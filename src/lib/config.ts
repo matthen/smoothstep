@@ -46,7 +46,7 @@ export const EXAMPLES: Example[] = [
   {id: "26d46785c1f6", title: "Stateful animations - iPrevFrame", group: "basics", teaches: ["iPrevFrame"],
     description: "A cellular automaton: each frame is worked out from the last."},
   {id: "c6e454d960df", title: "Wobbling mirror ball", group: "showcase",
-    teaches: ["ray marching", "equirectangular", "spherical harmonics"],
+    teaches: ["ray marching", "equirectangular", "timeline"],
     description: "A mirror ball, pulled out of shape and left to spring back."},
   {id: "2ed11c16d844", title: "Menger sponge dissection", group: "showcase",
     teaches: ["ray marching", "fractals", "timeline"],
