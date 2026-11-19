@@ -2,7 +2,7 @@ import React from 'react';
 import { FaBookOpen, FaGithub, FaInfoCircle } from "react-icons/fa";
 import { Button, Col, ListGroup, Modal, Row } from 'react-bootstrap';
 
-import { asset, documentHref } from '../config';
+import { asset, documentHref, DOCS_URL, TUTORIAL_URL } from '../config';
 import * as localStore from '../localStore';
 import ImageWithFallback from './ImageWithFallback';
 
@@ -68,10 +68,10 @@ class Splash extends React.Component {
                 to download them as files, or to open files saved elsewhere.
               </p>
               <ListGroup>
-                <ListGroup.Item action href="//docs.smoothstep.io/tutorial">
+                <ListGroup.Item action href={TUTORIAL_URL} target="_blank" rel="noreferrer">
                   <FaBookOpen />Getting started tutorial
                 </ListGroup.Item>
-                <ListGroup.Item action href="//docs.smoothstep.io/">
+                <ListGroup.Item action href={DOCS_URL} target="_blank" rel="noreferrer">
                   <FaInfoCircle />Documentation
                 </ListGroup.Item>
                 <ListGroup.Item action href={REPO_URL} target="_blank" rel="noreferrer">
@@ -122,8 +122,9 @@ class Splash extends React.Component {
         <Modal.Footer>
           <Button
             variant="secondary"
-            href="//docs.smoothstep.io/tutorial"
+            href={TUTORIAL_URL}
             target="_blank"
+            rel="noreferrer"
           >Tutorial</Button>
           <Button
             variant="primary"

@@ -5,7 +5,7 @@ import { FaAngleDown, FaCogs, FaDownload, FaFile, FaFolderOpen, FaSave } from "r
 import './App.scss';
 
 import * as archive from './archive';
-import { asset, documentHref } from './config';
+import { asset, documentHref, DOCS_URL } from './config';
 import * as localStore from './localStore';
 import Acknowledgements from './components/Acknowledgements';
 import {AnimationControls, TransitionsHelper} from './components/AnimationControls';
@@ -770,7 +770,7 @@ class App extends React.Component {
                   ><FaDownload /> Download</NavDropdown.Item>
                 </NavDropdown>
                 <Nav.Link onClick={() => this.setState({exportDialogOpen: true})}>Export video</Nav.Link>
-                <Nav.Link href="//docs.smoothstep.io" target="_blank">Documentation</Nav.Link>
+                <Nav.Link href={DOCS_URL} target="_blank" rel="noreferrer">Documentation</Nav.Link>
               </Nav>
             </Navbar.Collapse>
 

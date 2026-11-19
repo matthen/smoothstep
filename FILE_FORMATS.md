@@ -1,8 +1,8 @@
 # smoothstep file formats
 
-smoothstep saves and opens two kinds of file (`src/archive.js`): one animation as JSON, or
-everything as a zip. The old hosted smoothstep.io's "Download my data" also produced the
-zip, so those downloads open here too.
+smoothstep saves one animation as a JSON file, or all of them as a zip, and opens both
+(`src/archive.js`). The old hosted smoothstep.io's "Download my data" made the same zip, so
+those downloads open here too.
 
 ## The document JSON
 
@@ -31,8 +31,8 @@ An animation is a JSON object, as produced by `App.toJSON()`:
 
 ## One animation: `<title>.smoothstep.json`
 
-File → Download, or the download button in File → Open. A JSON file with the uploaded images
-it uses embedded:
+File → Download saves the open animation, and the download button in File → Open saves a
+stored one. Either way you get a JSON file with the uploaded images it uses embedded:
 
 ```json
 {
@@ -55,7 +55,7 @@ it uses embedded:
 
 ## Everything: `smoothstep-animations-<date>.zip`
 
-"Download all" in File → Open:
+"Download all" in File → Open saves this zip:
 
 ```
 manifest.json
