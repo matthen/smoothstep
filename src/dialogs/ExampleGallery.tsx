@@ -1,5 +1,5 @@
 import { Badge, Text, Title } from '@mantine/core';
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 
 import { EXAMPLES, exampleHref, examplePreview, exampleThumbnail, type Example } from '../lib/config';
 
@@ -8,30 +8,36 @@ const GROUPS: {key: Example["group"]; title: string}[] = [
   {key: "basics", title: "Learn the basics"},
 ];
 
-// A preview that plays while it's on screen, unless the viewer prefers less motion.
-function Preview({example}: {example: Example}) {
-  const ref = useRef<HTMLVideoElement>(null);
-  useEffect(() => {
-    const video = ref.current;
-    if (!video || window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
-        typeof IntersectionObserver === "undefined") {
-      return;
+// A card whose preview plays only while it's pointed at or focused, so the gallery stays calm.
+// Nothing downloads until then; touch screens show the still thumbnail.
+function ExampleCard({example, onOpen}: {example: Example; onOpen(): void}) {
+  const video = useRef<HTMLVideoElement>(null);
+  const play = () => {
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      video.current?.play().catch(() => {});
     }
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry?.isIntersecting) {
-        video.play().catch(() => {});
-      } else {
-        video.pause();
-      }
-    });
-    observer.observe(video);
-    return () => observer.disconnect();
-  }, []);
+  };
+  const pause = () => video.current?.pause();
   return (
-    <video
-      ref={ref} src={examplePreview(example.id)} poster={exampleThumbnail(example.id)}
-      muted loop playsInline preload="none" aria-hidden
-    />
+    <a
+      className="exampleCard" href={exampleHref(example.id)} onClick={onOpen}
+      onPointerEnter={event => event.pointerType === "mouse" && play()} onPointerLeave={pause}
+      onFocus={play} onBlur={pause}
+    >
+      <video
+        ref={video} src={examplePreview(example.id)} poster={exampleThumbnail(example.id)}
+        muted loop playsInline preload="none" aria-hidden
+      />
+      <span className="exampleText">
+        <Text component="span" fw={600} size="sm" className="exampleTitle">{example.title}</Text>
+        <Text component="span" size="xs" c="dimmed">{example.description}</Text>
+        <span className="exampleTags">
+          {example.teaches.map(tag =>
+            <Badge key={tag} size="xs" variant="light" color="gray" tt="none">{tag}</Badge>,
+          )}
+        </span>
+      </span>
+    </a>
   );
 }
 
@@ -44,18 +50,7 @@ export default function ExampleGallery({onOpen}: {onOpen(): void}) {
           <Title order={3} size="h6" c="dimmed" mb={8}>{group.title}</Title>
           <div className="exampleCards">
             {EXAMPLES.filter(example => example.group === group.key).map(example =>
-              <a key={example.id} className="exampleCard" href={exampleHref(example.id)} onClick={onOpen}>
-                <Preview example={example} />
-                <span className="exampleText">
-                  <Text component="span" fw={600} size="sm" className="exampleTitle">{example.title}</Text>
-                  <Text component="span" size="xs" c="dimmed">{example.description}</Text>
-                  <span className="exampleTags">
-                    {example.teaches.map(tag =>
-                      <Badge key={tag} size="xs" variant="light" color="gray" tt="none">{tag}</Badge>,
-                    )}
-                  </span>
-                </span>
-              </a>,
+              <ExampleCard key={example.id} example={example} onOpen={onOpen} />,
             )}
           </div>
         </section>,

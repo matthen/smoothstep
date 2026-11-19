@@ -90,6 +90,8 @@ div.playerButtons {
 div#animationControls {
   $grid-header-height: 24px;
   height: 100%;
+  // Keeps the playhead's z-index inside the timeline, so dialogs cover it.
+  isolation: isolate;
   display: flex;
   gap: 16px;
   padding: 0 16px 12px;
