@@ -789,7 +789,7 @@ form.disabled {
 
     div.tableFixedHead {
       overflow-y: auto;
-      height: 360px;
+      max-height: 280px;
       thead th {
         position: sticky;
         top: -1px;
@@ -806,9 +806,36 @@ form.disabled {
   }
 }
 
+.emptyNote {
+  color: $dt-gray-medium;
+}
+
 .storageNote {
   margin-top: 12px;
   color: $dt-gray-medium;
+}
+
+.exampleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 12px;
+  a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-align: center;
+    font-size: 0.9rem;
+    text-decoration: none;
+    color: $dt-gray-light;
+    &:hover img {
+      outline: 2px solid $dt-green;
+    }
+  }
+  img {
+    border-radius: 4px;
+    object-fit: cover;
+  }
 }
 
 // The crash screen.
