@@ -1,9 +1,10 @@
 import { ActionIcon, Button, Group, Kbd, Loader, Menu, SegmentedControl, Tabs, Text, TextInput, Tooltip } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import {
   TbBook, TbBrandGithub, TbChevronDown, TbCopy, TbDeviceFloppy, TbDownload, TbFile, TbFolderOpen, TbHammer,
-  TbHeart, TbHelp, TbHome, TbMovie, TbSchool,
+  TbHeart, TbHelp, TbHome, TbMovie, TbRoute, TbSchool,
 } from 'react-icons/tb';
 
 import Acknowledgements from '../dialogs/Acknowledgements';
@@ -28,7 +29,9 @@ import PlayerControls from '../timeline/PlayerControls';
 import Timeline from '../timeline/Timeline';
 import AppModal from './AppModal';
 import { setCrashDocument } from './crashState';
+import { setTourState, tourState } from './onboarding';
 import { hasConfirmedLeaving, parseHash, useHashLinks } from './routing';
+import { usePhone } from './usePhone';
 
 const STORAGE_BLOCKED = "This browser isn't letting smoothstep store data, so animations can't be saved here. " +
   "Private browsing can cause this.";
@@ -75,6 +78,8 @@ export default function App() {
   const [wideCanvas, setWideCanvas] = useState(false);
   const [mobileTab, setMobileTab] = useState<MobileTab>("code");
   const [panelTab, setPanelTab] = useState<"animation" | "textures">("animation");
+  const phone = usePhone();
+  const [tourTaken, setTourTaken] = useState(() => tourState() === "taken");
   const [alert, setAlert] = useState<string | null>(null);
   const [dialog, setDialog] = useState<"open" | "saveCopy" | "export" | "splash" | "acknowledgements" | null>(
     window.location.hash ? null : "splash");
@@ -109,6 +114,44 @@ export default function App() {
     windowTitle(json.title);
     setHasUnsavedChanges(false);
   }, []);
+
+  const takeTour = async () => {
+    setDialog(null);
+    notifications.hide("tour");
+    setTourState("taken");
+    setTourTaken(true);
+    const {startTour} = await import('./tour');
+    startTour({
+      phone,
+      // Applied at once, so the tour measures the pane it's about to highlight.
+      showPane: pane => flushSync(() => {
+        if (phone) {
+          chooseMobileTab(pane);
+        } else if (pane !== "code") {
+          setPanelTab(pane);
+          setShowFooter(true);
+        }
+      }),
+      onFinish: () => {},
+    });
+  };
+
+  // Someone whose first visit is a link to an animation doesn't see the welcome dialog, so
+  // offer them the tour once instead.
+  const offerTourRef = useLatest(() => {
+    if (initialRoute && tourState() === null) {
+      setTourState("offered");
+      notifications.show({
+        id: "tour", autoClose: 12000, title: "New to smoothstep?",
+        message: (
+          <Group gap="xs" mt={4}>
+            <Text size="sm">A one-minute tour shows you around.</Text>
+            <Button size="compact-sm" onClick={() => void takeTour()}>Take the tour</Button>
+          </Group>
+        ),
+      });
+    }
+  });
 
   // Open the storage, then the animation the URL names.
   useEffect(() => {
@@ -146,10 +189,11 @@ export default function App() {
         setBuiltCode("// " + text);
       } finally {
         setLoading(false);
+        offerTourRef.current();
       }
     });
     return unsubscribe;
-  }, [initialRoute, loadDocument]);
+  }, [initialRoute, loadDocument, offerTourRef]);
 
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -387,6 +431,7 @@ export default function App() {
             </Menu.Target>
             <Menu.Dropdown>
               <Menu.Item leftSection={<TbHome />} onClick={() => setDialog("splash")}>Welcome</Menu.Item>
+              <Menu.Item leftSection={<TbRoute />} onClick={() => void takeTour()}>Take the tour</Menu.Item>
               <Menu.Item component="a" href={TUTORIAL_URL} target="_blank" rel="noreferrer" leftSection={<TbSchool />}>
                 Tutorial
               </Menu.Item>
@@ -507,7 +552,10 @@ export default function App() {
         onExport={() => void startExport()} onCancel={cancelExport}
         progress={exportProgress} error={exportError}
       />
-      <Splash show={dialog === "splash"} onHide={() => setDialog(null)} />
+      <Splash
+        show={dialog === "splash"} onHide={() => setDialog(null)}
+        onTour={() => void takeTour()} tourTaken={tourTaken}
+      />
       <Acknowledgements show={dialog === "acknowledgements"} onHide={() => setDialog(null)} />
       <AppModal opened={alert !== null} onClose={() => setAlert(null)} withCloseButton={false} zIndex={400}>
         <p className="alertText">{alert}</p>

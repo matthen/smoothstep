@@ -13,6 +13,9 @@ import ImageWithFallback from './ImageWithFallback';
 interface SplashProps {
   show: boolean;
   onHide(): void;
+  onTour(): void;
+  // Once the tour has been taken, Continue becomes the main button.
+  tourTaken: boolean;
 }
 
 function LinkItem({href, onClick, icon, children}: {
@@ -29,7 +32,7 @@ function LinkItem({href, onClick, icon, children}: {
   );
 }
 
-export default function Splash({show, onHide}: SplashProps) {
+export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
   const [recentDocs, setRecentDocs] = useState<DocumentSummary[]>([]);
   const phone = usePhone();
 
@@ -91,7 +94,12 @@ export default function Splash({show, onHide}: SplashProps) {
       </SimpleGrid>
       <Group justify="flex-end" mt="xl">
         <Button variant="default" component="a" href={TUTORIAL_URL} target="_blank" rel="noreferrer">Tutorial</Button>
-        <Button onClick={onHide} data-autofocus>Continue</Button>
+        <Button variant={tourTaken ? "default" : "filled"} onClick={onTour} data-autofocus={!tourTaken || undefined}>
+          Take the tour
+        </Button>
+        <Button variant={tourTaken ? "filled" : "default"} onClick={onHide} data-autofocus={tourTaken || undefined}>
+          Continue
+        </Button>
       </Group>
     </AppModal>
   );

@@ -16,7 +16,7 @@ describe("Splash", () => {
       await addDocument("eeee0000000" + i, "Animation " + i, 1000 * i);
     }
     const onHide = vi.fn();
-    render(<Splash show={true} onHide={onHide} />);
+    render(<Splash show={true} onHide={onHide} onTour={() => {}} tourTaken={false} />);
     expect(await screen.findByText("Your recent animations")).toBeTruthy();
     expect(screen.getByRole("link", {name: "Animation 3"}).getAttribute("href")).toBe("#anim/eeee00000003");
     expect(screen.queryByText("Animation 0")).toBeNull();
@@ -27,7 +27,7 @@ describe("Splash", () => {
   });
 
   it("hides recent animations when there are none", async () => {
-    render(<Splash show={true} onHide={() => {}} />);
+    render(<Splash show={true} onHide={() => {}} onTour={() => {}} tourTaken={false} />);
     await screen.findByText("Examples");
     expect(screen.queryByText("Your recent animations")).toBeNull();
   });
