@@ -14,7 +14,7 @@ function Link({href, children}: {href: string; children: ReactNode}) {
 export default function Acknowledgements({show, onHide}: AcknowledgementsProps) {
   return (
     <Modal show={show} onHide={onHide} centered dialogClassName="terms">
-      <Modal.Header closeButton>
+      <Modal.Header closeButton closeVariant="white">
         <Modal.Title><FaList /> Acknowledgements</Modal.Title>
       </Modal.Header>
       <Modal.Body>

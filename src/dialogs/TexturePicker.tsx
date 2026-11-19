@@ -156,7 +156,7 @@ export default function TexturePicker(
         show={show} onHide={onHide} restoreFocus={false}
         size="lg" dialogClassName="texturePickerModal" centered
       >
-        <Modal.Header closeButton>
+        <Modal.Header closeButton closeVariant="white">
           <Modal.Title>{texture.id || "iTexture" + slot}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -242,7 +242,7 @@ export default function TexturePicker(
       </Modal>
       {toDelete &&
         <Modal show={showConfirm} onHide={() => setShowConfirm(false)} centered backdrop="static">
-          <Modal.Header closeButton></Modal.Header>
+          <Modal.Header closeButton closeVariant="white"></Modal.Header>
           <Modal.Body>
             <p>Delete '<b>{toDelete.filename}</b>'?</p>
             <img

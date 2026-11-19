@@ -91,7 +91,7 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
   return (
     <>
       <Modal show={show} onHide={onHide} onShow={updateList} dialogClassName="documentBrowser" centered>
-        <Modal.Header closeButton>
+        <Modal.Header closeButton closeVariant="white">
           <Modal.Title><FaFolderOpen /> Open</Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -158,7 +158,7 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
       </Modal>
       {toDelete &&
         <Modal show={showConfirm} onHide={() => setShowConfirm(false)} centered backdrop="static">
-          <Modal.Header closeButton></Modal.Header>
+          <Modal.Header closeButton closeVariant="white"></Modal.Header>
           <Modal.Body>
             <p>Delete '<b>{toDelete.title}</b>'?</p>
             {toDelete.id === currentId &&

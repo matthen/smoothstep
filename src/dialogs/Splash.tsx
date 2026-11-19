@@ -31,7 +31,7 @@ export default function Splash({show, onHide}: SplashProps) {
 
   return (
     <Modal show={show} onHide={onHide} onShow={updateRecentDocs} centered dialogClassName="splash">
-      <Modal.Header closeButton>
+      <Modal.Header closeButton closeVariant="white">
         <Modal.Title>
           <img src={asset("/images/logo.svg")} width="18" height="18" alt="smoothstep.io logo" /> smoothstep<i>.io</i>
         </Modal.Title>

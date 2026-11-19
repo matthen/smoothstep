@@ -41,7 +41,7 @@ export default function SaveCopy({show, title, onSave, onHide}: SaveCopyProps) {
       show={show} onHide={onHide} centered
       onShow={() => {setCopy(copyTitle(title)); setInputValue(copyTitle(title));}}
     >
-      <Modal.Header closeButton>
+      <Modal.Header closeButton closeVariant="white">
         <Modal.Title><FaCopy /> Save copy</Modal.Title>
       </Modal.Header>
       <Modal.Body>
