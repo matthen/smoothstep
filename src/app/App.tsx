@@ -1,4 +1,4 @@
-import { ActionIcon, Button, Group, Kbd, Loader, Menu, SegmentedControl, Tabs, TextInput, Tooltip } from '@mantine/core';
+import { ActionIcon, Button, Group, Kbd, Loader, Menu, SegmentedControl, Tabs, Text, TextInput, Tooltip } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -367,7 +367,10 @@ export default function App() {
               >Save</Menu.Item>
               {documentId &&
                 <Menu.Item leftSection={<TbCopy />} onClick={() => setDialog("saveCopy")}>Save copy</Menu.Item>}
-              <Menu.Item leftSection={<TbDownload />} onClick={() => void download()}>Download</Menu.Item>
+              <Menu.Item leftSection={<TbDownload />} onClick={() => void download()}>
+                Download animation file
+                <Text size="xs" c="dimmed">Code, timeline and textures, to open again later</Text>
+              </Menu.Item>
             </Menu.Dropdown>
           </Menu>
           <Button

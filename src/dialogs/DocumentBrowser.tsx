@@ -129,7 +129,7 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
                     <Table.Td visibleFrom="sm">{timeAgo(document.created)}</Table.Td>
                     <Table.Td>
                       <Group gap={4} wrap="nowrap">
-                        <ActionIcon variant="subtle" color="gray" title="Download" aria-label="Download" onClick={() => handleDownload(document)}>
+                        <ActionIcon variant="subtle" color="gray" title="Download file" aria-label="Download file" onClick={() => handleDownload(document)}>
                           <TbDownload />
                         </ActionIcon>
                         <ActionIcon
@@ -170,7 +170,7 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
             variant="default" leftSection={<TbDownload />} ml="auto"
             disabled={busy || documents.length === 0} onClick={handleDownloadAll}
           >
-            Download all
+            Download all files
           </Button>
         </Group>
       </AppModal>
