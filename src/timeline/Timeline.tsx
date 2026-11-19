@@ -56,6 +56,8 @@ export default function Timeline(props: TimelineProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const timeAreaRef = useRef<HTMLDivElement>(null);
   const rowsRef = useRef<HTMLDivElement>(null);
+  // How far the grid is scrolled sideways, so the row labels can stay at its left edge.
+  const [scrollLeft, setScrollLeft] = useState(0);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [hover, setHover] = useState<Selection | null>(null);
   const [gesture, setGestureState] = useState<Gesture>({kind: "idle"});
@@ -387,7 +389,7 @@ export default function Timeline(props: TimelineProps) {
             />
           </form>}
       </div>
-      <div className="gridContainer">
+      <div className="gridContainer" onScroll={event => setScrollLeft(event.currentTarget.scrollLeft)}>
         <div className={"header" + (ticks.tens ? " tensTicks" : "")} style={{width}} onClick={handleHeaderClick}>
           {ticks.labels.map(label => <p key={label}>{label}</p>)}
         </div>
@@ -415,6 +417,7 @@ export default function Timeline(props: TimelineProps) {
           <div className="filler" ref={rowsRef}>
             {variables.map((variable, row) => (
               <div key={row} className="variableRow">
+                <div className="rowLabel" style={{left: scrollLeft}}>iFloat{row}</div>
                 {variable.transitions.length > 0 &&
                   <div className="variableValue" style={{left: timeToX(currentTime), zIndex: markerZ}}>
                     {(variableValues[row] ?? 0).toFixed(2)}

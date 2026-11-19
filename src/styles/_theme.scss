@@ -24,25 +24,27 @@ $dt-purple: #bd93f9;
 $dt-red: #ff5555;
 $dt-yellow: #f1fa8c;
 
-// Mantine's "sm" breakpoint (48em), so the hiddenFrom/visibleFrom props agree with these.
+// Mantine's "sm" breakpoint (48em). Phones in landscape are short, and get the desktop layout.
 $phone-breakpoint: 767.98px;
 $short-height: 520px;
 // The screen below the phone's sticky Code/Timeline/Textures switch.
 $phone-pane-height: calc(100dvh - 52px);
 
+// Keep in step with app/usePhone.ts.
 @mixin phone {
-  @media (max-width: $phone-breakpoint) {
+  @media (max-width: $phone-breakpoint) and (min-height: $short-height + 0.02px) {
     @content;
   }
 }
 
 @mixin desktop {
-  @media (min-width: $phone-breakpoint + 0.02px) {
+  @media (min-width: $phone-breakpoint + 0.02px), (max-height: $short-height) {
     @content;
   }
 }
 
-// Landscape phones and short windows: the page scrolls rather than squeezing the panes.
+// Landscape phones and short windows: the editor and canvas fill the screen, and the page
+// scrolls down to the timeline.
 @mixin short {
   @media (max-height: $short-height) {
     @content;
