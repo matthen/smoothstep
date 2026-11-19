@@ -1,7 +1,7 @@
 // Saving, uploads, a browser restart, downloads, and importing into fresh browsers.
 import { chromium, expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { strFromU8, unzipSync } from 'fflate';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PNG } from 'pngjs';
@@ -12,10 +12,18 @@ import {
 
 test.describe.configure({mode: "serial"});
 
-const dir = mkdtempSync(join(tmpdir(), "smoothstep-e2e-"));
-const zipPath = join(dir, "export.zip");
-const onePath = join(dir, "one.smoothstep.json");
+// Made in beforeAll: the runner also loads this file to list tests, and only workers run afterAll.
+let dir = "";
+let zipPath = "";
+let onePath = "";
 let docId = "";
+
+test.beforeAll(() => {
+  dir = mkdtempSync(join(tmpdir(), "smoothstep-e2e-"));
+  zipPath = join(dir, "export.zip");
+  onePath = join(dir, "one.smoothstep.json");
+});
+test.afterAll(() => rmSync(dir, {recursive: true, force: true}));
 
 async function browser(name: string, baseURL: string): Promise<{context: BrowserContext; page: Page; errors: string[]}> {
   const context = await chromium.launchPersistentContext(join(dir, "profile-" + name), {

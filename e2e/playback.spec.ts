@@ -16,6 +16,6 @@ test("rebuilding restarts iFrame, so animations that set up on the first frames 
   await expect.poll(() => frameIndex(page)).toBeGreaterThan(60);
   await page.locator(".cm-content").click();
   await page.keyboard.press("Shift+Enter");
-  expect(await frameIndex(page)).toBeLessThan(30);
+  await expect.poll(() => frameIndex(page)).toBeLessThan(30);
   expect(errors).toEqual([]);
 });
