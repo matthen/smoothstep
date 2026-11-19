@@ -11,7 +11,7 @@ test("rebuilding restarts iFrame, so animations that set up on the first frames 
   const errors = await offline(context);
   await page.goto("./#example/26d46785c1f6");
   await expect(page.locator("#titleInput")).not.toHaveValue("Untitled animation");
-  await page.locator("#footerLinks").click({position: {x: 5, y: 5}});
+  await page.locator(".appHeader").click({position: {x: 4, y: 4}});
   await page.keyboard.press("Space");
   await expect.poll(() => frameIndex(page)).toBeGreaterThan(60);
   await page.locator(".cm-content").click();

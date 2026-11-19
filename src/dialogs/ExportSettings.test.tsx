@@ -1,7 +1,8 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { render } from '../test/render';
 import ExportSettings, { parseFps, parseWidth } from './ExportSettings';
 import type { ExportOptions, ExportProgress } from './exportTypes';
 
@@ -34,13 +35,13 @@ describe("ExportSettings", () => {
     const width = screen.getByLabelText("Resolution width");
     fireEvent.change(width, {target: {value: "641"}});
     expect(props.onOptionsChange).toHaveBeenLastCalledWith({...GIF, width: 642});
-    expect(width.className).not.toContain("is-invalid");
+    expect(width.getAttribute("aria-invalid")).not.toBe("true");
     fireEvent.change(width, {target: {value: "-4"}});
-    expect(width.className).toContain("is-invalid");
+    expect(width.getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByRole("button", {name: "Export"}).hasAttribute("disabled")).toBe(true);
     const fps = screen.getByLabelText("Frame rate");
     fireEvent.change(fps, {target: {value: "0"}});
-    expect(fps.className).toContain("is-invalid");
+    expect(fps.getAttribute("aria-invalid")).toBe("true");
     fireEvent.change(fps, {target: {value: "24"}});
     expect(props.onOptionsChange).toHaveBeenCalledTimes(2);
     expect(props.onOptionsChange).toHaveBeenLastCalledWith({...GIF, fps: 24});
@@ -58,11 +59,11 @@ describe("ExportSettings", () => {
   it("disables the form and shows progress while exporting", async () => {
     const {props, rerender} = renderExport(GIF, {stage: "rendering", fraction: 0.25});
     expect(screen.getByText("Rendering frames")).toBeTruthy();
-    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("0.25");
+    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("25");
     expect(screen.getByLabelText("Resolution width").hasAttribute("disabled")).toBe(true);
     expect(screen.getByRole("button", {name: "Export"}).hasAttribute("disabled")).toBe(true);
     rerender({progress: {stage: "encoding", fraction: 0.5}});
-    expect(screen.getByText("Encoding.")).toBeTruthy();
+    expect(screen.getByText("Encoding")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", {name: "Cancel"}));
     expect(props.onCancel).toHaveBeenCalled();
   });

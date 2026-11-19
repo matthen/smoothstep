@@ -1,7 +1,8 @@
 import {useEffect, useEffectEvent, useRef, useState} from "react";
 import type {MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent} from "react";
-import {Button, Col, Form, Row} from "react-bootstrap";
-import {FaTrash} from "react-icons/fa";
+import {ActionIcon, NativeSelect, TextInput} from "@mantine/core";
+import {useMediaQuery} from "@mantine/hooks";
+import {TbTrash} from "react-icons/tb";
 import {variableValue} from "../lib/document";
 import type {Transition, TransitionType, Variable} from "../lib/document";
 import {
@@ -61,6 +62,7 @@ export default function Timeline(props: TimelineProps) {
   // Pointer handlers read the gesture from here, as moves can arrive before React re-renders.
   const gestureRef = useRef<Gesture>(gesture);
   const [drafts, setDrafts] = useState<Drafts>({});
+  const touch = useMediaQuery("(hover: none)") ?? false;
 
   const maxDSecs = durationDSecs(duration);
   const maxTime = maxTimeFor(variables, duration);
@@ -194,7 +196,16 @@ export default function Timeline(props: TimelineProps) {
   }
 
   function handlePointerDown(event: ReactPointerEvent) {
-    if (event.button !== 0 || gestureRef.current.kind !== "idle") {
+    const current = gestureRef.current;
+    // A touch can't hover, so the second tap of a click-twice creation sets the end where it lands.
+    if (current.kind === "creating" && current.released) {
+      const endDSecs = hoverEndDSecs(position(event).x, current.startDSecs);
+      if (isInsertable(variables[current.row]!.transitions, current.startDSecs, endDSecs, maxDSecs)) {
+        setGesture({...current, endDSecs});
+      }
+      return;
+    }
+    if (event.button !== 0 || current.kind !== "idle") {
       return;
     }
     if (selected) {
@@ -233,7 +244,11 @@ export default function Timeline(props: TimelineProps) {
     setGesture({kind: "idle"});
   }
 
-  function handlePointerLeave() {
+  function handlePointerLeave(event: ReactPointerEvent) {
+    // Touch pointers leave on every lift, which would cancel a click-twice creation.
+    if (event.pointerType !== "mouse") {
+      return;
+    }
     const {kind} = gestureRef.current;
     if (kind === "idle" || kind === "creating") {
       setGesture({kind: "idle"});
@@ -316,9 +331,9 @@ export default function Timeline(props: TimelineProps) {
     <div id="animationControls" ref={rootRef}>
       <div className="properties">
         {selected &&
-          <Button variant="secondary" onClick={deleteSelected} className="delete" aria-label="Delete transition">
-            <FaTrash />
-          </Button>}
+          <ActionIcon variant="subtle" color="gray" onClick={deleteSelected} className="delete" aria-label="Delete transition">
+            <TbTrash />
+          </ActionIcon>}
         {heading &&
           <h4>
             iFloat{heading.row}
@@ -326,41 +341,31 @@ export default function Timeline(props: TimelineProps) {
               {heading.endDSecs !== null && <> &mdash; {(heading.endDSecs * 0.1).toFixed(1)}</>}s
             </span>
           </h4>}
+        {!heading &&
+          <p className="hint">
+            {touch ? "Tap where a transition starts, then where it ends." : "Click or drag in a row to add a transition."}
+          </p>}
         {selected &&
-          <Form onSubmit={e => e.preventDefault()}>
+          <form className="transitionForm" onSubmit={e => e.preventDefault()}>
             {(["start", "end"] as const).map(field => {
               const value = field === "start" ? selected.startValue : selected.endValue;
               const text = drafts[field] ?? String(value);
               return (
-                <Form.Group as={Row} controlId={field + "ValueInput"} key={field}>
-                  <Form.Label column xs={5}>{field} value</Form.Label>
-                  <Col xs={7}>
-                    <Form.Control
-                      size="sm"
-                      type="number"
-                      step="0.1"
-                      value={text}
-                      onChange={e => changeValue(field, e.target.value)}
-                      onBlur={() => blurValue(field)}
-                      isInvalid={parseValue(text) === null}
-                    />
-                  </Col>
-                </Form.Group>
+                <TextInput
+                  key={field} id={field + "ValueInput"} label={field + " value"} size="xs"
+                  type="number" step="0.1" value={text}
+                  onChange={e => changeValue(field, e.target.value)}
+                  onBlur={() => blurValue(field)}
+                  error={parseValue(text) === null}
+                />
               );
             })}
-            <Form.Group as={Row} controlId="typeInput">
-              <Form.Label column xs={5}>transition</Form.Label>
-              <Col xs={7}>
-                <Form.Select
-                  size="sm"
-                  value={selected.type}
-                  onChange={e => updateSelected({type: e.target.value as TransitionType})}
-                >
-                  {TYPE_OPTIONS.map(t => <option key={t}>{t}</option>)}
-                </Form.Select>
-              </Col>
-            </Form.Group>
-          </Form>}
+            <NativeSelect
+              id="typeInput" label="transition" size="xs" value={selected.type}
+              onChange={e => updateSelected({type: e.target.value as TransitionType})}
+              data={[...TYPE_OPTIONS]}
+            />
+          </form>}
       </div>
       <div className="gridContainer">
         <div className={"header" + (ticks.tens ? " tensTicks" : "")} style={{width}} onClick={handleHeaderClick}>

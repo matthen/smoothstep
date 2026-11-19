@@ -1,7 +1,6 @@
 // Shared sizes, the Dracula palette and breakpoints. Use with `@use "<path>/styles/theme" as *;`.
-// main.scss also passes these to Bootstrap.
 
-$header-height: 64px;
+$header-height: 56px;
 $footer-height: 272px;
 $footer-padding: 28px;
 $right-width: 512px;
@@ -25,18 +24,25 @@ $dt-purple: #bd93f9;
 $dt-red: #ff5555;
 $dt-yellow: #f1fa8c;
 
-$tablet-breakpoint: 960px;
-$phone-breakpoint: 575px;
-$phone-max-height: 400px;
+// Mantine's "sm" breakpoint (48em), so the hiddenFrom/visibleFrom props agree with these.
+$phone-breakpoint: 767.98px;
+$short-height: 520px;
 
-@mixin tablet {
-  @media (max-width: $tablet-breakpoint) {
+@mixin phone {
+  @media (max-width: $phone-breakpoint) {
     @content;
   }
 }
 
-@mixin phone {
-  @media (max-height: $phone-max-height), (max-width: $phone-breakpoint) {
+@mixin desktop {
+  @media (min-width: $phone-breakpoint + 0.02px) {
+    @content;
+  }
+}
+
+// Landscape phones and small windows: the desktop layout, scrolling the page.
+@mixin short {
+  @media (max-height: $short-height) and (min-width: $phone-breakpoint + 0.02px) {
     @content;
   }
 }

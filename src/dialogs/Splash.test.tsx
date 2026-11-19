@@ -1,7 +1,8 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { render } from '../test/render';
 import AspectRatioPicker from './AspectRatioPicker';
 import Splash from './Splash';
 import { addDocument, clearStore } from './testUtils';
@@ -16,7 +17,7 @@ describe("Splash", () => {
     }
     const onHide = vi.fn();
     render(<Splash show={true} onHide={onHide} />);
-    expect(await screen.findByText("Your Recent Animations")).toBeTruthy();
+    expect(await screen.findByText("Your recent animations")).toBeTruthy();
     expect(screen.getByRole("link", {name: "Animation 3"}).getAttribute("href")).toBe("#anim/eeee00000003");
     expect(screen.queryByText("Animation 0")).toBeNull();
     const fractals = screen.getByRole("link", {name: /Fractals/});
@@ -28,7 +29,7 @@ describe("Splash", () => {
   it("hides recent animations when there are none", async () => {
     render(<Splash show={true} onHide={() => {}} />);
     await screen.findByText("Examples");
-    expect(screen.queryByText("Your Recent Animations")).toBeNull();
+    expect(screen.queryByText("Your recent animations")).toBeNull();
   });
 });
 

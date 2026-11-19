@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react';
-import { Alert, Button, Modal, Table } from 'react-bootstrap';
-import { FaDownload, FaFileImport, FaFolderOpen, FaTrash } from 'react-icons/fa';
+import { ActionIcon, Alert, Button, Group, Modal, ScrollArea, Table, Text, Title } from '@mantine/core';
+import { useEffect, useRef, useState } from 'react';
+import { TbDownload, TbFileImport, TbTrash } from 'react-icons/tb';
 
+import { usePhone } from '../app/usePhone';
 import { animationFile, download, exportAll, importFiles, importMessage } from '../lib/archive';
 import { documentHref, EXAMPLES, exampleHref, exampleThumbnail } from '../lib/config';
 import { deleteDocument, getDocument, listDocuments, StorageFullError, type DocumentSummary } from '../lib/localStore';
@@ -27,10 +28,17 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
   const [showConfirm, setShowConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const phone = usePhone();
 
   const updateList = () => {
     listDocuments().then(setDocuments).catch(error => onMessage(errorText(error, "Error finding animations.")));
   };
+
+  useEffect(() => {
+    if (show) {
+      updateList();
+    }
+  }, [show]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDownload = async (document: DocumentSummary) => {
     try {
@@ -90,95 +98,93 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
 
   return (
     <>
-      <Modal show={show} onHide={onHide} onShow={updateList} dialogClassName="documentBrowser" centered>
-        <Modal.Header closeButton closeVariant="white">
-          <Modal.Title><FaFolderOpen /> Open</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <h5>Your animations</h5>
-          {documents.length > 0 && <div className="tableFixedHead">
-            <Table striped bordered size="sm">
-              <thead>
-                <tr>
-                  <th></th>
-                  <th>Title</th>
-                  <th>Modified</th>
-                  <th>Created</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
+      <Modal
+        opened={show} onClose={onHide} title="Open" size={800} fullScreen={phone} classNames={{content: "documentBrowser"}}>
+        <Title order={2} size="h5" mb="xs">Your animations</Title>
+        {documents.length > 0 &&
+          <ScrollArea.Autosize mah={280} type="auto" offsetScrollbars>
+            <Table striped highlightOnHover verticalSpacing={4} stickyHeader>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th w={80}></Table.Th>
+                  <Table.Th>Title</Table.Th>
+                  <Table.Th visibleFrom="sm">Modified</Table.Th>
+                  <Table.Th visibleFrom="sm">Created</Table.Th>
+                  <Table.Th w={80}></Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
                 {documents.map(document => (
-                  <tr key={document.id} className={document.id === currentId ? "opened" : ""}>
-                    <td className="centerTD">
+                  <Table.Tr key={document.id} className={document.id === currentId ? "opened" : ""}>
+                    <Table.Td>
                       {document.thumbnail &&
                         <a href={documentHref(document.id)} onClick={onHide}>
-                          <ImageWithFallback src={document.thumbnail} height="64px" alt="thumbnail" />
+                          <ImageWithFallback src={document.thumbnail} height="48" className="thumbnail" alt="thumbnail" />
                         </a>
                       }
-                    </td>
-                    <td><a href={documentHref(document.id)} onClick={onHide}>{document.title}</a></td>
-                    <td>{timeAgo(document.modified)}</td>
-                    <td>{timeAgo(document.created)}</td>
-                    <td className="buttonsTD">
-                      <Button size="sm" variant="light" title="Download" onClick={() => handleDownload(document)}>
-                        <FaDownload />
-                      </Button>
-                      <Button
-                        size="sm" variant="light" title="Delete"
-                        onClick={() => {setToDelete(document); setShowConfirm(true);}}
-                      ><FaTrash /></Button>
-                    </td>
-                  </tr>
+                    </Table.Td>
+                    <Table.Td><a href={documentHref(document.id)} onClick={onHide}>{document.title}</a></Table.Td>
+                    <Table.Td visibleFrom="sm">{timeAgo(document.modified)}</Table.Td>
+                    <Table.Td visibleFrom="sm">{timeAgo(document.created)}</Table.Td>
+                    <Table.Td>
+                      <Group gap={4} wrap="nowrap">
+                        <ActionIcon variant="subtle" color="gray" title="Download" aria-label="Download" onClick={() => handleDownload(document)}>
+                          <TbDownload />
+                        </ActionIcon>
+                        <ActionIcon
+                          variant="subtle" color="gray" title="Delete" aria-label="Delete"
+                          onClick={() => {setToDelete(document); setShowConfirm(true);}}
+                        ><TbTrash /></ActionIcon>
+                      </Group>
+                    </Table.Td>
+                  </Table.Tr>
                 ))}
-              </tbody>
+              </Table.Tbody>
             </Table>
-          </div>}
-          {documents.length === 0 && <p className="emptyNote">You have no saved animations yet.</p>}
-          <p className="storageNote">
-            Animations are saved in this browser only. Download them to keep a backup
-            or to move them to another computer.
-          </p>
-          <h5>Examples</h5>
-          <div className="exampleGrid">
-            {EXAMPLES.map(example =>
-              <a key={example.id} href={exampleHref(example.id)} onClick={onHide}>
-                <ImageWithFallback src={exampleThumbnail(example.id)} width="96px" height="96px" alt="" />
-                <span>{example.title}</span>
-              </a>,
-            )}
-          </div>
-        </Modal.Body>
-        <Modal.Footer>
-          <input
-            type="file" accept=".json,.zip,application/json,application/zip" multiple
-            ref={fileInput} style={{display: "none"}} data-testid="importInput"
-            onChange={event => handleImport(event.target.files)}
-          />
-          <Button variant="secondary" className="me-auto" disabled={busy} onClick={() => fileInput.current?.click()}>
-            <FaFileImport /> Open file…
+          </ScrollArea.Autosize>}
+        {documents.length === 0 && <Text c="dimmed" size="sm">You have no saved animations yet.</Text>}
+        <Text c="dimmed" size="sm" mt="sm">
+          Animations are saved in this browser only. Download them to keep a backup
+          or to move them to another computer.
+        </Text>
+        <Title order={2} size="h5" mt="lg" mb="xs">Examples</Title>
+        <div className="exampleGrid">
+          {EXAMPLES.map(example =>
+            <a key={example.id} href={exampleHref(example.id)} onClick={onHide}>
+              <ImageWithFallback src={exampleThumbnail(example.id)} width="96" height="96" alt="" />
+              <span>{example.title}</span>
+            </a>,
+          )}
+        </div>
+        <input
+          type="file" accept=".json,.zip,application/json,application/zip" multiple
+          ref={fileInput} style={{display: "none"}} data-testid="importInput"
+          onChange={event => handleImport(event.target.files)}
+        />
+        <Group mt="lg" gap="xs">
+          <Button variant="default" leftSection={<TbFileImport />} disabled={busy} onClick={() => fileInput.current?.click()}>
+            Open file…
           </Button>
-          <Button variant="secondary" disabled={busy || documents.length === 0} onClick={handleDownloadAll}>
-            <FaDownload /> Download all
+          <Button
+            variant="default" leftSection={<TbDownload />} ml="auto"
+            disabled={busy || documents.length === 0} onClick={handleDownloadAll}
+          >
+            Download all
           </Button>
-          <Button variant="secondary" onClick={onHide}>Cancel</Button>
-        </Modal.Footer>
+        </Group>
       </Modal>
-      {toDelete &&
-        <Modal show={showConfirm} onHide={() => setShowConfirm(false)} centered backdrop="static">
-          <Modal.Header closeButton closeVariant="white"></Modal.Header>
-          <Modal.Body>
-            <p>Delete '<b>{toDelete.title}</b>'?</p>
+      <Modal opened={showConfirm && toDelete !== null} onClose={() => setShowConfirm(false)} title="Delete animation" size="sm">
+        {toDelete &&
+          <>
+            <Text>Delete '<b>{toDelete.title}</b>'?</Text>
             {toDelete.id === currentId &&
-              <Alert variant="warning">That is the currently open animation.</Alert>
-            }
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowConfirm(false)}>Cancel</Button>
-            <Button variant="danger" onClick={() => handleDelete(toDelete)}>Delete</Button>
-          </Modal.Footer>
-        </Modal>
-      }
+              <Alert color="yellow" mt="sm">That is the currently open animation.</Alert>}
+          </>}
+        <Group justify="flex-end" mt="lg">
+          <Button variant="default" onClick={() => setShowConfirm(false)}>Cancel</Button>
+          <Button color="red" onClick={() => toDelete && handleDelete(toDelete)}>Delete</Button>
+        </Group>
+      </Modal>
     </>
   );
 }

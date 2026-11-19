@@ -26,7 +26,7 @@ export function useHashLinks(hasUnsavedChanges: boolean) {
     // Back/forward or an edited URL.
     const onHashChange = () => window.location.reload();
     // Confirm here rather than in beforeunload, so cancelling leaves the URL alone, and the same
-    // link reloads too. Plain href="#" is left alone: react-bootstrap's dropdown toggles use it.
+    // link reloads too.
     const onClick = (event: MouseEvent) => {
       const link = event.target instanceof Element ? event.target.closest(APP_LINKS) : null;
       if (!link || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) {

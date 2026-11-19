@@ -50,13 +50,13 @@ export async function editorCode(page: Page): Promise<string> {
 }
 
 export async function fileMenu(page: Page, item: string) {
-  await page.getByText("File", {exact: true}).click();
-  await page.locator(".dropdown-menu.show").getByText(item, {exact: true}).click();
+  await page.getByRole("button", {name: "File"}).click();
+  await page.getByRole("menu").getByText(item, {exact: true}).click();
 }
 
 export async function dismissAlert(page: Page): Promise<string> {
   // Other dialogs may stay open underneath the alert.
-  const alert = page.locator(".modal.show", {has: page.getByRole("button", {name: "Ok"})}).last();
+  const alert = page.getByRole("dialog").filter({has: page.getByRole("button", {name: "Ok"})}).last();
   const text = await alert.innerText();
   await alert.getByRole("button", {name: "Ok"}).click();
   await expect(page.getByRole("button", {name: "Ok"})).toHaveCount(0);

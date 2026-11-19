@@ -3,109 +3,76 @@
 
 // Player controls under the canvas.
 div.playerButtons {
-  // top is set inline, below the canvas.
+  // top and width are set inline, to sit under the canvas.
   position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
   height: 48px;
-  margin: 0;
   padding: 8px 0;
-  width: $right-width - 32px;
-  max-width: none;
-
-  @include phone {
-    position: static;
-    width: 100%;
-    height: auto;
-  }
-
-  > .row {
-    --bs-gutter-x: 0;
-    flex-wrap: nowrap;
-    margin-left: auto;
-    margin-right: auto;
-    max-width: 100%;
-
-    > .col, > .col-2 {
-      padding: 0;
-    }
-
-    > .col-2 {
-      min-width: 64px;
-    }
-
-    > .buttonsCol {
-      margin-right: 8px;
-    }
-
-    > .col {
-      margin-right: 4px;
-    }
-
-    > .durationCol {
-      flex: 0 0 12%;
-    }
-  }
-
-  div.btn-group {
-    margin-top: 2px;
-  }
+  display: flex;
+  align-items: center;
+  gap: 10px;
 
   .durationInput {
-    margin-top: 2px;
-    height: 27px;
-    padding: 0 4px;
-    color: $dt-gray-light;
+    width: 64px;
     text-align: center;
-    background: $dt-gray;
-    border-radius: 0.2rem;
+    font-variant-numeric: tabular-nums;
+  }
 
-    &:active, &:focus {
-      color: $dt-gray-light;
-    }
+  .durationUnit {
+    color: $dt-gray-medium;
+    font-size: 12px;
   }
 
   div.slider {
     position: relative;
-    margin-left: -4px;
-    margin-right: 10px;
-    // Pads the 8px bar into a taller target; the negative margin keeps the bar where it was.
-    margin-top: 3px;
-    padding: 8px 0;
+    flex: 1;
+    min-width: 0;
+    // Pads the 6px bar into a taller target.
+    padding: 12px 0;
     cursor: pointer;
     user-select: none;
     touch-action: none;
   }
 
   div.timeBar {
-    height: 8px;
+    height: 6px;
     width: 100%;
     background: $dt-gray;
-    border-radius: 0.2rem;
+    border-radius: 3px;
   }
 
   div.sliderHandle {
     position: absolute;
-    width: 24px;
-    height: 24px;
+    width: 18px;
+    height: 18px;
     background: $dt-green;
     border-radius: 100%;
-    top: 8px;
-    margin-top: -8px;
-    margin-left: -12px;
-    border: 3px solid $dt-gray-dark;
+    top: 50%;
+    margin-top: -9px;
+    margin-left: -9px;
+    box-shadow: 0 0 0 3px $dt-gray-dark;
+
+    @media (pointer: coarse) {
+      width: 24px;
+      height: 24px;
+      margin-top: -12px;
+      margin-left: -12px;
+    }
   }
 
   div.timeTooltip {
-    z-index: 10000;
+    z-index: 100;
     position: absolute;
-    display: inline-block;
-    top: 26px;
+    top: 30px;
     padding: 2px 8px;
-    border-radius: 0.2rem;
-    text-align: center;
+    border-radius: 4px;
     transform: translateX(-50%);
     background: $dt-gray-light;
     color: $dt-gray-dark;
-    font-size: 14px;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
     pointer-events: none;
   }
@@ -114,59 +81,78 @@ div.playerButtons {
 // The animation timeline.
 div#animationControls {
   $grid-header-height: 24px;
-  $left-width: 256px;
-  height: $footer-height - $footer-padding - 64px;
-  width: 100%;
-  padding-left: 16px;
-  padding-right: 16px;
-  position: relative;
+  height: 100%;
+  display: flex;
+  gap: 16px;
+  padding: 0 16px 12px;
+
+  @include phone {
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px 12px 12px;
+  }
 
   div.properties {
-    width: $left-width;
-    height: $footer-height - $footer-padding - 72px;
-    position: absolute;
-    top: 8px;
-    left: 0;
+    position: relative;
+    flex: 0 0 240px;
     background: $dt-gray-darker;
-    border-radius: 0.2rem;
-    padding: 16px;
-    font-size: 14px;
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-size: 13px;
+    overflow-y: auto;
 
-    .form-control-sm, .form-select-sm {
-      font-size: 14px;
+    @include phone {
+      flex: 0 0 auto;
+      padding: 8px 12px;
     }
 
-    form .row {
-      margin-bottom: 0;
+    .hint {
+      margin: 0;
+      color: $dt-gray-medium;
     }
 
-    .form-select-sm {
-      padding-right: 1.5rem;
-      background-position: right 0.375rem center;
+    form.transitionForm {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 8px;
+
+      > :last-child {
+        grid-column: 1 / -1;
+      }
+
+      @include phone {
+        grid-template-columns: 1fr 1fr 1.4fr;
+        > :last-child {
+          grid-column: auto;
+        }
+      }
     }
 
-    button.delete {
+    .delete {
       position: absolute;
-      top: 8px;
-      right: 8px;
-      transform: scale(0.8);
+      top: 6px;
+      right: 6px;
     }
 
     h4 {
-      font-size: 15px;
-      margin-bottom: 16px;
+      font-size: 14px;
+      font-family: var(--mantine-font-family-monospace);
+      margin: 0 0 10px;
 
       span {
         font-weight: normal;
         padding-left: 8px;
+        color: $dt-gray-medium;
       }
     }
   }
 
   div.gridContainer {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
     overflow-x: auto;
     display: grid;
-    margin-left: $left-width;
     grid-template-columns: 1fr;
     grid-template-rows: $grid-header-height 1fr;
     grid-template-areas: 'header' 'main';

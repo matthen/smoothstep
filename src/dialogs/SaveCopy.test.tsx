@@ -1,7 +1,8 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { render } from '../test/render';
 import SaveCopy, { copyTitle } from './SaveCopy';
 
 afterEach(cleanup);
@@ -23,7 +24,7 @@ describe("SaveCopy", () => {
 
   it("saves the suggested title", async () => {
     const props = renderSaveCopy("Fractals");
-    expect((screen.getByLabelText("Title of copy:") as HTMLInputElement).value).toBe("Fractals (copy)");
+    expect((screen.getByLabelText("Title of copy") as HTMLInputElement).value).toBe("Fractals (copy)");
     await userEvent.click(screen.getByRole("button", {name: "Save copy"}));
     expect(props.onSave).toHaveBeenCalledWith("Fractals (copy)");
     expect(props.onHide).toHaveBeenCalled();
@@ -31,7 +32,7 @@ describe("SaveCopy", () => {
 
   it("saves a typed title, capped at 32 characters, or the default when empty", async () => {
     const props = renderSaveCopy("Fractals");
-    const input = screen.getByLabelText("Title of copy:");
+    const input = screen.getByLabelText("Title of copy");
     await userEvent.clear(input);
     await userEvent.type(input, "x".repeat(40));
     expect((input as HTMLInputElement).value).toBe("x".repeat(32));

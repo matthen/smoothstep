@@ -1,7 +1,7 @@
 import {useEffect, useEffectEvent, useState} from "react";
 import type {MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent} from "react";
-import {Button, ButtonGroup, Col, Container, Form, OverlayTrigger, Row, Tooltip} from "react-bootstrap";
-import {FaPause, FaPlay, FaStepBackward} from "react-icons/fa";
+import {ActionIcon, TextInput, Tooltip} from "@mantine/core";
+import {TbPlayerPauseFilled, TbPlayerPlayFilled, TbPlayerSkipBackFilled} from "react-icons/tb";
 import {formatTime} from "./geometry";
 import {keyAction, keySeekTime, shortcutsAllowed} from "./keys";
 import "./timeline.scss";
@@ -103,17 +103,19 @@ function DurationInput({duration, onDurationChange}: Pick<PlayerControlsProps, "
   const valid = text.trim() !== "" && Number.isFinite(value) && value > 0;
 
   return (
-    <OverlayTrigger placement="bottom" delay={{show: 250, hide: 400}} overlay={<Tooltip>Duration in seconds</Tooltip>}>
-      <Form.Control
-        className="durationInput"
-        size="sm"
+    <Tooltip label="Duration in seconds" position="bottom">
+      <TextInput
+        classNames={{input: "durationInput"}}
+        size="xs"
         aria-label="Duration (seconds)"
         type="number"
         step="1"
         min="1"
         value={text}
-        isInvalid={!valid}
-        plaintext={valid}
+        error={!valid}
+        rightSection={<span className="durationUnit">s</span>}
+        rightSectionWidth={20}
+        rightSectionPointerEvents="none"
         onChange={event => {
           const next = event.target.value;
           setText(next);
@@ -123,7 +125,7 @@ function DurationInput({duration, onDurationChange}: Pick<PlayerControlsProps, "
           }
         }}
       />
-    </OverlayTrigger>
+    </Tooltip>
   );
 }
 
@@ -154,25 +156,17 @@ export default function PlayerControls(props: PlayerControlsProps) {
   const keepFocus = (event: ReactMouseEvent) => event.preventDefault();
 
   return (
-    <Container className="playerButtons" style={{top}}>
-      <Row style={{width: Math.max(width ?? MIN_WIDTH, MIN_WIDTH)}}>
-        <Col xs={2} className="buttonsCol">
-          <ButtonGroup>
-            <Button size="sm" variant="light" aria-label="Back to the start" onMouseDown={keepFocus} onClick={onReset}>
-              <FaStepBackward />
-            </Button>
-            <Button size="sm" variant="light" aria-label={isPlaying ? "Pause" : "Play"} onMouseDown={keepFocus} onClick={onPlayPause}>
-              {isPlaying ? <FaPause /> : <FaPlay />}
-            </Button>
-          </ButtonGroup>
-        </Col>
-        <Col className="scrubberCol">
-          <ScrubSlider {...props} />
-        </Col>
-        <Col xs={2} className="durationCol">
-          <DurationInput duration={duration} onDurationChange={props.onDurationChange} />
-        </Col>
-      </Row>
-    </Container>
+    <div className="playerButtons" style={{top, width: Math.max(width ?? MIN_WIDTH, MIN_WIDTH)}}>
+      <ActionIcon.Group>
+        <ActionIcon variant="default" size="lg" aria-label="Back to the start" onMouseDown={keepFocus} onClick={onReset}>
+          <TbPlayerSkipBackFilled />
+        </ActionIcon>
+        <ActionIcon variant="default" size="lg" aria-label={isPlaying ? "Pause" : "Play"} onMouseDown={keepFocus} onClick={onPlayPause}>
+          {isPlaying ? <TbPlayerPauseFilled /> : <TbPlayerPlayFilled />}
+        </ActionIcon>
+      </ActionIcon.Group>
+      <ScrubSlider {...props} />
+      <DurationInput duration={duration} onDurationChange={props.onDurationChange} />
+    </div>
   );
 }

@@ -1,26 +1,2 @@
-// Bootstrap 5 with the Dracula palette, then the app's layout and shared components.
-@use "theme" as *;
-
-$primary: $dt-blue;
-$secondary: $dt-gray;
-$success: $dt-green;
-$danger: $dt-red;
-$warning: $dt-yellow;
-$info: $dt-cyan;
-$light: $dt-gray;
-$dark: $dt-gray-dark;
-$body-bg: $dt-gray-dark;
-$body-color: $dt-gray-light;
-$dropdown-bg: $dt-gray;
-$dropdown-color: $dt-gray-light;
-$dropdown-link-color: $dt-gray-light;
-$dropdown-link-hover-bg: $dt-gray-dark;
-$dropdown-link-hover-color: $dt-gray-light;
-$dropdown-link-active-bg: $dt-gray-dark;
-$enable-shadows: false;
-$font-size-base: 1rem;
-$link-color: $dt-purple;
-
-@import "bootstrap/scss/bootstrap";
-
-@import "app";
+// The app's layout and shared component styles, on top of Mantine's.
+@use "app";

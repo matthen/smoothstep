@@ -1,8 +1,9 @@
-import { useEffect, useState, type MouseEvent } from 'react';
-import { Alert, Button, Col, Modal, Nav, Row, Spinner, Tab } from 'react-bootstrap';
+import { ActionIcon, Alert, Button, Group, Loader, Modal, Tabs, Text } from '@mantine/core';
+import { useEffect, useState, type MouseEvent, type ReactNode } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { FaFileUpload, FaTrash } from 'react-icons/fa';
+import { TbTrash, TbUpload } from 'react-icons/tb';
 
+import { usePhone } from '../app/usePhone';
 import { asset, textureURL } from '../lib/config';
 import type { TextureSlot } from '../lib/document';
 import {
@@ -85,17 +86,17 @@ function UploadForm({onUploaded, onMessage}: {onUploaded(): void; onMessage(text
   return (
     <div {...getRootProps()} className={"dropzone" + (isDragActive ? " active" : "")}>
       <input {...getInputProps()} />
-      <FaFileUpload className="uploadIcon" />
+      <TbUpload className="uploadIcon" />
       <p>Drop image here, or click to select.</p>
       <div className="selectedFile">
         {selected && selectedFile &&
           <>
             <img src={selected.preview} alt={selectedFile.name} />  {selectedFile.name}
             <Button onClick={handleUpload} disabled={uploading}>Upload</Button>
-            {uploading && <Spinner animation="border" role="status" variant="light" size="sm" />}
+            {uploading && <Loader size="xs" role="status" />}
           </>
         }
-        {isRejected && <Alert variant="danger">File must be a single image.</Alert>}
+        {isRejected && <Alert color="red">File must be a single image.</Alert>}
       </div>
       <p className="uploadNote">Images larger than {MAX_IMAGE_DIM}&nbsp;px are scaled down.</p>
     </div>
@@ -114,6 +115,7 @@ export default function TexturePicker(
   const [showConfirm, setShowConfirm] = useState(false);
   const [wasShown, setWasShown] = useState(false);
   const imagesVersion = useImagesChanged();
+  const phone = usePhone();
 
   if (show !== wasShown) {
     setWasShown(show);
@@ -150,112 +152,96 @@ export default function TexturePicker(
   };
 
   const selectedKey = categoryOf(texture);
+  const pickerItem = (key: string, selected: boolean, onClick: () => void, image: ReactNode, label?: string) =>
+    <div className={"picker" + (selected ? " selected" : "")} key={key}>
+      <button type="button" onClick={onClick} className="select">
+        {image}
+        {label && <span className="resolution">{label}</span>}
+      </button>
+    </div>;
+
   return (
     <>
       <Modal
-        show={show} onHide={onHide} restoreFocus={false}
-        size="lg" dialogClassName="texturePickerModal" centered
+        opened={show} onClose={onHide} returnFocus={false} size="xl" fullScreen={phone} title={texture.id || "iTexture" + slot}
+        classNames={{content: "texturePickerModal"}}
       >
-        <Modal.Header closeButton closeVariant="white">
-          <Modal.Title>{texture.id || "iTexture" + slot}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Tab.Container activeKey={activeKey} onSelect={key => key && setActiveKey(key)}>
-            <Row>
-              <Col sm={3}>
-                <Nav variant="pills" className="flex-column">
-                  {CATEGORIES.map(key =>
-                    <Nav.Item key={key} className={key === selectedKey ? "selected" : undefined}>
-                      <Nav.Link eventKey={key}>{key}</Nav.Link>
-                    </Nav.Item>,
-                  )}
-                  <Nav.Item className={selectedKey === "uploads" ? "selected" : undefined}>
-                    <Nav.Link eventKey="uploads">user uploads</Nav.Link>
-                  </Nav.Item>
-                </Nav>
-              </Col>
-              <Col sm={9}>
-                <Tab.Content>
-                  {CATEGORIES.map(key =>
-                    <Tab.Pane key={key} eventKey={key}>
-                      <div className="texturePickerGrid">
-                        {TEXTURES[key]!.map(t =>
-                          <div className={"picker" + (t.fname === texture.url ? " selected" : "")} key={t.fname}>
-                            <button onClick={() => select(t.fname, false)} className="select">
-                              <img src={asset("/images/textures/" + t.thumbnail_fname)} alt={t.fname + " preview"} />
-                              <span className="resolution">{t.width} &times; {t.height}</span>
-                            </button>
-                          </div>,
-                        )}
-                      </div>
-                    </Tab.Pane>,
-                  )}
-                  <Tab.Pane eventKey="uploads">
-                    <div className="texturePickerGrid">
-                      <div className="picker">
-                        <button
-                          onClick={() => {setUploadFormKey(k => k + 1); setActiveKey("upload");}}
-                          className="select"
-                        >
-                          <FaFileUpload className="thumbnail" />
-                          <span className="resolution">upload new image</span>
-                        </button>
-                      </div>
-                      {otherUploads.map(t =>
-                        <div className={"picker" + (t.url === texture.url ? " selected" : "")} key={"other-" + t.url}>
-                          <button onClick={() => select(t.url, true)} className="select">
-                            <img src={uploadThumbURL(t.url)} alt="texture preview" />
-                          </button>
-                        </div>,
-                      )}
-                      {uploads.map(image =>
-                        <div className={"picker" + (image.id === texture.url ? " selected" : "")} key={image.id}>
-                          <button onClick={() => select(image.id, true)} className="select">
-                            <img src={uploadThumbURL(image.id)} alt={image.filename + " preview"} />
-                            <span className="resolution">{image.width} &times; {image.height}</span>
-                          </button>
-                          {image.id !== texture.url &&
-                            <Button
-                              size="sm" className="delete" title="Delete"
-                              onClick={() => {setToDelete(image); setShowConfirm(true);}}
-                            ><FaTrash /></Button>
-                          }
-                        </div>,
-                      )}
-                    </div>
-                  </Tab.Pane>
-                  <Tab.Pane eventKey="upload">
-                    <UploadForm
-                      key={uploadFormKey} onMessage={onMessage}
-                      onUploaded={() => setActiveKey("uploads")}
-                    />
-                  </Tab.Pane>
-                </Tab.Content>
-              </Col>
-            </Row>
-          </Tab.Container>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={onHide}>Cancel</Button>
-          <Button variant="primary" onClick={() => onPick(texture)}>Apply changes</Button>
-        </Modal.Footer>
+        <Tabs
+          value={activeKey} onChange={key => key && setActiveKey(key)} orientation="vertical"
+          variant="pills" className="texturePickerTabs" keepMounted={false}
+        >
+          <Tabs.List>
+            {CATEGORIES.map(key =>
+              <Tabs.Tab key={key} value={key} data-has-selection={key === selectedKey || undefined}>{key}</Tabs.Tab>,
+            )}
+            <Tabs.Tab value="uploads" data-has-selection={selectedKey === "uploads" || undefined}>user uploads</Tabs.Tab>
+          </Tabs.List>
+          {CATEGORIES.map(key =>
+            <Tabs.Panel key={key} value={key}>
+              <div className="texturePickerGrid">
+                {TEXTURES[key]!.map(t => pickerItem(
+                  t.fname, t.fname === texture.url, () => select(t.fname, false),
+                  <img src={asset("/images/textures/" + t.thumbnail_fname)} alt={t.fname + " preview"} />,
+                  `${t.width} × ${t.height}`,
+                ))}
+              </div>
+            </Tabs.Panel>,
+          )}
+          <Tabs.Panel value="uploads">
+            <div className="texturePickerGrid">
+              {pickerItem(
+                "upload", false, () => {setUploadFormKey(k => k + 1); setActiveKey("upload");},
+                <TbUpload className="thumbnail" />, "upload new image",
+              )}
+              {otherUploads.map(t => pickerItem(
+                "other-" + t.url, t.url === texture.url, () => select(t.url, true),
+                <img src={uploadThumbURL(t.url)} alt="texture preview" />,
+              ))}
+              {uploads.map(image =>
+                <div className={"picker" + (image.id === texture.url ? " selected" : "")} key={image.id}>
+                  <button type="button" onClick={() => select(image.id, true)} className="select">
+                    <img src={uploadThumbURL(image.id)} alt={image.filename + " preview"} />
+                    <span className="resolution">{image.width} &times; {image.height}</span>
+                  </button>
+                  {image.id !== texture.url &&
+                    <ActionIcon
+                      size="sm" color="red" className="delete" title="Delete" aria-label="Delete"
+                      onClick={() => {setToDelete(image); setShowConfirm(true);}}
+                    ><TbTrash /></ActionIcon>
+                  }
+                </div>,
+              )}
+            </div>
+          </Tabs.Panel>
+          <Tabs.Panel value="upload">
+            <UploadForm
+              key={uploadFormKey} onMessage={onMessage}
+              onUploaded={() => setActiveKey("uploads")}
+            />
+          </Tabs.Panel>
+        </Tabs>
+        <Group justify="flex-end" mt="lg">
+          <Button variant="default" onClick={onHide}>Cancel</Button>
+          <Button onClick={() => onPick(texture)}>Apply changes</Button>
+        </Group>
       </Modal>
-      {toDelete &&
-        <Modal show={showConfirm} onHide={() => setShowConfirm(false)} centered backdrop="static">
-          <Modal.Header closeButton closeVariant="white"></Modal.Header>
-          <Modal.Body>
-            <p>Delete '<b>{toDelete.filename}</b>'?</p>
+      <Modal
+        opened={showConfirm && toDelete !== null} onClose={() => setShowConfirm(false)} title="Delete image" size="sm"
+        closeOnClickOutside={false}
+      >
+        {toDelete &&
+          <>
+            <Text mb="sm">Delete '<b>{toDelete.filename}</b>'?</Text>
             <img
               src={uploadThumbURL(toDelete.id)} alt={toDelete.filename + " preview"}
               style={{maxHeight: 128, maxWidth: 128}}
             />
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowConfirm(false)}>Cancel</Button>
-            <Button variant="danger" onClick={() => handleDelete(toDelete)}>Delete</Button>
-          </Modal.Footer>
-        </Modal>
-      }
+          </>}
+        <Group justify="flex-end" mt="lg">
+          <Button variant="default" onClick={() => setShowConfirm(false)}>Cancel</Button>
+          <Button color="red" onClick={() => toDelete && handleDelete(toDelete)}>Delete</Button>
+        </Group>
+      </Modal>
     </>
   );
 }

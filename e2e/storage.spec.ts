@@ -38,7 +38,7 @@ async function browser(name: string, baseURL: string): Promise<{context: Browser
 
 async function openDialog(page: Page) {
   await fileMenu(page, "Open");
-  return page.locator(".modal.show .documentBrowser");
+  return page.getByRole("dialog", {name: "Open"});
 }
 
 async function importFile(page: Page, path: string): Promise<{message: string; rows: number}> {
@@ -55,16 +55,16 @@ async function importFile(page: Page, path: string): Promise<{message: string; r
 test("first visit: make and save an animation with an uploaded texture", async ({baseURL}) => {
   const {context, page, errors} = await browser("a", baseURL!);
   await page.goto("./");
-  const splash = page.locator(".modal.show");
+  const splash = page.getByRole("dialog");
   await expect(splash).toContainText("saved in this browser");
   await expect(page.getByText(/Sign in|Log in/)).toHaveCount(0);
   await page.getByRole("button", {name: "Continue"}).click();
 
   await setCode(page, TEXTURE_SHADER);
   await page.keyboard.press("Shift+Enter");
-  await page.getByText("Textures", {exact: true}).click();
+  await page.getByRole("tab", {name: "Textures"}).click();
   await page.locator("div#textures .texture button").first().click();
-  const picker = page.locator(".modal.show .texturePickerModal");
+  const picker = page.getByRole("dialog", {name: "iTexture0"});
   await picker.getByText("user uploads", {exact: true}).click();
   await picker.locator(".picker", {hasText: "upload new image"}).locator("button.select").click();
   // Wider than 4096px, so it should be shrunk to 4096 x 3072.
@@ -92,8 +92,8 @@ test("after a browser restart the animation and texture are still there", async 
   const {context, page, errors} = await browser("a", baseURL!);
   await page.goto("./#anim/" + docId);
   await expect(page.locator("#titleInput")).toHaveValue("Static test");
-  await expect(page.locator(".modal.show")).toHaveCount(0);
-  await page.getByText("Textures", {exact: true}).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("tab", {name: "Textures"}).click();
   expect(await page.locator("div#textures .texture img").first().getAttribute("src")).toMatch(/^blob:/);
   expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
 
@@ -115,7 +115,7 @@ test("after a browser restart the animation and texture are still there", async 
   await page.goto("./#example/534226b1d5ed");
   await expect(page.locator("#titleInput")).toHaveValue("Minimal Animation");
   await page.goto("./");
-  await expect(page.locator(".modal.show")).toContainText("Static test");
+  await expect(page.getByRole("dialog")).toContainText("Static test");
   expect(errors).toEqual([]);
   await context.close();
 });
@@ -178,6 +178,8 @@ test("another fresh browser imports the single file, recognises bare JSON, and k
   page.once("dialog", dialog => void dialog.accept());
   await fileMenu(page, "New");
   await expect(page).toHaveURL(/#new$/);
+  // The URL changes before the reload, so wait for the new page's code.
+  await expect.poll(() => editorCode(page)).toContain("Getting started");
   await setCode(page, "// unsaved again");
   page.once("dialog", dialog => void dialog.accept());
   await fileMenu(page, "New");

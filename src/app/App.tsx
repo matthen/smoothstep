@@ -1,8 +1,10 @@
+import { ActionIcon, Button, Group, Kbd, Loader, Menu, Modal, SegmentedControl, Tabs, TextInput, Tooltip } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Button, Form, Modal, Nav, Navbar, NavDropdown, OverlayTrigger, Spinner, Tab, Tabs, Toast, Tooltip,
-} from 'react-bootstrap';
-import { FaAngleDown, FaCogs, FaCopy, FaDownload, FaFile, FaFolderOpen, FaSave } from 'react-icons/fa';
+  TbBook, TbBrandGithub, TbChevronDown, TbCopy, TbDeviceFloppy, TbDownload, TbFile, TbFolderOpen, TbHammer,
+  TbHeart, TbHelp, TbHome, TbMovie, TbSchool,
+} from 'react-icons/tb';
 
 import Acknowledgements from '../dialogs/Acknowledgements';
 import DocumentBrowser from '../dialogs/DocumentBrowser';
@@ -13,7 +15,7 @@ import Splash from '../dialogs/Splash';
 import Textures from '../dialogs/Textures';
 import CodeEditor from '../editor/CodeEditor';
 import * as archive from '../lib/archive';
-import { asset, documentHref, DOCS_URL, textureURL } from '../lib/config';
+import { asset, documentHref, DOCS_URL, REPO_URL, textureURL, TUTORIAL_URL } from '../lib/config';
 import {
   DEFAULT_TITLE, MAX_TITLE_LENGTH, newDocument, parseDocument, variableValues,
   type AnimationDocument, type AspectRatio, type TextureSlot, type Variable,
@@ -32,6 +34,19 @@ const STORAGE_BLOCKED = "This browser isn't letting smoothstep store data, so an
 
 function windowTitle(title: string) {
   document.title = title === DEFAULT_TITLE ? "smoothstep.io" : title + " - smoothstep.io";
+}
+
+// Which pane fills the screen below the canvas on a phone.
+type MobileTab = "code" | "animation" | "textures";
+
+const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+const MOD_KEY = isMac ? "⌘" : "Ctrl";
+
+function showMessage(text: string, loading = false) {
+  const options = {id: "status", message: text, loading, autoClose: loading ? false : 1500, withCloseButton: !loading};
+  // Each is a no-op when the other applies: update needs an existing id, show skips one.
+  notifications.update(options);
+  notifications.show(options);
 }
 
 function errorMessage(error: unknown, fallback: string): string {
@@ -57,7 +72,8 @@ export default function App() {
   const [layout, setLayout] = useState<CanvasLayout>({width: 0, height: 0, top: 0});
   const [showFooter, setShowFooter] = useState(true);
   const [wideCanvas, setWideCanvas] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [mobileTab, setMobileTab] = useState<MobileTab>("code");
+  const [panelTab, setPanelTab] = useState<"animation" | "textures">("animation");
   const [alert, setAlert] = useState<string | null>(null);
   const [dialog, setDialog] = useState<"open" | "saveCopy" | "export" | "splash" | "acknowledgements" | null>(
     window.location.hash ? null : "splash");
@@ -199,7 +215,7 @@ export default function App() {
       return;
     }
     saving.current = true;
-    setMessage("Saving animation...");
+    showMessage("Saving animation...", true);
     let json = doc;
     if (copyTitle) {
       json = {...doc, title: copyTitle};
@@ -215,10 +231,10 @@ export default function App() {
       setDocumentId(id);
       // Edits made while saving are still unsaved.
       setHasUnsavedChanges(docRef.current !== json);
-      setMessage("Animation saved.");
+      showMessage("Animation saved.");
     } catch (error) {
       console.error(error);
-      setMessage(null);
+      notifications.hide("status");
       setAlert(errorMessage(error, "Error saving animation. The browser may be out of storage space."));
     } finally {
       saving.current = false;
@@ -276,7 +292,7 @@ export default function App() {
       const {exportVideo} = await import('../export/exportVideo');
       archive.download(await exportVideo(doc, exportOptions, setExportProgress, controller.signal));
       setDialog(null);
-      setMessage("Video exported.");
+      showMessage("Video exported.");
     } catch (error) {
       if (!controller.signal.aborted) {
         console.error(error);
@@ -296,71 +312,118 @@ export default function App() {
     setDialog(null);
   };
 
-  const buildVariant = lineErrors.length > 0 ? "danger" : builtCode === doc.code ? "hidden" : "primary";
+
+  const chooseMobileTab = (tab: MobileTab) => {
+    setMobileTab(tab);
+    if (tab !== "code") {
+      setPanelTab(tab);
+    }
+  };
+
+  const buildState = lineErrors.length > 0 ? "error" : builtCode === doc.code ? "built" : "changed";
 
   return (
-    <div id="root" className={(showFooter ? "showFooter " : "hideFooter ") + (wideCanvas ? "wideCanvas" : "")}>
-      <header id="header">
-        <Navbar variant="dark" expand="sm">
-          <Navbar.Brand href="./">
-            <img src={asset("images/logo.svg")} width="26" height="26" alt="smoothstep logo" />
-            smoothstep<i>.io</i>
-          </Navbar.Brand>
-          <Navbar.Toggle aria-controls="header-nav" />
-          <Navbar.Collapse id="header-nav">
-            <Nav className="me-auto">
-              <Form.Control
-                type="text" id="titleInput" plaintext ref={titleRef}
-                value={titleInput} maxLength={MAX_TITLE_LENGTH}
-                className={doc.title === DEFAULT_TITLE ? "default" : undefined}
-                aria-label="Title"
-                onChange={event => {setTitleInput(event.target.value); setHasUnsavedChanges(true);}}
-                onFocus={() => {
-                  if (titleInput === DEFAULT_TITLE) {
-                    titleRef.current?.select();
-                  }
-                }}
-                onBlur={commitTitle}
-                onKeyDown={event => {
-                  if (event.key === "Enter") {
-                    titleRef.current?.blur();
-                  }
-                }}
-              />
-              <NavDropdown title="File" id="fileMenu">
-                <NavDropdown.Item href="#new" id="newButton"><FaFile /> New</NavDropdown.Item>
-                <NavDropdown.Item onClick={() => setDialog("open")}><FaFolderOpen /> Open</NavDropdown.Item>
-                <NavDropdown.Item onClick={() => void save(false)} className={hasUnsavedChanges ? "emph" : ""}>
-                  <FaSave /> Save
-                </NavDropdown.Item>
-                {documentId &&
-                  <NavDropdown.Item onClick={() => setDialog("saveCopy")}><FaCopy /> Save copy</NavDropdown.Item>}
-                <NavDropdown.Item onClick={() => void download()}><FaDownload /> Download</NavDropdown.Item>
-              </NavDropdown>
-              <Nav.Link onClick={() => {setExportError(null); setDialog("export");}}>Export video</Nav.Link>
-              <Nav.Link href={DOCS_URL} target="_blank" rel="noreferrer">Documentation</Nav.Link>
-            </Nav>
-          </Navbar.Collapse>
-        </Navbar>
+    <div
+      className="app" data-footer={showFooter ? "open" : "closed"} data-wide={wideCanvas || undefined}
+      data-mobile-tab={mobileTab}
+    >
+      <header className="appHeader">
+        <a className="brand" href="./" aria-label="smoothstep home">
+          <img src={asset("images/logo.svg")} width="24" height="24" alt="" />
+          <span className="brandName">smoothstep<i>.io</i></span>
+        </a>
+        <TextInput
+          id="titleInput" ref={titleRef} variant="unstyled" className="titleInput"
+          value={titleInput} maxLength={MAX_TITLE_LENGTH}
+          data-default={doc.title === DEFAULT_TITLE || undefined}
+          aria-label="Title"
+          onChange={event => {setTitleInput(event.target.value); setHasUnsavedChanges(true);}}
+          onFocus={() => {
+            if (titleInput === DEFAULT_TITLE) {
+              titleRef.current?.select();
+            }
+          }}
+          onBlur={commitTitle}
+          onKeyDown={event => {
+            if (event.key === "Enter") {
+              titleRef.current?.blur();
+            }
+          }}
+        />
+        <Group gap={4} wrap="nowrap" className="headerActions">
+          <Menu>
+            <Menu.Target>
+              <Button variant="subtle" color="gray" aria-label="File" rightSection={<TbChevronDown />}>
+                <TbFile className="mobileOnly" aria-hidden /><span className="desktopOnly">File</span>
+              </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item component="a" href="#new" leftSection={<TbFile />}>New</Menu.Item>
+              <Menu.Item leftSection={<TbFolderOpen />} onClick={() => setDialog("open")}>Open</Menu.Item>
+              <Menu.Item
+                leftSection={<TbDeviceFloppy />} onClick={() => void save(false)} fw={hasUnsavedChanges ? 600 : undefined}
+                rightSection={<Kbd size="xs">{MOD_KEY} S</Kbd>}
+              >Save</Menu.Item>
+              {documentId &&
+                <Menu.Item leftSection={<TbCopy />} onClick={() => setDialog("saveCopy")}>Save copy</Menu.Item>}
+              <Menu.Item leftSection={<TbDownload />} onClick={() => void download()}>Download</Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+          <Button
+            variant="subtle" color="gray" leftSection={<TbMovie />} aria-label="Export video"
+            onClick={() => {setExportError(null); setDialog("export");}}
+          >
+            <span className="desktopOnly">Export video</span>
+          </Button>
+          <Menu position="bottom-end">
+            <Menu.Target>
+              <Button variant="subtle" color="gray" leftSection={<TbHelp />} aria-label="Help">
+                <span className="desktopOnly">Help</span>
+              </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item leftSection={<TbHome />} onClick={() => setDialog("splash")}>Welcome</Menu.Item>
+              <Menu.Item component="a" href={TUTORIAL_URL} target="_blank" rel="noreferrer" leftSection={<TbSchool />}>
+                Tutorial
+              </Menu.Item>
+              <Menu.Item component="a" href={DOCS_URL} target="_blank" rel="noreferrer" leftSection={<TbBook />}>
+                Documentation
+              </Menu.Item>
+              <Menu.Item component="a" href={REPO_URL} target="_blank" rel="noreferrer" leftSection={<TbBrandGithub />}>
+                Source code
+              </Menu.Item>
+              <Menu.Divider />
+              <Menu.Item leftSection={<TbHeart />} onClick={() => setDialog("acknowledgements")}>Acknowledgements</Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+          <Tooltip label={`Save (${MOD_KEY} S)`}>
+            <ActionIcon
+              variant={hasUnsavedChanges ? "light" : "subtle"} color={hasUnsavedChanges ? undefined : "gray"}
+              size="lg" aria-label="Save" className="saveButton" onClick={() => void save(false)}
+            >
+              <TbDeviceFloppy size={18} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
       </header>
-      <div id="main">
-        <div id="left">
+
+      <main className="workspace">
+        <section className="editorPane">
           <CodeEditor
             value={doc.code} onChange={onCodeChange} onBuild={build} onSave={() => void save(false)}
             lineErrors={lineErrors}
           />
-          <div className="buildButton">
-            <OverlayTrigger placement="bottom" delay={{show: 250, hide: 400}} overlay={<Tooltip>Shift + Enter</Tooltip>}>
-              <Button onClick={build} variant={buildVariant} className={"build" + (buildVariant === "hidden" ? " d-none" : "")}>
-                <FaCogs /> build
+          {buildState !== "built" &&
+            <Tooltip label="Shift + Enter" position="top">
+              <Button
+                className="buildButton" onClick={build} leftSection={<TbHammer />}
+                color={buildState === "error" ? "red" : undefined}
+              >
+                Build
               </Button>
-            </OverlayTrigger>
-          </div>
-          <Toast className="message" show={message !== null} onClose={() => setMessage(null)} delay={1500} autohide>
-            <Toast.Body>{message}</Toast.Body>
-          </Toast>
-        </div>
-        <div id="right">
+            </Tooltip>}
+        </section>
+        <section className="previewPane">
           <Canvas
             ref={canvasRef}
             code={builtCode} buildId={buildId} textureURLs={textureURLs}
@@ -376,33 +439,48 @@ export default function App() {
             onScrubStart={() => setScrubbing(true)} onScrubEnd={() => setScrubbing(false)}
             width={layout.width || undefined} top={layout.top}
           />
-        </div>
-      </div>
-      <footer id="footer" className={showFooter ? "show" : "hide"}>
-        <button type="button" className="toggleFooter" aria-label="Toggle footer" onClick={() => setShowFooter(s => !s)}>
-          <FaAngleDown />
-        </button>
-        <Tabs defaultActiveKey="animation" onSelect={() => setShowFooter(true)}>
-          <Tab eventKey="animation" title="Animation">
+        </section>
+      </main>
+
+      <nav className="mobileTabs">
+        <SegmentedControl
+          fullWidth size="sm" value={mobileTab} onChange={value => chooseMobileTab(value as MobileTab)}
+          data={[{value: "code", label: "Code"}, {value: "animation", label: "Timeline"}, {value: "textures", label: "Textures"}]}
+        />
+      </nav>
+
+      <section className="bottomPanel">
+        <Tabs
+          value={panelTab} keepMounted
+          onChange={value => {setPanelTab(value === "textures" ? "textures" : "animation"); setShowFooter(true);}}
+        >
+          <Tabs.List>
+            <Tabs.Tab value="animation">Animation</Tabs.Tab>
+            <Tabs.Tab value="textures">Textures</Tabs.Tab>
+            <ActionIcon
+              variant="subtle" color="gray" className="toggleFooter" aria-label="Toggle footer"
+              onClick={() => setShowFooter(s => !s)}
+            >
+              <TbChevronDown />
+            </ActionIcon>
+          </Tabs.List>
+          <Tabs.Panel value="animation">
             <Timeline
               variables={doc.variables} variableValues={values}
               onVariablesChange={(variables: Variable[]) => updateDoc({variables})}
               duration={doc.duration} currentTime={time} onSeek={seek} onDurationChange={onDurationChange}
             />
-          </Tab>
-          <Tab eventKey="textures" title="Textures">
+          </Tabs.Panel>
+          <Tabs.Panel value="textures">
             <Textures
               textures={doc.textures} onChange={(textures: TextureSlot[]) => updateDoc({textures})}
               onMessage={setAlert}
             />
-          </Tab>
+          </Tabs.Panel>
         </Tabs>
-      </footer>
-      <div id="footerLinks">
-        <Button onClick={() => setDialog("splash")}>Welcome</Button>
-        <Button onClick={() => setDialog("acknowledgements")}>Acknowledgements</Button>
-      </div>
-      {loading && <div id="loading"><Spinner animation="border" size="sm" /></div>}
+      </section>
+
+      {loading && <div id="loading"><Loader size="sm" /></div>}
 
       <DocumentBrowser
         show={dialog === "open"} onHide={() => setDialog(null)} currentId={documentId}
@@ -427,10 +505,9 @@ export default function App() {
       />
       <Splash show={dialog === "splash"} onHide={() => setDialog(null)} />
       <Acknowledgements show={dialog === "acknowledgements"} onHide={() => setDialog(null)} />
-      <Modal show={alert !== null} onHide={() => setAlert(null)} centered>
-        <Modal.Header closeButton />
-        <Modal.Body><p>{alert}</p></Modal.Body>
-        <Modal.Footer><Button onClick={() => setAlert(null)}>Ok</Button></Modal.Footer>
+      <Modal opened={alert !== null} onClose={() => setAlert(null)} withCloseButton={false} zIndex={400}>
+        <p className="alertText">{alert}</p>
+        <Group justify="flex-end"><Button onClick={() => setAlert(null)}>Ok</Button></Group>
       </Modal>
     </div>
   );
