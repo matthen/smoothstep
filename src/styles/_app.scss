@@ -520,6 +520,8 @@ div#textures {
     width: 100%;
     aspect-ratio: 1;
     object-fit: cover;
+    // Taller examples, like the cellular automaton, have their action at the bottom.
+    object-position: bottom;
     background: #000;
   }
 
