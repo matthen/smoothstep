@@ -16,10 +16,6 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
   },
-  // ffmpeg.wasm creates its worker with `new URL(..., import.meta.url)`; pre-bundling breaks that.
-  optimizeDeps: {
-    exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
-  },
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],

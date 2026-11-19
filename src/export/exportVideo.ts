@@ -1,0 +1,149 @@
+// Renders an animation frame by frame at a fixed rate on its own canvas, and encodes it in the
+// browser: WebM and MP4 with WebCodecs, GIF with gifenc, PNG frames as a zip.
+import { zip } from 'fflate';
+import { applyPalette, GIFEncoder, quantize } from 'gifenc';
+import {
+  BufferTarget, CanvasSource, getFirstEncodableVideoCodec, Mp4OutputFormat, Output, QUALITY_HIGH,
+  WebMOutputFormat, type VideoCodec,
+} from 'mediabunny';
+
+import type { ExportOptions, ExportProgress } from '../dialogs/exportTypes';
+import { safeFilename, type DownloadableFile } from '../lib/archive';
+import { textureURL } from '../lib/config';
+import { variableValues, type AnimationDocument } from '../lib/document';
+import { Renderer } from '../render/Renderer';
+
+export class ExportCancelled extends Error {}
+
+export function exportSize(options: ExportOptions, aspectRatio: readonly [number, number]): [number, number] {
+  const even = (x: number) => Math.max(2, 2 * Math.round(x / 2));
+  const width = even(options.width);
+  return [width, even(width * aspectRatio[1] / aspectRatio[0])];
+}
+
+export function frameCount(duration: number, fps: number): number {
+  return Math.max(1, Math.round(duration * fps));
+}
+
+interface Encoder {
+  addFrame(index: number): Promise<void>;
+  finish(): Promise<Blob>;
+  cancel(): Promise<void>;
+}
+
+async function videoEncoder(
+  canvas: HTMLCanvasElement, type: "webm" | "mp4", fps: number, width: number, height: number,
+): Promise<Encoder> {
+  if (typeof VideoEncoder === "undefined") {
+    throw new Error("This browser can't encode video. Try Chrome, Edge or Firefox, or export a GIF or PNG frames.");
+  }
+  const candidates: VideoCodec[] = type === "mp4" ? ["avc", "hevc", "av1"] : ["vp9", "vp8", "av1"];
+  const codec = await getFirstEncodableVideoCodec(candidates, {width, height});
+  if (!codec) {
+    throw new Error(`This browser can't encode ${type.toUpperCase()} video at ${width}×${height}.`);
+  }
+  const target = new BufferTarget();
+  const output = new Output({format: type === "mp4" ? new Mp4OutputFormat() : new WebMOutputFormat(), target});
+  const source = new CanvasSource(canvas, {codec, quality: QUALITY_HIGH});
+  output.addVideoTrack(source, {frameRate: fps});
+  await output.start();
+  return {
+    addFrame: index => source.add(index / fps, 1 / fps),
+    finish: async () => {
+      await output.finalize();
+      return new Blob([target.buffer!], {type: type === "mp4" ? "video/mp4" : "video/webm"});
+    },
+    cancel: () => output.cancel(),
+  };
+}
+
+function gifEncoder(canvas: HTMLCanvasElement, fps: number): Encoder {
+  const gif = GIFEncoder();
+  const context = canvas.getContext("2d", {willReadFrequently: true})!;
+  return {
+    addFrame: async () => {
+      const {data, width, height} = context.getImageData(0, 0, canvas.width, canvas.height);
+      const palette = quantize(data, 256);
+      gif.writeFrame(applyPalette(data, palette), width, height, {palette, delay: 1000 / fps});
+    },
+    finish: async () => {
+      gif.finish();
+      return new Blob([gif.bytes() as Uint8Array<ArrayBuffer>], {type: "image/gif"});
+    },
+    cancel: async () => {},
+  };
+}
+
+function pngEncoder(canvas: HTMLCanvasElement): Encoder {
+  const files: Record<string, Uint8Array> = {};
+  return {
+    addFrame: async index => {
+      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png"));
+      if (!blob) {
+        throw new Error("Couldn't encode a PNG frame.");
+      }
+      files["frame" + String(index).padStart(5, "0") + ".png"] = new Uint8Array(await blob.arrayBuffer());
+    },
+    finish: async () => {
+      const bytes = await new Promise<Uint8Array>((resolve, reject) =>
+        zip(files, {level: 0}, (err, data) => err ? reject(err) : resolve(data)));
+      return new Blob([bytes as Uint8Array<ArrayBuffer>], {type: "application/zip"});
+    },
+    cancel: async () => {},
+  };
+}
+
+const EXTENSIONS = {webm: ".webm", mp4: ".mp4", gif: ".gif", png: ".zip"};
+
+// Throws ExportCancelled when `signal` aborts.
+export async function exportVideo(
+  doc: AnimationDocument, options: ExportOptions,
+  onProgress: (progress: ExportProgress) => void, signal: AbortSignal,
+): Promise<DownloadableFile> {
+  const [width, height] = exportSize(options, doc.aspectRatio);
+  const fps = Math.max(1, Math.round(options.fps));
+  const frames = frameCount(doc.duration, fps);
+  const glCanvas = document.createElement("canvas");
+  const renderer = new Renderer(glCanvas);
+  // Each frame is copied to a 2D canvas straight after it's drawn, before WebGL can clear it.
+  const frameCanvas = document.createElement("canvas");
+  frameCanvas.width = width;
+  frameCanvas.height = height;
+  const frameContext = frameCanvas.getContext("2d", {willReadFrequently: options.type === "gif"})!;
+  let encoder: Encoder | null = null;
+  try {
+    const compiled = renderer.setCode(doc.code);
+    if (!compiled.ok) {
+      throw new Error("The shader doesn't compile: " + (compiled.errors[0]?.message ?? ""));
+    }
+    renderer.setSize(width, height);
+    renderer.setTextures(doc.textures.map(textureURL));
+    await renderer.texturesReady();
+    encoder = options.type === "gif" ? gifEncoder(frameCanvas, fps) :
+      options.type === "png" ? pngEncoder(frameCanvas) :
+      await videoEncoder(frameCanvas, options.type, fps, width, height);
+    for (let i = 0; i < frames; i++) {
+      if (signal.aborted) {
+        throw new ExportCancelled();
+      }
+      const time = i / fps;
+      renderer.render({
+        time, duration: doc.duration, frameIndex: i, variableValues: variableValues(doc.variables, time),
+      });
+      frameContext.drawImage(glCanvas, 0, 0);
+      await encoder.addFrame(i);
+      onProgress({stage: "rendering", fraction: (i + 1) / frames});
+      if (i % 4 === 3) {
+        await new Promise(resolve => setTimeout(resolve, 0));  // Let the progress bar repaint.
+      }
+    }
+    onProgress({stage: "encoding", fraction: 1});
+    const blob = await encoder.finish();
+    return {blob, filename: safeFilename(doc.title) + EXTENSIONS[options.type]};
+  } catch (error) {
+    await encoder?.cancel().catch(() => {});
+    throw error;
+  } finally {
+    renderer.dispose();
+  }
+}
