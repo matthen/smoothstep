@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 
 import { textureURL } from '../lib/config';
 import type { TextureSlot } from '../lib/document';
-import TexturePicker from './TexturePicker';
 import { useImagesChanged } from './useImagesChanged';
 
 interface TexturesProps {
@@ -10,6 +9,9 @@ interface TexturesProps {
   onChange(textures: TextureSlot[]): void;
   onMessage(text: string): void;
 }
+
+// Loaded on first open, with the upload dropzone and the list of built-in textures.
+const TexturePicker = lazy(() => import('./TexturePicker'));
 
 // The footer's Textures tab: a button per slot, which opens the texture picker.
 export default function Textures({textures, onChange, onMessage}: TexturesProps) {
@@ -29,15 +31,17 @@ export default function Textures({textures, onChange, onMessage}: TexturesProps)
         </div>,
       )}
       {current && slot !== null &&
-        <TexturePicker
-          show={showPicker} slot={slot} current={current} textures={textures}
-          onHide={() => setShowPicker(false)}
-          onPick={picked => {
-            onChange(textures.map((t, i) => i === slot ? picked : t));
-            setShowPicker(false);
-          }}
-          onMessage={onMessage}
-        />
+        <Suspense fallback={null}>
+          <TexturePicker
+            show={showPicker} slot={slot} current={current} textures={textures}
+            onHide={() => setShowPicker(false)}
+            onPick={picked => {
+              onChange(textures.map((t, i) => i === slot ? picked : t));
+              setShowPicker(false);
+            }}
+            onMessage={onMessage}
+          />
+        </Suspense>
       }
     </div>
   );
