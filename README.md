@@ -44,68 +44,51 @@ animations from it with "Download my data", open that zip with "Open file…".
 
 ## Running it
 
-You need Node 20.
+You need Node 24 (the version is in `.nvmrc`).
 
 ```bash
-npm install --legacy-peer-deps   # old peer ranges need the flag
-npm start                        # dev server on http://localhost:3000
-npm run build                    # production build in build/
+npm ci
+npm run dev        # dev server on http://localhost:5173
+npm run build      # type-checks, then builds the static site in dist/
+npm run preview    # serves dist/
 npm run lint
+npm test           # unit tests
+npm run test:e2e   # end-to-end tests in Chromium, against the build
 ```
 
-`npm run build` makes a plain static site in `build/`. You can put it on any static host,
-such as GitHub Pages or Netlify, at any path. To try it locally, run
-`python3 tools/serve.py 8000 build`. It works offline, apart from MP4 export, which downloads
-the ffmpeg core (about 31 MB) from unpkg the first time. Saved animations open at
-`#anim/<id>`, and the bundled examples at `#example/<id>`.
-
-The scripts set `NODE_OPTIONS=--openssl-legacy-provider`, because webpack 4 uses a hash that
-Node 17 and later disable. `.env` turns off source maps for production builds.
+`npm run build` makes a plain static site in `dist/`. You can put it on any static host,
+such as GitHub Pages or Netlify, at any path. It works fully offline, including video export.
+Saved animations open at `#anim/<id>`, and the bundled examples at `#example/<id>`.
 
 ## How it's built
 
-smoothstep uses React 17 with create-react-app 4 (`react-scripts` 4.0.1), class components,
-react-bootstrap 1 with Bootstrap 4.5, and Sass.
+smoothstep is a React 19 app in TypeScript, built with Vite. It uses react-bootstrap with
+Bootstrap 5 and Sass, CodeMirror 6 for the code editor, and WebGL 2 for rendering.
 
-`src/App.js` holds the app's state (code, timeline, textures and export) and lays out the
-navbar, code editor, canvas and player, and the Animation and Textures tabs. It also handles
-saving, loading and export. `src/localStore.js` keeps animations and uploaded images in
-IndexedDB, and `src/archive.js` downloads and opens files, in the formats described in
-[FILE_FORMATS.md](FILE_FORMATS.md).
-
-The components in `src/components/` are:
-
-- `Canvas.jsx`, which compiles and renders the shader with WebGL 2 and reports compile
-  errors by line
-- `CodeEditor.jsx`, the CodeMirror 5 editor, with its GLSL mode in `src/shaderMode.js` and
-  its inline pickers in `src/glslEditor/` (adapted from
-  [glslEditor](https://github.com/patriciogonzalezvivo/glslEditor))
-- `AnimationControls.jsx`, the timeline, and `PlayerControls.jsx`, the play and seek bar
-- `Textures.jsx` and `TexturePicker.jsx`, the texture slots, built-in textures and uploads
-- `ExportSettings.jsx`, the export dialog
-- `DocumentBrowser.jsx`, the File → Open dialog, which lists, opens, downloads and deletes
-  saved animations, and opens files
-- `Splash.jsx`, the welcome dialog with the examples, and `Acknowledgements.jsx`
+- `src/app/` has `App.tsx`, which holds the open animation and lays out the page, the URL
+  handling, and the crash screen. If the app ever hits an error, the crash screen lets you
+  download the animation you were editing and everything you've saved.
+- `src/lib/` has the animation format and its checks (`document.ts`), the IndexedDB store
+  for animations and uploaded images (`localStore.ts`), and file downloads and imports
+  (`archive.ts`), in the formats described in [FILE_FORMATS.md](FILE_FORMATS.md).
+- `src/render/` compiles and draws the shader, and maps compile errors back to lines of
+  your code.
+- `src/editor/` is the code editor, with GLSL highlighting, hints and the inline pickers.
+  The pickers are adapted from [glslEditor](https://github.com/patriciogonzalezvivo/glslEditor).
+- `src/timeline/` is the timeline and the play and seek bar.
+- `src/dialogs/` has the welcome, Open, texture, export and other dialogs.
+- `src/export/` renders an animation frame by frame and encodes it in the browser. WebM and
+  MP4 use the browser's WebCodecs encoder through [Mediabunny](https://mediabunny.dev), GIF
+  uses [gifenc](https://github.com/mattdesl/gifenc), and PNG frames download as a zip.
 
 Everything in `public/` is copied into the build as it is. That includes the built-in
-textures in `images/textures/` (credited in [CREDITS.md](public/images/textures/CREDITS.md)),
-the example animations in `examples/`, `CCapture.js` and `gif.worker.js` for recording and
-GIF encoding, and ffmpeg.wasm's browser files in `ffmpeg/`.
+textures in `images/textures/` (credited in [CREDITS.md](public/images/textures/CREDITS.md))
+and the example animations in `examples/`.
 
-`tools/` has the scripts that generate data, and the tests. `buildTextures.py` makes
-`src/textures.json` and the texture thumbnails, `buildFonts.py` draws the font sheets, and
-`buildFunctions.py` makes `src/glslFunctions.json`, the GLSL built-ins the editor's hints
-show. `serve.py` serves a build, and `test_static.py` and `test_export.py` are Playwright
-end-to-end tests, with their usage at the top of each file.
-
-### MP4 export
-
-smoothstep converts CCapture's WebM recording to MP4 with ffmpeg.wasm 0.12. It uses the
-single-threaded core, which doesn't need `SharedArrayBuffer` or COOP/COEP headers. Webpack 4
-can't parse the `@ffmpeg/ffmpeg` package, so it's a devDependency, and
-`npm run vendor-ffmpeg` copies its browser files into `public/ffmpeg/`. Rerun that after
-upgrading it. Your server must send `ffmpeg/*.js` as JavaScript, because the worker is a
-module worker.
+`tools/` has the scripts that generate data. `buildTextures.py` makes the texture list and
+thumbnails, `buildFonts.py` draws the font sheets, and `buildFunctions.py` makes the list of
+GLSL built-ins the editor's hints show. The end-to-end tests are in `e2e/`. They block every
+request that isn't to your own machine, so they also check that the app works offline.
 
 ## Licence
 
