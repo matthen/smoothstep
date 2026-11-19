@@ -11,7 +11,14 @@ export function parseHash(hash: string): Route | null {
   return match ? {kind: match[1] as Route["kind"], id: match[2]!} : null;
 }
 
-const APP_LINKS = 'a[href="#new"], a[href^="#anim/"], a[href^="#example/"]';
+// Set once the user has agreed to discard changes, so beforeunload doesn't ask again.
+let confirmedLeaving = false;
+
+export function hasConfirmedLeaving(): boolean {
+  return confirmedLeaving;
+}
+
+const APP_LINKS ='a[href="#new"], a[href^="#anim/"], a[href^="#example/"]';
 
 export function useHashLinks(hasUnsavedChanges: boolean) {
   const unsaved = useLatest(hasUnsavedChanges);
@@ -29,7 +36,7 @@ export function useHashLinks(hasUnsavedChanges: boolean) {
       if (unsaved.current && !window.confirm("This animation has unsaved changes. Discard them?")) {
         return;
       }
-      unsaved.current = false;
+      confirmedLeaving = true;
       window.removeEventListener("hashchange", onHashChange);
       window.history.pushState({}, "", link.getAttribute("href"));
       window.location.reload();

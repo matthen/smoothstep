@@ -25,7 +25,7 @@ import Canvas, { type CanvasHandle, type CanvasLayout } from '../render/Canvas';
 import PlayerControls from '../timeline/PlayerControls';
 import Timeline from '../timeline/Timeline';
 import { setCrashDocument } from './crashState';
-import { parseHash, useHashLinks } from './routing';
+import { hasConfirmedLeaving, parseHash, useHashLinks } from './routing';
 
 const STORAGE_BLOCKED = "This browser isn't letting smoothstep store data, so animations can't be saved here. " +
   "Private browsing can cause this.";
@@ -69,6 +69,8 @@ export default function App() {
   const titleRef = useRef<HTMLInputElement>(null);
   // Latest values for callbacks that shouldn't change identity every frame.
   const timeRef = useLatest(time);
+  const docRef = useLatest(doc);
+  const saving = useRef(false);
 
   const values = useMemo(() => variableValues(doc.variables, time), [doc.variables, time]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -134,7 +136,7 @@ export default function App() {
 
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
+      if (hasUnsavedChanges && !hasConfirmedLeaving()) {
         event.preventDefault();
       }
     };
@@ -167,6 +169,8 @@ export default function App() {
     return () => cancelAnimationFrame(id);
   }, [isPlaying, scrubbing, doc.duration, timeRef]);
 
+  const restartFrames = useCallback(() => setFrameIndex(0), []);
+
   const seek = useCallback((t: number) => {
     setTime(t);
     if (t === 0) {
@@ -188,7 +192,13 @@ export default function App() {
     }
   };
 
-  const save = useCallback(async (asCopy: boolean, copyTitle?: string) => {
+  const save = async (asCopy: boolean, copyTitle?: string) => {
+    // Saving before the animation has loaded would overwrite it with the default document, and
+    // two overlapping first saves would make two copies.
+    if (loading || saving.current) {
+      return;
+    }
+    saving.current = true;
     setMessage("Saving animation...");
     let json = doc;
     if (copyTitle) {
@@ -203,14 +213,19 @@ export default function App() {
         window.history.replaceState({}, "", documentHref(id));
       }
       setDocumentId(id);
-      setHasUnsavedChanges(false);
+      // Edits made while saving are still unsaved.
+      setHasUnsavedChanges(docRef.current !== json);
       setMessage("Animation saved.");
     } catch (error) {
       console.error(error);
       setMessage(null);
       setAlert(errorMessage(error, "Error saving animation. The browser may be out of storage space."));
+    } finally {
+      saving.current = false;
     }
-  }, [doc, documentId]);
+  };
+
+  const saveRef = useLatest(save);
 
   const download = useCallback(async () => {
     const now = Date.now();
@@ -230,12 +245,12 @@ export default function App() {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s" &&
           !(event.target instanceof Element && event.target.closest(".cm-editor"))) {
         event.preventDefault();
-        void save(false);
+        void saveRef.current(false);
       }
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [save]);
+  }, [saveRef]);
 
   const commitTitle = () => {
     const title = (titleInput || DEFAULT_TITLE).slice(0, MAX_TITLE_LENGTH);
@@ -268,8 +283,11 @@ export default function App() {
         setExportError(error instanceof Error ? error.message : String(error));
       }
     } finally {
-      exportAbort.current = null;
-      setExportProgress(null);
+      // A cancelled run can finish after a new one has started; leave the new one's state alone.
+      if (exportAbort.current === controller) {
+        exportAbort.current = null;
+        setExportProgress(null);
+      }
     }
   };
 
@@ -349,7 +367,7 @@ export default function App() {
             time={time} duration={doc.duration} frameIndex={frameIndex} variableValues={values}
             aspectRatio={doc.aspectRatio}
             onAspectRatioChange={(aspectRatio: AspectRatio) => updateDoc({aspectRatio})}
-            onBuilt={setLineErrors} onLayout={setLayout} onToggleWide={() => setWideCanvas(w => !w)}
+            onBuilt={setLineErrors} onRestart={restartFrames} onLayout={setLayout} onToggleWide={() => setWideCanvas(w => !w)}
           />
           <PlayerControls
             duration={doc.duration} currentTime={time} isPlaying={isPlaying}

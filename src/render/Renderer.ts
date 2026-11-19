@@ -163,15 +163,17 @@ export class Renderer {
     return {ok: true};
   }
 
-  setSize(width: number, height: number) {
+  // Returns whether the size changed, which clears the previous frame.
+  setSize(width: number, height: number): boolean {
     if (width === this.width && height === this.height && this.targets) {
-      return;
+      return false;
     }
     this.width = width;
     this.height = height;
     this.gl.canvas.width = width;
     this.gl.canvas.height = height;
     this.clearTargets();
+    return true;
   }
 
   // Starts again from a blank previous frame (after a new shader or size, or a rewind).

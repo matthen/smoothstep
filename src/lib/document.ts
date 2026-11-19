@@ -84,6 +84,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+// The old timeline could save a cleared value field as "" (which it played as 0) or a number as a
+// string, so those load as numbers.
+function numericValue(value: unknown): number | null {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === "string") {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
 // Checks a parsed JSON value is a valid document, with the rules the old hosted smoothstep.io
 // applied when saving, and returns a clean copy with only the known fields.
 export function parseDocument(value: unknown): AnimationDocument {
@@ -112,15 +125,17 @@ export function parseDocument(value: unknown): AnimationDocument {
   const variables = (json.variables as unknown[]).map((variable, i): Variable => {
     if (!isRecord(variable) || !Array.isArray(variable.transitions)) {fail("variable " + i);}
     const transitions = ((variable as Record<string, unknown>).transitions as unknown[]).map(t => {
-      const ok = isRecord(t) && Number.isInteger(t.startDSecs) && (t.startDSecs as number) >= 0 &&
-        Number.isInteger(t.endDSecs) && (t.endDSecs as number) > (t.startDSecs as number) &&
-        typeof t.startValue === "number" && typeof t.endValue === "number" &&
-        (TRANSITION_TYPES as readonly unknown[]).includes(t.type);
+      const r = isRecord(t) ? t : {};
+      const startValue = numericValue(r.startValue);
+      const endValue = numericValue(r.endValue);
+      const ok = isRecord(t) && Number.isInteger(r.startDSecs) && (r.startDSecs as number) >= 0 &&
+        Number.isInteger(r.endDSecs) && (r.endDSecs as number) > (r.startDSecs as number) &&
+        startValue !== null && endValue !== null &&
+        (TRANSITION_TYPES as readonly unknown[]).includes(r.type);
       if (!ok) {fail("transition in variable " + i);}
-      const r = t as Record<string, unknown>;
       return {
         startDSecs: r.startDSecs as number, endDSecs: r.endDSecs as number,
-        startValue: r.startValue as number, endValue: r.endValue as number,
+        startValue: startValue!, endValue: endValue!,
         type: r.type as TransitionType,
       };
     });

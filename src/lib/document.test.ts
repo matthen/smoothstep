@@ -25,7 +25,19 @@ describe("parseDocument", () => {
       {startDSecs: 0, endDSecs: 10, startValue: 0, endValue: 1, type: "linear"});
   });
 
+  it("reads the old timeline's blank and string values as numbers", () => {
+    const doc = newDocument();
+    (doc.variables[0]!.transitions as unknown[]).push(
+      {startDSecs: 0, endDSecs: 10, startValue: "", endValue: "2.5", type: "linear"});
+    const t = parseDocument(doc).variables[0]!.transitions[0]!;
+    expect([t.startValue, t.endValue]).toEqual([0, 2.5]);
+  });
+
   it.each([
+    ["a non-numeric value", (d: Record<string, unknown>) => {
+      (d.variables as {transitions: unknown[]}[])[0]!.transitions.push(
+        {startDSecs: 0, endDSecs: 10, startValue: "abc", endValue: 1, type: "linear"});
+    }],
     ["a missing title", (d: Record<string, unknown>) => {delete d.title;}],
     ["a zero duration", (d: Record<string, unknown>) => {d.duration = 0;}],
     ["an unknown aspect ratio", (d: Record<string, unknown>) => {d.aspectRatio = [2, 1];}],

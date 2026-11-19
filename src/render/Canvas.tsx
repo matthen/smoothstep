@@ -31,6 +31,8 @@ interface CanvasProps {
   aspectRatio: AspectRatio;
   onAspectRatioChange(aspectRatio: AspectRatio): void;
   onBuilt(errors: LineError[]): void;
+  // The previous frame was cleared (new build, size or textures), so iFrame should restart at 0.
+  onRestart(): void;
   onLayout(layout: CanvasLayout): void;
   onToggleWide(): void;
 }
@@ -90,7 +92,9 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
   }, []);
 
   useEffect(() => {
-    rendererRef.current?.setSize(width, height);
+    if (rendererRef.current?.setSize(width, height)) {
+      props.onRestart();
+    }
     needsRender.current = true;
     props.onLayout({width, height, top: marginTop + height});
   }, [width, height, marginTop]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -102,14 +106,18 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     }
     const result = renderer.setCode(props.code);
     props.onBuilt(result.ok ? [] : result.errors);
+    if (result.ok) {
+      props.onRestart();
+    }
     needsRender.current = true;
   }, [props.code, props.buildId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     rendererRef.current?.setTextures(props.textureURLs);
     rendererRef.current?.clearTargets();
+    propsRef.current.onRestart();
     needsRender.current = true;
-  }, [props.textureURLs]);
+  }, [props.textureURLs, propsRef]);
 
   useEffect(() => {
     needsRender.current = true;

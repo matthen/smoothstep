@@ -139,6 +139,9 @@ export async function exportVideo(
     }
     onProgress({stage: "encoding", fraction: 1});
     const blob = await encoder.finish();
+    if (signal.aborted) {
+      throw new ExportCancelled();
+    }
     return {blob, filename: safeFilename(doc.title) + EXTENSIONS[options.type]};
   } catch (error) {
     await encoder?.cancel().catch(() => {});
