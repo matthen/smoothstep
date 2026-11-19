@@ -24,6 +24,7 @@ import '@mantine/core/styles/ScrollArea.css';
 import '@mantine/core/styles/Button.css';
 import '@mantine/core/styles/ActionIcon.css';
 import '@mantine/core/styles/Alert.css';
+import '@mantine/core/styles/Badge.css';
 import '@mantine/core/styles/Menu.css';
 import '@mantine/core/styles/Modal.css';
 import '@mantine/core/styles/Notification.css';

@@ -24,8 +24,8 @@ You can use it at **[smoothstep.io](https://smoothstep.io)**, or run your own co
 <p align="center">
   <img src="docs/images/examples.png" alt="Renders from four of the built-in examples">
   <br>
-  <sub>Four of the built-in examples: a Julia set fractal, a ray-marched sphere, a photo
-  texture warped with sine waves, and a cellular automaton that reads its previous frame.</sub>
+  <sub>Four of the built-in examples: domain-warped noise, a kaleidoscope of a painting, a
+  ray-marched sphere, and Truchet tiles.</sub>
 </p>
 
 The editor highlights GLSL, shows compile errors on the line they occur, and gives you
@@ -83,11 +83,14 @@ Sass for the app's own styles, CodeMirror 6 for the code editor, and WebGL 2 for
 
 Everything in `public/` is copied into the build as it is. That includes the built-in
 textures in `images/textures/` (credited in [CREDITS.md](public/images/textures/CREDITS.md))
-and the example animations in `examples/`.
+and the example animations in `examples/`: each has its `.json`, a `.png` thumbnail and a short
+`.mp4` preview for the example gallery. The list of examples, with their descriptions, is in
+`src/lib/config.ts`.
 
 `tools/` has the scripts that generate data. `buildTextures.py` makes the texture list and
 thumbnails, `buildFonts.py` draws the font sheets, and `buildFunctions.py` makes the list of
-GLSL built-ins the editor's hints show. The end-to-end tests are in `e2e/`. They block every
+GLSL built-ins the editor's hints show. `makeExamplePreviews.mjs` renders the examples' previews
+and thumbnails with the app's own exporter. The end-to-end tests are in `e2e/`. They block every
 request that isn't to your own machine, so they also check that the app works offline.
 
 ## Licence

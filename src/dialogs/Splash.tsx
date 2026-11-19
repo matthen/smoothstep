@@ -4,10 +4,9 @@ import { TbBook, TbBrandGithub, TbSchool } from 'react-icons/tb';
 
 import AppModal from '../app/AppModal';
 import { usePhone } from '../app/usePhone';
-import {
-  asset, documentHref, DOCS_URL, EXAMPLES, exampleHref, exampleThumbnail, REPO_URL, TUTORIAL_URL,
-} from '../lib/config';
+import { asset, documentHref, DOCS_URL, REPO_URL, TUTORIAL_URL } from '../lib/config';
 import { listDocuments, type DocumentSummary } from '../lib/localStore';
+import ExampleGallery from './ExampleGallery';
 import ImageWithFallback from './ImageWithFallback';
 
 interface SplashProps {
@@ -47,7 +46,7 @@ export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
 
   return (
     <AppModal
-      opened={show} onClose={onHide} size="xl" fullScreen={phone} classNames={{content: "splash"}}
+      opened={show} onClose={onHide} size={960} fullScreen={phone} classNames={{content: "splash"}}
       title={<span className="splashTitle"><img src={asset("images/logo.svg")} width="20" height="20" alt="" /><span>smoothstep<i>.io</i></span></span>}
     >
       <SimpleGrid cols={{base: 1, sm: 2}} spacing="xl">
@@ -60,6 +59,8 @@ export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
             Animations and uploaded textures are saved in this browser. Use File &rarr; Open
             to download them as files, or to open files saved elsewhere.
           </Text>
+        </div>
+        <div>
           <div className="linkList">
             <LinkItem href={TUTORIAL_URL} icon={<TbSchool />}>Getting started tutorial</LinkItem>
             <LinkItem href={DOCS_URL} icon={<TbBook />}>Documentation</LinkItem>
@@ -81,17 +82,9 @@ export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
             </>
           }
         </div>
-        <div>
-          <Title order={2} size="h5" mb="xs">Examples</Title>
-          <div className="linkList">
-            {EXAMPLES.map(example =>
-              <LinkItem key={example.id} href={exampleHref(example.id)} onClick={onHide} icon={thumbnail(exampleThumbnail(example.id))}>
-                {example.title}
-              </LinkItem>,
-            )}
-          </div>
-        </div>
       </SimpleGrid>
+      <Title order={2} size="h5" mt="xl" mb="sm">Examples</Title>
+      <ExampleGallery onOpen={onHide} />
       <Group justify="flex-end" mt="xl">
         <Button variant="default" component="a" href={TUTORIAL_URL} target="_blank" rel="noreferrer">Tutorial</Button>
         <Button variant={tourTaken ? "default" : "filled"} onClick={onTour} data-autofocus={!tourTaken || undefined}>
