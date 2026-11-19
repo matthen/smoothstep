@@ -3,7 +3,7 @@
     1,
     1
   ],
-  "code": "// A wobbling mirror ball in a panorama. iTexture0 is an equirectangular photo: a full 360\u00b0\n// view with the direction around across it and the height up it. Every few seconds the ball\n// is pulled out of shape, into a spherical harmonic (one of the natural ways a sphere can\n// vibrate), then let go to spring back and wobble to a stop. Each pixel casts a ray from a\n// camera circling the ball. Rays that miss show the panorama; rays that hit bounce off and\n// show it in reflection. iFloat0 on the timeline is how far the ball is pulled.\n#define strength iFloat0\n#define PI 3.14159265\n#define SECONDS_PER_MODE 3.0\n\n// The colour of the panorama seen in direction dir.\nvec3 panorama(vec3 dir) {\n  float around = atan(dir.z, dir.x) / (2.0 * PI) + 0.5;\n  float up = asin(clamp(dir.y, -1.0, 1.0)) / PI + 0.5;\n  vec2 uv = vec2(around, up);\n  // Where the photo's left and right edges meet, \"around\" jumps from 1 back to 0. Texture\n  // lookups take that jump as the picture being squashed, and blur a line of pixels. Giving\n  // the lookup how fast uv changes between pixels, without the jump, avoids the seam.\n  vec2 dx = dFdx(uv);\n  vec2 dy = dFdy(uv);\n  dx.x -= round(dx.x);\n  dy.x -= round(dy.x);\n  return textureGrad(iTexture0, uv, dx, dy).rgb;\n}\n\n// Six spherical harmonics, as functions of a direction n, each scaled to range about -1 to 1.\n// Here y is the ball's up axis.\nfloat harmonic(int mode, vec3 n) {\n  float x = n.x, y = n.z, z = n.y;\n  if (mode == 0) return 0.5 * (3.0 * z * z - 1.0);\n  if (mode == 1) return x * x - y * y;\n  if (mode == 2) return 0.75 * x * (5.0 * z * z - 1.0);\n  if (mode == 3) return x * x * x - 3.0 * x * y * y;\n  if (mode == 4) return (35.0 * z * z * z * z - 30.0 * z * z + 3.0) / 8.0;\n  return x * x * x * x - 6.0 * x * x * y * y + y * y * y * y;\n}\n\n// How far out of shape the ball is, s seconds after it starts being pulled. It's pulled out\n// quickly and held for a moment, then let go. After that it moves like a damped spring\n// starting at rest: it swings back past its round shape and wobbles, each swing smaller.\nfloat pullAndRelease(float s) {\n  float pullTime = 0.35;\n  float releaseTime = 0.5;\n  if (s < releaseTime) {\n    return smoothstep(0.0, pullTime, s);\n  }\n  float t = s - releaseTime;\n  float damping = 1.8;\n  float frequency = 2.0 * PI * 2.2;\n  return exp(-damping * t) * (cos(frequency * t) + damping / frequency * sin(frequency * t));\n}\n\n// The ball's radius in direction n at the current time, going through the six harmonics.\nfloat radius(vec3 n) {\n  float phase = iTime / SECONDS_PER_MODE;\n  int mode = int(mod(floor(phase), 6.0));\n  float amount = pullAndRelease(fract(phase) * SECONDS_PER_MODE);\n  return 1.0 + strength * amount * harmonic(mode, n);\n}\n\n// Roughly how far p is from the ball's surface: negative inside.\nfloat ballDistance(vec3 p) {\n  return length(p) - radius(normalize(p));\n}\n\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  // Coordinates with (0, 0) in the middle, and y from -1 to 1.\n  vec2 uv = (2.0 * fragCoord - iResolution.xy) / iResolution.y;\n\n  // A camera circling the ball and looking at it, bobbing up and down.\n  float angle = 0.35 * iTime;\n  vec3 camera = vec3(3.2 * sin(angle), 0.8 * sin(0.4 * iTime), 3.2 * cos(angle));\n  vec3 forward = normalize(-camera);\n  vec3 right = normalize(cross(forward, vec3(0.0, 1.0, 0.0)));\n  vec3 up = cross(right, forward);\n  vec3 ray = normalize(1.6 * forward + uv.x * right + uv.y * up);\n\n  // Ray marching: step along the ray by the distance to the surface, until we reach it. The\n  // wobbly surface makes that distance a guess, so take smaller steps to be safe.\n  float t = 0.0;\n  bool hit = false;\n  for (int i = 0; i < 80; i++) {\n    float d = ballDistance(camera + t * ray);\n    if (d < 0.001) {\n      hit = true;\n      break;\n    }\n    t += 0.6 * d;\n    if (t > 6.0) break;\n  }\n\n  vec3 col = panorama(ray);\n  if (hit) {\n    // The surface normal: the direction in which the distance grows fastest.\n    vec3 p = camera + t * ray;\n    vec2 e = vec2(0.001, 0.0);\n    vec3 normal = normalize(vec3(\n      ballDistance(p + e.xyy) - ballDistance(p - e.xyy),\n      ballDistance(p + e.yxy) - ballDistance(p - e.yxy),\n      ballDistance(p + e.yyx) - ballDistance(p - e.yyx)));\n    // Mirrors reflect more at grazing angles (the Fresnel effect).\n    float fresnel = 0.6 + 0.4 * pow(1.0 - max(dot(-ray, normal), 0.0), 3.0);\n    col = fresnel * panorama(reflect(ray, normal)) * vec3(1.0, 0.95, 0.9);\n  }\n  fragColor = vec4(col, 1.0);\n}\n",
+  "code": "// A wobbling mirror ball in a panorama. iTexture0 is an equirectangular photo: a full 360\u00b0\n// view with the direction around across it and the height up it. Every few seconds the ball\n// is pulled out of shape, into a spherical harmonic (one of the natural ways a sphere can\n// vibrate), then let go to spring back and wobble to a stop. Each pixel casts a ray from a\n// camera circling the ball. Rays that miss show the panorama; rays that hit bounce off and\n// show it in reflection. iFloat0 on the timeline is how far the ball is pulled each time:\n// try changing the values, or adding more steps.\n#define strength iFloat0\n#define PI 3.14159265\n#define SECONDS_PER_MODE 3.0\n\n// The colour of the panorama seen in direction dir.\nvec3 panorama(vec3 dir) {\n  float around = atan(dir.z, dir.x) / (2.0 * PI) + 0.5;\n  float up = asin(clamp(dir.y, -1.0, 1.0)) / PI + 0.5;\n  vec2 uv = vec2(around, up);\n  // Where the photo's left and right edges meet, \"around\" jumps from 1 back to 0. Texture\n  // lookups take that jump as the picture being squashed, and blur a line of pixels. Giving\n  // the lookup how fast uv changes between pixels, without the jump, avoids the seam.\n  vec2 dx = dFdx(uv);\n  vec2 dy = dFdy(uv);\n  dx.x -= round(dx.x);\n  dy.x -= round(dy.x);\n  return textureGrad(iTexture0, uv, dx, dy).rgb;\n}\n\n// Six spherical harmonics, as functions of a direction n, each scaled to range about -1 to 1.\n// Here y is the ball's up axis.\nfloat harmonic(int mode, vec3 n) {\n  float x = n.x, y = n.z, z = n.y;\n  if (mode == 0) return 0.5 * (3.0 * z * z - 1.0);\n  if (mode == 1) return x * x - y * y;\n  if (mode == 2) return 0.75 * x * (5.0 * z * z - 1.0);\n  if (mode == 3) return x * x * x - 3.0 * x * y * y;\n  if (mode == 4) return (35.0 * z * z * z * z - 30.0 * z * z + 3.0) / 8.0;\n  return x * x * x * x - 6.0 * x * x * y * y + y * y * y * y;\n}\n\n// How far out of shape the ball is, s seconds after it starts being pulled. It's pulled out\n// quickly and held for a moment, then let go. After that it moves like a damped spring\n// starting at rest: it swings back past its round shape and wobbles, each swing smaller.\nfloat pullAndRelease(float s) {\n  float pullTime = 0.35;\n  float releaseTime = 0.5;\n  if (s < releaseTime) {\n    return smoothstep(0.0, pullTime, s);\n  }\n  float t = s - releaseTime;\n  float damping = 1.8;\n  float frequency = 2.0 * PI * 2.2;\n  return exp(-damping * t) * (cos(frequency * t) + damping / frequency * sin(frequency * t));\n}\n\n// The ball's radius in direction n at the current time, going through the six harmonics.\nfloat radius(vec3 n) {\n  float phase = iTime / SECONDS_PER_MODE;\n  int mode = int(mod(floor(phase), 6.0));\n  float amount = pullAndRelease(fract(phase) * SECONDS_PER_MODE);\n  return 1.0 + strength * amount * harmonic(mode, n);\n}\n\n// Roughly how far p is from the ball's surface: negative inside.\nfloat ballDistance(vec3 p) {\n  return length(p) - radius(normalize(p));\n}\n\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  // Coordinates with (0, 0) in the middle, and y from -1 to 1.\n  vec2 uv = (2.0 * fragCoord - iResolution.xy) / iResolution.y;\n\n  // A camera circling the ball and looking at it, bobbing up and down.\n  float angle = 0.35 * iTime;\n  vec3 camera = vec3(3.2 * sin(angle), 0.8 * sin(0.4 * iTime), 3.2 * cos(angle));\n  vec3 forward = normalize(-camera);\n  vec3 right = normalize(cross(forward, vec3(0.0, 1.0, 0.0)));\n  vec3 up = cross(right, forward);\n  vec3 ray = normalize(1.6 * forward + uv.x * right + uv.y * up);\n\n  // Ray marching: step along the ray by the distance to the surface, until we reach it. The\n  // wobbly surface makes that distance a guess, so take smaller steps to be safe.\n  float t = 0.0;\n  bool hit = false;\n  for (int i = 0; i < 80; i++) {\n    float d = ballDistance(camera + t * ray);\n    if (d < 0.001) {\n      hit = true;\n      break;\n    }\n    t += 0.6 * d;\n    if (t > 6.0) break;\n  }\n\n  vec3 col = panorama(ray);\n  if (hit) {\n    // The surface normal: the direction in which the distance grows fastest.\n    vec3 p = camera + t * ray;\n    vec2 e = vec2(0.001, 0.0);\n    vec3 normal = normalize(vec3(\n      ballDistance(p + e.xyy) - ballDistance(p - e.xyy),\n      ballDistance(p + e.yxy) - ballDistance(p - e.yxy),\n      ballDistance(p + e.yyx) - ballDistance(p - e.yyx)));\n    // Mirrors reflect more at grazing angles (the Fresnel effect).\n    float fresnel = 0.6 + 0.4 * pow(1.0 - max(dot(-ray, normal), 0.0), 3.0);\n    col = fresnel * panorama(reflect(ray, normal)) * vec3(1.0, 0.95, 0.9);\n  }\n  fragColor = vec4(col, 1.0);\n}\n",
   "duration": 18,
   "textures": [
     {
@@ -52,18 +52,39 @@
     {
       "transitions": [
         {
-          "startDSecs": 0,
-          "endDSecs": 80,
-          "startValue": 0.3,
-          "endValue": 0.4,
-          "type": "smoothstep"
+          "startDSecs": 28,
+          "endDSecs": 32,
+          "startValue": 0.12,
+          "endValue": 0.45,
+          "type": "step"
         },
         {
-          "startDSecs": 80,
-          "endDSecs": 170,
-          "startValue": 0.4,
-          "endValue": 0.3,
-          "type": "smoothstep"
+          "startDSecs": 58,
+          "endDSecs": 62,
+          "startValue": 0.45,
+          "endValue": 0.25,
+          "type": "step"
+        },
+        {
+          "startDSecs": 88,
+          "endDSecs": 92,
+          "startValue": 0.25,
+          "endValue": 0.55,
+          "type": "step"
+        },
+        {
+          "startDSecs": 118,
+          "endDSecs": 122,
+          "startValue": 0.55,
+          "endValue": 0.15,
+          "type": "step"
+        },
+        {
+          "startDSecs": 148,
+          "endDSecs": 152,
+          "startValue": 0.15,
+          "endValue": 0.4,
+          "type": "step"
         }
       ]
     },
