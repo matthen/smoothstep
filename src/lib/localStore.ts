@@ -24,8 +24,9 @@ export interface StoredImage {
 export type DocumentSummary = Omit<StoredDocument, "json">;
 
 export const MAX_IMAGE_DIM = 4096;
-// Uploads in these formats are stored unchanged when they don't need shrinking.
-const KEPT_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+// Uploads in these formats are stored unchanged when they don't need shrinking. JPEG and WebP
+// are always redrawn, which strips EXIF data (such as a photo's location) and applies its rotation.
+const KEPT_TYPES = ["image/png", "image/gif"];
 const THUMB_DIM = 128;
 
 export class StorageFullError extends Error {
@@ -173,8 +174,8 @@ function textureSizeLimit(): number {
   return Math.min(MAX_IMAGE_DIM, maxTextureSize);
 }
 
-// Stores an image file the user picked. It's kept as is when small enough; otherwise shrunk
-// to fit, as JPEG for a JPEG and PNG for anything else.
+// Stores an image file the user picked: a small PNG or GIF as is, anything else redrawn (and
+// shrunk to fit if needed) as JPEG for a JPEG and PNG otherwise.
 export async function addUploadedImage(file: File): Promise<StoredImage> {
   const image = await loadImage(file);
   const scale = Math.min(1, textureSizeLimit() / Math.max(image.width, image.height));
