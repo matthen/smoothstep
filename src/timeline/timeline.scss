@@ -69,10 +69,11 @@ div.playerButtons {
     }
   }
 
+  // Above the bar, so the phone's pane switch below can't cover it.
   div.timeTooltip {
     z-index: 100;
     position: absolute;
-    top: 30px;
+    bottom: 32px;
     padding: 2px 8px;
     border-radius: 4px;
     transform: translateX(-50%);

@@ -58,6 +58,8 @@ export default function Timeline(props: TimelineProps) {
   const rowsRef = useRef<HTMLDivElement>(null);
   // How far the grid is scrolled sideways, so the row labels can stay at its left edge.
   const [scrollLeft, setScrollLeft] = useState(0);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const lastTimeRef = useRef(currentTime);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [hover, setHover] = useState<Selection | null>(null);
   const [gesture, setGestureState] = useState<Gesture>({kind: "idle"});
@@ -314,6 +316,23 @@ export default function Timeline(props: TimelineProps) {
     onSeek(clampTime(xToTime(event.clientX - rect.left), duration));
   }
 
+  // Keep the playhead in view on a timeline wider than the screen: when it runs off the right
+  // edge, or jumps back off the left (looping or seeking), scroll it to near the left edge.
+  useEffect(() => {
+    const grid = gridRef.current;
+    const previous = lastTimeRef.current;
+    lastTimeRef.current = currentTime;
+    if (!grid || grid.scrollWidth <= grid.clientWidth) {
+      return;
+    }
+    const x = timeToX(currentTime);
+    const pastRight = currentTime > previous && x > grid.scrollLeft + grid.clientWidth - 8;
+    const pastLeft = currentTime < previous && x < grid.scrollLeft;
+    if (pastRight || pastLeft) {
+      grid.scrollLeft = Math.max(0, x - 24);
+    }
+  }, [currentTime]);
+
   const onKeyDown = useEffectEvent((event: KeyboardEvent) => {
     if (selected && keyAction(event)?.type === "deleteTransition" && shortcutsAllowed(event.target, event.key)) {
       event.preventDefault();
@@ -389,7 +408,7 @@ export default function Timeline(props: TimelineProps) {
             />
           </form>}
       </div>
-      <div className="gridContainer" onScroll={event => setScrollLeft(event.currentTarget.scrollLeft)}>
+      <div className="gridContainer" ref={gridRef} onScroll={event => setScrollLeft(event.currentTarget.scrollLeft)}>
         <div className={"header" + (ticks.tens ? " tensTicks" : "")} style={{width}} onClick={handleHeaderClick}>
           {ticks.labels.map(label => <p key={label}>{label}</p>)}
         </div>
