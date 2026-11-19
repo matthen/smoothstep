@@ -1,0 +1,101 @@
+{
+ "aspectRatio": [
+  1,
+  1
+ ],
+ "code": "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  vec2 uv = fragCoord / iResolution.xy;\n  \n  uv = 0.8 * uv + 0.1;  // zoom in a bit\n  float t = 6.2831853 * iTime / iDuration;\n  uv.xy += 0.02 * sin(t + 20. * uv.yx);  // warp the coordinates with sine waves\n  \n  // Look up the color from the texture.\n  vec3 col = texture(iTexture0, uv).rgb;\n  fragColor = vec4(col, 1.0);\n}",
+ "duration": 2,
+ "textures": [
+  {
+   "id": "iTexture0",
+   "isUserUploaded": false,
+   "url": "photos/cats2.jpg"
+  },
+  {
+   "id": "iTexture1",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  },
+  {
+   "id": "iTexture2",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  },
+  {
+   "id": "iTexture3",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  },
+  {
+   "id": "iTexture4",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  },
+  {
+   "id": "iTexture5",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  },
+  {
+   "id": "iTexture6",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  },
+  {
+   "id": "iTexture7",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  }
+ ],
+ "title": "Using textures",
+ "variables": [
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  }
+ ]
+}
