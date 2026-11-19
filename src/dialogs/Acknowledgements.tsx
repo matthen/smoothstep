@@ -36,6 +36,7 @@ export default function Acknowledgements({show, onHide}: AcknowledgementsProps) 
         <ul>
           <li><Link href="https://github.com/patriciogonzalezvivo/glslEditor">glslEditor</Link> - from the book of shaders</li>
           <li><Link href="https://codemirror.net/">CodeMirror</Link></li>
+          <li><Link href="https://mediabunny.dev/">Mediabunny</Link></li>
           <li><Link href="https://github.com/mattdesl/gifenc">gifenc</Link></li>
           <li><Link href="https://github.com/101arrowz/fflate">fflate</Link></li>
           <li><Link href="https://react-bootstrap.github.io/">React Bootstrap</Link></li>

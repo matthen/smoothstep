@@ -55,10 +55,11 @@ export async function fileMenu(page: Page, item: string) {
 }
 
 export async function dismissAlert(page: Page): Promise<string> {
-  const alert = page.locator(".modal.show").last();
+  // Other dialogs may stay open underneath the alert.
+  const alert = page.locator(".modal.show", {has: page.getByRole("button", {name: "Ok"})}).last();
   const text = await alert.innerText();
   await alert.getByRole("button", {name: "Ok"}).click();
-  await expect(alert).toBeHidden();
+  await expect(page.getByRole("button", {name: "Ok"})).toHaveCount(0);
   return text;
 }
 

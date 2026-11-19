@@ -12,7 +12,6 @@ import SaveCopy from '../dialogs/SaveCopy';
 import Splash from '../dialogs/Splash';
 import Textures from '../dialogs/Textures';
 import CodeEditor from '../editor/CodeEditor';
-import { ExportCancelled, exportVideo } from '../export/exportVideo';
 import * as archive from '../lib/archive';
 import { asset, documentHref, DOCS_URL, textureURL } from '../lib/config';
 import {
@@ -61,7 +60,7 @@ export default function App() {
   const [message, setMessage] = useState<string | null>(null);
   const [alert, setAlert] = useState<string | null>(null);
   const [dialog, setDialog] = useState<"open" | "saveCopy" | "export" | "splash" | "acknowledgements" | null>(
-    initialRoute ? null : "splash");
+    window.location.hash ? null : "splash");
   const [exportOptions, setExportOptions] = useState<ExportOptions>({width: 512, fps: 30, type: "webm"});
   const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -258,11 +257,13 @@ export default function App() {
     setExportError(null);
     setExportProgress({stage: "rendering", fraction: 0});
     try {
+      // Loaded on first export, since the encoders are a large part of the app's size.
+      const {exportVideo} = await import('../export/exportVideo');
       archive.download(await exportVideo(doc, exportOptions, setExportProgress, controller.signal));
       setDialog(null);
       setMessage("Video exported.");
     } catch (error) {
-      if (!(error instanceof ExportCancelled)) {
+      if (!controller.signal.aborted) {
         console.error(error);
         setExportError(error instanceof Error ? error.message : String(error));
       }

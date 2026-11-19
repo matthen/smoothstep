@@ -1,4 +1,4 @@
-// GLSL as a CodeMirror stream language: a port of CodeMirror 5's clike mode configured as old-src/shaderMode.js.
+// GLSL as a CodeMirror stream language: a port of CodeMirror 5's clike mode configured for GLSL.
 import { StreamLanguage, StringStream, type StreamParser } from '@codemirror/language';
 
 export const KEYWORDS = (

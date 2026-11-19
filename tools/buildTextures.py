@@ -47,5 +47,5 @@ for dirname in os.listdir(root_dir):
             )
         )
 
-with open(os.path.join(root_dir, "..", "..", "..", "src", "textures.json"), "w") as f:
+with open(os.path.join(root_dir, "..", "..", "..", "src", "dialogs", "textures.json"), "w") as f:
     f.write(json.dumps(json_obj, indent=4, sort_keys=True))
