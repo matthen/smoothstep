@@ -218,6 +218,11 @@ div#animationControls {
       position: relative;
       touch-action: pan-y;
 
+      // Fingers scroll the timeline both ways; transitions are added with two taps instead of a drag.
+      @media (pointer: coarse) {
+        touch-action: pan-x pan-y;
+      }
+
       .postDuration {
         cursor: default;
         background: repeating-linear-gradient(
@@ -262,6 +267,20 @@ div#animationControls {
 
         &:nth-child(2n) {
           background-color: #999db233;
+        }
+
+        .rowLabel {
+          position: absolute;
+          top: 7px;
+          z-index: 1;
+          padding: 0 4px;
+          border-radius: 3px;
+          font-family: var(--mantine-font-family-monospace);
+          font-size: 10px;
+          line-height: 14px;
+          color: $dt-gray-medium;
+          background: rgba($dt-gray-darker, 0.7);
+          pointer-events: none;
         }
 
         .variableValue {

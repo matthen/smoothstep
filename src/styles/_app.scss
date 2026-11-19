@@ -3,18 +3,21 @@
 
 html, body, #appRoot {
   height: 100%;
-  // Phones scroll the whole page, so the code can take the full screen.
+  // Phones and short screens scroll the whole page, so the code can take the full screen.
   @include phone {
+    height: auto;
+  }
+  @include short {
     height: auto;
   }
 }
 
 body {
   overflow: hidden;
-  @include short {
-    overflow: auto;
-  }
   @include phone {
+    overflow: visible;
+  }
+  @include short {
     overflow: visible;
   }
 }
@@ -54,6 +57,12 @@ a {
 
   @media (min-width: $max-width) {
     box-shadow: 0 0 16px black;
+  }
+
+  @include short {
+    height: auto;
+    min-height: 0;
+    grid-template-rows: $header-height calc(100dvh - #{$header-height}) auto;
   }
 
   &[data-wide] {
