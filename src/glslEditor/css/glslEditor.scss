@@ -1,0 +1,17 @@
+@charset 'utf-8';
+
+/* VARIABLES */
+
+:root {
+    --modal-shadow: 0 0 0 5px rgba(0,0,0,0.2), 0 4px 8px 0 rgba(0,0,0,0.25);
+
+    /* Z-INDEX SCALE */
+    --z-editor: 100;
+    --z-shader-ghost: 199;
+    --z-shader: 200;
+    --z-divider: 250;
+    --z-menu: 300;
+    --z-helpers: 1000;
+}
+
+@import '_pickers';

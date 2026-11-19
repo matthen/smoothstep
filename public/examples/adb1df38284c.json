@@ -1,0 +1,131 @@
+{
+ "aspectRatio": [
+  1,
+  1
+ ],
+ "code": "// Rename animated iFloat variables\n#define colorBlend iFloat0\n#define radius iFloat1\n\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  // Compute coordinates that range from x = -1 to 1 and y = -1 to 1.\n  vec2 uv = fragCoord / iResolution.xy;\n  uv = 2. * (uv - 0.5);\n  \n  // The signed distance to the edge of a circle.\n  float circleDist = length(uv) - radius;\n \n  vec3 circleColor = mix(\n    vec3(0.800, 0.184, 0.277),  // red\n    vec3(0.800, 0.740, 0.234),  // yellow\n    colorBlend\n  );\n  vec3 col = mix(\n    circleColor,\n    vec3(0.049, 0.111, 0.215),  // dark blue\n    smoothstep(0., 2. / iResolution.x, circleDist)\n  );\n  \n  fragColor = vec4(col, 1.0);\n}",
+ "duration": 5,
+ "textures": [
+  {
+   "id": "iTexture0",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  },
+  {
+   "id": "iTexture1",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  },
+  {
+   "id": "iTexture2",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  },
+  {
+   "id": "iTexture3",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  },
+  {
+   "id": "iTexture4",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  },
+  {
+   "id": "iTexture5",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  },
+  {
+   "id": "iTexture6",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  },
+  {
+   "id": "iTexture7",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  }
+ ],
+ "title": "Using the animation timeline",
+ "variables": [
+  {
+   "transitions": [
+    {
+     "endDSecs": 28,
+     "endValue": 1,
+     "startDSecs": 9,
+     "startValue": 0,
+     "type": "smoothstep"
+    },
+    {
+     "endDSecs": 50,
+     "endValue": 0,
+     "startDSecs": 32,
+     "startValue": 1,
+     "type": "smoothstep"
+    }
+   ]
+  },
+  {
+   "transitions": [
+    {
+     "endDSecs": 25,
+     "endValue": 0.8,
+     "startDSecs": 5,
+     "startValue": 0.1,
+     "type": "smoothstep"
+    },
+    {
+     "endDSecs": 50,
+     "endValue": 0.1,
+     "startDSecs": 30,
+     "startValue": 0.8,
+     "type": "smoothstep"
+    }
+   ]
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  }
+ ]
+}
