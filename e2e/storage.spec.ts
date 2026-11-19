@@ -102,6 +102,8 @@ test("after a browser restart the animation and texture are still there", async 
   await expect(page).toHaveURL(new RegExp("#anim/" + docId + "$"));
   await expect(page.locator("#titleInput")).toHaveValue("Static test");
 
+  // A hash-only goto returns before the app's own reload, so load the page fresh.
+  await page.goto("about:blank");
   await page.goto("./#example/534226b1d5ed");
   await expect(page.locator("#titleInput")).toHaveValue("Minimal Animation");
   await page.goto("./");
