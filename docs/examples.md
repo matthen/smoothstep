@@ -6,8 +6,8 @@ If you change an example, save it to keep it as one of your own animations.
 
 ## Showcase
 
-* [Vibrating mirror ball](https://smoothstep.io/#example/c6e454d960df): a mirror ball wobbling in
-  the shapes of spherical harmonics, reflecting a 360° equirectangular photo.
+* [Wobbling mirror ball](https://smoothstep.io/#example/c6e454d960df): a mirror ball, pulled into
+  the shapes of spherical harmonics and left to spring back, reflecting a 360° photo.
 * [Menger sponge dissection](https://smoothstep.io/#example/2ed11c16d844): a Menger sponge, sliced
   open by a moving plane.
 * [Domain warping](https://smoothstep.io/#example/19bb8790cb0d): fractal noise fed back into
