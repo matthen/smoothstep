@@ -62,8 +62,8 @@ Saved animations open at `#anim/<id>`, and the bundled examples at `#example/<id
 
 ## How it's built
 
-smoothstep is a React 19 app in TypeScript, built with Vite. It uses react-bootstrap with
-Bootstrap 5 and Sass, CodeMirror 6 for the code editor, and WebGL 2 for rendering.
+smoothstep is a React 19 app in TypeScript, built with Vite. It uses Mantine for its interface,
+Sass for the app's own styles, CodeMirror 6 for the code editor, and WebGL 2 for rendering.
 
 - `src/app/` has `App.tsx`, which holds the open animation and lays out the page, the URL
   handling, and the crash screen. If the app ever hits an error, the crash screen lets you

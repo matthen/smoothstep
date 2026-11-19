@@ -1,6 +1,6 @@
+import { Alert } from '@mantine/core';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Alert } from 'react-bootstrap';
-import { FaAngleLeft } from 'react-icons/fa';
+import { TbChevronLeft } from 'react-icons/tb';
 
 import AspectRatioPicker from '../dialogs/AspectRatioPicker';
 import type { AspectRatio } from '../lib/document';
@@ -153,14 +153,14 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
 
   return (
     <div id="canvasContainer" ref={containerRef}>
-      {error ? <Alert variant="warning">{error}</Alert> : (
+      {error ? <Alert color="yellow" className="webglError">{error}</Alert> : (
         <>
           <button
             type="button" id="toggleWideCanvas" aria-label="Toggle wide canvas"
             onClick={props.onToggleWide}
             style={{left: marginSide - 32, top: marginTop + height / 2}}
           >
-            <FaAngleLeft />
+            <TbChevronLeft />
           </button>
           <canvas ref={canvasRef} id="canvas" style={{width, height}} />
           <AspectRatioPicker

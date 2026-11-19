@@ -1,8 +1,8 @@
 # Examples
 
 These example animations show different parts of animating with smoothstep. You can also open
-them from the app's *Welcome* screen. If you change an example, save it to keep it as one of
-your own animations.
+them from File → Open in the app, or from Help → Welcome. If you change an example, save it to
+keep it as one of your own animations.
 
 * [Minimal animation](https://smoothstep.io/#example/534226b1d5ed)
 * [Drawing a circle](https://smoothstep.io/#example/6c214a0d19e4)

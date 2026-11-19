@@ -18,8 +18,8 @@ for (const type of ["webm", "mp4", "gif", "png"]) {
     await page.goto("./#example/534226b1d5ed");
     await expect(page.locator("#titleInput")).toHaveValue("Minimal Animation");
     await page.locator(".durationInput").fill("1");
-    await page.getByText("Export video", {exact: true}).click();
-    const modal = page.locator(".modal.show .modal-content");
+    await page.getByRole("button", {name: "Export video"}).click();
+    const modal = page.getByRole("dialog", {name: /Export video/});
     await modal.locator("input[type=number]").first().fill("128");
     await expect(modal.locator("input[type=number]").nth(1)).toHaveValue("30");
     await modal.locator("select").selectOption(type);
@@ -34,7 +34,7 @@ for (const type of ["webm", "mp4", "gif", "png"]) {
     if (type === "png") {
       expect(Object.keys(unzipSync(bytes))).toHaveLength(30);
     }
-    await expect(page.locator(".modal.show")).toHaveCount(0);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
     expect(errors).toEqual([]);
   });
 }

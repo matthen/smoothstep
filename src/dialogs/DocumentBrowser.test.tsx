@@ -1,7 +1,8 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { render } from '../test/render';
 import { newDocument } from '../lib/document';
 import * as localStore from '../lib/localStore';
 import DocumentBrowser from './DocumentBrowser';
@@ -27,7 +28,7 @@ describe("DocumentBrowser", () => {
     const newer = await screen.findByRole("link", {name: "Newer"});
     const rows = screen.getAllByRole("row").slice(1);
     expect(rows.map(r => within(r).getByRole("link").textContent)).toEqual(["Newer", "Older"]);
-    expect(rows[1]!.className).toBe("opened");
+    expect(rows[1]!.className).toContain("opened");
     expect(within(rows[0]!).getAllByText("1 minute ago").length).toBe(2);
     expect(within(rows[1]!).getAllByText("3 hours ago").length).toBe(2);
     expect(newer.getAttribute("href")).toBe("#anim/aaaa00000002");
@@ -70,7 +71,7 @@ describe("DocumentBrowser", () => {
     await clearStore();
     renderBrowser();
     expect(await screen.findByText("You have no saved animations yet.")).toBeTruthy();
-    expect(screen.getByRole("button", {name: /Download all/}).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", {name: /Download all files/}).hasAttribute("disabled")).toBe(true);
   });
 
   it("imports files and reports the result", async () => {

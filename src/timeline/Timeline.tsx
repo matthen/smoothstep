@@ -1,7 +1,8 @@
 import {useEffect, useEffectEvent, useRef, useState} from "react";
 import type {MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent} from "react";
-import {Button, Col, Form, Row} from "react-bootstrap";
-import {FaTrash} from "react-icons/fa";
+import {ActionIcon, NativeSelect, TextInput} from "@mantine/core";
+import {useMediaQuery} from "@mantine/hooks";
+import {TbTrash} from "react-icons/tb";
 import {variableValue} from "../lib/document";
 import type {Transition, TransitionType, Variable} from "../lib/document";
 import {
@@ -55,12 +56,17 @@ export default function Timeline(props: TimelineProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const timeAreaRef = useRef<HTMLDivElement>(null);
   const rowsRef = useRef<HTMLDivElement>(null);
+  // How far the grid is scrolled sideways, so the row labels can stay at its left edge.
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const lastTimeRef = useRef(currentTime);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [hover, setHover] = useState<Selection | null>(null);
   const [gesture, setGestureState] = useState<Gesture>({kind: "idle"});
   // Pointer handlers read the gesture from here, as moves can arrive before React re-renders.
   const gestureRef = useRef<Gesture>(gesture);
   const [drafts, setDrafts] = useState<Drafts>({});
+  const touch = useMediaQuery("(hover: none)") ?? false;
 
   const maxDSecs = durationDSecs(duration);
   const maxTime = maxTimeFor(variables, duration);
@@ -193,8 +199,27 @@ export default function Timeline(props: TimelineProps) {
     }
   }
 
+  function cancelCreating() {
+    setGesture({kind: "idle"});
+    setHover(null);
+  }
+
   function handlePointerDown(event: ReactPointerEvent) {
-    if (event.button !== 0 || gestureRef.current.kind !== "idle") {
+    const current = gestureRef.current;
+    // A touch can't hover, so the second tap of a click-twice creation sets the end where it lands.
+    // A second tap in another row, or where the transition can't end, cancels it instead.
+    if (current.kind === "creating" && current.released) {
+      const {x, y} = position(event);
+      const endDSecs = hoverEndDSecs(x, current.startDSecs);
+      const fits = isInsertable(variables[current.row]!.transitions, current.startDSecs, endDSecs, maxDSecs);
+      if (event.pointerType === "touch" && (!fits || Math.floor(y / ROW_HEIGHT) !== current.row)) {
+        cancelCreating();
+      } else if (fits) {
+        setGesture({...current, endDSecs});
+      }
+      return;
+    }
+    if (event.button !== 0 || current.kind !== "idle") {
       return;
     }
     if (selected) {
@@ -233,17 +258,25 @@ export default function Timeline(props: TimelineProps) {
     setGesture({kind: "idle"});
   }
 
-  function handlePointerLeave() {
+  function handlePointerLeave(event: ReactPointerEvent) {
+    // Touch pointers leave on every lift, which would cancel a click-twice creation.
+    if (event.pointerType === "touch") {
+      return;
+    }
     const {kind} = gestureRef.current;
     if (kind === "idle" || kind === "creating") {
-      setGesture({kind: "idle"});
-      setHover(null);
+      cancelCreating();
     }
   }
 
   function handleTransitionPointerDown(event: ReactPointerEvent<HTMLDivElement>, row: number, index: number) {
-    if (event.button !== 0 || gestureRef.current.kind === "creating") {
+    const current = gestureRef.current;
+    if (event.button !== 0 || (current.kind === "creating" && !current.released)) {
       return;
+    }
+    // Picking a transition abandons a half-made one.
+    if (current.kind === "creating") {
+      cancelCreating();
     }
     event.stopPropagation();
     const transitions = variables[row]!.transitions;
@@ -283,6 +316,23 @@ export default function Timeline(props: TimelineProps) {
     onSeek(clampTime(xToTime(event.clientX - rect.left), duration));
   }
 
+  // Keep the playhead in view on a timeline wider than the screen: when it runs off the right
+  // edge, or jumps back off the left (looping or seeking), scroll it to near the left edge.
+  useEffect(() => {
+    const grid = gridRef.current;
+    const previous = lastTimeRef.current;
+    lastTimeRef.current = currentTime;
+    if (!grid || grid.scrollWidth <= grid.clientWidth) {
+      return;
+    }
+    const x = timeToX(currentTime);
+    const pastRight = currentTime > previous && x > grid.scrollLeft + grid.clientWidth - 8;
+    const pastLeft = currentTime < previous && x < grid.scrollLeft;
+    if (pastRight || pastLeft) {
+      grid.scrollLeft = Math.max(0, x - 24);
+    }
+  }, [currentTime]);
+
   const onKeyDown = useEffectEvent((event: KeyboardEvent) => {
     if (selected && keyAction(event)?.type === "deleteTransition" && shortcutsAllowed(event.target, event.key)) {
       event.preventDefault();
@@ -290,8 +340,14 @@ export default function Timeline(props: TimelineProps) {
     }
   });
   const onDocumentPointerDown = useEffectEvent((event: PointerEvent) => {
-    if (selection && !rootRef.current?.contains(event.target as Node)) {
+    if (rootRef.current?.contains(event.target as Node)) {
+      return;
+    }
+    if (selection) {
       select(null);
+    }
+    if (gestureRef.current.kind === "creating") {
+      cancelCreating();
     }
   });
   useEffect(() => {
@@ -316,9 +372,9 @@ export default function Timeline(props: TimelineProps) {
     <div id="animationControls" ref={rootRef}>
       <div className="properties">
         {selected &&
-          <Button variant="secondary" onClick={deleteSelected} className="delete" aria-label="Delete transition">
-            <FaTrash />
-          </Button>}
+          <ActionIcon variant="subtle" color="gray" onClick={deleteSelected} className="delete" aria-label="Delete transition">
+            <TbTrash />
+          </ActionIcon>}
         {heading &&
           <h4>
             iFloat{heading.row}
@@ -326,43 +382,33 @@ export default function Timeline(props: TimelineProps) {
               {heading.endDSecs !== null && <> &mdash; {(heading.endDSecs * 0.1).toFixed(1)}</>}s
             </span>
           </h4>}
+        {!heading &&
+          <p className="hint">
+            {touch ? "Tap where a transition starts, then where it ends." : "Click or drag in a row to add a transition."}
+          </p>}
         {selected &&
-          <Form onSubmit={e => e.preventDefault()}>
+          <form className="transitionForm" onSubmit={e => e.preventDefault()}>
             {(["start", "end"] as const).map(field => {
               const value = field === "start" ? selected.startValue : selected.endValue;
               const text = drafts[field] ?? String(value);
               return (
-                <Form.Group as={Row} controlId={field + "ValueInput"} key={field}>
-                  <Form.Label column xs={5}>{field} value</Form.Label>
-                  <Col xs={7}>
-                    <Form.Control
-                      size="sm"
-                      type="number"
-                      step="0.1"
-                      value={text}
-                      onChange={e => changeValue(field, e.target.value)}
-                      onBlur={() => blurValue(field)}
-                      isInvalid={parseValue(text) === null}
-                    />
-                  </Col>
-                </Form.Group>
+                <TextInput
+                  key={field} id={field + "ValueInput"} label={field + " value"} size="xs"
+                  type="number" step="0.1" value={text}
+                  onChange={e => changeValue(field, e.target.value)}
+                  onBlur={() => blurValue(field)}
+                  error={parseValue(text) === null}
+                />
               );
             })}
-            <Form.Group as={Row} controlId="typeInput">
-              <Form.Label column xs={5}>transition</Form.Label>
-              <Col xs={7}>
-                <Form.Select
-                  size="sm"
-                  value={selected.type}
-                  onChange={e => updateSelected({type: e.target.value as TransitionType})}
-                >
-                  {TYPE_OPTIONS.map(t => <option key={t}>{t}</option>)}
-                </Form.Select>
-              </Col>
-            </Form.Group>
-          </Form>}
+            <NativeSelect
+              id="typeInput" label="transition" size="xs" value={selected.type}
+              onChange={e => updateSelected({type: e.target.value as TransitionType})}
+              data={[...TYPE_OPTIONS]}
+            />
+          </form>}
       </div>
-      <div className="gridContainer">
+      <div className="gridContainer" ref={gridRef} onScroll={event => setScrollLeft(event.currentTarget.scrollLeft)}>
         <div className={"header" + (ticks.tens ? " tensTicks" : "")} style={{width}} onClick={handleHeaderClick}>
           {ticks.labels.map(label => <p key={label}>{label}</p>)}
         </div>
@@ -373,7 +419,7 @@ export default function Timeline(props: TimelineProps) {
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
-          onPointerCancel={() => setGesture({kind: "idle"})}
+          onPointerCancel={cancelCreating}
           onPointerLeave={handlePointerLeave}
         >
           <div className="postDuration" style={{left: timeToX(duration), width: timeToX(maxTime - duration) + 20, height: rowsHeight}} />
@@ -390,6 +436,7 @@ export default function Timeline(props: TimelineProps) {
           <div className="filler" ref={rowsRef}>
             {variables.map((variable, row) => (
               <div key={row} className="variableRow">
+                <div className="rowLabel" style={{left: scrollLeft}}>iFloat{row}</div>
                 {variable.transitions.length > 0 &&
                   <div className="variableValue" style={{left: timeToX(currentTime), zIndex: markerZ}}>
                     {(variableValues[row] ?? 0).toFixed(2)}

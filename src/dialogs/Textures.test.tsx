@@ -1,7 +1,8 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { render } from '../test/render';
 import { emptyTextures, type TextureSlot } from '../lib/document';
 import * as localStore from '../lib/localStore';
 import { addImage, clearStore } from './testUtils';
@@ -34,7 +35,7 @@ describe("Textures and TexturePicker", () => {
     const props = renderTextures();
     await userEvent.click(screen.getByAltText("iTexture2 preview"));
     expect(within(picker()).getByText("iTexture2")).toBeTruthy();
-    expect(within(picker()).getByRole("tab", {name: "special"}).className).toContain("active");
+    expect(within(picker()).getByRole("tab", {name: "special"}).getAttribute("aria-selected")).toBe("true");
     await userEvent.click(within(picker()).getByRole("tab", {name: "fonts"}));
     await userEvent.click(within(picker()).getByAltText("fonts/1.png preview"));
     expect(within(picker()).getByAltText("fonts/1.png preview").closest(".picker")!.className).toContain("selected");
@@ -48,6 +49,7 @@ describe("Textures and TexturePicker", () => {
   it("cancel leaves the textures alone", async () => {
     const props = renderTextures();
     await userEvent.click(screen.getByAltText("iTexture0 preview"));
+    await userEvent.click(within(picker()).getByRole("tab", {name: "fonts"}));
     await userEvent.click(within(picker()).getByAltText("fonts/1.png preview"));
     await userEvent.click(within(picker()).getByRole("button", {name: "Cancel"}));
     expect(props.onChange).not.toHaveBeenCalled();
@@ -78,7 +80,7 @@ describe("Textures and TexturePicker", () => {
     textures[0] = {id: "iTexture0", url: "cccc00000001", isUserUploaded: true};
     const props = renderTextures(textures);
     await userEvent.click(screen.getByAltText("iTexture0 preview"));
-    expect(within(picker()).getByRole("tab", {name: "user uploads"}).className).toContain("active");
+    expect(within(picker()).getByRole("tab", {name: "user uploads"}).getAttribute("aria-selected")).toBe("true");
     const keep = (await within(picker()).findByAltText("keep.png preview")).closest(".picker") as HTMLElement;
     expect(within(keep).queryByTitle("Delete")).toBeNull();
     const remove = within(picker()).getByAltText("remove.png preview").closest(".picker") as HTMLElement;

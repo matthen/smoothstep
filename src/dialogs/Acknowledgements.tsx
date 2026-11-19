@@ -1,6 +1,7 @@
+import { Button, Group } from '@mantine/core';
 import type { ReactNode } from 'react';
-import { Button, Modal } from 'react-bootstrap';
-import { FaList } from 'react-icons/fa';
+
+import AppModal from '../app/AppModal';
 
 interface AcknowledgementsProps {
   show: boolean;
@@ -13,11 +14,7 @@ function Link({href, children}: {href: string; children: ReactNode}) {
 
 export default function Acknowledgements({show, onHide}: AcknowledgementsProps) {
   return (
-    <Modal show={show} onHide={onHide} centered dialogClassName="terms">
-      <Modal.Header closeButton closeVariant="white">
-        <Modal.Title><FaList /> Acknowledgements</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
+    <AppModal opened={show} onClose={onHide} title="Acknowledgements" size="lg" classNames={{body: "prose"}}>
         <p>
           smoothstep.io was developed by <Link href="https://twitter.com/matthen2">Matt Henderson</Link>.
         </p>
@@ -39,7 +36,7 @@ export default function Acknowledgements({show, onHide}: AcknowledgementsProps) 
           <li><Link href="https://mediabunny.dev/">Mediabunny</Link></li>
           <li><Link href="https://github.com/mattdesl/gifenc">gifenc</Link></li>
           <li><Link href="https://github.com/101arrowz/fflate">fflate</Link></li>
-          <li><Link href="https://react-bootstrap.github.io/">React Bootstrap</Link></li>
+          <li><Link href="https://mantine.dev/">Mantine</Link></li>
           <li><Link href="https://www.khronos.org/webgl/">WebGL</Link></li>
           <li><Link href="https://github.com/dracula/dracula-theme/">Dracula theme</Link></li>
         </ul>
@@ -64,10 +61,7 @@ export default function Acknowledgements({show, onHide}: AcknowledgementsProps) 
           The font textures are drawn with Courier Prime, Arimo, Tinos, Inter and Exo 2,
           under the <Link href="https://openfontlicense.org">SIL Open Font License</Link>.
         </p>
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={onHide}>Close</Button>
-      </Modal.Footer>
-    </Modal>
+      <Group justify="flex-end" mt="lg"><Button variant="default" onClick={onHide}>Close</Button></Group>
+    </AppModal>
   );
 }

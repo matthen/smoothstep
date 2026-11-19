@@ -1,7 +1,7 @@
+import { Button, Group, TextInput } from '@mantine/core';
 import { useState, type FormEvent } from 'react';
-import { Button, Col, Form, Modal, Row } from 'react-bootstrap';
-import { FaCopy } from 'react-icons/fa';
 
+import AppModal from '../app/AppModal';
 import { DEFAULT_TITLE, MAX_TITLE_LENGTH } from '../lib/document';
 
 interface SaveCopyProps {
@@ -36,32 +36,28 @@ export default function SaveCopy({show, title, onSave, onHide}: SaveCopyProps) {
     onHide();
   };
 
+  const [wasShown, setWasShown] = useState(false);
+  if (show !== wasShown) {
+    setWasShown(show);
+    if (show) {
+      setCopy(copyTitle(title));
+      setInputValue(copyTitle(title));
+    }
+  }
+
   return (
-    <Modal
-      show={show} onHide={onHide} centered
-      onShow={() => {setCopy(copyTitle(title)); setInputValue(copyTitle(title));}}
-    >
-      <Modal.Header closeButton closeVariant="white">
-        <Modal.Title><FaCopy /> Save copy</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <Form onSubmit={save}>
-          <Row>
-            <Form.Label column sm={4} htmlFor="saveCopyTitle">Title of copy:</Form.Label>
-            <Col>
-              <Form.Control
-                id="saveCopyTitle" type="text" value={inputValue} maxLength={MAX_TITLE_LENGTH}
-                onChange={event => handleChange(event.target.value)}
-                onBlur={() => setInputValue(copy)}
-              />
-            </Col>
-          </Row>
-        </Form>
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={onHide}>Cancel</Button>
-        <Button variant="primary" onClick={() => save()}>Save copy</Button>
-      </Modal.Footer>
-    </Modal>
+    <AppModal opened={show} onClose={onHide} title="Save copy">
+      <form onSubmit={save}>
+        <TextInput
+          id="saveCopyTitle" label="Title of copy" value={inputValue} maxLength={MAX_TITLE_LENGTH} data-autofocus
+          onChange={event => handleChange(event.target.value)}
+          onBlur={() => setInputValue(copy)}
+        />
+        <Group justify="flex-end" mt="lg">
+          <Button variant="default" onClick={onHide}>Cancel</Button>
+          <Button type="submit">Save copy</Button>
+        </Group>
+      </form>
+    </AppModal>
   );
 }

@@ -1,382 +1,372 @@
+@use "sass:color";
 @use "theme" as *;
 
-html {
+html, body, #appRoot {
   height: 100%;
-  font-size: 14px;
+  // Phones and short screens scroll the whole page, so the code can take the full screen.
+  @include phone {
+    height: auto;
+  }
+  @include short {
+    height: auto;
+  }
 }
 
 body {
-  height: 100%;
-  min-height: 400px;
   overflow: hidden;
-  @include tablet {
-    overflow-x: scroll;
-  }
   @include phone {
-    overflow-x: hidden;
-    overflow-y: scroll;
+    overflow: visible;
   }
-  @media (min-width: $max-width) {
-    background: $dt-gray-darker;
+  @include short {
+    overflow: visible;
   }
 }
 
-#appRoot {
+a {
+  color: $dt-purple;
+}
+
+.mobileOnly {
+  @include desktop {
+    display: none !important;
+  }
+}
+
+.desktopOnly {
+  @include phone {
+    display: none !important;
+  }
+}
+
+// Layout. Desktop: header, then the editor beside the canvas, then the bottom panel.
+// Phone: header, canvas, a Code/Timeline/Textures switch, then whichever pane it picks, with the
+// page scrolling and the switch sticking to the top.
+.app {
+  --preview-width: min(#{$right-width}, 45vw);
+  --panel-height: #{$footer-height};
   height: 100%;
-  width: 100%;
-}
-
-// Layout: a fixed header, the editor on the left, the canvas on the right, and the footer tabs.
-#root {
-  background: $dt-gray-dark;
+  min-height: 520px;
   max-width: $max-width;
-  margin-right: auto;
-  margin-left: auto;
-  height: 100%;
-  padding-bottom: $footer-height;
-  padding-top: $header-height;
-  padding-right: $right-width;
-  position: relative;
-  min-width: $tablet-breakpoint;
-  transition-property: padding-bottom, padding-right;
-  transition-duration: $transition-duration;
+  margin: 0 auto;
+  display: grid;
+  grid-template-rows: $header-height minmax(0, 1fr) auto;
+  // A wide timeline scrolls inside its pane rather than widening the page.
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "header" "workspace" "panel";
+  background: $dt-gray-dark;
 
   @media (min-width: $max-width) {
     box-shadow: 0 0 16px black;
   }
 
-  &.wideCanvas {
-    padding-right: $wide-right-width;
-    #right {
-      width: $wide-right-width;
-      right: -$wide-right-width;
-    }
+  @include short {
+    height: auto;
+    min-height: 0;
+    grid-template-rows: $header-height calc(100dvh - #{$header-height}) auto;
+  }
+
+  &[data-wide] {
+    --preview-width: min(#{$wide-right-width}, 60vw);
     #toggleWideCanvas {
       transform: rotate(180deg);
     }
   }
 
-  @include phone {
-    min-width: unset;
-    width: 100%;
-    height: auto;
-    padding: 0;
-  }
-
-  &.hideFooter {
-    padding-bottom: $hidden-footer-height;
-    // Wait for the footer to collapse before growing the main area.
-    transition-delay: $transition-duration;
-  }
-}
-
-#main {
-  height: 100%;
-  width: 100%;
-  position: relative;
-  @include phone {
-    height: auto;
-    position: static;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-
-#left {
-  height: 100%;
-  width: 100%;
-  padding-right: 16px;
-  padding-bottom: 4px;
-  position: relative;
-  @include phone {
-    height: 320px;
-    order: 2;
-  }
-
-  .buildButton {
-    padding: 8px;
-    position: absolute;
-    bottom: 0;
-    right: 30px;
-    z-index: 1000;
-  }
-
-  .message {
-    position: absolute;
-    top: 0;
-    right: 16px;
-    z-index: 1060;
-    width: 256px;
-    background: $dt-gray-darker;
-    opacity: 0.8;
-    color: $dt-gray-light;
-    box-shadow: 2px 2px 4px $dt-gray-darker;
-  }
-}
-
-#right {
-  width: $right-width;
-  padding: 0 16px;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  right: -$right-width;
-  transition-property: width, right;
-  transition-duration: $transition-duration;
-
-  @include phone {
-    width: 100%;
-    height: auto;
-    position: static;
-    order: 1;
-  }
-}
-
-#header {
-  width: 100%;
-  padding: 4px;
-  position: absolute;
-  top: 0;
-  left: 0;
-
-  @include phone {
-    position: static;
-    .navbar-collapse {
-      z-index: 1000;
-      background: $dt-gray-darker;
-      padding: 8px;
-      margin-top: 8px;
-      border-radius: 0.2rem;
-      box-shadow: 1px 1px 4px $dt-gray-darker;
-    }
-  }
-
-  .navbar {
-    align-items: baseline;
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-
-  .navbar-brand {
-    font-family: 'Monda', sans-serif;
-    font-weight: 700;
-    font-size: 24px;
-    color: $dt-gray-light;
-    text-shadow: 1px 1px 3px $dt-gray-darker;
-    margin-right: 48px;
-
-    img {
-      margin-right: 16px;
-      vertical-align: baseline;
-      transform: translateY(16%);
-    }
-
-    i {
-      font-size: 14px;
-      text-shadow: none;
-      font-weight: normal;
-      font-style: normal;
-    }
-  }
-
-  .dropdown-menu {
-    font-size: 14px;
-    box-shadow: 1px 1px 4px $dt-gray-dark;
-  }
-
-  .dropdown-toggle {
-    &::after {
-      margin-left: 16px;
-      transform: rotate(-90deg);
-      transition: $transition-duration;
-    }
-    &[aria-expanded="true"] {
-      background-color: #343644;
-      &::after {
-        transform: rotate(0deg);
+  // Phones always show the chosen pane, so collapsing only applies on desktop.
+  &[data-footer="closed"] {
+    @include desktop {
+      --panel-height: 42px;
+      .bottomPanel .mantine-Tabs-panel {
+        display: none;
+      }
+      .toggleFooter {
+        transform: rotate(180deg);
       }
     }
   }
 
-  .nav-link {
-    color: $dt-gray-light;
-    border-radius: 0.2rem;
-    margin-right: 4px;
-    white-space: nowrap;
-
-    &:hover {
-      background-color: #343644;
-    }
-  }
-
-  svg {
-    margin-right: 6px;
-  }
-}
-
-.dropdown-item {
-  svg {
-    vertical-align: baseline;
-    position: relative;
-    left: -8px;
-    top: 1px;
-    height: 13px;
-  }
-
-  &.emph {
-    font-weight: bold;
-  }
-}
-
-button.btn-sm svg {
-  margin-top: -2px;
-}
-
-input#titleInput {
-  padding-left: 8px;
-  font-size: 16px;
-  border: 1px solid transparent;
-  margin-right: 8px;
-  width: 256px;
-  color: $dt-gray-light;
-
-  &:hover {
-    border: 1px solid $dt-gray-light;
-    border-radius: 0.2rem;
-  }
-
-  &.default:not(:focus) {
-    color: $dt-gray-medium;
-  }
-}
-
-#footer {
-  width: 100%;
-  height: $footer-height;
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  padding-top: 8px;
-  padding-bottom: $footer-padding;
-  overflow: hidden;
-  transition-property: height;
-  transition-duration: $transition-duration;
-
   @include phone {
-    position: static;
-    .toggleFooter {
+    height: auto;
+    min-height: 100dvh;
+    grid-template-rows: auto auto auto auto;
+    grid-template-areas: "header" "preview" "tabs" "pane";
+
+    .workspace {
+      display: contents;
+    }
+
+    &[data-mobile-tab="code"] .bottomPanel,
+    &:not([data-mobile-tab="code"]) .editorPane {
       display: none;
     }
   }
-
-  .toggleFooter {
-    position: absolute;
-    right: 16px;
-    top: 12px;
-    cursor: pointer;
-    background: none;
-    border: none;
-    color: $dt-gray-light;
-    transition-duration: $transition-duration;
-    transition-property: transform;
-    filter: drop-shadow(1px 1px 2px black);
-  }
-
-  &.hide {
-    height: $hidden-footer-height;
-    .tab-content {
-      visibility: hidden;
-    }
-    .toggleFooter {
-      transform: rotate(180deg);
-    }
-  }
-
-  .tab-content {
-    padding: 8px;
-    height: $footer-height - $footer-padding - 38px;
-    max-height: $footer-height - $footer-padding - 38px;
-    background-color: $dt-gray-dark;
-    max-width: 100%;
-  }
 }
 
-#footerLinks {
-  position: absolute;
-  display: block;
-  bottom: 0;
-  left: 0;
-  background: $dt-gray-darker;
-  text-align: right;
-  padding: 4px 32px;
-  width: 100%;
-  box-shadow: inset 0 4px 4px -4px black;
+.appHeader {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px 0 16px;
+  min-width: 0;
+  border-bottom: 1px solid $dt-gray-darker;
 
   @include phone {
-    position: static;
+    gap: 4px;
+    padding: 6px 4px 6px 12px;
   }
 
-  .btn {
-    color: $dt-gray-medium;
-    background: transparent;
-    border: none;
-    margin-right: 8px;
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    text-decoration: none;
+    font-family: 'Monda', sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+    color: $dt-gray-light;
+
+    i {
+      font-size: 13px;
+      font-style: normal;
+      font-weight: normal;
+      color: $dt-gray-medium;
+    }
+
+    @include phone {
+      .brandName {
+        display: none;
+      }
+    }
+  }
+
+  .titleInput {
+    flex: 0 1 280px;
+    min-width: 0;
+    margin-left: 16px;
+
+    @include phone {
+      flex: 1 1 auto;
+      margin-left: 4px;
+    }
+
+    input {
+      font-size: 15px;
+      padding: 0 8px;
+      border-radius: 4px;
+      border: 1px solid transparent;
+      color: $dt-gray-light;
+      text-overflow: ellipsis;
+
+      &:hover {
+        border-color: $dt-gray;
+      }
+      &:focus {
+        border-color: $dt-purple;
+        background: $dt-gray-darker;
+      }
+    }
+
+    input[data-default]:not(:focus) {
+      color: $dt-gray-medium;
+    }
+  }
+
+  .headerActions {
+    margin-right: auto;
+    @include phone {
+      margin-right: 0;
+    }
+    .mantine-Button-root {
+      font-weight: 500;
+      @include phone {
+        padding: 0 8px;
+        .mantine-Button-section[data-position="left"] {
+          margin-inline-end: 0;
+        }
+      }
+    }
+  }
+
+  .saveButton {
+    @include phone {
+      display: none;
+    }
   }
 }
 
-.nav-tabs {
-  border-bottom: 1px solid $dt-gray-medium;
-  padding-left: 16px;
-  background: linear-gradient(0deg, $dt-gray-darker, 5%, $dt-gray-dark);
+.workspace {
+  grid-area: workspace;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--preview-width);
+  min-height: 0;
+  transition: grid-template-columns $transition-duration;
+}
 
-  .nav-link {
-    background: #343644;
-    border: 1px solid transparent;
-    border-color: transparent transparent $dt-gray-medium transparent !important;
-    color: $dt-gray-light;
-    padding: 0.3rem 1rem;
-    margin-right: 8px;
+.editorPane {
+  grid-area: pane;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  padding: 4px 0;
 
-    &.active {
-      color: $dt-gray-light;
-      background-color: $dt-gray-dark;
-      border-color: $dt-gray-medium $dt-gray-medium $dt-gray-dark $dt-gray-medium !important;
-    }
+  @include desktop {
+    grid-area: auto;
+    padding-right: 8px;
+  }
 
-    &:hover:not(.active) {
-      color: $dt-gray-light;
-      background: $dt-gray;
+  // The editor grows with the code and the page scrolls, filling at least the screen below the switch.
+  @include phone {
+    .ss-code-editor, .cm-editor {
+      height: auto;
+      min-height: $phone-pane-height;
     }
   }
+
+  .buildButton {
+    position: absolute;
+    right: 24px;
+    bottom: 16px;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+
+    @include phone {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+    }
+  }
+}
+
+.previewPane {
+  grid-area: preview;
+  position: relative;
+  min-height: 0;
+  padding: 8px 16px 0;
+
+  @include desktop {
+    grid-area: auto;
+  }
+
+  @include phone {
+    height: min(max(52dvh, 240px), 100vw);
+    padding: 8px 12px 0;
+  }
+}
+
+.mobileTabs {
+  grid-area: tabs;
+  padding: 8px 12px 4px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: $dt-gray-dark;
+  @include desktop {
+    display: none;
+  }
+}
+
+.bottomPanel {
+  grid-area: panel;
+  height: var(--panel-height);
+  min-height: 0;
+  overflow: hidden;
+  border-top: 1px solid $dt-gray-darker;
+  background: linear-gradient(180deg, $dt-gray-darker, $dt-gray-dark 42px);
+  transition: height $transition-duration;
+
+  .mantine-Tabs-root, .mantine-Tabs-panel {
+    height: 100%;
+  }
+
+  @include phone {
+    grid-area: pane;
+    height: auto;
+    min-height: $phone-pane-height;
+    overflow: visible;
+    border-top: none;
+    background: none;
+    .mantine-Tabs-list {
+      display: none;
+    }
+    .mantine-Tabs-root, .mantine-Tabs-panel {
+      height: auto;
+    }
+  }
+  .mantine-Tabs-root {
+    display: flex;
+    flex-direction: column;
+  }
+  .mantine-Tabs-list {
+    padding: 0 8px 0 16px;
+    flex-shrink: 0;
+    &::before {
+      border-color: $dt-gray-darker;
+    }
+  }
+  .mantine-Tabs-panel {
+    min-height: 0;
+    flex: 1;
+    padding-top: 8px;
+  }
+  .toggleFooter {
+    margin: auto 0 auto auto;
+    transition: transform $transition-duration;
+  }
+}
+
+#loading {
+  position: fixed;
+  z-index: 1000;
+  top: $header-height + 8px;
+  left: 24px;
+}
+
+.alertText {
+  margin: 0 0 16px;
 }
 
 // The canvas and its overlays.
 div#canvasContainer {
-  height: calc(100% - 48px);
+  height: calc(100% - 56px);
   min-height: 128px;
   position: relative;
   display: flex;
-
-  @include phone {
-    height: 320px;
-  }
 
   #canvas {
     background-color: #000;
     display: block;
     margin: auto;
+    border-radius: 2px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  }
+
+  div.fps, div.aspectRatioPicker {
+    position: absolute;
+    opacity: 0;
+    transition: opacity 150ms;
+  }
+
+  &:hover div.fps, &:hover div.aspectRatioPicker, div.aspectRatioPicker:focus-within {
+    opacity: 1;
+  }
+
+  // No hover on touch screens, so keep them visible.
+  @media (hover: none) {
+    div.fps, div.aspectRatioPicker {
+      opacity: 1;
+    }
   }
 
   div.fps {
-    display: none;
-    box-shadow: 1px 1px 3px $dt-gray-darker;
-    border-radius: 0.2rem;
+    pointer-events: none;
+    border-radius: 4px;
     text-align: center;
     padding: 4px;
-    position: absolute;
-    font-size: 12px;
-    background: rgba($dt-gray, 0.8);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    background: rgba($dt-gray-darker, 0.75);
     color: $dt-gray-light;
     width: 80px;
 
@@ -384,195 +374,315 @@ div#canvasContainer {
       margin: 0;
       white-space: nowrap;
     }
-
-    &.exporting {
-      display: block;
-    }
   }
 
-  &:hover div.fps {
-    display: block;
+  div.aspectRatioPicker select {
+    background: rgba($dt-gray-darker, 0.75);
+    border: none;
+    width: 96px;
   }
 
-  div.aspectRatioPicker {
-    display: none;
-    position: absolute;
-
-    .input-group-text {
-      color: $dt-gray-light;
-      background: rgba($dt-gray-darker, 0.8);
-      border: none;
-      box-shadow: 1px 1px 3px $dt-gray-darker;
-    }
-    select {
-      border: none;
-      background-color: rgba($dt-gray, 0.8);
-      color: $dt-gray-light;
-      box-shadow: 1px 1px 3px $dt-gray-darker;
-    }
-  }
-
-  &:hover div.aspectRatioPicker {
-    display: block;
-  }
-
-  .alert {
+  .webglError {
     margin: auto;
   }
 }
 
 #toggleWideCanvas {
   position: absolute;
-  padding: 2px 4px 4px;
-  line-height: 21px;
+  padding: 4px;
   cursor: pointer;
   background: none;
   border: none;
-  color: $dt-gray-light;
-  transition-property: transform;
-  transition-duration: $transition-duration;
-  filter: drop-shadow(1px 1px 2px black);
+  color: $dt-gray-medium;
+  transition: transform $transition-duration, color 150ms;
+  display: flex;
+
+  &:hover {
+    color: $dt-gray-light;
+  }
 
   @include phone {
     display: none;
   }
 }
 
-// Texture slots in the footer.
+// Texture slots in the bottom panel.
 div#textures {
   overflow-x: auto;
-  white-space: nowrap;
-  padding: 4px;
+  padding: 4px 16px;
   display: flex;
-  align-items: center;
-  height: 180px;
+  gap: 12px;
+  height: 100%;
+  align-items: flex-start;
+
+  @include phone {
+    height: auto;
+    flex-wrap: wrap;
+    overflow: visible;
+    padding: 8px 12px;
+    align-content: flex-start;
+  }
 
   div.texture {
-    min-width: 170px;
-    margin-right: 16px;
+    flex-shrink: 0;
     background: $dt-gray-darker;
-    border-radius: 0.2rem;
-    padding: 8px 16px;
-    height: 100%;
+    border-radius: 6px;
+    padding: 8px 12px 12px;
 
     h1 {
-      font-size: 14px;
-      font-weight: normal;
+      font-size: 13px;
+      font-weight: 500;
+      margin: 0 0 6px;
+      color: $dt-gray-medium;
+      font-family: var(--mantine-font-family-monospace);
     }
 
     button {
       display: block;
-      margin-left: auto;
-      margin-right: auto;
       width: 112px;
       height: 112px;
       background: #fff;
       border: 2px solid $dt-gray-darker;
-      border-radius: 0.2rem;
-      transition-duration: $transition-duration;
+      border-radius: 4px;
       padding: 0;
+      cursor: pointer;
+      overflow: hidden;
+      transition: border-color 150ms;
 
-      &:hover {
-        border: 2px solid $dt-green;
+      @include phone {
+        width: 84px;
+        height: 84px;
+      }
+
+      &:hover, &:focus-visible {
+        border-color: $dt-green;
       }
 
       img {
         width: 100%;
-        max-height: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
       }
     }
   }
 }
 
-// Texture picker.
-$texture-picker-height: 320px;
-
-.modal-dialog.texturePickerModal, .modal-dialog.documentBrowser {
-  max-width: 800px;
+// The Open dialog.
+.documentBrowser {
+  tr.opened td {
+    font-weight: 600;
+  }
+  tr.opened td:first-child {
+    box-shadow: inset 4px 0 0 $dt-green;
+  }
+  img.thumbnail {
+    display: block;
+    border-radius: 3px;
+  }
 }
 
-.texturePickerModal .nav-pills {
-  .nav-link {
+.exampleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 12px;
+
+  a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-align: center;
+    font-size: 13px;
+    line-height: 1.3;
+    text-decoration: none;
     color: $dt-gray-light;
+
+    &:hover img, &:focus-visible img {
+      outline: 2px solid $dt-green;
+    }
   }
-  .nav-item.selected .nav-link {
-    font-weight: bold;
+
+  img {
+    width: 100%;
+    max-width: 96px;
+    height: auto;
+    aspect-ratio: 1;
+    border-radius: 6px;
+    object-fit: cover;
+  }
+}
+
+// The welcome dialog.
+.splash .splashTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Monda', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+
+  i {
+    font-size: 13px;
+    font-style: normal;
+    font-weight: normal;
+    color: $dt-gray-medium;
+  }
+}
+
+.linkList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.linkItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: $dt-gray-light;
+  text-decoration: none;
+  font-size: 14px;
+
+  svg {
+    color: $dt-purple;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  .thumbnail {
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    object-fit: cover;
+    background: $dt-gray-darker;
+  }
+
+  &:hover, &:focus-visible {
+    background: $dt-gray;
+  }
+}
+
+// Texture picker.
+$texture-picker-height: 360px;
+
+.texturePickerTabs {
+  @include phone {
+    flex-direction: column;
+    .mantine-Tabs-list {
+      flex-direction: row;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      margin: 0 0 8px;
+    }
+  }
+
+  .mantine-Tabs-list {
+    min-width: 140px;
+    margin-right: 12px;
+  }
+  .mantine-Tabs-tab {
+    white-space: nowrap;
+    &[data-has-selection] {
+      font-weight: 700;
+    }
+  }
+  .mantine-Tabs-panel {
+    min-width: 0;
   }
 }
 
 .dropzone {
-  border: 2px dashed $dt-gray-dark;
-  background-color: #eee;
-  color: $dt-gray-dark;
+  border: 2px dashed $dt-gray;
+  border-radius: 8px;
+  background-color: $dt-gray-darker;
+  color: $dt-gray-light;
   padding: 16px;
-  height: $texture-picker-height;
+  min-height: $texture-picker-height;
   cursor: pointer;
+  transition: border-color 150ms, background-color 150ms;
+
   p {
     text-align: center;
   }
+  .uploadNote {
+    color: $dt-gray-medium;
+    font-size: 13px;
+  }
   svg.uploadIcon {
-    color: $dt-gray;
-    height: 96px;
-    width: 96px;
-    margin: 16px auto;
+    color: $dt-gray-medium;
+    height: 72px;
+    width: 72px;
+    margin: 24px auto 8px;
     display: block;
   }
-  .spinner-border {
-    margin-left: 8px;
-  }
   div.selectedFile {
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
     img {
       max-width: 128px;
       max-height: 80px;
-      border: 3px solid $dt-gray;
-    }
-    button {
-      margin-left: 8px;
+      border-radius: 4px;
     }
   }
-  &.active {
-    background: $dt-green;
+  &.active, &:hover {
+    border-color: $dt-green;
   }
 }
 
 .texturePickerGrid {
   height: $texture-picker-height;
-  width: 100%;
-  display: flex;
-  overflow-y: scroll;
-  flex-flow: row wrap;
-  align-content: flex-start;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+  align-content: start;
+  padding: 4px;
+
+  @include phone {
+    height: 50dvh;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  }
 
   div.picker {
-    width: 96px;
-    height: 96px;
-    margin: 8px;
+    aspect-ratio: 1;
     background: #fff;
-    padding: 0;
     position: relative;
-    border: 4px solid $dt-gray-light;
-    border-radius: 0.2rem;
-    transition-duration: $transition-duration;
+    outline: 3px solid transparent;
+    border-radius: 6px;
+    overflow: hidden;
+    transition: outline-color 150ms;
 
     &:hover {
-      border-color: $dt-green;
+      outline-color: $dt-green;
     }
 
     &.selected {
-      border-color: $dt-red;
+      outline-color: $dt-pink;
     }
 
     span.resolution {
       position: absolute;
-      top: 2px;
-      right: 2px;
-      background: $dt-gray;
-      border-radius: 0.2rem;
+      top: 4px;
+      right: 4px;
+      background: rgba($dt-gray-darker, 0.85);
+      border-radius: 4px;
       color: $dt-gray-light;
-      font-size: 12px;
-      padding: 2px 4px;
-      display: none;
+      font-size: 11px;
+      padding: 1px 4px;
+      opacity: 0;
+      transition: opacity 150ms;
+    }
+
+    &:hover span.resolution {
+      opacity: 1;
     }
 
     button.select {
@@ -581,260 +691,49 @@ $texture-picker-height: 320px;
       height: 100%;
       padding: 0;
       background: none;
+      cursor: pointer;
 
       img {
         width: 100%;
-        max-height: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
       }
       svg.thumbnail {
-        width: 60%;
-        height: 60%;
+        width: 50%;
+        height: 50%;
         color: $dt-gray;
       }
     }
 
-    button.delete {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 18px;
-      height: 18px;
-      font-size: 10px;
-      padding: 0;
-    }
-
-    &:hover span.resolution {
-      display: inline;
-    }
-  }
-}
-
-// Export dialog.
-button.toggleAdvanced {
-  &, &:hover, &:focus, &:active {
-    background-color: transparent !important;
-    color: $dt-gray-light !important;
-    border: none;
-  }
-  &.expanded svg {
-    transform: rotate(180deg);
-  }
-}
-
-div.progress {
-  height: 32px;
-  margin-bottom: 16px;
-  &.noTransition .progress-bar {
-    transition: none;
-  }
-}
-
-form .row {
-  margin-bottom: 8px;
-}
-
-form.disabled {
-  opacity: 0.7;
-}
-
-#loading {
-  z-index: 100000;
-  position: absolute;
-  top: $header-height + 2px;
-  left: 36px;
-  color: $dt-gray-light;
-}
-
-// Welcome dialog.
-.modal-dialog.splash {
-  max-width: 960px;
-
-  @include phone {
-    align-items: start;
-    margin-top: 16px;
-  }
-
-  .modal-header .modal-title {
-    font-family: 'Monda', sans-serif;
-    font-weight: 700;
-    font-size: 18px;
-    color: $dt-gray-light;
-    text-shadow: 1px 1px 3px $dt-gray-darker;
-
-    i {
-      font-size: 14px;
-      text-shadow: none;
-      font-weight: normal;
-      font-style: normal;
-    }
-    img {
-      margin-right: 16px;
-      vertical-align: baseline;
-      transform: translateY(16%);
-    }
-  }
-
-  .modal-body {
-    padding: 32px;
-    max-height: 70vh;
-    overflow-y: auto;
-
-    .list-group {
-      margin-bottom: 1rem;
-      background: rgba(#2c2f3e, 0.5);
-      padding: 8px 0;
-
-      .list-group-item {
-        color: $dt-purple;
-        text-decoration: underline;
-        text-decoration-color: $dt-gray;
+    // The upload tile has no image, so its label always shows.
+    button.select:has(svg.thumbnail) {
+      background: $dt-gray-darker;
+      span.resolution {
+        opacity: 1;
+        top: auto;
+        bottom: 6px;
+        left: 0;
+        right: 0;
         background: none;
-        border: none;
-        padding: 0.25rem 1.25rem;
-
-        img.thumbnail {
-          height: 24px;
-          width: 24px;
-          margin-right: 8px;
-        }
-
-        svg {
-          color: $dt-gray-medium;
-          height: 16px;
-          width: 16px;
-          margin-right: 10px;
-          margin-left: 4px;
-        }
-
-        &:hover, &:hover svg {
-          color: $dt-gray-light;
-        }
-      }
-    }
-  }
-}
-
-// Modals.
-.modal-backdrop {
-  background-color: $dt-gray-dark;
-  &.show {
-    opacity: 0.5;
-  }
-}
-
-.modal-dialog .modal-content {
-  font-size: 14px;
-  background: linear-gradient(180deg, rgba(#21232d, 0.9) 0, rgba($dt-gray-dark, 0.7) 53px);
-  backdrop-filter: blur(8px);
-  color: $dt-gray-light;
-  border: 1px solid $dt-gray;
-  box-shadow: 1px 1px 4px $dt-gray-darker;
-
-  @include phone {
-    background: #21232d;
-    backdrop-filter: none;
-  }
-
-  .modal-header {
-    border-bottom: 1px solid $dt-gray;
-    position: relative;
-    .modal-title {
-      color: $dt-gray-light;
-      font-size: 16px;
-      svg {
-        margin-right: 8px;
-      }
-    }
-    .spinner-border {
-      position: absolute;
-      right: 12px;
-      top: 12px;
-    }
-  }
-
-  .modal-body {
-    input, select {
-      background-color: $dt-gray;
-      color: $dt-gray-light;
-      border: none;
-    }
-    .input-group-text {
-      background: $dt-gray-dark;
-      color: $dt-gray-light;
-      border: none;
-      user-select: none;
-    }
-    a {
-      color: $dt-purple;
-    }
-
-    .table {
-      --bs-table-bg: #2c2f3e;
-      --bs-table-striped-bg: #31344a;
-      --bs-table-color: #{$dt-gray-light};
-      --bs-table-striped-color: #{$dt-gray-light};
-      tr.opened td {
-        font-weight: bold;
-      }
-      tr.opened td:first-child {
-        border-left: 8px solid $dt-green;
-      }
-      td.centerTD, td.buttonsTD {
         text-align: center;
       }
     }
-    .table, .table tr td, .table tr th {
-      border: none;
-    }
 
-    div.tableFixedHead {
-      overflow-y: auto;
-      max-height: 280px;
-      thead th {
-        position: sticky;
-        top: -1px;
-        background: $dt-gray-dark;
-      }
-      tr td {
-        vertical-align: middle;
-      }
+    .delete {
+      position: absolute;
+      bottom: 4px;
+      left: 4px;
     }
-  }
-
-  .modal-footer {
-    border-top: none;
   }
 }
 
-.emptyNote {
-  color: $dt-gray-medium;
-}
-
-.storageNote {
-  margin-top: 12px;
-  color: $dt-gray-medium;
-}
-
-.exampleGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
-  gap: 12px;
-  a {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    text-align: center;
-    font-size: 0.9rem;
-    text-decoration: none;
-    color: $dt-gray-light;
-    &:hover img {
-      outline: 2px solid $dt-green;
-    }
-  }
-  img {
-    border-radius: 4px;
-    object-fit: cover;
+// Prose dialogs.
+.prose {
+  font-size: 14px;
+  line-height: 1.55;
+  ul {
+    padding-left: 20px;
   }
 }
 
@@ -844,7 +743,16 @@ form.disabled {
   margin: 96px auto;
   padding: 32px;
   background: $dt-gray-darker;
-  border-radius: 0.3rem;
+  border-radius: 8px;
+
+  h1 {
+    font-size: 20px;
+    margin-top: 0;
+  }
+
+  .crashStatus {
+    color: $dt-yellow;
+  }
 
   pre {
     color: $dt-gray-medium;

@@ -1,7 +1,6 @@
 // Shared sizes, the Dracula palette and breakpoints. Use with `@use "<path>/styles/theme" as *;`.
-// main.scss also passes these to Bootstrap.
 
-$header-height: 64px;
+$header-height: 56px;
 $footer-height: 272px;
 $footer-padding: 28px;
 $right-width: 512px;
@@ -25,18 +24,29 @@ $dt-purple: #bd93f9;
 $dt-red: #ff5555;
 $dt-yellow: #f1fa8c;
 
-$tablet-breakpoint: 960px;
-$phone-breakpoint: 575px;
-$phone-max-height: 400px;
+// Mantine's "sm" breakpoint (48em). Phones in landscape are short, and get the desktop layout.
+$phone-breakpoint: 767.98px;
+$short-height: 520px;
+// The screen below the phone's sticky Code/Timeline/Textures switch.
+$phone-pane-height: calc(100dvh - 52px);
 
-@mixin tablet {
-  @media (max-width: $tablet-breakpoint) {
+// Keep in step with app/usePhone.ts.
+@mixin phone {
+  @media (max-width: $phone-breakpoint) and (min-height: $short-height + 0.02px) {
     @content;
   }
 }
 
-@mixin phone {
-  @media (max-height: $phone-max-height), (max-width: $phone-breakpoint) {
+@mixin desktop {
+  @media (min-width: $phone-breakpoint + 0.02px), (max-height: $short-height) {
+    @content;
+  }
+}
+
+// Landscape phones and short windows: the editor and canvas fill the screen, and the page
+// scrolls down to the timeline.
+@mixin short {
+  @media (max-height: $short-height) {
     @content;
   }
 }

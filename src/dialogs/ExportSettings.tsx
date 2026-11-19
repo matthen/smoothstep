@@ -1,6 +1,7 @@
+import { Alert, Button, Group, Loader, NativeSelect, Progress, Stack, Text, TextInput } from '@mantine/core';
 import { useState } from 'react';
-import { Alert, Button, Col, Form, InputGroup, Modal, ProgressBar, Row, Spinner } from 'react-bootstrap';
 
+import AppModal from '../app/AppModal';
 import type { ExportOptions, ExportProgress, ExportType } from './exportTypes';
 
 interface ExportSettingsProps {
@@ -66,83 +67,53 @@ export default function ExportSettings(
     }
   };
 
+  const unit = (text: string) => <Text size="sm" c="dimmed" pr="xs">{text}</Text>;
+
   return (
-    <Modal show={show} backdrop="static" className="export" onHide={onCancel} centered keyboard={false}>
-      <Modal.Header>
-        <Modal.Title>
-          Export video
-          {disabled && <Spinner animation="border" role="status" variant="primary" size="sm" />}
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <Form className={disabled ? "disabled" : ""} onSubmit={event => event.preventDefault()}>
-          <Row>
-            <Form.Label column sm={4} htmlFor="exportWidth">Resolution width</Form.Label>
-            <Col>
-              <InputGroup>
-                <Form.Control
-                  id="exportWidth" type="number" min="16" step="16" value={widthText}
-                  onChange={event => handleWidth(event.target.value)}
-                  isInvalid={!widthValid} disabled={disabled}
-                />
-                <InputGroup.Text>px</InputGroup.Text>
-              </InputGroup>
-            </Col>
-          </Row>
-          <Row>
-            <Form.Label column sm={4} htmlFor="exportFps">Frame rate</Form.Label>
-            <Col>
-              <InputGroup>
-                <Form.Control
-                  id="exportFps" type="number" min="6" step="6" value={fpsText}
-                  onChange={event => handleFps(event.target.value)}
-                  isInvalid={!fpsValid} disabled={disabled}
-                />
-                <InputGroup.Text>fps</InputGroup.Text>
-              </InputGroup>
-            </Col>
-          </Row>
-          <Row>
-            <Form.Label column sm={4} htmlFor="exportType">File type</Form.Label>
-            <Col>
-              <Form.Select
-                id="exportType" value={options.type} disabled={disabled}
-                onChange={event => onOptionsChange({...options, type: event.target.value as ExportType})}
-              >
-                {FILE_TYPES.map(([type, label]) => <option key={type} value={type}>{label}</option>)}
-              </Form.Select>
-            </Col>
-          </Row>
+    <AppModal
+      opened={show} onClose={onCancel} closeOnEscape={false} closeOnClickOutside={false} withCloseButton={false}
+      title={<Group gap="xs">Export video{disabled && <Loader size="xs" role="status" />}</Group>}
+      classNames={{content: "export"}}
+    >
+      <form onSubmit={event => event.preventDefault()}>
+        <Stack gap="sm">
+          <TextInput
+            id="exportWidth" label="Resolution width" type="number" min="16" step="16" value={widthText}
+            onChange={event => handleWidth(event.target.value)} rightSection={unit("px")} rightSectionWidth={40}
+            error={!widthValid} disabled={disabled}
+          />
+          <TextInput
+            id="exportFps" label="Frame rate" type="number" min="6" step="6" value={fpsText}
+            onChange={event => handleFps(event.target.value)} rightSection={unit("fps")} rightSectionWidth={44}
+            error={!fpsValid} disabled={disabled}
+          />
+          <NativeSelect
+            id="exportType" label="File type" value={options.type} disabled={disabled}
+            onChange={event => onOptionsChange({...options, type: event.target.value as ExportType})}
+            data={FILE_TYPES.map(([value, label]) => ({value, label}))}
+          />
           {noVideoEncoder &&
-            <Row>
-              <Col>
-                <Alert variant="warning">
-                  This browser can't encode video. Export a GIF or PNG frames instead, or use a
-                  recent version of Chrome, Edge, Firefox or Safari.
-                </Alert>
-              </Col>
-            </Row>
+            <Alert color="yellow">
+              This browser can't encode video. Export a GIF or PNG frames instead, or use a
+              recent version of Chrome, Edge, Firefox or Safari.
+            </Alert>
           }
-        </Form>
-        {error && <Alert variant="danger">{error}</Alert>}
-        {progress && <hr />}
-        {progress?.stage === "rendering" &&
-          <>
-            <p>Rendering frames</p>
-            <ProgressBar now={progress.fraction} max={1} striped animated className="noTransition" />
-          </>
-        }
-        {progress?.stage === "encoding" &&
-          <>
-            <p>Encoding.</p>
-            <ProgressBar now={progress.fraction} max={1} striped animated />
-          </>
-        }
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={onCancel}>Cancel</Button>
-        <Button variant="primary" onClick={onExport} disabled={disabled || !widthValid || !fpsValid}>Export</Button>
-      </Modal.Footer>
-    </Modal>
+        </Stack>
+      </form>
+      {error && <Alert color="red" mt="md">{error}</Alert>}
+      {progress &&
+        <Stack gap={6} mt="lg">
+          <Text size="sm">{progress.stage === "rendering" ? "Rendering frames" : "Encoding"}</Text>
+          <Progress
+            value={progress.fraction * 100} striped animated
+            transitionDuration={progress.stage === "rendering" ? 0 : 200}
+          />
+        </Stack>
+      }
+      <Group justify="flex-end" mt="lg">
+        <Button variant="default" onClick={onCancel}>Cancel</Button>
+        <Button onClick={onExport} disabled={disabled || !widthValid || !fpsValid}>Export</Button>
+      </Group>
+    </AppModal>
   );
 }

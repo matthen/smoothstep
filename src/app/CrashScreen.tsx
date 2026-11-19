@@ -1,5 +1,5 @@
 import { Component, useState, type ReactNode } from 'react';
-import { Button } from 'react-bootstrap';
+import { Button, Group } from '@mantine/core';
 
 import * as archive from '../lib/archive';
 import * as localStore from '../lib/localStore';
@@ -29,19 +29,19 @@ function CrashScreen({error}: {error: Error}) {
 
   return (
     <div className="crashScreen">
-      <h1 className="h4">Something went wrong</h1>
+      <h1>Something went wrong</h1>
       <p>
         smoothstep hit an error it couldn't recover from. Your saved animations are still in this browser.
         Before you reload, you can download the animation you were editing, including any unsaved changes.
       </p>
-      <p>
-        {editing && <Button className="me-2" onClick={() => void downloadCurrent()}>Download this animation</Button>}
-        <Button variant="secondary" className="me-2" onClick={() => void run(async () => archive.download(await archive.exportAll()))}>
+      <Group gap="xs" my="md">
+        {editing && <Button onClick={() => void downloadCurrent()}>Download this animation</Button>}
+        <Button variant="default" onClick={() => void run(async () => archive.download(await archive.exportAll()))}>
           Download all saved animations
         </Button>
-        <Button variant="secondary" onClick={() => window.location.reload()}>Reload</Button>
-      </p>
-      {status && <p className="text-warning">{status}</p>}
+        <Button variant="default" onClick={() => window.location.reload()}>Reload</Button>
+      </Group>
+      {status && <p className="crashStatus">{status}</p>}
       <pre>{error.stack ?? error.message}</pre>
     </div>
   );
