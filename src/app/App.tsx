@@ -1,4 +1,4 @@
-import { ActionIcon, Button, Group, Kbd, Loader, Menu, Modal, SegmentedControl, Tabs, TextInput, Tooltip } from '@mantine/core';
+import { ActionIcon, Button, Group, Kbd, Loader, Menu, SegmentedControl, Tabs, TextInput, Tooltip } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -26,6 +26,7 @@ import { useLatest } from '../lib/useLatest';
 import Canvas, { type CanvasHandle, type CanvasLayout } from '../render/Canvas';
 import PlayerControls from '../timeline/PlayerControls';
 import Timeline from '../timeline/Timeline';
+import AppModal from './AppModal';
 import { setCrashDocument } from './crashState';
 import { hasConfirmedLeaving, parseHash, useHashLinks } from './routing';
 
@@ -505,10 +506,10 @@ export default function App() {
       />
       <Splash show={dialog === "splash"} onHide={() => setDialog(null)} />
       <Acknowledgements show={dialog === "acknowledgements"} onHide={() => setDialog(null)} />
-      <Modal opened={alert !== null} onClose={() => setAlert(null)} withCloseButton={false} zIndex={400}>
+      <AppModal opened={alert !== null} onClose={() => setAlert(null)} withCloseButton={false} zIndex={400}>
         <p className="alertText">{alert}</p>
         <Group justify="flex-end"><Button onClick={() => setAlert(null)}>Ok</Button></Group>
-      </Modal>
+      </AppModal>
     </div>
   );
 }

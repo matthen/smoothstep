@@ -1,7 +1,8 @@
-import { Button, Group, Modal, SimpleGrid, Text, Title } from '@mantine/core';
+import { Button, Group, SimpleGrid, Text, Title } from '@mantine/core';
 import { useEffect, useState, type ReactNode } from 'react';
 import { TbBook, TbBrandGithub, TbSchool } from 'react-icons/tb';
 
+import AppModal from '../app/AppModal';
 import { usePhone } from '../app/usePhone';
 import {
   asset, documentHref, DOCS_URL, EXAMPLES, exampleHref, exampleThumbnail, REPO_URL, TUTORIAL_URL,
@@ -42,7 +43,7 @@ export default function Splash({show, onHide}: SplashProps) {
     <ImageWithFallback src={src} width="28" height="28" alt="" className="thumbnail" />;
 
   return (
-    <Modal
+    <AppModal
       opened={show} onClose={onHide} size="xl" fullScreen={phone} classNames={{content: "splash"}}
       title={<span className="splashTitle"><img src={asset("images/logo.svg")} width="20" height="20" alt="" /><span>smoothstep<i>.io</i></span></span>}
     >
@@ -92,6 +93,6 @@ export default function Splash({show, onHide}: SplashProps) {
         <Button variant="default" component="a" href={TUTORIAL_URL} target="_blank" rel="noreferrer">Tutorial</Button>
         <Button onClick={onHide} data-autofocus>Continue</Button>
       </Group>
-    </Modal>
+    </AppModal>
   );
 }

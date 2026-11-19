@@ -21,6 +21,13 @@ test("on a phone, the panes switch and a transition can be added with two taps",
   await page.touchscreen.tap(row!.x + 165, row!.y + 10);
   await expect(page.locator(".properties h4")).toHaveText(/iFloat1\s*1\.0 — 4\.1s/);
 
+  // Tapping an existing transition abandons a half-made one and selects it.
+  await page.locator(".timeArea").tap({position: {x: 10, y: 5}});
+  await page.touchscreen.tap(row!.x + 45, row!.y + 38);
+  await page.locator(".timeArea .transition.selected, .timeArea .transition").first().tap();
+  await expect(page.locator(".timeArea .transition:not(.hover)")).toHaveCount(1);
+  await expect(page.locator(".properties h4")).toHaveText(/iFloat1\s*1\.0 — 4\.1s/);
+
   await panes.getByText("Textures", {exact: true}).tap();
   await expect(page.locator("div#textures .texture")).toHaveCount(8);
   await expect(page.locator(".timeArea")).toBeHidden();

@@ -9,6 +9,11 @@ div.playerButtons {
   transform: translateX(-50%);
   max-width: calc(100% - 24px);
   height: 48px;
+
+  // Phone canvases can be narrow, so the controls use the full width instead.
+  @include phone {
+    width: calc(100% - 24px) !important;
+  }
   padding: 8px 0;
   display: flex;
   align-items: center;
@@ -106,8 +111,14 @@ div#animationControls {
       padding: 8px 12px;
     }
 
+    // The same height as the heading that replaces it, so the grid below doesn't jump.
+    .hint, h4 {
+      min-height: 20px;
+      line-height: 20px;
+      margin: 0 0 10px;
+    }
+
     .hint {
-      margin: 0;
       color: $dt-gray-medium;
     }
 
@@ -137,7 +148,6 @@ div#animationControls {
     h4 {
       font-size: 14px;
       font-family: var(--mantine-font-family-monospace);
-      margin: 0 0 10px;
 
       span {
         font-weight: normal;

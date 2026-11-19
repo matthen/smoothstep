@@ -1,6 +1,7 @@
-import { Button, Group, Modal, TextInput } from '@mantine/core';
+import { Button, Group, TextInput } from '@mantine/core';
 import { useState, type FormEvent } from 'react';
 
+import AppModal from '../app/AppModal';
 import { DEFAULT_TITLE, MAX_TITLE_LENGTH } from '../lib/document';
 
 interface SaveCopyProps {
@@ -45,7 +46,7 @@ export default function SaveCopy({show, title, onSave, onHide}: SaveCopyProps) {
   }
 
   return (
-    <Modal opened={show} onClose={onHide} title="Save copy">
+    <AppModal opened={show} onClose={onHide} title="Save copy">
       <form onSubmit={save}>
         <TextInput
           id="saveCopyTitle" label="Title of copy" value={inputValue} maxLength={MAX_TITLE_LENGTH} data-autofocus
@@ -57,6 +58,6 @@ export default function SaveCopy({show, title, onSave, onHide}: SaveCopyProps) {
           <Button type="submit">Save copy</Button>
         </Group>
       </form>
-    </Modal>
+    </AppModal>
   );
 }

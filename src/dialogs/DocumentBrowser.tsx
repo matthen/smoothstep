@@ -1,7 +1,8 @@
-import { ActionIcon, Alert, Button, Group, Modal, ScrollArea, Table, Text, Title } from '@mantine/core';
+import { ActionIcon, Alert, Button, Group, ScrollArea, Table, Text, Title } from '@mantine/core';
 import { useEffect, useRef, useState } from 'react';
 import { TbDownload, TbFileImport, TbTrash } from 'react-icons/tb';
 
+import AppModal from '../app/AppModal';
 import { usePhone } from '../app/usePhone';
 import { animationFile, download, exportAll, importFiles, importMessage } from '../lib/archive';
 import { documentHref, EXAMPLES, exampleHref, exampleThumbnail } from '../lib/config';
@@ -98,7 +99,7 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
 
   return (
     <>
-      <Modal
+      <AppModal
         opened={show} onClose={onHide} title="Open" size={800} fullScreen={phone} classNames={{content: "documentBrowser"}}>
         <Title order={2} size="h5" mb="xs">Your animations</Title>
         {documents.length > 0 &&
@@ -172,8 +173,10 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
             Download all
           </Button>
         </Group>
-      </Modal>
-      <Modal opened={showConfirm && toDelete !== null} onClose={() => setShowConfirm(false)} title="Delete animation" size="sm">
+      </AppModal>
+      <AppModal opened={showConfirm && toDelete !== null} onClose={() => setShowConfirm(false)} title="Delete animation" size="sm"
+        closeOnClickOutside={false}
+      >
         {toDelete &&
           <>
             <Text>Delete '<b>{toDelete.title}</b>'?</Text>
@@ -184,7 +187,7 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
           <Button variant="default" onClick={() => setShowConfirm(false)}>Cancel</Button>
           <Button color="red" onClick={() => toDelete && handleDelete(toDelete)}>Delete</Button>
         </Group>
-      </Modal>
+      </AppModal>
     </>
   );
 }

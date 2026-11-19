@@ -2,5 +2,6 @@ import { useMediaQuery } from '@mantine/hooks';
 
 // Matches the phone layout in styles/_theme.scss.
 export function usePhone(): boolean {
-  return useMediaQuery("(max-width: 767.98px)") ?? false;
+  // Read on the first render, so dialogs don't open centred and then jump to full screen.
+  return useMediaQuery("(max-width: 767.98px)", undefined, {getInitialValueInEffect: false}) ?? false;
 }

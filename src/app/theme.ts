@@ -21,9 +21,11 @@ const red: MantineColorsTuple = [
 export const theme = createTheme({
   colors: {dark, purple, green, red},
   primaryColor: 'purple',
-  primaryShade: {light: 6, dark: 4},
+  // The app is always dark; components that resolve colours without a scheme use the light shade.
+  primaryShade: 4,
   autoContrast: true,
-  luminanceThreshold: 0.45,
+  // Dark text on the light purple buttons.
+  luminanceThreshold: 0.3,
   defaultRadius: 'sm',
   cursorType: 'pointer',
   fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',

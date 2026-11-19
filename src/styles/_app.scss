@@ -53,18 +53,24 @@ a {
     }
   }
 
+  // Phones always show the chosen pane, so collapsing only applies on desktop.
   &[data-footer="closed"] {
-    --panel-height: 42px;
-    .bottomPanel .mantine-Tabs-panel {
-      display: none;
-    }
-    .toggleFooter {
-      transform: rotate(180deg);
+    @include desktop {
+      --panel-height: 42px;
+      .bottomPanel .mantine-Tabs-panel {
+        display: none;
+      }
+      .toggleFooter {
+        transform: rotate(180deg);
+      }
     }
   }
 
   @include phone {
     min-height: 0;
+    @include short {
+      min-height: 640px;
+    }
     grid-template-rows: auto auto auto minmax(0, 1fr);
     grid-template-areas: "header" "preview" "tabs" "pane";
 
@@ -145,7 +151,7 @@ a {
       }
     }
 
-    &[data-default] input:not(:focus) {
+    input[data-default]:not(:focus) {
       color: $dt-gray-medium;
     }
   }
@@ -213,7 +219,7 @@ a {
   }
 
   @include phone {
-    height: min(52dvh, 100vw);
+    height: min(max(52dvh, 240px), 100vw);
     padding: 8px 12px 0;
   }
 }

@@ -40,9 +40,9 @@ $short-height: 520px;
   }
 }
 
-// Landscape phones and small windows: the desktop layout, scrolling the page.
+// Landscape phones and short windows: the page scrolls rather than squeezing the panes.
 @mixin short {
-  @media (max-height: $short-height) and (min-width: $phone-breakpoint + 0.02px) {
+  @media (max-height: $short-height) {
     @content;
   }
 }

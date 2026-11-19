@@ -195,12 +195,22 @@ export default function Timeline(props: TimelineProps) {
     }
   }
 
+  function cancelCreating() {
+    setGesture({kind: "idle"});
+    setHover(null);
+  }
+
   function handlePointerDown(event: ReactPointerEvent) {
     const current = gestureRef.current;
     // A touch can't hover, so the second tap of a click-twice creation sets the end where it lands.
+    // A second tap in another row, or where the transition can't end, cancels it instead.
     if (current.kind === "creating" && current.released) {
-      const endDSecs = hoverEndDSecs(position(event).x, current.startDSecs);
-      if (isInsertable(variables[current.row]!.transitions, current.startDSecs, endDSecs, maxDSecs)) {
+      const {x, y} = position(event);
+      const endDSecs = hoverEndDSecs(x, current.startDSecs);
+      const fits = isInsertable(variables[current.row]!.transitions, current.startDSecs, endDSecs, maxDSecs);
+      if (event.pointerType === "touch" && (!fits || Math.floor(y / ROW_HEIGHT) !== current.row)) {
+        cancelCreating();
+      } else if (fits) {
         setGesture({...current, endDSecs});
       }
       return;
@@ -246,19 +256,23 @@ export default function Timeline(props: TimelineProps) {
 
   function handlePointerLeave(event: ReactPointerEvent) {
     // Touch pointers leave on every lift, which would cancel a click-twice creation.
-    if (event.pointerType !== "mouse") {
+    if (event.pointerType === "touch") {
       return;
     }
     const {kind} = gestureRef.current;
     if (kind === "idle" || kind === "creating") {
-      setGesture({kind: "idle"});
-      setHover(null);
+      cancelCreating();
     }
   }
 
   function handleTransitionPointerDown(event: ReactPointerEvent<HTMLDivElement>, row: number, index: number) {
-    if (event.button !== 0 || gestureRef.current.kind === "creating") {
+    const current = gestureRef.current;
+    if (event.button !== 0 || (current.kind === "creating" && !current.released)) {
       return;
+    }
+    // Picking a transition abandons a half-made one.
+    if (current.kind === "creating") {
+      cancelCreating();
     }
     event.stopPropagation();
     const transitions = variables[row]!.transitions;
@@ -305,8 +319,14 @@ export default function Timeline(props: TimelineProps) {
     }
   });
   const onDocumentPointerDown = useEffectEvent((event: PointerEvent) => {
-    if (selection && !rootRef.current?.contains(event.target as Node)) {
+    if (rootRef.current?.contains(event.target as Node)) {
+      return;
+    }
+    if (selection) {
       select(null);
+    }
+    if (gestureRef.current.kind === "creating") {
+      cancelCreating();
     }
   });
   useEffect(() => {
@@ -378,7 +398,7 @@ export default function Timeline(props: TimelineProps) {
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
-          onPointerCancel={() => setGesture({kind: "idle"})}
+          onPointerCancel={cancelCreating}
           onPointerLeave={handlePointerLeave}
         >
           <div className="postDuration" style={{left: timeToX(duration), width: timeToX(maxTime - duration) + 20, height: rowsHeight}} />

@@ -1,8 +1,9 @@
-import { ActionIcon, Alert, Button, Group, Loader, Modal, Tabs, Text } from '@mantine/core';
+import { ActionIcon, Alert, Button, Group, Loader, Tabs, Text } from '@mantine/core';
 import { useEffect, useState, type MouseEvent, type ReactNode } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { TbTrash, TbUpload } from 'react-icons/tb';
 
+import AppModal from '../app/AppModal';
 import { usePhone } from '../app/usePhone';
 import { asset, textureURL } from '../lib/config';
 import type { TextureSlot } from '../lib/document';
@@ -162,7 +163,7 @@ export default function TexturePicker(
 
   return (
     <>
-      <Modal
+      <AppModal
         opened={show} onClose={onHide} returnFocus={false} size="xl" fullScreen={phone} title={texture.id || "iTexture" + slot}
         classNames={{content: "texturePickerModal"}}
       >
@@ -224,8 +225,8 @@ export default function TexturePicker(
           <Button variant="default" onClick={onHide}>Cancel</Button>
           <Button onClick={() => onPick(texture)}>Apply changes</Button>
         </Group>
-      </Modal>
-      <Modal
+      </AppModal>
+      <AppModal
         opened={showConfirm && toDelete !== null} onClose={() => setShowConfirm(false)} title="Delete image" size="sm"
         closeOnClickOutside={false}
       >
@@ -241,7 +242,7 @@ export default function TexturePicker(
           <Button variant="default" onClick={() => setShowConfirm(false)}>Cancel</Button>
           <Button color="red" onClick={() => toDelete && handleDelete(toDelete)}>Delete</Button>
         </Group>
-      </Modal>
+      </AppModal>
     </>
   );
 }

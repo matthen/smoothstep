@@ -1,6 +1,7 @@
-import { Alert, Button, Group, Loader, Modal, NativeSelect, Progress, Stack, Text, TextInput } from '@mantine/core';
+import { Alert, Button, Group, Loader, NativeSelect, Progress, Stack, Text, TextInput } from '@mantine/core';
 import { useState } from 'react';
 
+import AppModal from '../app/AppModal';
 import type { ExportOptions, ExportProgress, ExportType } from './exportTypes';
 
 interface ExportSettingsProps {
@@ -69,7 +70,7 @@ export default function ExportSettings(
   const unit = (text: string) => <Text size="sm" c="dimmed" pr="xs">{text}</Text>;
 
   return (
-    <Modal
+    <AppModal
       opened={show} onClose={onCancel} closeOnEscape={false} closeOnClickOutside={false} withCloseButton={false}
       title={<Group gap="xs">Export video{disabled && <Loader size="xs" role="status" />}</Group>}
       classNames={{content: "export"}}
@@ -113,6 +114,6 @@ export default function ExportSettings(
         <Button variant="default" onClick={onCancel}>Cancel</Button>
         <Button onClick={onExport} disabled={disabled || !widthValid || !fpsValid}>Export</Button>
       </Group>
-    </Modal>
+    </AppModal>
   );
 }

@@ -1,5 +1,7 @@
-import { Button, Group, Modal } from '@mantine/core';
+import { Button, Group } from '@mantine/core';
 import type { ReactNode } from 'react';
+
+import AppModal from '../app/AppModal';
 
 interface AcknowledgementsProps {
   show: boolean;
@@ -12,7 +14,7 @@ function Link({href, children}: {href: string; children: ReactNode}) {
 
 export default function Acknowledgements({show, onHide}: AcknowledgementsProps) {
   return (
-    <Modal opened={show} onClose={onHide} title="Acknowledgements" size="lg" classNames={{body: "prose"}}>
+    <AppModal opened={show} onClose={onHide} title="Acknowledgements" size="lg" classNames={{body: "prose"}}>
         <p>
           smoothstep.io was developed by <Link href="https://twitter.com/matthen2">Matt Henderson</Link>.
         </p>
@@ -60,6 +62,6 @@ export default function Acknowledgements({show, onHide}: AcknowledgementsProps) 
           under the <Link href="https://openfontlicense.org">SIL Open Font License</Link>.
         </p>
       <Group justify="flex-end" mt="lg"><Button variant="default" onClick={onHide}>Close</Button></Group>
-    </Modal>
+    </AppModal>
   );
 }
