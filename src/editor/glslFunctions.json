@@ -1,0 +1,1152 @@
+[
+    {
+        "functionName": "iFrame",
+        "oneLiner": "The index of the current frame.",
+        "signatures": [
+            "int iFrame"
+        ]
+    },
+    {
+        "functionName": "iTime",
+        "oneLiner": "The time into the animation that the current frame is being rendered at.",
+        "signatures": [
+            "float iTime"
+        ]
+    },
+    {
+        "functionName": "iPrevFrame",
+        "oneLiner": "The contents of the previously rendered frame.",
+        "signatures": [
+            "sampler2D iPrevFrame"
+        ]
+    },
+    {
+        "functionName": "iResolution",
+        "oneLiner": "The resolution of the frame being rendered in pixels.",
+        "signatures": [
+            "vec2 iResolution"
+        ]
+    },
+    {
+        "functionName": "iDuration",
+        "oneLiner": "The total duration of the animation in seconds.",
+        "signatures": [
+            "float iDuration"
+        ]
+    },
+    {
+        "functionName": "iTexture0",
+        "oneLiner": "The contents of the texture loaded as iTexture0.",
+        "signatures": [
+            "sampler2D iTexture0"
+        ]
+    },
+    {
+        "functionName": "iTexture1",
+        "oneLiner": "The contents of the texture loaded as iTexture1.",
+        "signatures": [
+            "sampler2D iTexture1"
+        ]
+    },
+    {
+        "functionName": "iTexture2",
+        "oneLiner": "The contents of the texture loaded as iTexture2.",
+        "signatures": [
+            "sampler2D iTexture2"
+        ]
+    },
+    {
+        "functionName": "iTexture3",
+        "oneLiner": "The contents of the texture loaded as iTexture3.",
+        "signatures": [
+            "sampler2D iTexture3"
+        ]
+    },
+    {
+        "functionName": "iTexture4",
+        "oneLiner": "The contents of the texture loaded as iTexture4.",
+        "signatures": [
+            "sampler2D iTexture4"
+        ]
+    },
+    {
+        "functionName": "iTexture5",
+        "oneLiner": "The contents of the texture loaded as iTexture5.",
+        "signatures": [
+            "sampler2D iTexture5"
+        ]
+    },
+    {
+        "functionName": "iTexture6",
+        "oneLiner": "The contents of the texture loaded as iTexture6.",
+        "signatures": [
+            "sampler2D iTexture6"
+        ]
+    },
+    {
+        "functionName": "iTexture7",
+        "oneLiner": "The contents of the texture loaded as iTexture7.",
+        "signatures": [
+            "sampler2D iTexture7"
+        ]
+    },
+    {
+        "functionName": "iFloat0",
+        "oneLiner": "The value of the animated variable iFloat0.",
+        "signatures": [
+            "float iFloat0"
+        ]
+    },
+    {
+        "functionName": "iFloat1",
+        "oneLiner": "The value of the animated variable iFloat1.",
+        "signatures": [
+            "float iFloat1"
+        ]
+    },
+    {
+        "functionName": "iFloat2",
+        "oneLiner": "The value of the animated variable iFloat2.",
+        "signatures": [
+            "float iFloat2"
+        ]
+    },
+    {
+        "functionName": "iFloat3",
+        "oneLiner": "The value of the animated variable iFloat3.",
+        "signatures": [
+            "float iFloat3"
+        ]
+    },
+    {
+        "functionName": "iFloat4",
+        "oneLiner": "The value of the animated variable iFloat4.",
+        "signatures": [
+            "float iFloat4"
+        ]
+    },
+    {
+        "functionName": "iFloat5",
+        "oneLiner": "The value of the animated variable iFloat5.",
+        "signatures": [
+            "float iFloat5"
+        ]
+    },
+    {
+        "functionName": "iFloat6",
+        "oneLiner": "The value of the animated variable iFloat6.",
+        "signatures": [
+            "float iFloat6"
+        ]
+    },
+    {
+        "functionName": "iFloat7",
+        "oneLiner": "The value of the animated variable iFloat7.",
+        "signatures": [
+            "float iFloat7"
+        ]
+    },
+    {
+        "functionName": "iFloat8",
+        "oneLiner": "The value of the animated variable iFloat8.",
+        "signatures": [
+            "float iFloat8"
+        ]
+    },
+    {
+        "functionName": "iFloat9",
+        "oneLiner": "The value of the animated variable iFloat9.",
+        "signatures": [
+            "float iFloat9"
+        ]
+    },
+    {
+        "functionName": "iFloat10",
+        "oneLiner": "The value of the animated variable iFloat10.",
+        "signatures": [
+            "float iFloat10"
+        ]
+    },
+    {
+        "functionName": "iFloat11",
+        "oneLiner": "The value of the animated variable iFloat11.",
+        "signatures": [
+            "float iFloat11"
+        ]
+    },
+    {
+        "functionName": "iFloat12",
+        "oneLiner": "The value of the animated variable iFloat12.",
+        "signatures": [
+            "float iFloat12"
+        ]
+    },
+    {
+        "functionName": "iFloat13",
+        "oneLiner": "The value of the animated variable iFloat13.",
+        "signatures": [
+            "float iFloat13"
+        ]
+    },
+    {
+        "functionName": "iFloat14",
+        "oneLiner": "The value of the animated variable iFloat14.",
+        "signatures": [
+            "float iFloat14"
+        ]
+    },
+    {
+        "functionName": "iFloat15",
+        "oneLiner": "The value of the animated variable iFloat15.",
+        "signatures": [
+            "float iFloat15"
+        ]
+    },
+    {
+        "functionName": "greaterThanEqual",
+        "oneLiner": "Perform a component-wise greater-than-or-equal comparison of two vectors.",
+        "signatures": [
+            "bvec greaterThanEqual(vec x, vec y)",
+            "bvec greaterThanEqual(ivec x, ivec y)",
+            "bvec greaterThanEqual(uvec x, uvec y)"
+        ],
+        "helpUrl": "https://docs.gl/el3/greaterThanEqual"
+    },
+    {
+        "functionName": "acos",
+        "oneLiner": "Return the arccosine of the parameter.",
+        "signatures": [
+            "genType acos(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/acos"
+    },
+    {
+        "functionName": "acosh",
+        "oneLiner": "Return the arc hyperbolic cosine of the parameter.",
+        "signatures": [
+            "genType acosh(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/acosh"
+    },
+    {
+        "functionName": "asin",
+        "oneLiner": "Return the arcsine of the parameter.",
+        "signatures": [
+            "genType asin(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/asin"
+    },
+    {
+        "functionName": "asinh",
+        "oneLiner": "Return the arc hyperbolic sine of the parameter.",
+        "signatures": [
+            "genType asinh(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/asinh"
+    },
+    {
+        "functionName": "atan",
+        "oneLiner": "Return the arc-tangent of the parameters.",
+        "signatures": [
+            "genType atan(genType y, genType x)",
+            "genType atan(genType y_over_x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/atan"
+    },
+    {
+        "functionName": "atanh",
+        "oneLiner": "Return the arc hyperbolic tangent of the parameter.",
+        "signatures": [
+            "genType atanh(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/atanh"
+    },
+    {
+        "functionName": "cos",
+        "oneLiner": "Return the cosine of the parameter.",
+        "signatures": [
+            "genType cos(genType angle)"
+        ],
+        "helpUrl": "https://docs.gl/el3/cos"
+    },
+    {
+        "functionName": "cosh",
+        "oneLiner": "Return the hyperbolic cosine of the parameter.",
+        "signatures": [
+            "genType cosh(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/cosh"
+    },
+    {
+        "functionName": "degrees",
+        "oneLiner": "Convert a quantity in radians to degrees.",
+        "signatures": [
+            "genType degrees(genType radians)"
+        ],
+        "helpUrl": "https://docs.gl/el3/degrees"
+    },
+    {
+        "functionName": "radians",
+        "oneLiner": "Convert a quantity in degrees to radians.",
+        "signatures": [
+            "genType radians(genType degrees)"
+        ],
+        "helpUrl": "https://docs.gl/el3/radians"
+    },
+    {
+        "functionName": "sin",
+        "oneLiner": "Return the sine of the parameter.",
+        "signatures": [
+            "genType sin(genType angle)"
+        ],
+        "helpUrl": "https://docs.gl/el3/sin"
+    },
+    {
+        "functionName": "sinh",
+        "oneLiner": "Return the hyperbolic sine of the parameter.",
+        "signatures": [
+            "genType sinh(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/sinh"
+    },
+    {
+        "functionName": "tan",
+        "oneLiner": "Return the tangent of the parameter.",
+        "signatures": [
+            "genType tan(genType angle)"
+        ],
+        "helpUrl": "https://docs.gl/el3/tan"
+    },
+    {
+        "functionName": "tanh",
+        "oneLiner": "Return the hyperbolic tangent of the parameter.",
+        "signatures": [
+            "genType tanh(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/tanh"
+    },
+    {
+        "functionName": "abs",
+        "oneLiner": "Return the absolute value of the parameter.",
+        "signatures": [
+            "genType abs(genType x)",
+            "genIType abs(genIType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/abs"
+    },
+    {
+        "functionName": "ceil",
+        "oneLiner": "Find the nearest integer that is greater than or equal to the parameter.",
+        "signatures": [
+            "genType ceil(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/ceil"
+    },
+    {
+        "functionName": "clamp",
+        "oneLiner": "Constrain a value to lie between two further values.",
+        "signatures": [
+            "genType clamp(genType x, genType minVal, genType maxVal)",
+            "genType clamp(genType x, float minVal, float maxVal)",
+            "genIType clamp(genIType x, genIType minVal, genIType maxVal)",
+            "genIType clamp(genIType x, int minVal, int maxVal)",
+            "genUType clamp(genUType x, genUType minVal, genUType maxVal)",
+            "genUType clamp(genUType x, uint minVal, uint maxVal)"
+        ],
+        "helpUrl": "https://docs.gl/el3/clamp"
+    },
+    {
+        "functionName": "dFdx",
+        "oneLiner": "Return the partial derivative of an argument with respect to x or y.",
+        "signatures": [
+            "genType dFdx(genType p)"
+        ],
+        "helpUrl": "https://docs.gl/el3/dFdx"
+    },
+    {
+        "functionName": "dFdy",
+        "oneLiner": "Return the partial derivative of an argument with respect to x or y.",
+        "signatures": [
+            "genType dFdy(genType p)"
+        ],
+        "helpUrl": "https://docs.gl/el3/dFdy"
+    },
+    {
+        "functionName": "exp",
+        "oneLiner": "Return the natural exponentiation of the parameter.",
+        "signatures": [
+            "genType exp(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/exp"
+    },
+    {
+        "functionName": "exp2",
+        "oneLiner": "Return 2 raised to the power of the parameter.",
+        "signatures": [
+            "genType exp2(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/exp2"
+    },
+    {
+        "functionName": "floor",
+        "oneLiner": "Find the nearest integer less than or equal to the parameter.",
+        "signatures": [
+            "genType floor(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/floor"
+    },
+    {
+        "functionName": "floor",
+        "oneLiner": "Find the nearest integer less than or equal to the parameter.",
+        "signatures": [
+            "genType floor(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/floor"
+    },
+    {
+        "functionName": "fma",
+        "oneLiner": "Perform a fused multiply-add operation.",
+        "signatures": [
+            "genType fma(genType a, genType b, genType c)"
+        ],
+        "helpUrl": "https://docs.gl/el3/fma"
+    },
+    {
+        "functionName": "fract",
+        "oneLiner": "Compute the fractional part of the argument.",
+        "signatures": [
+            "genType fract(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/fract"
+    },
+    {
+        "functionName": "fwidth",
+        "oneLiner": "Return the sum of the absolute derivatives in x and y.",
+        "signatures": [
+            "genType fwidth(genType p)"
+        ],
+        "helpUrl": "https://docs.gl/el3/fwidth"
+    },
+    {
+        "functionName": "inversesqrt",
+        "oneLiner": "Return the inverse of the square root of the parameter.",
+        "signatures": [
+            "genType inversesqrt(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/inversesqrt"
+    },
+    {
+        "functionName": "isinf",
+        "oneLiner": "Determine whether the parameter is positive or negative infinity.",
+        "signatures": [
+            "genBType isinf(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/isinf"
+    },
+    {
+        "functionName": "isnan",
+        "oneLiner": "Determine whether the parameter is a number.",
+        "signatures": [
+            "genBType isnan(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/isnan"
+    },
+    {
+        "functionName": "log",
+        "oneLiner": "Return the natural logarithm of the parameter.",
+        "signatures": [
+            "genType log(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/log"
+    },
+    {
+        "functionName": "log2",
+        "oneLiner": "Return the base 2 logarithm of the parameter.",
+        "signatures": [
+            "genType log2(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/log2"
+    },
+    {
+        "functionName": "max",
+        "oneLiner": "Return the greater of two values.",
+        "signatures": [
+            "genType max(genType x, genType y)",
+            "genType max(genType x, float y)",
+            "genIType max(genIType x, genIType y)",
+            "genIType max(genIType x, int y)",
+            "genUType max(genUType x, genUType y)",
+            "genUType max(genUType x, uint y)"
+        ],
+        "helpUrl": "https://docs.gl/el3/max"
+    },
+    {
+        "functionName": "min",
+        "oneLiner": "Return the lesser of two values.",
+        "signatures": [
+            "genType min(genType x, genType y)",
+            "genType min(genType x, float y)",
+            "genIType min(genIType x, genIType y)",
+            "genIType min(genIType x, int y)",
+            "genUType min(genUType x, genUType y)",
+            "genUType min(genUType x, uint y)"
+        ],
+        "helpUrl": "https://docs.gl/el3/min"
+    },
+    {
+        "functionName": "mix",
+        "oneLiner": "Linearly interpolate between two values.",
+        "signatures": [
+            "genType mix(genType x, genType y, genType a)",
+            "genType mix(genType x, genType y, float a)",
+            "genType mix(genType x, genType y, genBType a)"
+        ],
+        "helpUrl": "https://docs.gl/el3/mix"
+    },
+    {
+        "functionName": "mod",
+        "oneLiner": "Compute value of one parameter modulo another.",
+        "signatures": [
+            "genType mod(genType x, float y)",
+            "genType mod(genType x, genType y)"
+        ],
+        "helpUrl": "https://docs.gl/el3/mod"
+    },
+    {
+        "functionName": "modf",
+        "oneLiner": "Separate a value into its integer and fractional components.",
+        "signatures": [
+            "genType modf(genType x, out genType i)"
+        ],
+        "helpUrl": "https://docs.gl/el3/modf"
+    },
+    {
+        "functionName": "pow",
+        "oneLiner": "Return the value of the first parameter raised to the power of the second.",
+        "signatures": [
+            "genType pow(genType x, genType y)"
+        ],
+        "helpUrl": "https://docs.gl/el3/pow"
+    },
+    {
+        "functionName": "round",
+        "oneLiner": "Find the nearest integer to the parameter.",
+        "signatures": [
+            "genType round(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/round"
+    },
+    {
+        "functionName": "roundEven",
+        "oneLiner": "Find the nearest even integer to the parameter.",
+        "signatures": [
+            "genType roundEven(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/roundEven"
+    },
+    {
+        "functionName": "sign",
+        "oneLiner": "Extract the sign of the parameter.",
+        "signatures": [
+            "genType sign(genType x)",
+            "genIType sign(genIType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/sign"
+    },
+    {
+        "functionName": "smoothstep",
+        "oneLiner": "Perform Hermite interpolation between two values.",
+        "signatures": [
+            "genType smoothstep(genType edge0, genType edge1, genType x)",
+            "genType smoothstep(float edge0, float edge1, genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/smoothstep"
+    },
+    {
+        "functionName": "sqrt",
+        "oneLiner": "Return the square root of the parameter.",
+        "signatures": [
+            "genType sqrt(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/sqrt"
+    },
+    {
+        "functionName": "step",
+        "oneLiner": "Generate a step function by comparing two values.",
+        "signatures": [
+            "genType step(genType edge, genType x)",
+            "genType step(float edge, genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/step"
+    },
+    {
+        "functionName": "trunc",
+        "oneLiner": "Find the truncated value of the parameter.",
+        "signatures": [
+            "genType trunc(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/trunc"
+    },
+    {
+        "functionName": "floatBitsToInt",
+        "oneLiner": "Produce the encoding of a floating point value as an integer.",
+        "signatures": [
+            "genIType floatBitsToInt(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/floatBitsToInt"
+    },
+    {
+        "functionName": "frexp",
+        "oneLiner": "Split a floating point number.",
+        "signatures": [
+            "genType frexp(genType x, out genIType exp)"
+        ],
+        "helpUrl": "https://docs.gl/el3/frexp"
+    },
+    {
+        "functionName": "intBitsToFloat",
+        "oneLiner": "Produce a floating point using an encoding supplied as an integer.",
+        "signatures": [
+            "genType intBitsToFloat(genIType x)",
+            "genType uintBitsToFloat(genUType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/intBitsToFloat"
+    },
+    {
+        "functionName": "ldexp",
+        "oneLiner": "Assemble a floating point number from a value and exponent.",
+        "signatures": [
+            "genType ldexp(genType x, genIType exp)"
+        ],
+        "helpUrl": "https://docs.gl/el3/ldexp"
+    },
+    {
+        "functionName": "packHalf2x16",
+        "oneLiner": "Convert two 32-bit floating-point quantities to 16-bit quantities and pack them into a single 32-bit integer.",
+        "signatures": [
+            "uint packHalf2x16(vec2 v)"
+        ],
+        "helpUrl": "https://docs.gl/el3/packHalf2x16"
+    },
+    {
+        "functionName": "packUnorm",
+        "oneLiner": "Pack floating-point values into an unsigned integer.",
+        "signatures": [
+            "uint packUnorm2x16(vec2 v)",
+            "uint packUnorm4x8(vec4 v)"
+        ],
+        "helpUrl": "https://docs.gl/el3/packUnorm"
+    },
+    {
+        "functionName": "unpackHalf2x16",
+        "oneLiner": "Convert two 16-bit floating-point values packed into a single 32-bit integer into a vector of two 32-bit floating-point quantities.",
+        "signatures": [
+            "vec2 unpackHalf2x16(uint v)"
+        ],
+        "helpUrl": "https://docs.gl/el3/unpackHalf2x16"
+    },
+    {
+        "functionName": "unpackUnorm",
+        "oneLiner": "Unpack floating-point values from an unsigned integer.",
+        "signatures": [
+            "vec2 unpackUnorm2x16(uint p)",
+            "vec2 unpackUnorm4x8(uint p)"
+        ],
+        "helpUrl": "https://docs.gl/el3/unpackUnorm"
+    },
+    {
+        "functionName": "cross",
+        "oneLiner": "Calculate the cross product of two vectors.",
+        "signatures": [
+            "vec3 cross(vec3 x, vec3 y)"
+        ],
+        "helpUrl": "https://docs.gl/el3/cross"
+    },
+    {
+        "functionName": "distance",
+        "oneLiner": "Calculate the distance between two points.",
+        "signatures": [
+            "float distance(genType p0, genType p1)"
+        ],
+        "helpUrl": "https://docs.gl/el3/distance"
+    },
+    {
+        "functionName": "dot",
+        "oneLiner": "Calculate the dot product of two vectors.",
+        "signatures": [
+            "float dot(genType x, genType y)"
+        ],
+        "helpUrl": "https://docs.gl/el3/dot"
+    },
+    {
+        "functionName": "equal",
+        "oneLiner": "Perform a component-wise equal-to comparison of two vectors.",
+        "signatures": [
+            "bvec equal(vec x, vec y)",
+            "bvec equal(bvec x, bvec y)",
+            "bvec equal(ivec x, ivec y)",
+            "bvec equal(uvec x, uvec y)"
+        ],
+        "helpUrl": "https://docs.gl/el3/equal"
+    },
+    {
+        "functionName": "faceforward",
+        "oneLiner": "Return a vector pointing in the same direction as another.",
+        "signatures": [
+            "genType faceforward(genType N, genType I, genType Nref)"
+        ],
+        "helpUrl": "https://docs.gl/el3/faceforward"
+    },
+    {
+        "functionName": "length",
+        "oneLiner": "Calculate the length of a vector.",
+        "signatures": [
+            "float length(genType x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/length"
+    },
+    {
+        "functionName": "normalize",
+        "oneLiner": "Calculate the normalize product of two vectors.",
+        "signatures": [
+            "genType normalize(genType v)"
+        ],
+        "helpUrl": "https://docs.gl/el3/normalize"
+    },
+    {
+        "functionName": "notEqual",
+        "oneLiner": "Perform a component-wise not-equal-to comparison of two vectors.",
+        "signatures": [
+            "bvec notEqual(vec x, vec y)",
+            "bvec notEqual(ivec x, ivec y)",
+            "bvec notEqual(bvec x, bvec y)",
+            "bvec notEqual(uvec x, uvec y)"
+        ],
+        "helpUrl": "https://docs.gl/el3/notEqual"
+    },
+    {
+        "functionName": "reflect",
+        "oneLiner": "Calculate the reflection direction for an incident vector.",
+        "signatures": [
+            "genType reflect(genType I, genType N)"
+        ],
+        "helpUrl": "https://docs.gl/el3/reflect"
+    },
+    {
+        "functionName": "refract",
+        "oneLiner": "Calculate the refraction direction for an incident vector.",
+        "signatures": [
+            "genType refract(genType I, genType N, float eta)"
+        ],
+        "helpUrl": "https://docs.gl/el3/refract"
+    },
+    {
+        "functionName": "all",
+        "oneLiner": "Check whether all elements of a boolean vector are true.",
+        "signatures": [
+            "bool all(bvec x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/all"
+    },
+    {
+        "functionName": "any",
+        "oneLiner": "Check whether any element of a boolean vector is true.",
+        "signatures": [
+            "bool any(bvec x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/any"
+    },
+    {
+        "functionName": "greaterThan",
+        "oneLiner": "Perform a component-wise greater-than comparison of two vectors.",
+        "signatures": [
+            "bvec greaterThan(vec x, vec y)",
+            "bvec greaterThan(ivec x, ivec y)",
+            "bvec greaterThan(uvec x, uvec y)"
+        ],
+        "helpUrl": "https://docs.gl/el3/greaterThan"
+    },
+    {
+        "functionName": "greaterThanEqual",
+        "oneLiner": "Perform a component-wise greater-than-or-equal comparison of two vectors.",
+        "signatures": [
+            "bvec greaterThanEqual(vec x, vec y)",
+            "bvec greaterThanEqual(ivec x, ivec y)",
+            "bvec greaterThanEqual(uvec x, uvec y)"
+        ],
+        "helpUrl": "https://docs.gl/el3/greaterThanEqual"
+    },
+    {
+        "functionName": "lessThan",
+        "oneLiner": "Perform a component-wise less-than comparison of two vectors.",
+        "signatures": [
+            "bvec lessThan(vec x, vec y)",
+            "bvec lessThan(ivec x, ivec y)",
+            "bvec lessThan(uvec x, uvec y)"
+        ],
+        "helpUrl": "https://docs.gl/el3/lessThan"
+    },
+    {
+        "functionName": "lessThanEqual",
+        "oneLiner": "Perform a component-wise less-than-or-equal comparison of two vectors.",
+        "signatures": [
+            "bvec lessThanEqual(vec x, vec y)",
+            "bvec lessThanEqual(ivec x, ivec y)",
+            "bvec lessThanEqual(uvec x, uvec y)"
+        ],
+        "helpUrl": "https://docs.gl/el3/lessThanEqual"
+    },
+    {
+        "functionName": "not",
+        "oneLiner": "Logically invert a boolean vector.",
+        "signatures": [
+            "bvec not(bvec x)"
+        ],
+        "helpUrl": "https://docs.gl/el3/not"
+    },
+    {
+        "functionName": "texelFetch",
+        "oneLiner": "Perform a lookup of a single texel within a texture.",
+        "signatures": [
+            "gvec4 texelFetch(gsampler2D sampler, ivec2 P, int lod)",
+            "gvec4 texelFetch(gsampler3D sampler, ivec3 P, int lod)",
+            "gvec4 texelFetch(gsampler2DArray sampler, ivec3 P, int lod)"
+        ],
+        "helpUrl": "https://docs.gl/el3/texelFetch"
+    },
+    {
+        "functionName": "texelFetchOffset",
+        "oneLiner": "Perform a lookup of a single texel within a texture with an offset.",
+        "signatures": [
+            "gvec4 texelFetchOffset(gsampler2D sampler, ivec2 P, int lod, ivec2 offset)",
+            "gvec4 texelFetchOffset(gsampler3D sampler, ivec3 P, int lod, ivec3 offset)",
+            "gvec4 texelFetchOffset(gsampler2DArray sampler, ivec3 P, int lod, ivec2 offset)"
+        ],
+        "helpUrl": "https://docs.gl/el3/texelFetchOffset"
+    },
+    {
+        "functionName": "texture",
+        "oneLiner": "Retrieves texels from a texture.",
+        "signatures": [
+            "gvec4 texture(gsampler2D sampler, vec2 P, [float bias])",
+            "gvec4 texture(gsampler3D sampler, vec3 P, [float bias])",
+            "gvec4 texture(gsamplerCube sampler, vec3 P, [float bias])",
+            "float texture(sampler2DShadow sampler, vec3 P, [float bias])",
+            "float texture(samplerCubeShadow sampler, vec4 P, [float bias])",
+            "gvec4 texture(gsampler2DArray sampler, vec3 P, [float bias])",
+            "float texture(gsampler2DArrayShadow sampler, vec4 P)"
+        ],
+        "helpUrl": "https://docs.gl/el3/texture"
+    },
+    {
+        "functionName": "textureGather",
+        "oneLiner": "Gathers four texels from a texture.",
+        "signatures": [
+            "gvec4 textureGather(gsampler2D sampler, vec2 P, [int comp])",
+            "gvec4 textureGather(gsampler2DArray sampler, vec3 P, [int comp])",
+            "gvec4 textureGather(gsamplerCube sampler, vec3 P, [int comp])",
+            "vec4 textureGather(gsampler2DShadow sampler, vec2 P, float refZ)",
+            "vec4 textureGather(gsampler2DArrayShadow sampler, vec3 P, float refZ)",
+            "vec4 textureGather(gsamplerCubeShadow sampler, vec3 P, float refZ)",
+            "vec4 textureGather(gsamplerCubeArrayShadow sampler, vec4 P, float refZ)"
+        ],
+        "helpUrl": "https://docs.gl/el3/textureGather"
+    },
+    {
+        "functionName": "textureGatherOffset",
+        "oneLiner": "Gathers four texels from a texture with offset.",
+        "signatures": [
+            "gvec4 textureGatherOffset(gsampler2D sampler, vec2 P, ivec2 offset, [int comp])",
+            "gvec4 textureGatherOffset(gsampler2DArray sampler, vec3 P, ivec2 offset, [int comp])",
+            "vec4 textureGatherOffset(gsampler2DShadow sampler, vec2 P, float refZ, ivec2 offset)",
+            "vec4 textureGatherOffset(gsampler2DArrayShadow sampler, vec3 P, float refZ, ivec2 offset)"
+        ],
+        "helpUrl": "https://docs.gl/el3/textureGatherOffset"
+    },
+    {
+        "functionName": "textureGrad",
+        "oneLiner": "Perform a texture lookup with explicit gradients.",
+        "signatures": [
+            "gvec4 textureGrad(gsampler2D sampler, vec2 P, vec2 dPdx, vec2 dPdy)",
+            "gvec4 textureGrad(gsampler3D sampler, vec3 P, vec3 dPdx, vec3 dPdy)",
+            "gvec4 textureGrad(gsamplerCube sampler, vec3 P, vec3 dPdx, vec3 dPdy)",
+            "float textureGrad(sampler2DShadow sampler, vec3 P, vec2 dPdx, vec2 dPdy)",
+            "float textureGrad(samplerCubeShadow sampler, vec4 P, vec3 dPdx, vec3 dPdy)",
+            "gvec4 textureGrad(gsampler2DArray sampler, vec3 P, vec2 dPdx, vec2 dPdy)",
+            "float textureGrad(gsampler2DArrayShadow sampler, vec4 P, vec2 dPdx, vec2 dPdy)"
+        ],
+        "helpUrl": "https://docs.gl/el3/textureGrad"
+    },
+    {
+        "functionName": "textureGradOffset",
+        "oneLiner": "Perform a texture lookup with explicit gradients and offset.",
+        "signatures": [
+            "gvec4 textureGradOffset(gsampler2D sampler, vec2 P, vec2 dPdx, vec2 dPdy, ivec2 offset)",
+            "gvec4 textureGradOffset(gsampler3D sampler, vec3 P, vec3 dPdx, vec3 dPdy, ivec3 offset)",
+            "float textureGradOffset(sampler2DShadow sampler, vec3 P, vec2 dPdx, vec2 dPdy, ivec2 offset)",
+            "gvec4 textureGradOffset(gsampler2DArray sampler, vec3 P, vec2 dPdx, vec2 dPdy, ivec2 offset)",
+            "float textureGradOffset(sampler2DArrayShadow sampler, vec4 P, vec2 dPdx, vec2 dPdy, ivec2 offset)"
+        ],
+        "helpUrl": "https://docs.gl/el3/textureGradOffset"
+    },
+    {
+        "functionName": "textureLod",
+        "oneLiner": "Perform a texture lookup with explicit level-of-detail.",
+        "signatures": [
+            "gvec4 textureLod(gsampler2D sampler, vec2 P, float lod)",
+            "gvec4 textureLod(gsampler3D sampler, vec3 P, float lod)",
+            "gvec4 textureLod(gsamplerCube sampler, vec3 P, float lod)",
+            "float textureLod(sampler2DShadow sampler, vec3 P, float lod)",
+            "gvec4 textureLod(gsampler2DArray sampler, vec3 P, float lod)"
+        ],
+        "helpUrl": "https://docs.gl/el3/textureLod"
+    },
+    {
+        "functionName": "textureLodOffset",
+        "oneLiner": "Perform a texture lookup with explicit level-of-detail and offset.",
+        "signatures": [
+            "gvec4 textureLodOffset(gsampler2D sampler, vec2 P, float lod, ivec2 offset)",
+            "gvec4 textureLodOffset(gsampler3D sampler, vec3 P, float lod, ivec3 offset)",
+            "float textureLodOffset(sampler2DShadow sampler, vec3 P, float lod, ivec2 offset)",
+            "gvec4 textureLodOffset(gsampler2DArray sampler, vec3 P, float lod, ivec2 offset)"
+        ],
+        "helpUrl": "https://docs.gl/el3/textureLodOffset"
+    },
+    {
+        "functionName": "textureOffset",
+        "oneLiner": "Perform a texture lookup with offset.",
+        "signatures": [
+            "gvec4 textureOffset(gsampler2D sampler, vec2 P, ivec2 offset, [float bias])",
+            "gvec4 textureOffset(gsampler3D sampler, vec3 P, ivec3 offset, [float bias])",
+            "float textureOffset(sampler2DShadow sampler, vec3 P, ivec2 offset, [float bias])",
+            "gvec4 textureOffset(gsampler2DArray sampler, vec3 P, ivec2 offset, [float bias])"
+        ],
+        "helpUrl": "https://docs.gl/el3/textureOffset"
+    },
+    {
+        "functionName": "textureProj",
+        "oneLiner": "Perform a texture lookup with projection.",
+        "signatures": [
+            "gvec4 textureProj(gsampler2D sampler, vec3 P, [float bias])",
+            "gvec4 textureProj(gsampler2D sampler, vec4 P, [float bias])",
+            "gvec4 textureProj(gsampler3D sampler, vec4 P, [float bias])",
+            "float textureProj(sampler2DShadow sampler, vec4 P, [float bias])"
+        ],
+        "helpUrl": "https://docs.gl/el3/textureProj"
+    },
+    {
+        "functionName": "textureProjGrad",
+        "oneLiner": "Perform a texture lookup with projection and explicit gradients.",
+        "signatures": [
+            "gvec4 textureProjGrad(gsampler2D sampler, vec3 P, vec2 dPdx, vec2 dPdy)",
+            "gvec4 textureProjGrad(gsampler2D sampler, vec4 P, vec2 dPdx, vec2 dPdy)",
+            "gvec4 textureProjGrad(gsampler3D sampler, vec4 P, vec3 dPdx, vec3 dPdy)",
+            "float textureProjGrad(sampler2DShadow sampler, vec4 P, vec2 dPdx, vec2 dPdy)"
+        ],
+        "helpUrl": "https://docs.gl/el3/textureProjGrad"
+    },
+    {
+        "functionName": "textureProjGradOffset",
+        "oneLiner": "Perform a texture lookup with projection, explicit gradients and offset.",
+        "signatures": [
+            "gvec4 textureProjGradOffset(gsampler2D sampler, vec3 P, vec2 dPdx, vec2 dPdy, ivec2 offset)",
+            "gvec4 textureProjGradOffset(gsampler2D sampler, vec4 P, vec2 dPdx, vec2 dPdy, ivec2 offset)",
+            "gvec4 textureProjGradOffset(gsampler3D sampler, vec4 P, vec3 dPdx, vec3 dPdy, ivec3 offset)",
+            "float textureProjGradOffset(sampler2DShadow sampler, vec4 P, vec2 dPdx, vec2 dPdy, ivec2 offset)"
+        ],
+        "helpUrl": "https://docs.gl/el3/textureProjGradOffset"
+    },
+    {
+        "functionName": "textureProjLod",
+        "oneLiner": "Perform a texture lookup with projection and explicit level-of-detail.",
+        "signatures": [
+            "gvec4 textureProjLod(gsampler2D sampler, vec3 P, float lod)",
+            "gvec4 textureProjLod(gsampler2D sampler, vec4 P, float lod)",
+            "gvec4 textureProjLod(gsampler3D sampler, vec4 P, float lod)",
+            "float textureProjLod(sampler2DShadow sampler, vec4 P, float lod)"
+        ],
+        "helpUrl": "https://docs.gl/el3/textureProjLod"
+    },
+    {
+        "functionName": "textureProjLodOffset",
+        "oneLiner": "Perform a texture lookup with projection and explicit level-of-detail and offset.",
+        "signatures": [
+            "gvec4 textureProjLodOffset(gsampler2D sampler, vec3 P, float lod, ivec2 offset)",
+            "gvec4 textureProjLodOffset(gsampler2D sampler, vec4 P, float lod, ivec2 offset)",
+            "gvec4 textureProjLodOffset(gsampler3D sampler, vec4 P, float lod, ivec3 offset)",
+            "float textureProjLodOffset(sampler2DShadow sampler, vec4 P, float lod, ivec2 offset)"
+        ],
+        "helpUrl": "https://docs.gl/el3/textureProjLodOffset"
+    },
+    {
+        "functionName": "textureProjOffset",
+        "oneLiner": "Perform a texture lookup with projection and offset.",
+        "signatures": [
+            "gvec4 textureProjOffset(gsampler2D sampler, vec3 P, ivec2 offset, [float bias])",
+            "gvec4 textureProjOffset(gsampler2D sampler, vec4 P, ivec2 offset, [float bias])",
+            "gvec4 textureProjOffset(gsampler3D sampler, vec4 P, ivec3 offset, [float bias])",
+            "float textureProjOffset(sampler2DShadow sampler, vec4 P, ivec2 offset, [float bias])"
+        ],
+        "helpUrl": "https://docs.gl/el3/textureProjOffset"
+    },
+    {
+        "functionName": "textureSize",
+        "oneLiner": "Retrieve the dimensions of a level of a texture.",
+        "signatures": [
+            "ivec2 textureSize(gsampler2D sampler, int lod)",
+            "ivec3 textureSize(gsampler3D sampler, int lod)",
+            "ivec2 textureSize(gsamplerCube sampler, int lod)",
+            "ivec2 textureSize(sampler2DShadow sampler, int lod)",
+            "ivec2 textureSize(samplerCubeShadow sampler, int lod)",
+            "ivec3 textureSize(gsampler2DArray sampler, int lod)",
+            "ivec3 textureSize(sampler2DArrayShadow sampler, int lod)"
+        ],
+        "helpUrl": "https://docs.gl/el3/textureSize"
+    },
+    {
+        "functionName": "determinant",
+        "oneLiner": "Calculate the determinant of a matrix.",
+        "signatures": [
+            "float determinant(mat2 m)",
+            "float determinant(mat3 m)",
+            "float determinant(mat4 m)"
+        ],
+        "helpUrl": "https://docs.gl/el3/determinant"
+    },
+    {
+        "functionName": "groupMemoryBarrier",
+        "oneLiner": "Controls the ordering of memory transaction issued shader invocation relative to a work group.",
+        "signatures": [
+            "void groupMemoryBarrier(void)"
+        ],
+        "helpUrl": "https://docs.gl/el3/groupMemoryBarrier"
+    },
+    {
+        "functionName": "inverse",
+        "oneLiner": "Calculate the inverse of a matrix.",
+        "signatures": [
+            "mat2 inverse(mat2 m)",
+            "mat3 inverse(mat3 m)",
+            "mat4 inverse(mat4 m)"
+        ],
+        "helpUrl": "https://docs.gl/el3/inverse"
+    },
+    {
+        "functionName": "matrixCompMult",
+        "oneLiner": "Perform a component-wise multiplication of two matrices.",
+        "signatures": [
+            "mat matrixCompMult(mat x, mat y)"
+        ],
+        "helpUrl": "https://docs.gl/el3/matrixCompMult"
+    },
+    {
+        "functionName": "outerProduct",
+        "oneLiner": "Calculate the outer product of a pair of vectors.",
+        "signatures": [
+            "mat2 outerProduct(vec2 c, vec2 r)",
+            "mat3 outerProduct(vec3 c, vec3 r)",
+            "mat4 outerProduct(vec4 c, vec4 r)",
+            "mat2x3 outerProduct(vec3 c, vec2 r)",
+            "mat3x2 outerProduct(vec2 c, vec3 r)",
+            "mat2x4 outerProduct(vec4 c, vec2 r)",
+            "mat4x2 outerProduct(vec2 c, vec4 r)",
+            "mat3x4 outerProduct(vec4 c, vec3 r)",
+            "mat4x3 outerProduct(vec3 c, vec4 r)"
+        ],
+        "helpUrl": "https://docs.gl/el3/outerProduct"
+    },
+    {
+        "functionName": "transpose",
+        "oneLiner": "Calculate the transpose of a matrix.",
+        "signatures": [
+            "mat2 transpose(mat2 m)",
+            "mat3 transpose(mat3 m)",
+            "mat4 transpose(mat4 m)",
+            "mat2x3 transpose(mat3x2 m)",
+            "mat2x4 transpose(mat4x2 m)",
+            "mat3x2 transpose(mat2x3 m)",
+            "mat3x4 transpose(mat4x3 m)",
+            "mat4x2 transpose(mat2x4 m)",
+            "mat4x3 transpose(mat3x4 m)"
+        ],
+        "helpUrl": "https://docs.gl/el3/transpose"
+    },
+    {
+        "functionName": "bitCount",
+        "oneLiner": "Counts the number of 1 bits in an integer.",
+        "signatures": [
+            "genIType bitCount(genIType value)",
+            "genIType bitCount(genUType value)"
+        ],
+        "helpUrl": "https://docs.gl/el3/bitCount"
+    },
+    {
+        "functionName": "bitfieldExtract",
+        "oneLiner": "Extract a range of bits from an integer.",
+        "signatures": [
+            "genIType bitfieldExtract(genIType value, int offset, int bits)",
+            "genUType bitfieldExtract(genUType value, int offset, int bits)"
+        ],
+        "helpUrl": "https://docs.gl/el3/bitfieldExtract"
+    },
+    {
+        "functionName": "bitfieldInsert",
+        "oneLiner": "Insert a range of bits into an integer.",
+        "signatures": [
+            "genIType bitfieldInsert(genIType base, genIType insert, int offset, int bits)",
+            "genUType bitfieldInsert(genUType base, genUType insert, int offset, int bits)"
+        ],
+        "helpUrl": "https://docs.gl/el3/bitfieldInsert"
+    },
+    {
+        "functionName": "bitfieldReverse",
+        "oneLiner": "Reverse the order of bits in an integer.",
+        "signatures": [
+            "genIType bitfieldReverse(genIType value)",
+            "genUType bitfieldReverse(genUType value)"
+        ],
+        "helpUrl": "https://docs.gl/el3/bitfieldReverse"
+    },
+    {
+        "functionName": "findLSB",
+        "oneLiner": "Find the index of the least significant bit set to 1 in an integer.",
+        "signatures": [
+            "genIType findLSB(genIType value)",
+            "genIType findLSB(genUType value)"
+        ],
+        "helpUrl": "https://docs.gl/el3/findLSB"
+    },
+    {
+        "functionName": "findMSB",
+        "oneLiner": "Find the index of the most significant bit set to 1 in an integer.",
+        "signatures": [
+            "genIType findMSB(genIType value)",
+            "genIType findMSB(genUType value)"
+        ],
+        "helpUrl": "https://docs.gl/el3/findMSB"
+    },
+    {
+        "functionName": "uaddCarry",
+        "oneLiner": "Add unsigned integers and generate carry.",
+        "signatures": [
+            "genUType uaddCarry(genUType x, genUType y, out genUType carry)"
+        ],
+        "helpUrl": "https://docs.gl/el3/uaddCarry"
+    },
+    {
+        "functionName": "umulExtended",
+        "oneLiner": "Perform a 32- by 32-bit multiply to produce a 64-bit result.",
+        "signatures": [
+            "void umulExtended(genUType x, genUType y, out genUType msb, out genUType lsb)"
+        ],
+        "helpUrl": "https://docs.gl/el3/umulExtended"
+    },
+    {
+        "functionName": "usubBorrow",
+        "oneLiner": "Subtract unsigned integers and generate borrow.",
+        "signatures": [
+            "genUType usubBorrow(genUType x, genUType y, out genUType borrow)"
+        ],
+        "helpUrl": "https://docs.gl/el3/usubBorrow"
+    }
+]
