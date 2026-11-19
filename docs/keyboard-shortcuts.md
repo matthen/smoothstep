@@ -17,6 +17,10 @@
 | `shift + tab` | re-indent the current line or selected code automatically |
 | `ctrl/cmd + Z` | undo |
 | `shift + ctrl/cmd + Z` or `ctrl/cmd + Y` | redo |
+| `ctrl + space` | show completions (`tab` or `enter` accepts one) |
+| `ctrl/cmd + D` | also select the next match of the selected text |
+| `alt + up arrow`/`alt + down arrow` | move the current line up or down |
+| `escape` | close the find panel or a picker |
 
 ## Playing the animation
 
