@@ -1,0 +1,306 @@
+{
+    "equirectangular": [
+        {
+            "fname": "equirectangular/27450338940_708196e177_k.jpg",
+            "height": 512,
+            "thumbnail_fname": "equirectangular/27450338940_708196e177_k_thumb.jpg",
+            "width": 1024
+        },
+        {
+            "fname": "equirectangular/49973646676_79dbc1a189_k.jpg",
+            "height": 512,
+            "thumbnail_fname": "equirectangular/49973646676_79dbc1a189_k_thumb.jpg",
+            "width": 1024
+        },
+        {
+            "fname": "equirectangular/world.png",
+            "height": 640,
+            "thumbnail_fname": "equirectangular/world_thumb.png",
+            "width": 1280
+        }
+    ],
+    "fonts": [
+        {
+            "fname": "fonts/1.png",
+            "height": 192,
+            "thumbnail_fname": "fonts/1_thumb.png",
+            "width": 512
+        },
+        {
+            "fname": "fonts/2.png",
+            "height": 192,
+            "thumbnail_fname": "fonts/2_thumb.png",
+            "width": 512
+        },
+        {
+            "fname": "fonts/3.png",
+            "height": 192,
+            "thumbnail_fname": "fonts/3_thumb.png",
+            "width": 512
+        },
+        {
+            "fname": "fonts/4.png",
+            "height": 192,
+            "thumbnail_fname": "fonts/4_thumb.png",
+            "width": 512
+        },
+        {
+            "fname": "fonts/5.png",
+            "height": 192,
+            "thumbnail_fname": "fonts/5_thumb.png",
+            "width": 512
+        },
+        {
+            "fname": "fonts/6.png",
+            "height": 192,
+            "thumbnail_fname": "fonts/6_thumb.png",
+            "width": 512
+        }
+    ],
+    "photos": [
+        {
+            "fname": "photos/30573139680_ab8dd0e4c3_c.jpg",
+            "height": 512,
+            "thumbnail_fname": "photos/30573139680_ab8dd0e4c3_c_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "photos/36764351583_180cd1de97_c.jpg",
+            "height": 512,
+            "thumbnail_fname": "photos/36764351583_180cd1de97_c_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "photos/50866961661_873602eafb_c.jpg",
+            "height": 512,
+            "thumbnail_fname": "photos/50866961661_873602eafb_c_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "photos/9155009434_9ef1f8deb8_z.jpg",
+            "height": 512,
+            "thumbnail_fname": "photos/9155009434_9ef1f8deb8_z_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "photos/cats1.jpg",
+            "height": 512,
+            "thumbnail_fname": "photos/cats1_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "photos/cats2.jpg",
+            "height": 512,
+            "thumbnail_fname": "photos/cats2_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "photos/jorg-angeli-S56zN8cV5fk-unsplash.jpg",
+            "height": 512,
+            "thumbnail_fname": "photos/jorg-angeli-S56zN8cV5fk-unsplash_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "photos/nickypainting.jpg",
+            "height": 512,
+            "thumbnail_fname": "photos/nickypainting_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "photos/tiles.jpg",
+            "height": 512,
+            "thumbnail_fname": "photos/tiles_thumb.jpg",
+            "width": 512
+        }
+    ],
+    "special": [
+        {
+            "fname": "special/black.png",
+            "height": 1,
+            "thumbnail_fname": "special/black_thumb.png",
+            "width": 1
+        },
+        {
+            "fname": "special/clouds.png",
+            "height": 512,
+            "thumbnail_fname": "special/clouds_thumb.png",
+            "width": 512
+        },
+        {
+            "fname": "special/noise.png",
+            "height": 128,
+            "thumbnail_fname": "special/noise_thumb.png",
+            "width": 128
+        },
+        {
+            "fname": "special/noise_gauss.png",
+            "height": 256,
+            "thumbnail_fname": "special/noise_gauss_thumb.png",
+            "width": 256
+        },
+        {
+            "fname": "special/noise_gauss_large.png",
+            "height": 256,
+            "thumbnail_fname": "special/noise_gauss_large_thumb.png",
+            "width": 256
+        },
+        {
+            "fname": "special/noise_large.png",
+            "height": 256,
+            "thumbnail_fname": "special/noise_large_thumb.png",
+            "width": 256
+        },
+        {
+            "fname": "special/plasma.png",
+            "height": 512,
+            "thumbnail_fname": "special/plasma_thumb.png",
+            "width": 512
+        }
+    ],
+    "tiling": [
+        {
+            "fname": "tiling/461223102.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223102_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223104.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223104_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223106.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223106_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223108.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223108_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223110.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223110_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223112.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223112_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223114.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223114_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223116.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223116_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223118.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223118_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223120.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223120_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223122.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223122_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223124.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223124_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223126.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223126_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223128.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223128_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223130.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223130_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223132.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223132_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223134.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223134_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223136.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223136_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223138.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223138_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223140.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223140_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223142.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223142_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223144.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223144_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223146.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223146_thumb.jpg",
+            "width": 512
+        },
+        {
+            "fname": "tiling/461223148.jpg",
+            "height": 512,
+            "thumbnail_fname": "tiling/461223148_thumb.jpg",
+            "width": 512
+        }
+    ]
+}
