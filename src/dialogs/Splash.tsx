@@ -2,20 +2,11 @@ import { useState } from 'react';
 import { Button, Col, ListGroup, Modal, Row } from 'react-bootstrap';
 import { FaBookOpen, FaGithub, FaInfoCircle } from 'react-icons/fa';
 
-import { asset, documentHref, DOCS_URL, exampleHref, REPO_URL, TUTORIAL_URL } from '../lib/config';
+import {
+  asset, documentHref, DOCS_URL, EXAMPLES, exampleHref, exampleThumbnail, REPO_URL, TUTORIAL_URL,
+} from '../lib/config';
 import { listDocuments, type DocumentSummary } from '../lib/localStore';
 import ImageWithFallback from './ImageWithFallback';
-
-// Example animations, bundled in public/examples/ (<id>.json and an <id>.png thumbnail).
-const EXAMPLES = [
-  {id: "534226b1d5ed", title: "Minimal animation"},
-  {id: "6c214a0d19e4", title: "Drawing a circle"},
-  {id: "70bef4ffb215", title: "Fractals"},
-  {id: "b2482911f435", title: "Using textures"},
-  {id: "adb1df38284c", title: "Using the animation timeline"},
-  {id: "f9ad362373e4", title: "3D ray tracing"},
-  {id: "26d46785c1f6", title: "Stateful animations - iPrevFrame"},
-];
 
 interface SplashProps {
   show: boolean;
@@ -80,7 +71,7 @@ export default function Splash({show, onHide}: SplashProps) {
               {EXAMPLES.map(example =>
                 <ListGroup.Item action key={example.id} href={exampleHref(example.id)} onClick={onHide}>
                   <ImageWithFallback
-                    src={asset("/examples/" + example.id + ".png")}
+                    src={exampleThumbnail(example.id)}
                     width="24px" height="24px" alt="thumbnail" className="thumbnail"
                   />
                   {example.title}

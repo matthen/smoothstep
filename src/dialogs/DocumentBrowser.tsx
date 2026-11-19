@@ -3,7 +3,7 @@ import { Alert, Button, Modal, Table } from 'react-bootstrap';
 import { FaDownload, FaFileImport, FaFolderOpen, FaTrash } from 'react-icons/fa';
 
 import { animationFile, download, exportAll, importFiles, importMessage } from '../lib/archive';
-import { documentHref } from '../lib/config';
+import { documentHref, EXAMPLES, exampleHref, exampleThumbnail } from '../lib/config';
 import { deleteDocument, getDocument, listDocuments, StorageFullError, type DocumentSummary } from '../lib/localStore';
 import ImageWithFallback from './ImageWithFallback';
 import { timeAgo } from './timeAgo';
@@ -95,7 +95,8 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
           <Modal.Title><FaFolderOpen /> Open</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <div className="tableFixedHead">
+          <h5>Your animations</h5>
+          {documents.length > 0 && <div className="tableFixedHead">
             <Table striped bordered size="sm">
               <thead>
                 <tr>
@@ -132,14 +133,21 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
                 ))}
               </tbody>
             </Table>
-            {documents.length === 0 && (
-              <Alert variant="warning">You have no saved animations.</Alert>
-            )}
-          </div>
+          </div>}
+          {documents.length === 0 && <p className="emptyNote">You have no saved animations yet.</p>}
           <p className="storageNote">
             Animations are saved in this browser only. Download them to keep a backup
             or to move them to another computer.
           </p>
+          <h5>Examples</h5>
+          <div className="exampleGrid">
+            {EXAMPLES.map(example =>
+              <a key={example.id} href={exampleHref(example.id)} onClick={onHide}>
+                <ImageWithFallback src={exampleThumbnail(example.id)} width="96px" height="96px" alt="" />
+                <span>{example.title}</span>
+              </a>,
+            )}
+          </div>
         </Modal.Body>
         <Modal.Footer>
           <input
