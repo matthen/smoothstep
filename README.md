@@ -1,4 +1,18 @@
-# smoothstep
+<h1 align="center">
+  <img src="public/images/logo.svg" width="48" height="48" alt=""><br>
+  smoothstep
+</h1>
+
+<p align="center">
+  Make animations in the WebGL shader language, right in your browser.<br>
+  <b><a href="https://smoothstep.io">Open smoothstep.io</a></b> ·
+  <a href="docs/tutorial/README.md">Tutorial</a> ·
+  <a href="docs/">Documentation</a>
+</p>
+
+<p align="center">
+  <a href="https://smoothstep.io"><img src="docs/images/screenshot.png" alt="smoothstep, with the 3D ray marching example: GLSL code on the left, the rendered sphere on the right, and the animation timeline below"></a>
+</p>
 
 smoothstep is a toolkit for making animations in the WebGL shader language. You write a
 GLSL fragment shader, animate its inputs on a timeline, give it image textures, and export
@@ -6,6 +20,13 @@ the result as video. It all runs in your browser, with no server or sign-in.
 
 You can use it at **[smoothstep.io](https://smoothstep.io)**, or run your own copy. The
 [documentation](docs/) has a tutorial, examples and the full list of shader inputs.
+
+<p align="center">
+  <img src="docs/images/examples.png" alt="Renders from four of the built-in examples">
+  <br>
+  <sub>Four of the built-in examples: a Julia set fractal, a ray-marched sphere, a photo
+  texture warped with sine waves, and a cellular automaton that reads its previous frame.</sub>
+</p>
 
 The editor highlights GLSL, shows compile errors on the line they occur, and gives you
 inline pickers for colours, numbers and vectors. The timeline drives 16 animated variables,
