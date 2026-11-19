@@ -50,6 +50,17 @@ test("on a phone, the panes switch and a transition can be added with two taps",
   const label = (await page.locator(".rowLabel").first().boundingBox())!;
   expect(Math.abs(label.x - area.x)).toBeLessThan(4);
 
+  // The timeline follows the playhead: seeking far ahead scrolls it into view, and back to the start returns.
+  const grid = page.locator(".gridContainer");
+  const slider = (await page.locator(".playerButtons .slider").boundingBox())!;
+  await page.touchscreen.tap(slider.x + slider.width * 0.9, slider.y + slider.height / 2);
+  await expect.poll(() => grid.evaluate(e => e.scrollLeft)).toBeGreaterThan(800);
+  const scrubber = (await page.locator(".timeArea .scrubber").boundingBox())!;
+  expect(scrubber.x).toBeGreaterThanOrEqual(area.x);
+  expect(scrubber.x).toBeLessThan(area.x + area.width);
+  await page.getByRole("button", {name: "Back to the start"}).tap();
+  await expect.poll(() => grid.evaluate(e => e.scrollLeft)).toBe(0);
+
   await panes.getByText("Textures", {exact: true}).tap();
   await expect(page.locator("div#textures .texture")).toHaveCount(8);
   await expect(page.locator(".timeArea")).toBeHidden();
