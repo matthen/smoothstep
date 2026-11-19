@@ -71,7 +71,7 @@ describe("DocumentBrowser", () => {
     await clearStore();
     renderBrowser();
     expect(await screen.findByText("You have no saved animations yet.")).toBeTruthy();
-    expect(screen.getByRole("button", {name: /Download all/}).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", {name: /Download all files/}).hasAttribute("disabled")).toBe(true);
   });
 
   it("imports files and reports the result", async () => {

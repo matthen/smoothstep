@@ -3,12 +3,19 @@
 
 html, body, #appRoot {
   height: 100%;
+  // Phones scroll the whole page, so the code can take the full screen.
+  @include phone {
+    height: auto;
+  }
 }
 
 body {
   overflow: hidden;
   @include short {
     overflow: auto;
+  }
+  @include phone {
+    overflow: visible;
   }
 }
 
@@ -29,7 +36,8 @@ a {
 }
 
 // Layout. Desktop: header, then the editor beside the canvas, then the bottom panel.
-// Phone: header, canvas, a Code/Timeline/Textures switch, then whichever pane it picks.
+// Phone: header, canvas, a Code/Timeline/Textures switch, then whichever pane it picks, with the
+// page scrolling and the switch sticking to the top.
 .app {
   --preview-width: min(#{$right-width}, 45vw);
   --panel-height: #{$footer-height};
@@ -39,6 +47,8 @@ a {
   margin: 0 auto;
   display: grid;
   grid-template-rows: $header-height minmax(0, 1fr) auto;
+  // A wide timeline scrolls inside its pane rather than widening the page.
+  grid-template-columns: minmax(0, 1fr);
   grid-template-areas: "header" "workspace" "panel";
   background: $dt-gray-dark;
 
@@ -67,11 +77,9 @@ a {
   }
 
   @include phone {
-    min-height: 0;
-    @include short {
-      min-height: 640px;
-    }
-    grid-template-rows: auto auto auto minmax(0, 1fr);
+    height: auto;
+    min-height: 100dvh;
+    grid-template-rows: auto auto auto auto;
     grid-template-areas: "header" "preview" "tabs" "pane";
 
     .workspace {
@@ -199,12 +207,26 @@ a {
     padding-right: 8px;
   }
 
+  // The editor grows with the code and the page scrolls, filling at least the screen below the switch.
+  @include phone {
+    .ss-code-editor, .cm-editor {
+      height: auto;
+      min-height: $phone-pane-height;
+    }
+  }
+
   .buildButton {
     position: absolute;
     right: 24px;
     bottom: 16px;
     z-index: 10;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+
+    @include phone {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+    }
   }
 }
 
@@ -227,6 +249,10 @@ a {
 .mobileTabs {
   grid-area: tabs;
   padding: 8px 12px 4px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: $dt-gray-dark;
   @include desktop {
     display: none;
   }
@@ -241,18 +267,23 @@ a {
   background: linear-gradient(180deg, $dt-gray-darker, $dt-gray-dark 42px);
   transition: height $transition-duration;
 
+  .mantine-Tabs-root, .mantine-Tabs-panel {
+    height: 100%;
+  }
+
   @include phone {
     grid-area: pane;
     height: auto;
+    min-height: $phone-pane-height;
+    overflow: visible;
     border-top: none;
     background: none;
     .mantine-Tabs-list {
       display: none;
     }
-  }
-
-  .mantine-Tabs-root, .mantine-Tabs-panel {
-    height: 100%;
+    .mantine-Tabs-root, .mantine-Tabs-panel {
+      height: auto;
+    }
   }
   .mantine-Tabs-root {
     display: flex;
@@ -376,9 +407,9 @@ div#textures {
   align-items: flex-start;
 
   @include phone {
+    height: auto;
     flex-wrap: wrap;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: visible;
     padding: 8px 12px;
     align-content: flex-start;
   }

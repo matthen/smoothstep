@@ -21,10 +21,11 @@ frame rate and resolution. It all runs in your browser at [smoothstep.io](https:
 ## Saving your work
 
 smoothstep saves your animations and uploaded textures in your browser. File → Open lists the
-animations saved there. You can download each one from that list, or click "Download all" to
-save everything as a zip. "Open file…" opens files you downloaded before. File → Download saves
-the animation you have open as a `.smoothstep.json` file. Your browser is the only place your work is kept, so
-download anything you want to back up or move to another computer.
+animations saved there. You can download each one from that list, or click "Download all files"
+to save everything as a zip. "Open file…" opens files you downloaded before. File → Download
+animation file saves the animation you have open as a `.smoothstep.json` file. Your browser is
+the only place your work is kept, so download anything you want to back up or move to another
+computer.
 
 ## Acknowledgements
 
