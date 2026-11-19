@@ -6,6 +6,16 @@ If you change an example, save it to keep it as one of your own animations.
 
 ## Showcase
 
+* [Metallic reflections](https://smoothstep.io/#example/8cacb2958eb6): mirrored metaballs
+  reflecting a 360° photo, drifting apart and back.
+* [Menger sponge dissection](https://smoothstep.io/#example/2ed11c16d844): a Menger sponge, sliced
+  open by a moving plane.
+* [Droste Julia spiral](https://smoothstep.io/#example/6352fbfa16cd): a Julia set drawn in spirals
+  that repeat inside themselves forever.
+* [Mandelbrot to Julia morph](https://smoothstep.io/#example/de556cc497a2): the Mandelbrot set
+  morphing into Julia sets and back.
+* [Squiggly pentagons](https://smoothstep.io/#example/6208a95b8a35): wobbling nested pentagons
+  twisting into a spiral.
 * [Domain warping](https://smoothstep.io/#example/19bb8790cb0d): fractal noise fed back into
   itself, like marbled paper.
 * [Kaleidoscope](https://smoothstep.io/#example/d692b3fe2561): a painting, mirrored into turning
@@ -14,8 +24,6 @@ If you change an example, save it to keep it as one of your own animations.
   drawn on top of the previous frame.
 * [Truchet tiles](https://smoothstep.io/#example/bd2cdbfe233d): tiles that turn smoothly, rejoining
   into winding paths.
-* [Mirror ball in a panorama](https://smoothstep.io/#example/c6e454d960df): a camera circles a
-  mirror ball by ray casting, with a 360° equirectangular photo all around it.
 * [Metaballs](https://smoothstep.io/#example/3d6489cf0694): blobs that melt into each other and
   pull apart, following the timeline.
 

@@ -1,0 +1,190 @@
+{
+  "aspectRatio": [
+    1,
+    1
+  ],
+  "code": "// A Menger sponge: a cube with a cross cut through it, then the same cut in each of the\n// 20 smaller cubes left over, and so on. It is ray marched, and a plane slices it open to\n// show the inside. On the timeline, iFloat0 is the number of levels, iFloat1 moves the\n// slicing plane, iFloat2 and iFloat3 turn and tilt the camera, and iFloat4 swings the light.\n#define levels iFloat0\n#define cutPosition iFloat1\n#define cameraTurn iFloat2\n#define cameraTilt iFloat3\n#define lightSwing iFloat4\n#define MAX_STEPS 256\n#define HIT_THRESHOLD 0.00001\n#define FLOOR_COLOR vec3(1.0)\n#define SPONGE_COLOR vec3(0.970, 0.647, 0.151)\n// The slicing plane faces along the cube's diagonal.\n#define CUT_NORMAL vec3(0.57735)\n\n// A 2D rotation, used to turn a pair of coordinates such as xz.\nmat2 rotate(float angle) {\n  float c = cos(angle);\n  float s = sin(angle);\n  return mat2(c, s, -s, c);\n}\n\n// The distance from p to a cube of side 6 with a cross of square bars, 2 wide, cut out\n// through it along all three axes: one level of the sponge.\nfloat crossedCube(vec3 p) {\n  vec3 a = abs(p);\n  float maxYZ = max(a.y, a.z);\n  float maxXZ = max(a.x, a.z);\n  float maxXY = max(a.x, a.y);\n  // For each bar, the distance to its side is the larger of the other two coordinates.\n  // The bar along the axis where p is largest is the one that matters.\n  float bars = 1.0 - (step(maxYZ, a.x) * maxYZ + step(maxXZ, a.y) * maxXZ + step(maxXY, a.z) * maxXY);\n  float cube = max(maxXY, a.z) - 3.0;\n  return max(bars, cube);\n}\n\n// The sponge: repeat the crossed cube at a third of the size each level, tiled so each\n// smaller cube gets its own copy.\nfloat sponge(vec3 p) {\n  float scale = 1.0;\n  float dist = 0.0;\n  for (int i = 0; i < int(levels); i++) {\n    dist = max(dist, crossedCube(p) * scale);\n    p = fract((p - 1.0) * 0.5) * 6.0 - 3.0;\n    scale /= 3.0;\n  }\n  return dist;\n}\n\n// The distance to the nearest surface (in .x) and its colour (in .yzw): a white floor, and\n// the sponge sitting on it with everything beyond the slicing plane cut away.\nvec4 scene(vec3 p) {\n  float floorDist = p.y;\n  float spongeDist = max(sponge(p - vec3(0.0, 3.0, 0.0)), dot(p, CUT_NORMAL) - cutPosition);\n  return floorDist < spongeDist ? vec4(floorDist, FLOOR_COLOR) : vec4(spongeDist, SPONGE_COLOR);\n}\n\n// The surface normal, from how the distance changes when p moves a little along each axis.\nvec3 sceneNormal(vec3 p, float d) {\n  float eps = 0.001;\n  return normalize(vec3(\n    scene(p + vec3(eps, 0.0, 0.0)).x - d,\n    scene(p + vec3(0.0, eps, 0.0)).x - d,\n    scene(p + vec3(0.0, 0.0, eps)).x - d\n  ));\n}\n\n// 0.2 if something blocks the way from p to the light, 1.0 if not.\nfloat shadow(vec3 p, vec3 toLight, float maxDist) {\n  float t = 0.01;\n  for (int i = 0; i < 128; i++) {\n    float h = scene(p + toLight * t).x;\n    if (h < 0.0001 && i > 0) {\n      return 0.2;\n    }\n    t += h;\n    if (t > maxDist) {\n      break;\n    }\n  }\n  return 1.0;\n}\n\n// Diffuse lighting from a light at light.xyz that reaches light.w away.\nvec3 shade(vec3 p, vec3 normal, vec3 color, vec4 light) {\n  vec3 toLight = light.xyz - p;\n  float lightDist = length(toLight);\n  toLight /= lightDist;\n\n  float diffuse = 1.5 * max(0.0, dot(normal, toLight));\n  float falloff = 1.0 - pow(min(1.0, lightDist / light.w), 2.0);\n  float brightness = 0.1 + diffuse * falloff * shadow(p, toLight, lightDist);\n\n  // Paint the freshly cut face white.\n  color = mix(color, vec3(1.0), smoothstep(0.001, 0.0, abs(dot(p, CUT_NORMAL) - cutPosition)));\n  return brightness * color;\n}\n\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  // The camera looks down at the sponge, turning around it and tilting.\n  vec2 ndc = 2.0 * fragCoord / iResolution - 1.0;\n  vec2 xy = 0.32 * ndc * vec2(iResolution.x / iResolution.y, 1.0);\n  vec3 dir = normalize(vec3(xy, -1.0));\n  dir.zy = rotate(cameraTilt) * dir.zy;\n  dir.xz = rotate(cameraTurn) * dir.xz;\n  vec3 camera = vec3(0.0, 12.2, 14.0);\n  camera.xz = rotate(cameraTurn) * camera.xz;\n\n  // Two lights: one up to the side that swings round, and one at the camera.\n  vec4 light = vec4(12.0, 9.2, 9.0, 30.0);\n  light.xz = rotate(-1.5707963 * lightSwing) * light.xz;\n  vec4 cameraLight = vec4(camera - vec3(0.01, 0.01, 0.0), 20.0);\n\n  // March along the ray, stepping by the distance to the nearest surface each time.\n  vec3 p = camera;\n  vec3 col = vec3(0.0);\n  for (int i = 0; i < MAX_STEPS; i++) {\n    vec4 s = scene(p);\n    if (s.x < HIT_THRESHOLD) {\n      vec3 normal = sceneNormal(p, s.x);\n      col = 0.5 * shade(p, normal, s.yzw, light) + 0.5 * shade(p, normal, s.yzw, cameraLight);\n      break;\n    }\n    p += s.x * dir;\n  }\n  fragColor = vec4(col, 1.0);\n}\n",
+  "duration": 20.2,
+  "textures": [
+    {
+      "id": "iTexture0",
+      "isUserUploaded": false,
+      "url": "special/black.png"
+    },
+    {
+      "id": "iTexture1",
+      "isUserUploaded": false,
+      "url": "special/black.png"
+    },
+    {
+      "id": "iTexture2",
+      "isUserUploaded": false,
+      "url": "special/black.png"
+    },
+    {
+      "id": "iTexture3",
+      "isUserUploaded": false,
+      "url": "special/black.png"
+    },
+    {
+      "id": "iTexture4",
+      "isUserUploaded": false,
+      "url": "special/black.png"
+    },
+    {
+      "id": "iTexture5",
+      "isUserUploaded": false,
+      "url": "special/black.png"
+    },
+    {
+      "id": "iTexture6",
+      "isUserUploaded": false,
+      "url": "special/black.png"
+    },
+    {
+      "id": "iTexture7",
+      "isUserUploaded": false,
+      "url": "special/black.png"
+    }
+  ],
+  "title": "Menger sponge dissection",
+  "variables": [
+    {
+      "transitions": [
+        {
+          "endDSecs": 30,
+          "endValue": 4,
+          "startDSecs": 10,
+          "startValue": 1,
+          "type": "linear"
+        },
+        {
+          "endDSecs": 200,
+          "endValue": 1,
+          "startDSecs": 164,
+          "startValue": 4,
+          "type": "smoothstep"
+        }
+      ]
+    },
+    {
+      "transitions": [
+        {
+          "endDSecs": 65,
+          "endValue": 5.196,
+          "startDSecs": 35,
+          "startValue": 7,
+          "type": "smoothstep"
+        },
+        {
+          "endDSecs": 91,
+          "endValue": 1.75,
+          "startDSecs": 70,
+          "startValue": 5.196,
+          "type": "smoothstep"
+        },
+        {
+          "endDSecs": 120,
+          "endValue": 0,
+          "startDSecs": 100,
+          "startValue": 1.75,
+          "type": "smoothstep"
+        },
+        {
+          "endDSecs": 147,
+          "endValue": -1.75,
+          "startDSecs": 127,
+          "startValue": 0,
+          "type": "smoothstep"
+        },
+        {
+          "endDSecs": 174,
+          "endValue": 7,
+          "startDSecs": 154,
+          "startValue": -1.75,
+          "type": "smoothstep"
+        }
+      ]
+    },
+    {
+      "transitions": [
+        {
+          "endDSecs": 65,
+          "endValue": -0.6,
+          "startDSecs": 0,
+          "startValue": 0,
+          "type": "smoothstep"
+        },
+        {
+          "endDSecs": 200,
+          "endValue": -1.5707963,
+          "startDSecs": 154,
+          "startValue": -0.6,
+          "type": "smoothstep"
+        }
+      ]
+    },
+    {
+      "transitions": [
+        {
+          "endDSecs": 65,
+          "endValue": 0.57,
+          "startDSecs": 0,
+          "startValue": 0.54,
+          "type": "smoothstep"
+        },
+        {
+          "endDSecs": 200,
+          "endValue": 0.54,
+          "startDSecs": 154,
+          "startValue": 0.57,
+          "type": "smoothstep"
+        }
+      ]
+    },
+    {
+      "transitions": [
+        {
+          "endDSecs": 190,
+          "endValue": 1,
+          "startDSecs": 150,
+          "startValue": 0,
+          "type": "smoothstep"
+        }
+      ]
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    }
+  ]
+}
