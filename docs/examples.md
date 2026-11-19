@@ -12,7 +12,7 @@ If you change an example, save it to keep it as one of your own animations.
   segments with polar coordinates.
 * [Glowing trails](https://smoothstep.io/#example/3156da0acaeb): dots that leave fading trails,
   drawn on top of the previous frame.
-* [Truchet tiles](https://smoothstep.io/#example/bd2cdbfe233d): randomly turned tiles that join
+* [Truchet tiles](https://smoothstep.io/#example/bd2cdbfe233d): tiles that turn smoothly, rejoining
   into winding paths.
 * [Mirror ball in a panorama](https://smoothstep.io/#example/c6e454d960df): a camera circles a
   mirror ball by ray casting, with a 360° equirectangular photo all around it.
