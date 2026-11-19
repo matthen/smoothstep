@@ -53,6 +53,9 @@ export const EXAMPLES: Example[] = [
     description: "Dots that leave fading trails, drawn on top of the last frame."},
   {id: "bd2cdbfe233d", title: "Truchet tiles", group: "showcase", teaches: ["grids", "random numbers"],
     description: "Randomly turned tiles that join into winding paths."},
+  {id: "c6e454d960df", title: "Mirror ball in a panorama", group: "showcase",
+    teaches: ["ray casting", "equirectangular", "reflection"],
+    description: "A camera circles a mirror ball, lit by a 360° photo."},
   {id: "3d6489cf0694", title: "Metaballs", group: "showcase", teaches: ["fwidth", "timeline"],
     description: "Blobs that melt into each other and pull apart, following the timeline."},
 ];
