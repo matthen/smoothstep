@@ -107,5 +107,5 @@ for builtin in builtins:
         print("Error on", builtin)
         raise
 
-with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "src", "glslFunctions.json"), "w") as f:
+with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "src", "editor", "glslFunctions.json"), "w") as f:
     f.write(json.dumps(functions, indent=4))

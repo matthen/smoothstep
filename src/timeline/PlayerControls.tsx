@@ -1,0 +1,178 @@
+import {useEffect, useEffectEvent, useState} from "react";
+import type {MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent} from "react";
+import {Button, ButtonGroup, Col, Container, Form, OverlayTrigger, Row, Tooltip} from "react-bootstrap";
+import {FaPause, FaPlay, FaStepBackward} from "react-icons/fa";
+import {formatTime} from "./geometry";
+import {keyAction, keySeekTime, shortcutsAllowed} from "./keys";
+import "./timeline.scss";
+
+export interface PlayerControlsProps {
+  duration: number;
+  currentTime: number;
+  isPlaying: boolean;
+  onSeek(time: number): void;
+  onPlayPause(): void;
+  onReset(): void;
+  onDurationChange(duration: number): void;
+  onScrubStart(): void;
+  onScrubEnd(): void;
+  width: number | undefined;
+  top: number;
+}
+
+const MIN_WIDTH = 200;
+
+function fractionAt(element: HTMLElement, clientX: number): number {
+  const rect = element.getBoundingClientRect();
+  return rect.width > 0 ? Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) : 0;
+}
+
+// The scrub bar: hovering shows the time under the pointer, pressing or dragging seeks there.
+function ScrubSlider({duration, currentTime, onSeek, onScrubStart, onScrubEnd}: Pick<
+  PlayerControlsProps, "duration" | "currentTime" | "onSeek" | "onScrubStart" | "onScrubEnd">) {
+  const [hoverFraction, setHoverFraction] = useState<number | null>(null);
+  const [scrubbing, setScrubbing] = useState(false);
+  const progress = duration > 0 ? Math.max(0, Math.min(1, currentTime / duration)) : 0;
+
+  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const fraction = fractionAt(event.currentTarget, event.clientX);
+    setScrubbing(true);
+    setHoverFraction(fraction);
+    onScrubStart();
+    onSeek(fraction * duration);
+  }
+
+  function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    const fraction = fractionAt(event.currentTarget, event.clientX);
+    if (scrubbing) {
+      onSeek(fraction * duration);
+    }
+    if (scrubbing || event.pointerType === "mouse") {
+      setHoverFraction(fraction);
+    }
+  }
+
+  function endScrub() {
+    if (scrubbing) {
+      setScrubbing(false);
+      onScrubEnd();
+    }
+    setHoverFraction(null);
+  }
+
+  return (
+    <div
+      className="slider"
+      role="slider"
+      aria-label="Time"
+      aria-valuemin={0}
+      aria-valuemax={duration}
+      aria-valuenow={Math.round(currentTime * 100) / 100}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={endScrub}
+      onPointerCancel={endScrub}
+      onPointerLeave={() => !scrubbing && setHoverFraction(null)}
+    >
+      <div className="timeBar" />
+      <div className="sliderHandle" style={{left: `${progress * 100}%`}} />
+      {hoverFraction !== null &&
+        <div className="timeTooltip" style={{left: `${hoverFraction * 100}%`}}>
+          {formatTime(hoverFraction * duration)}
+        </div>}
+    </div>
+  );
+}
+
+// The duration as typed; it's only passed on once it's a positive number.
+function DurationInput({duration, onDurationChange}: Pick<PlayerControlsProps, "duration" | "onDurationChange">) {
+  const [text, setText] = useState(String(duration));
+  const [shownDuration, setShownDuration] = useState(duration);
+  if (shownDuration !== duration) {
+    setShownDuration(duration);
+    if (Number(text) !== duration) {
+      setText(String(duration));
+    }
+  }
+  const value = Number(text);
+  const valid = text.trim() !== "" && Number.isFinite(value) && value > 0;
+
+  return (
+    <OverlayTrigger placement="bottom" delay={{show: 250, hide: 400}} overlay={<Tooltip>Duration in seconds</Tooltip>}>
+      <Form.Control
+        className="durationInput"
+        size="sm"
+        aria-label="Duration (seconds)"
+        type="number"
+        step="1"
+        min="1"
+        value={text}
+        isInvalid={!valid}
+        plaintext={valid}
+        onChange={event => {
+          const next = event.target.value;
+          setText(next);
+          const nextValue = Number(next);
+          if (next.trim() !== "" && Number.isFinite(nextValue) && nextValue > 0) {
+            onDurationChange(nextValue);
+          }
+        }}
+      />
+    </OverlayTrigger>
+  );
+}
+
+export default function PlayerControls(props: PlayerControlsProps) {
+  const {duration, currentTime, isPlaying, onSeek, onPlayPause, onReset, width, top} = props;
+
+  const onKeyDown = useEffectEvent((event: KeyboardEvent) => {
+    const action = keyAction(event);
+    if (!action || action.type === "deleteTransition" || !shortcutsAllowed(event.target, event.key)) {
+      return;
+    }
+    event.preventDefault();
+    if (action.type === "playPause") {
+      onPlayPause();
+      return;
+    }
+    const time = keySeekTime(action, currentTime, duration);
+    if (time !== null) {
+      onSeek(time);
+    }
+  });
+  useEffect(() => {
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  // Clicking the buttons shouldn't take focus, so space keeps toggling playback afterwards.
+  const keepFocus = (event: ReactMouseEvent) => event.preventDefault();
+
+  return (
+    <Container className="playerButtons" style={{top}}>
+      <Row style={{width: Math.max(width ?? MIN_WIDTH, MIN_WIDTH)}}>
+        <Col xs={2} className="buttonsCol">
+          <ButtonGroup>
+            <Button size="sm" variant="light" aria-label="Back to the start" onMouseDown={keepFocus} onClick={onReset}>
+              <FaStepBackward />
+            </Button>
+            <Button size="sm" variant="light" aria-label={isPlaying ? "Pause" : "Play"} onMouseDown={keepFocus} onClick={onPlayPause}>
+              {isPlaying ? <FaPause /> : <FaPlay />}
+            </Button>
+          </ButtonGroup>
+        </Col>
+        <Col className="scrubberCol">
+          <ScrubSlider {...props} />
+        </Col>
+        <Col xs={2} className="durationCol">
+          <DurationInput duration={duration} onDurationChange={props.onDurationChange} />
+        </Col>
+      </Row>
+    </Container>
+  );
+}

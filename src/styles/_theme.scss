@@ -1,0 +1,42 @@
+// Shared sizes, the Dracula palette and breakpoints. Use with `@use "<path>/styles/theme" as *;`.
+// main.scss also passes these to Bootstrap.
+
+$header-height: 64px;
+$footer-height: 272px;
+$footer-padding: 28px;
+$right-width: 512px;
+$wide-right-width: 768px;
+$hidden-footer-height: 88px;
+$max-width: 1768px;
+$transition-duration: 50ms;
+
+$dt-gray-darker: #191a21;
+$dt-gray-dark: #282a36;  // Background
+$dt-gray: #44475a;       // Current line and selection
+$dt-gray-medium: #999db2;
+$dt-gray-light: #f8f8f2; // Foreground
+
+$dt-blue: #6272a4;       // Comment
+$dt-cyan: #8be9fd;
+$dt-green: #50fa7b;
+$dt-orange: #ffb86c;
+$dt-pink: #ff79c6;
+$dt-purple: #bd93f9;
+$dt-red: #ff5555;
+$dt-yellow: #f1fa8c;
+
+$tablet-breakpoint: 960px;
+$phone-breakpoint: 575px;
+$phone-max-height: 400px;
+
+@mixin tablet {
+  @media (max-width: $tablet-breakpoint) {
+    @content;
+  }
+}
+
+@mixin phone {
+  @media (max-height: $phone-max-height), (max-width: $phone-breakpoint) {
+    @content;
+  }
+}

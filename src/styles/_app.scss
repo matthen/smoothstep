@@ -1,0 +1,828 @@
+@use "theme" as *;
+
+html {
+  height: 100%;
+  font-size: 14px;
+}
+
+body {
+  height: 100%;
+  min-height: 400px;
+  overflow: hidden;
+  @include tablet {
+    overflow-x: scroll;
+  }
+  @include phone {
+    overflow-x: hidden;
+    overflow-y: scroll;
+  }
+  @media (min-width: $max-width) {
+    background: $dt-gray-darker;
+  }
+}
+
+#appRoot {
+  height: 100%;
+  width: 100%;
+}
+
+// Layout: a fixed header, the editor on the left, the canvas on the right, and the footer tabs.
+#root {
+  background: $dt-gray-dark;
+  max-width: $max-width;
+  margin-right: auto;
+  margin-left: auto;
+  height: 100%;
+  padding-bottom: $footer-height;
+  padding-top: $header-height;
+  padding-right: $right-width;
+  position: relative;
+  min-width: $tablet-breakpoint;
+  transition-property: padding-bottom, padding-right;
+  transition-duration: $transition-duration;
+
+  @media (min-width: $max-width) {
+    box-shadow: 0 0 16px black;
+  }
+
+  &.wideCanvas {
+    padding-right: $wide-right-width;
+    #right {
+      width: $wide-right-width;
+      right: -$wide-right-width;
+    }
+    #toggleWideCanvas {
+      transform: rotate(180deg);
+    }
+  }
+
+  @include phone {
+    min-width: unset;
+    width: 100%;
+    height: auto;
+    padding: 0;
+  }
+
+  &.hideFooter {
+    padding-bottom: $hidden-footer-height;
+    // Wait for the footer to collapse before growing the main area.
+    transition-delay: $transition-duration;
+  }
+}
+
+#main {
+  height: 100%;
+  width: 100%;
+  position: relative;
+  @include phone {
+    height: auto;
+    position: static;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+#left {
+  height: 100%;
+  width: 100%;
+  padding-right: 16px;
+  padding-bottom: 4px;
+  position: relative;
+  @include phone {
+    height: 320px;
+    order: 2;
+  }
+
+  .buildButton {
+    padding: 8px;
+    position: absolute;
+    bottom: 0;
+    right: 30px;
+    z-index: 1000;
+  }
+
+  .message {
+    position: absolute;
+    top: 0;
+    right: 16px;
+    z-index: 1060;
+    width: 256px;
+    background: $dt-gray-darker;
+    opacity: 0.8;
+    color: $dt-gray-light;
+    box-shadow: 2px 2px 4px $dt-gray-darker;
+  }
+}
+
+#right {
+  width: $right-width;
+  padding: 0 16px;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  right: -$right-width;
+  transition-property: width, right;
+  transition-duration: $transition-duration;
+
+  @include phone {
+    width: 100%;
+    height: auto;
+    position: static;
+    order: 1;
+  }
+}
+
+#header {
+  width: 100%;
+  padding: 4px;
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  @include phone {
+    position: static;
+    .navbar-collapse {
+      z-index: 1000;
+      background: $dt-gray-darker;
+      padding: 8px;
+      margin-top: 8px;
+      border-radius: 0.2rem;
+      box-shadow: 1px 1px 4px $dt-gray-darker;
+    }
+  }
+
+  .navbar {
+    align-items: baseline;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .navbar-brand {
+    font-family: 'Monda', sans-serif;
+    font-weight: 700;
+    font-size: 24px;
+    color: $dt-gray-light;
+    text-shadow: 1px 1px 3px $dt-gray-darker;
+    margin-right: 48px;
+
+    img {
+      margin-right: 16px;
+      vertical-align: baseline;
+      transform: translateY(16%);
+    }
+
+    i {
+      font-size: 14px;
+      text-shadow: none;
+      font-weight: normal;
+      font-style: normal;
+    }
+  }
+
+  .dropdown-menu {
+    font-size: 14px;
+    box-shadow: 1px 1px 4px $dt-gray-dark;
+  }
+
+  .dropdown-toggle {
+    &::after {
+      margin-left: 16px;
+      transform: rotate(-90deg);
+      transition: $transition-duration;
+    }
+    &[aria-expanded="true"] {
+      background-color: #343644;
+      &::after {
+        transform: rotate(0deg);
+      }
+    }
+  }
+
+  .nav-link {
+    color: $dt-gray-light;
+    border-radius: 0.2rem;
+    margin-right: 4px;
+    white-space: nowrap;
+
+    &:hover {
+      background-color: #343644;
+    }
+  }
+
+  svg {
+    margin-right: 6px;
+  }
+}
+
+.dropdown-item {
+  svg {
+    vertical-align: baseline;
+    position: relative;
+    left: -8px;
+    top: 1px;
+    height: 13px;
+  }
+
+  &.emph {
+    font-weight: bold;
+  }
+}
+
+button.btn-sm svg {
+  margin-top: -2px;
+}
+
+input#titleInput {
+  padding-left: 8px;
+  font-size: 16px;
+  border: 1px solid transparent;
+  margin-right: 8px;
+  width: 256px;
+  color: $dt-gray-light;
+
+  &:hover {
+    border: 1px solid $dt-gray-light;
+    border-radius: 0.2rem;
+  }
+
+  &.default:not(:focus) {
+    color: $dt-gray-medium;
+  }
+}
+
+#footer {
+  width: 100%;
+  height: $footer-height;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  padding-top: 8px;
+  padding-bottom: $footer-padding;
+  overflow: hidden;
+  transition-property: height;
+  transition-duration: $transition-duration;
+
+  @include phone {
+    position: static;
+    .toggleFooter {
+      display: none;
+    }
+  }
+
+  .toggleFooter {
+    position: absolute;
+    right: 16px;
+    top: 12px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: $dt-gray-light;
+    transition-duration: $transition-duration;
+    transition-property: transform;
+    filter: drop-shadow(1px 1px 2px black);
+  }
+
+  &.hide {
+    height: $hidden-footer-height;
+    .tab-content {
+      visibility: hidden;
+    }
+    .toggleFooter {
+      transform: rotate(180deg);
+    }
+  }
+
+  .tab-content {
+    padding: 8px;
+    height: $footer-height - $footer-padding - 38px;
+    max-height: $footer-height - $footer-padding - 38px;
+    background-color: $dt-gray-dark;
+    max-width: 100%;
+  }
+}
+
+#footerLinks {
+  position: absolute;
+  display: block;
+  bottom: 0;
+  left: 0;
+  background: $dt-gray-darker;
+  text-align: right;
+  padding: 4px 32px;
+  width: 100%;
+  box-shadow: inset 0 4px 4px -4px black;
+
+  @include phone {
+    position: static;
+  }
+
+  .btn {
+    color: $dt-gray-medium;
+    background: transparent;
+    border: none;
+    margin-right: 8px;
+  }
+}
+
+.nav-tabs {
+  border-bottom: 1px solid $dt-gray-medium;
+  padding-left: 16px;
+  background: linear-gradient(0deg, $dt-gray-darker, 5%, $dt-gray-dark);
+
+  .nav-link {
+    background: #343644;
+    border: 1px solid transparent;
+    border-color: transparent transparent $dt-gray-medium transparent !important;
+    color: $dt-gray-light;
+    padding: 0.3rem 1rem;
+    margin-right: 8px;
+
+    &.active {
+      color: $dt-gray-light;
+      background-color: $dt-gray-dark;
+      border-color: $dt-gray-medium $dt-gray-medium $dt-gray-dark $dt-gray-medium !important;
+    }
+
+    &:hover:not(.active) {
+      color: $dt-gray-light;
+      background: $dt-gray;
+    }
+  }
+}
+
+// The canvas and its overlays.
+div#canvasContainer {
+  height: calc(100% - 48px);
+  min-height: 128px;
+  position: relative;
+  display: flex;
+
+  @include phone {
+    height: 320px;
+  }
+
+  #canvas {
+    background-color: #000;
+    display: block;
+    margin: auto;
+  }
+
+  div.fps {
+    display: none;
+    box-shadow: 1px 1px 3px $dt-gray-darker;
+    border-radius: 0.2rem;
+    text-align: center;
+    padding: 4px;
+    position: absolute;
+    font-size: 12px;
+    background: rgba($dt-gray, 0.8);
+    color: $dt-gray-light;
+    width: 80px;
+
+    p {
+      margin: 0;
+      white-space: nowrap;
+    }
+
+    &.exporting {
+      display: block;
+    }
+  }
+
+  &:hover div.fps {
+    display: block;
+  }
+
+  div.aspectRatioPicker {
+    display: none;
+    position: absolute;
+
+    .input-group-text {
+      color: $dt-gray-light;
+      background: rgba($dt-gray-darker, 0.8);
+      border: none;
+      box-shadow: 1px 1px 3px $dt-gray-darker;
+    }
+    select {
+      border: none;
+      background-color: rgba($dt-gray, 0.8);
+      color: $dt-gray-light;
+      box-shadow: 1px 1px 3px $dt-gray-darker;
+    }
+  }
+
+  &:hover div.aspectRatioPicker {
+    display: block;
+  }
+
+  .alert {
+    margin: auto;
+  }
+}
+
+#toggleWideCanvas {
+  position: absolute;
+  padding: 2px 4px 4px;
+  line-height: 21px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: $dt-gray-light;
+  transition-property: transform;
+  transition-duration: $transition-duration;
+  filter: drop-shadow(1px 1px 2px black);
+
+  @include phone {
+    display: none;
+  }
+}
+
+// Texture slots in the footer.
+div#textures {
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  height: 180px;
+
+  div.texture {
+    min-width: 170px;
+    margin-right: 16px;
+    background: $dt-gray-darker;
+    border-radius: 0.2rem;
+    padding: 8px 16px;
+    height: 100%;
+
+    h1 {
+      font-size: 14px;
+      font-weight: normal;
+    }
+
+    button {
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+      width: 112px;
+      height: 112px;
+      background: #fff;
+      border: 2px solid $dt-gray-darker;
+      border-radius: 0.2rem;
+      transition-duration: $transition-duration;
+      padding: 0;
+
+      &:hover {
+        border: 2px solid $dt-green;
+      }
+
+      img {
+        width: 100%;
+        max-height: 100%;
+      }
+    }
+  }
+}
+
+// Texture picker.
+$texture-picker-height: 320px;
+
+.modal-dialog.texturePickerModal, .modal-dialog.documentBrowser {
+  max-width: 800px;
+}
+
+.texturePickerModal .nav-pills {
+  .nav-link {
+    color: $dt-gray-light;
+  }
+  .nav-item.selected .nav-link {
+    font-weight: bold;
+  }
+}
+
+.dropzone {
+  border: 2px dashed $dt-gray-dark;
+  background-color: #eee;
+  color: $dt-gray-dark;
+  padding: 16px;
+  height: $texture-picker-height;
+  cursor: pointer;
+  p {
+    text-align: center;
+  }
+  svg.uploadIcon {
+    color: $dt-gray;
+    height: 96px;
+    width: 96px;
+    margin: 16px auto;
+    display: block;
+  }
+  .spinner-border {
+    margin-left: 8px;
+  }
+  div.selectedFile {
+    text-align: center;
+    img {
+      max-width: 128px;
+      max-height: 80px;
+      border: 3px solid $dt-gray;
+    }
+    button {
+      margin-left: 8px;
+    }
+  }
+  &.active {
+    background: $dt-green;
+  }
+}
+
+.texturePickerGrid {
+  height: $texture-picker-height;
+  width: 100%;
+  display: flex;
+  overflow-y: scroll;
+  flex-flow: row wrap;
+  align-content: flex-start;
+
+  div.picker {
+    width: 96px;
+    height: 96px;
+    margin: 8px;
+    background: #fff;
+    padding: 0;
+    position: relative;
+    border: 4px solid $dt-gray-light;
+    border-radius: 0.2rem;
+    transition-duration: $transition-duration;
+
+    &:hover {
+      border-color: $dt-green;
+    }
+
+    &.selected {
+      border-color: $dt-red;
+    }
+
+    span.resolution {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      background: $dt-gray;
+      border-radius: 0.2rem;
+      color: $dt-gray-light;
+      font-size: 12px;
+      padding: 2px 4px;
+      display: none;
+    }
+
+    button.select {
+      border: none;
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      background: none;
+
+      img {
+        width: 100%;
+        max-height: 100%;
+      }
+      svg.thumbnail {
+        width: 60%;
+        height: 60%;
+        color: $dt-gray;
+      }
+    }
+
+    button.delete {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 18px;
+      height: 18px;
+      font-size: 10px;
+      padding: 0;
+    }
+
+    &:hover span.resolution {
+      display: inline;
+    }
+  }
+}
+
+// Export dialog.
+button.toggleAdvanced {
+  &, &:hover, &:focus, &:active {
+    background-color: transparent !important;
+    color: $dt-gray-light !important;
+    border: none;
+  }
+  &.expanded svg {
+    transform: rotate(180deg);
+  }
+}
+
+div.progress {
+  height: 32px;
+  margin-bottom: 16px;
+  &.noTransition .progress-bar {
+    transition: none;
+  }
+}
+
+form .row {
+  margin-bottom: 8px;
+}
+
+form.disabled {
+  opacity: 0.7;
+}
+
+#loading {
+  z-index: 100000;
+  position: absolute;
+  top: $header-height + 2px;
+  left: 36px;
+  color: $dt-gray-light;
+}
+
+// Welcome dialog.
+.modal-dialog.splash {
+  max-width: 960px;
+
+  @include phone {
+    align-items: start;
+    margin-top: 16px;
+  }
+
+  .modal-header .modal-title {
+    font-family: 'Monda', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    color: $dt-gray-light;
+    text-shadow: 1px 1px 3px $dt-gray-darker;
+
+    i {
+      font-size: 14px;
+      text-shadow: none;
+      font-weight: normal;
+      font-style: normal;
+    }
+    img {
+      margin-right: 16px;
+      vertical-align: baseline;
+      transform: translateY(16%);
+    }
+  }
+
+  .modal-body {
+    padding: 32px;
+    max-height: 70vh;
+    overflow-y: auto;
+
+    .list-group {
+      margin-bottom: 1rem;
+      background: rgba(#2c2f3e, 0.5);
+      padding: 8px 0;
+
+      .list-group-item {
+        color: $dt-purple;
+        text-decoration: underline;
+        text-decoration-color: $dt-gray;
+        background: none;
+        border: none;
+        padding: 0.25rem 1.25rem;
+
+        img.thumbnail {
+          height: 24px;
+          width: 24px;
+          margin-right: 8px;
+        }
+
+        svg {
+          color: $dt-gray-medium;
+          height: 16px;
+          width: 16px;
+          margin-right: 10px;
+          margin-left: 4px;
+        }
+
+        &:hover, &:hover svg {
+          color: $dt-gray-light;
+        }
+      }
+    }
+  }
+}
+
+// Modals.
+.modal-backdrop {
+  background-color: $dt-gray-dark;
+  &.show {
+    opacity: 0.5;
+  }
+}
+
+.modal-dialog .modal-content {
+  font-size: 14px;
+  background: linear-gradient(180deg, rgba(#21232d, 0.9) 0, rgba($dt-gray-dark, 0.7) 53px);
+  backdrop-filter: blur(8px);
+  color: $dt-gray-light;
+  border: 1px solid $dt-gray;
+  box-shadow: 1px 1px 4px $dt-gray-darker;
+
+  @include phone {
+    background: #21232d;
+    backdrop-filter: none;
+  }
+
+  .modal-header {
+    border-bottom: 1px solid $dt-gray;
+    position: relative;
+    .modal-title {
+      color: $dt-gray-light;
+      font-size: 16px;
+      svg {
+        margin-right: 8px;
+      }
+    }
+    .spinner-border {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+    }
+  }
+
+  .modal-body {
+    input, select {
+      background-color: $dt-gray;
+      color: $dt-gray-light;
+      border: none;
+    }
+    .input-group-text {
+      background: $dt-gray-dark;
+      color: $dt-gray-light;
+      border: none;
+      user-select: none;
+    }
+    a {
+      color: $dt-purple;
+    }
+
+    .table {
+      --bs-table-bg: #2c2f3e;
+      --bs-table-striped-bg: #31344a;
+      --bs-table-color: #{$dt-gray-light};
+      --bs-table-striped-color: #{$dt-gray-light};
+      tr.opened td {
+        font-weight: bold;
+      }
+      tr.opened td:first-child {
+        border-left: 8px solid $dt-green;
+      }
+      td.centerTD, td.buttonsTD {
+        text-align: center;
+      }
+    }
+    .table, .table tr td, .table tr th {
+      border: none;
+    }
+
+    div.tableFixedHead {
+      overflow-y: auto;
+      height: 360px;
+      thead th {
+        position: sticky;
+        top: -1px;
+        background: $dt-gray-dark;
+      }
+      tr td {
+        vertical-align: middle;
+      }
+    }
+  }
+
+  .modal-footer {
+    border-top: none;
+  }
+}
+
+.storageNote {
+  margin-top: 12px;
+  color: $dt-gray-medium;
+}
+
+// The crash screen.
+.crashScreen {
+  max-width: 640px;
+  margin: 96px auto;
+  padding: 32px;
+  background: $dt-gray-darker;
+  border-radius: 0.3rem;
+
+  pre {
+    color: $dt-gray-medium;
+    white-space: pre-wrap;
+    max-height: 160px;
+    overflow: auto;
+  }
+}
