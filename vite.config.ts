@@ -15,6 +15,19 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    rolldownOptions: {
+      output: {
+        // Large libraries in chunks of their own, so they load in parallel and stay cached
+        // across app updates.
+        codeSplitting: {
+          groups: [
+            {name: 'react', test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/, priority: 3},
+            {name: 'codemirror', test: /[\\/]node_modules[\\/](@codemirror|@lezer|crelt|style-mod|w3c-keyname)[\\/]/, priority: 2},
+            {name: 'mantine', test: /[\\/]node_modules[\\/](@mantine|@floating-ui|react-remove-scroll[^\\/]*|react-style-singleton|use-callback-ref|use-sidecar|tslib|get-nonce|aria-hidden|detect-node-es|clsx)[\\/]/, priority: 1},
+          ],
+        },
+      },
+    },
   },
   test: {
     environment: 'jsdom',
