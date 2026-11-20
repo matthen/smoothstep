@@ -11,7 +11,7 @@ notices when you've done it.
 5. [Patterns](https://smoothstep.io/app/#tutorial/5): tiling with `fract`, rotation, and polar coordinates.
 6. [Textures](https://smoothstep.io/app/#tutorial/6): showing, warping and folding an image.
 7. [Memory with iPrevFrame](https://smoothstep.io/app/#tutorial/7): trails that fade, and setting up the first frame with `iFrame`.
-8. [Share it](https://smoothstep.io/app/#tutorial/8): saving, downloading and exporting video, and where to learn more.
+8. [Share it](https://smoothstep.io/app/#tutorial/8): saving, sharing a link, downloading and exporting video, and where to learn more.
 
 Each lesson builds one animation a step at a time, and most end with a related example to explore.
 

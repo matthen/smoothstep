@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 
 import { openHelpDialog, type HelpDialog } from '../app/helpDialogs';
 import { EMPTY_TEXTURE, type AspectRatio, type TextureSlot, type Variable } from '../lib/document';
-import { EXAMPLES } from '../lib/config';
+import { DOCS_URL, EXAMPLES } from '../lib/config';
 import * as shaders from './shaders';
 
 // What a step's check can see of the editor.
@@ -612,12 +612,25 @@ export const LESSONS: Lesson[] = [
             browser, and File → Open lists everything you've saved.
           </p>
           <p>
-            To send it to someone, click Share. The link it gives you holds the whole animation, and whoever
-            opens it can play it and change their own copy.
-          </p>
-          <p>
             To keep a copy elsewhere, use File → Download animation file. It holds the code, the timeline and the
             textures, and File → Open → "Open file…" opens it again.
+          </p>
+        </>,
+      },
+      {
+        id: "share",
+        title: "Send it to someone",
+        body: <>
+          <p>
+            Click Share to send your animation to someone. The link it gives you holds the whole animation, so
+            nothing is uploaded, and whoever opens it can play it and change their own copy. Share can also show
+            the link as a QR code for a phone to scan.
+          </p>
+          <p>
+            Share also gives you code that shows the animation playing on a web page, and a player file: one web
+            page that plays it, which works offline. A link can't carry images you added yourself, so if you used
+            any, <Link href={DOCS_URL + "/sharing.md"}>Sharing animations</Link> in the docs explains how to put
+            the animation file in a GitHub gist instead.
           </p>
         </>,
       },

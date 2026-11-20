@@ -87,10 +87,11 @@ function desktopSteps({showPane}: TourOptions): DriveStep[] {
       element: ".headerActions",
       onHighlightStarted: () => showPane("animation"),
       popover: {
-        title: "Save, export and help",
+        title: "Save, share, export and help",
         description: `File saves your animation in this browser (<kbd>${MOD_KEY}</kbd> + <kbd>S</kbd>) and ` +
-          "downloads it as a file you can keep or share. Export video makes a WebM, MP4, GIF or PNG frames. " +
-          "Help has the tutorial, the shader inputs and the keyboard shortcuts.",
+          "downloads it as a file you can keep. Share gives you a link with the whole animation in it. " +
+          "Export video makes a WebM, MP4, GIF or PNG frames. Help has the tutorial, the shader inputs and " +
+          "the keyboard shortcuts.",
         side: "bottom", align: "start",
       },
     },
@@ -144,9 +145,9 @@ function phoneSteps({showPane}: TourOptions): DriveStep[] {
       element: ".headerActions",
       onHighlightStarted: () => showPane("code"),
       popover: {
-        title: "File, export and help",
+        title: "File, share, export and help",
         description: "The file menu saves your animation in this browser and downloads it as a file. " +
-          "Next to it are Export video and Help.",
+          "Next to it are Share, which gives you a link with the whole animation in it, Export video and Help.",
         side: "bottom", align: "end",
       },
     },
