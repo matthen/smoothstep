@@ -34,6 +34,7 @@ import Canvas, { type CanvasHandle, type CanvasLayout, type Shaders } from '../r
 import type { CompileResult, ShaderId } from '../render/Renderer';
 import { floatNames } from '../timeline/names';
 import PlayerControls from '../timeline/PlayerControls';
+import Sliders from '../timeline/Sliders';
 import Timeline from '../timeline/Timeline';
 import { lessonTitle, type TutorialState } from '../tutorial/lessons';
 import { openingProgress } from '../tutorial/progress';
@@ -55,7 +56,8 @@ function windowTitle(title: string) {
 }
 
 // Which pane fills the screen below the canvas on a phone.
-type MobileTab = "code" | "animation" | "textures" | "learn";
+type MobileTab = "code" | "animation" | "sliders" | "textures" | "learn";
+type PanelTab = "animation" | "sliders" | "textures";
 
 // Loaded when the tutorial opens, with its lessons.
 const TutorialPanel = lazy(() => import('../tutorial/TutorialPanel'));
@@ -118,7 +120,7 @@ export default function App() {
   const phone = usePhone();
   useKeyboardInset();
   const [mobileTab, setMobileTab] = useState<MobileTab>(tutorialStart && phone ? "learn" : "code");
-  const [panelTab, setPanelTab] = useState<"animation" | "textures">("animation");
+  const [panelTab, setPanelTab] = useState<PanelTab>("animation");
   const [tourTaken, setTourTaken] = useState(() => tourState() === "taken");
   const [alert, setAlert] = useState<string | null>(null);
   const [dialog, setDialog] = useState<Dialog | null>(window.location.hash ? null : "splash");
@@ -144,7 +146,19 @@ export default function App() {
   // The link the animation opened from, which can be shared again while it's unchanged.
   const [sharedFrom, setSharedFrom] = useState<Route | null>(null);
 
-  const values = useMemo(() => variableValues(doc.variables, time), [doc.variables, time]);
+  // Animated values held still while their sliders are dragged, by row.
+  const [held, setHeld] = useState<ReadonlyMap<number, number>>(new Map());
+  const values = useMemo(() => variableValues(doc.variables, time).map((v, i) => held.get(i) ?? v),
+    [doc.variables, time, held]);
+  const hold = (row: number, value: number | null) => setHeld(h => {
+    const next = new Map(h);
+    if (value === null) {
+      next.delete(row);
+    } else {
+      next.set(row, value);
+    }
+    return next;
+  });
   // Named in any shader's #defines, the image's first.
   const floatNameList = useMemo(() => floatNames([doc.code, doc.shared ?? "", ...bufferCodes(doc)].join("\n")), [doc]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -172,7 +186,7 @@ export default function App() {
 
   const chooseMobileTab = (tab: MobileTab) => {
     setMobileTab(tab);
-    if (tab === "animation" || tab === "textures") {
+    if (tab === "animation" || tab === "sliders" || tab === "textures") {
       setPanelTab(tab);
     }
   };
@@ -722,7 +736,8 @@ export default function App() {
         <SegmentedControl
           fullWidth size="sm" value={mobileTab} onChange={value => chooseMobileTab(value as MobileTab)}
           data={[
-            {value: "code", label: "Code"}, {value: "animation", label: "Timeline"}, {value: "textures", label: "Textures"},
+            {value: "code", label: "Code"}, {value: "animation", label: "Timeline"}, {value: "sliders", label: "Sliders"},
+            {value: "textures", label: "Textures"},
             ...(tutorialOpen ? [{
               value: "learn",
               label: tutorialStepDone && mobileTab !== "learn"
@@ -745,10 +760,14 @@ export default function App() {
       <section className="bottomPanel">
         <Tabs
           value={panelTab} keepMounted
-          onChange={value => {setPanelTab(value === "textures" ? "textures" : "animation"); setShowFooter(true);}}
+          onChange={value => {
+            setPanelTab(value === "textures" || value === "sliders" ? value : "animation");
+            setShowFooter(true);
+          }}
         >
           <Tabs.List>
             <Tabs.Tab value="animation">Animation</Tabs.Tab>
+            <Tabs.Tab value="sliders">Sliders</Tabs.Tab>
             <Tabs.Tab value="textures">Textures</Tabs.Tab>
             <ActionIcon
               variant="subtle" color="gray" className="toggleFooter" aria-label="Toggle footer"
@@ -765,6 +784,13 @@ export default function App() {
                 updateDoc({variables});
               }}
               duration={doc.duration} currentTime={time} onSeek={seek} onDurationChange={onDurationChange}
+            />
+          </Tabs.Panel>
+          <Tabs.Panel value="sliders">
+            <Sliders
+              variables={doc.variables} values={values} names={floatNameList}
+              code={[doc.code, doc.shared ?? "", ...bufferCodes(doc)].join("\n")}
+              onVariablesChange={(variables: Variable[]) => updateDoc({variables})} onHold={hold}
             />
           </Tabs.Panel>
           <Tabs.Panel value="textures">

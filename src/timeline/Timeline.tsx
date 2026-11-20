@@ -152,7 +152,8 @@ export default function Timeline(props: TimelineProps) {
       setHover(null);
       return;
     }
-    const value = variableValue(transitions, startDSecs / 10);
+    // A first transition starts from the value its slider set.
+    const value = transitions.length > 0 ? variableValue(transitions, startDSecs / 10) : variables[row]!.value ?? 0;
     const inserted = insertTransition(transitions, {startDSecs, endDSecs, startValue: value, endValue: value, type: "smoothstep"});
     setRow(row, inserted.transitions);
     select({row, startDSecs});

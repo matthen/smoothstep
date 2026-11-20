@@ -1157,3 +1157,59 @@ div#textures .texturesHint {
   margin: 0 6px;
   background: $dt-gray;
 }
+
+// The Sliders tab: a row for each iFloat the code uses.
+.sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 16px 16px;
+  overflow-y: auto;
+  height: 100%;
+  max-width: 900px;
+}
+
+.sliderRow {
+  display: grid;
+  grid-template-columns: minmax(90px, 160px) 64px 1fr 64px 76px;
+  align-items: center;
+  gap: 10px;
+
+  @include phone {
+    grid-template-columns: 56px 1fr 56px 68px;
+    row-gap: 2px;
+
+    .sliderName {
+      grid-column: 1 / -1;
+    }
+  }
+}
+
+.sliderName {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  .floatName {
+    color: $dt-gray-medium;
+    font-size: 11px;
+  }
+}
+
+// Shown beside a slider whose value comes from the timeline.
+.sliderAnimated {
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-family: var(--mantine-font-family);
+  font-size: 10px;
+  color: $dt-purple;
+  border: 1px solid $dt-purple;
+}
+
+.sliderNumber input {
+  text-align: right;
+  font-family: var(--mantine-font-family-monospace);
+}
