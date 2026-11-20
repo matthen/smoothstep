@@ -130,12 +130,24 @@ export function createFloatPicker(initial: number, onChange: (value: number) => 
     ctx.stroke();
   };
 
+  // A finger wobbles, so a touch drag either slides or zooms, decided by its first few pixels.
+  let axis: 'both' | 'x' | 'y' | null = 'both';
+  let start: [number, number] = [0, 0];
   onDrag(canvas, {
-    down: (x, y) => (prev = [x, y]),
+    down: (x, y, e) => {
+      prev = start = [x, y];
+      axis = e.pointerType === 'mouse' ? 'both' : null;
+    },
     move: (x, y) => {
-      zoom -= y - prev[1];
+      if (axis === null) {
+        const dx = Math.abs(x - start[0]);
+        const dy = Math.abs(y - start[1]);
+        if (Math.max(dx, dy) < 8) return;
+        axis = dx >= dy ? 'x' : 'y';
+      }
+      if (axis !== 'y') value -= ((x - prev[0]) * scale) / width;
+      if (axis !== 'x') zoom -= y - prev[1];
       const newScale = 2 * Math.exp(0.04 * zoom);
-      value -= ((x - prev[0]) * scale) / width;
       scale = newScale;
       prev = [x, y];
       draw();

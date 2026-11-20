@@ -23,6 +23,9 @@ export default function CodeEditor({ value, onChange, onBuild, onSave, lineError
   const lineErrorsRef = useRef(lineErrors);
   // The code the editor last reported or was given, so our own edits coming back as `value` are ignored.
   const knownValueRef = useRef(value);
+  // Reports React hasn't caught up with: a fast picker drag can edit again before an older report's
+  // effect runs, and that older code must not reset the editor.
+  const reportedRef = useRef<string[]>([]);
 
   useLayoutEffect(() => {
     callbacksRef.current = { onChange, onBuild, onSave };
@@ -39,6 +42,7 @@ export default function CodeEditor({ value, onChange, onBuild, onSave, lineError
         if (!update.docChanged) return;
         const code = update.state.doc.toString();
         knownValueRef.current = code;
+        reportedRef.current = [...reportedRef.current.slice(-49), code];
         const isHelperChange = update.transactions.some((tr) => tr.annotation(pickerEdit));
         callbacksRef.current.onChange(code, isHelperChange);
       }),
@@ -57,8 +61,14 @@ export default function CodeEditor({ value, onChange, onBuild, onSave, lineError
 
   useEffect(() => {
     const view = viewRef.current;
-    if (!view || value === knownValueRef.current) return;
+    if (!view) return;
+    if (value === knownValueRef.current) {
+      reportedRef.current = [];
+      return;
+    }
+    if (reportedRef.current.includes(value)) return;
     knownValueRef.current = value;
+    reportedRef.current = [];
     if (value === view.state.doc.toString()) return;
     // A new document gets a fresh state, so undo can't step back into the previous one.
     view.setState(EditorState.create({ doc: value, extensions: extensionsRef.current! }));

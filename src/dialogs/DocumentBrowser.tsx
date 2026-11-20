@@ -5,8 +5,9 @@ import { TbDownload, TbFileImport, TbTrash } from 'react-icons/tb';
 import AppModal from '../app/AppModal';
 import { usePhone } from '../app/usePhone';
 import { animationFile, download, exportAll, importFiles, importMessage } from '../lib/archive';
-import { documentHref, EXAMPLES, exampleHref, exampleThumbnail } from '../lib/config';
+import { documentHref } from '../lib/config';
 import { deleteDocument, getDocument, listDocuments, StorageFullError, type DocumentSummary } from '../lib/localStore';
+import ExampleGallery from './ExampleGallery';
 import ImageWithFallback from './ImageWithFallback';
 import { timeAgo } from './timeAgo';
 
@@ -143,20 +144,17 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
               </Table.Tbody>
             </Table>
           </ScrollArea.Autosize>}
-        {documents.length === 0 && <Text c="dimmed" size="sm">You have no saved animations yet.</Text>}
+        {documents.length === 0 &&
+          <Text c="dimmed" size="sm">
+            You have no saved animations yet. File → Save keeps the one you're working on here, and
+            "Open file…" below opens one you downloaded.
+          </Text>}
         <Text c="dimmed" size="sm" mt="sm">
           Animations are saved in this browser only. Download them to keep a backup
           or to move them to another computer.
         </Text>
         <Title order={2} size="h5" mt="lg" mb="xs">Examples</Title>
-        <div className="exampleGrid">
-          {EXAMPLES.map(example =>
-            <a key={example.id} href={exampleHref(example.id)} onClick={onHide}>
-              <ImageWithFallback src={exampleThumbnail(example.id)} width="96" height="96" alt="" />
-              <span>{example.title}</span>
-            </a>,
-          )}
-        </div>
+        <ExampleGallery onOpen={onHide} />
         <input
           type="file" accept=".json,.zip,application/json,application/zip" multiple
           ref={fileInput} style={{display: "none"}} data-testid="importInput"

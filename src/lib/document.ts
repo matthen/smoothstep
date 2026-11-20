@@ -41,7 +41,7 @@ export interface AnimationDocument {
   variables: Variable[];
 }
 
-export const DEFAULT_CODE = `// Getting started? Try the tutorial: https://github.com/matthen/smoothstep/blob/main/docs/tutorial/README.md
+export const DEFAULT_CODE = `// Getting started? Try the tutorial in Help → Tutorial.
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // Compute coordinates that range from x = 0 to 1 and y = 0 to 1.
   vec2 uv = fragCoord / iResolution.xy;
@@ -53,9 +53,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   fragColor = vec4(col, 1.0);
 }`;
 
+// The built-in image an empty texture slot holds.
+export const EMPTY_TEXTURE = "special/black.png";
+
 export function emptyTextures(): TextureSlot[] {
   return Array.from({length: NUM_TEXTURES}, (_, i) => (
-    {id: "iTexture" + i, url: "special/black.png", isUserUploaded: false}));
+    {id: "iTexture" + i, url: EMPTY_TEXTURE, isUserUploaded: false}));
 }
 
 export function emptyVariables(): Variable[] {

@@ -27,6 +27,7 @@
     "@mantine/core": "^9.7.5",
     "@mantine/hooks": "^9.7.5",
     "@mantine/notifications": "^9.7.5",
+    "driver.js": "1.10.2",
     "fflate": "^0.8.3",
     "gifenc": "^1.0.3",
     "idb-keyval": "^6.3.0",

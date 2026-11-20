@@ -16,7 +16,7 @@ describe("Splash", () => {
       await addDocument("eeee0000000" + i, "Animation " + i, 1000 * i);
     }
     const onHide = vi.fn();
-    render(<Splash show={true} onHide={onHide} />);
+    render(<Splash show={true} onHide={onHide} onTour={() => {}} tourTaken={false} />);
     expect(await screen.findByText("Your recent animations")).toBeTruthy();
     expect(screen.getByRole("link", {name: "Animation 3"}).getAttribute("href")).toBe("#anim/eeee00000003");
     expect(screen.queryByText("Animation 0")).toBeNull();
@@ -27,9 +27,30 @@ describe("Splash", () => {
   });
 
   it("hides recent animations when there are none", async () => {
-    render(<Splash show={true} onHide={() => {}} />);
+    render(<Splash show={true} onHide={() => {}} onTour={() => {}} tourTaken={false} />);
     await screen.findByText("Examples");
     expect(screen.queryByText("Your recent animations")).toBeNull();
+  });
+});
+
+describe("Welcome tip", () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it("shows the next tip on each visit, and on Next tip", async () => {
+    const tip = () => screen.getByRole("region", {name: "Did you know?"}).textContent ?? "";
+    const view = render(<Splash show={true} onHide={() => {}} onTour={() => {}} tourTaken={true} />);
+    await screen.findByText("Examples");
+    const first = tip();
+    expect(first).toMatch(/Click a number/);
+    await userEvent.click(screen.getByRole("button", {name: "Next tip"}));
+    const second = tip();
+    expect(second).not.toBe(first);
+    view.unmount();
+
+    render(<Splash show={true} onHide={() => {}} onTour={() => {}} tourTaken={true} />);
+    await screen.findByText("Examples");
+    expect(tip()).not.toBe(second);
+    expect(tip()).not.toBe(first);
   });
 });
 

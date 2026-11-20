@@ -3,7 +3,7 @@
   1,
   1
  ],
- "code": "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  // Compute coordinates that range from x = -1 to 1 and y = -1 to 1.\n  vec2 uv = fragCoord / iResolution.xy;\n  uv = 2. * (uv - 0.5);\n  \n  // The signed distance to the edge of a circle.\n  float radius = 0.8 + 0.1 * sin(6.28318530 * iTime / iDuration);\n  float circleDist = length(uv) - radius;\n   \n  // Compute the color of the pixel as a mix of red and blue,\n  // depending on the distance to the circle.\n  vec3 col = mix(\n    vec3(0.800, 0.184, 0.277),  // red\n    vec3(0.049, 0.111, 0.215),  // dark blue\n    smoothstep(0., 2. / iResolution.x, circleDist)\n  );\n  \n  fragColor = vec4(col, 1.0);\n}",
+ "code": "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  // Compute coordinates with (0, 0) in the middle, and y from -1 to 1.\n  vec2 uv = (2. * fragCoord - iResolution.xy) / iResolution.y;\n  \n  // The signed distance to the edge of a circle.\n  float radius = 0.8 + 0.1 * sin(6.28318530 * iTime / iDuration);\n  float circleDist = length(uv) - radius;\n   \n  // Compute the color of the pixel as a mix of red and blue,\n  // depending on the distance to the circle.\n  vec3 col = mix(\n    vec3(0.800, 0.184, 0.277),  // red\n    vec3(0.049, 0.111, 0.215),  // dark blue\n    smoothstep(0., 2. / iResolution.y, circleDist)\n  );\n  \n  fragColor = vec4(col, 1.0);\n}",
  "duration": 4,
  "textures": [
   {

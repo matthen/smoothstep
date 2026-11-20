@@ -1,18 +1,21 @@
 import { Button, Group, SimpleGrid, Text, Title } from '@mantine/core';
 import { useEffect, useState, type ReactNode } from 'react';
-import { TbBook, TbBrandGithub, TbSchool } from 'react-icons/tb';
+import { TbBook, TbBrandGithub, TbBulb, TbSchool } from 'react-icons/tb';
 
 import AppModal from '../app/AppModal';
 import { usePhone } from '../app/usePhone';
-import {
-  asset, documentHref, DOCS_URL, EXAMPLES, exampleHref, exampleThumbnail, REPO_URL, TUTORIAL_URL,
-} from '../lib/config';
+import { asset, documentHref, DOCS_URL, REPO_URL, TUTORIAL_HREF } from '../lib/config';
 import { listDocuments, type DocumentSummary } from '../lib/localStore';
+import ExampleGallery from './ExampleGallery';
 import ImageWithFallback from './ImageWithFallback';
+import { WELCOME_TIPS, welcomeTipIndex, welcomeTipShown } from './welcomeTips';
 
 interface SplashProps {
   show: boolean;
   onHide(): void;
+  onTour(): void;
+  // Once the tour has been taken, Continue becomes the main button.
+  tourTaken: boolean;
 }
 
 function LinkItem({href, onClick, icon, children}: {
@@ -29,7 +32,25 @@ function LinkItem({href, onClick, icon, children}: {
   );
 }
 
-export default function Splash({show, onHide}: SplashProps) {
+// Mounted each time the dialog opens, so each visit starts on the next tip.
+function WelcomeTip() {
+  const [index, setIndex] = useState(welcomeTipIndex);
+  useEffect(() => welcomeTipShown(index), [index]);
+  return (
+    <section className="welcomeTip" aria-label="Did you know?">
+      <Text size="sm" fw={600} className="welcomeTipTitle"><TbBulb aria-hidden />Did you know?</Text>
+      <Text size="sm" className="welcomeTipText">{WELCOME_TIPS[index]}</Text>
+      <Button
+        variant="subtle" size="compact-xs" color="gray" className="welcomeTipNext"
+        onClick={() => setIndex(i => (i + 1) % WELCOME_TIPS.length)}
+      >
+        Next tip
+      </Button>
+    </section>
+  );
+}
+
+export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
   const [recentDocs, setRecentDocs] = useState<DocumentSummary[]>([]);
   const phone = usePhone();
 
@@ -44,7 +65,7 @@ export default function Splash({show, onHide}: SplashProps) {
 
   return (
     <AppModal
-      opened={show} onClose={onHide} size="xl" fullScreen={phone} classNames={{content: "splash"}}
+      opened={show} onClose={onHide} size={960} fullScreen={phone} classNames={{content: "splash"}}
       title={<span className="splashTitle"><img src={asset("images/logo.svg")} width="20" height="20" alt="" /><span>smoothstep<i>.io</i></span></span>}
     >
       <SimpleGrid cols={{base: 1, sm: 2}} spacing="xl">
@@ -54,11 +75,14 @@ export default function Splash({show, onHide}: SplashProps) {
             smoothstep.io is a toolkit for building animations in the WebGL Shader language.
           </Text>
           <Text mb="md" c="dimmed" size="sm">
-            Animations and uploaded textures are saved in this browser. Use File &rarr; Open
+            Animations and the images you add are saved in this browser. Use File &rarr; Open
             to download them as files, or to open files saved elsewhere.
           </Text>
+          <WelcomeTip />
+        </div>
+        <div>
           <div className="linkList">
-            <LinkItem href={TUTORIAL_URL} icon={<TbSchool />}>Getting started tutorial</LinkItem>
+            <LinkItem href={TUTORIAL_HREF} onClick={onHide} icon={<TbSchool />}>Getting started tutorial</LinkItem>
             <LinkItem href={DOCS_URL} icon={<TbBook />}>Documentation</LinkItem>
             <LinkItem href={REPO_URL} icon={<TbBrandGithub />}>Source code</LinkItem>
           </div>
@@ -78,20 +102,17 @@ export default function Splash({show, onHide}: SplashProps) {
             </>
           }
         </div>
-        <div>
-          <Title order={2} size="h5" mb="xs">Examples</Title>
-          <div className="linkList">
-            {EXAMPLES.map(example =>
-              <LinkItem key={example.id} href={exampleHref(example.id)} onClick={onHide} icon={thumbnail(exampleThumbnail(example.id))}>
-                {example.title}
-              </LinkItem>,
-            )}
-          </div>
-        </div>
       </SimpleGrid>
+      <Title order={2} size="h5" mt="xl" mb="sm">Examples</Title>
+      <ExampleGallery onOpen={onHide} />
       <Group justify="flex-end" mt="xl">
-        <Button variant="default" component="a" href={TUTORIAL_URL} target="_blank" rel="noreferrer">Tutorial</Button>
-        <Button onClick={onHide} data-autofocus>Continue</Button>
+        <Button variant="default" component="a" href={TUTORIAL_HREF} onClick={onHide}>Tutorial</Button>
+        <Button variant={tourTaken ? "default" : "filled"} onClick={onTour} data-autofocus={!tourTaken || undefined}>
+          Take the tour
+        </Button>
+        <Button variant={tourTaken ? "filled" : "default"} onClick={onHide} data-autofocus={tourTaken || undefined}>
+          Continue
+        </Button>
       </Group>
     </AppModal>
   );

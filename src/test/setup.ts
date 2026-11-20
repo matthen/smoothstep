@@ -18,4 +18,7 @@ if (typeof window !== "undefined") {
     disconnect() {}
   };
   Element.prototype.scrollIntoView ??= () => {};
+  // jsdom's play() logs "not implemented" and returns nothing, where browsers return a promise.
+  HTMLMediaElement.prototype.play = () => Promise.resolve();
+  HTMLMediaElement.prototype.pause = () => {};
 }

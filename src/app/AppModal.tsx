@@ -12,6 +12,10 @@ function changed() {
   listeners.forEach(listener => listener());
 }
 
+export function anyModalOpen(): boolean {
+  return stack.length > 0;
+}
+
 function subscribe(listener: () => void) {
   listeners.add(listener);
   return () => listeners.delete(listener);

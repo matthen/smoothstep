@@ -27,22 +27,29 @@ const picker = () => screen.getAllByRole("dialog")[0]!;
 
 // The picker is loaded on first open, so wait for it.
 async function openSlot(id: string) {
-  await userEvent.click(screen.getByAltText(id + " preview"));
+  await userEvent.click(screen.queryByAltText(id + " preview") ?? screen.getByRole("button", {name: new RegExp(`^${id} is empty`)}));
   await screen.findByRole("dialog");
 }
 
 describe("Textures and TexturePicker", () => {
-  it("shows a button per slot", () => {
-    renderTextures();
-    expect(screen.getAllByRole("img", {name: /iTexture\d preview/}).length).toBe(8);
+  it("shows a button per slot, which says when the slot is empty", () => {
+    const textures = emptyTextures();
+    textures[1] = {id: "iTexture1", url: "fonts/1.png", isUserUploaded: false};
+    renderTextures(textures);
+    expect(screen.getAllByRole("button", {name: /^iTexture\d is empty: choose an image$/}).length).toBe(7);
+    expect(screen.getByAltText("iTexture1 preview")).toBeTruthy();
   });
 
   it("picks a built-in texture", async () => {
     const props = renderTextures();
     await openSlot("iTexture2");
     expect(within(picker()).getByText("iTexture2")).toBeTruthy();
-    expect(within(picker()).getByRole("tab", {name: "special"}).getAttribute("aria-selected")).toBe("true");
-    await userEvent.click(within(picker()).getByRole("tab", {name: "fonts"}));
+    // Every group is on the one page, each with a caption, and so are the textures.
+    const fonts = within(picker()).getByRole("region", {name: "Font sheets"});
+    expect(within(fonts).getByText("Text characters in a grid, for drawing text.")).toBeTruthy();
+    expect(within(fonts).getByText("Courier Prime")).toBeTruthy();
+    expect(within(picker()).getByRole("region", {name: "Photos"})).toBeTruthy();
+    expect(within(picker()).queryByAltText("special/black.png preview")).toBeNull();
     await userEvent.click(within(picker()).getByAltText("fonts/1.png preview"));
     expect(within(picker()).getByAltText("fonts/1.png preview").closest(".picker")!.className).toContain("selected");
     expect(within(picker()).getAllByText("512 × 192").length).toBeGreaterThan(0);
@@ -55,23 +62,21 @@ describe("Textures and TexturePicker", () => {
   it("cancel leaves the textures alone", async () => {
     const props = renderTextures();
     await openSlot("iTexture0");
-    await userEvent.click(within(picker()).getByRole("tab", {name: "fonts"}));
     await userEvent.click(within(picker()).getByAltText("fonts/1.png preview"));
     await userEvent.click(within(picker()).getByRole("button", {name: "Cancel"}));
     expect(props.onChange).not.toHaveBeenCalled();
   });
 
-  it("uploads an image and picks it", async () => {
+  it("adds an image and picks it", async () => {
     const props = renderTextures();
     await openSlot("iTexture0");
-    await userEvent.click(within(picker()).getByRole("tab", {name: "user uploads"}));
-    await userEvent.click(within(picker()).getByText("upload new image"));
+    await userEvent.click(within(picker()).getByRole("button", {name: "Add image"}));
     expect(within(picker()).getByText("Images larger than 4096 px are scaled down.")).toBeTruthy();
     const input = picker().querySelector<HTMLInputElement>(".dropzone input")!;
     await userEvent.upload(input, new File(["x"], "photo.png", {type: "image/png"}));
     expect(await within(picker()).findByText("photo.png")).toBeTruthy();
-    await userEvent.click(within(picker()).getByRole("button", {name: "Upload"}));
-    await waitFor(() => expect(props.onMessage).toHaveBeenCalledWith("Image uploaded."));
+    await userEvent.click(within(picker()).getByRole("button", {name: "Add"}));
+    await waitFor(() => expect(props.onMessage).toHaveBeenCalledWith("Image added."));
     await userEvent.click(await within(picker()).findByAltText("photo.png preview"));
     expect(within(picker()).getByText("64 × 32")).toBeTruthy();
     await userEvent.click(within(picker()).getByRole("button", {name: "Apply changes"}));
@@ -86,7 +91,6 @@ describe("Textures and TexturePicker", () => {
     textures[0] = {id: "iTexture0", url: "cccc00000001", isUserUploaded: true};
     const props = renderTextures(textures);
     await openSlot("iTexture0");
-    expect(within(picker()).getByRole("tab", {name: "user uploads"}).getAttribute("aria-selected")).toBe("true");
     const keep = (await within(picker()).findByAltText("keep.png preview")).closest(".picker") as HTMLElement;
     expect(within(keep).queryByTitle("Delete")).toBeNull();
     const remove = within(picker()).getByAltText("remove.png preview").closest(".picker") as HTMLElement;
@@ -106,5 +110,16 @@ describe("Textures and TexturePicker", () => {
     await openSlot("iTexture3");
     const other = within(picker()).getByAltText("texture preview").closest(".picker")!;
     expect(other.className).toContain("selected");
+  });
+
+  it("empties a slot", async () => {
+    const textures = emptyTextures();
+    textures[2] = {id: "iTexture2", url: "fonts/1.png", isUserUploaded: false};
+    const props = renderTextures(textures);
+    await openSlot("iTexture2");
+    await userEvent.click(within(picker()).getByRole("button", {name: "Empty the slot"}));
+    await userEvent.click(within(picker()).getByRole("button", {name: "Apply changes"}));
+    const picked = props.onChange.mock.calls[0]![0] as TextureSlot[];
+    expect(picked[2]).toEqual(emptyTextures()[2]);
   });
 });

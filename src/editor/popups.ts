@@ -147,7 +147,7 @@ const illuminateField = StateField.define<{ word: string | null; decorations: De
 });
 
 // `pos` comes from the click's coordinates: on touch devices the selection catches up later.
-function onClick(view: EditorView, pos: number) {
+function onClick(view: EditorView, pos: number, touch: boolean) {
   const { state } = view;
   const wasOpen = state.field(popupField) !== null;
   const sel = state.selection.main;
@@ -159,6 +159,8 @@ function onClick(view: EditorView, pos: number) {
   if (selecting || (wasOpen && usable)) return;
   if (match && usable) {
     openPicker(view, line.from + match.from, line.from + match.to, match.kind, match.text, pos - line.from - match.from);
+    // On a touch screen the keyboard would cover the picker.
+    if (touch) view.contentDOM.blur();
     return;
   }
   const word = state.wordAt(pos);
@@ -195,14 +197,20 @@ const dismissPlugin = ViewPlugin.define((view) => {
 });
 
 export function clickHelpers(): Extension {
+  // Older Safari's click events aren't PointerEvents, so remember the press's pointer type.
+  let pointerType = 'mouse';
   return [
     popupField,
     illuminateField,
     dismissPlugin,
     EditorView.domEventHandlers({
+      pointerdown: (e) => {
+        pointerType = e.pointerType;
+        return false;
+      },
       click: (e, view) => {
         const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
-        if (pos !== null) onClick(view, pos);
+        if (pos !== null) onClick(view, pos, pointerType !== 'mouse');
         return false;
       },
     }),

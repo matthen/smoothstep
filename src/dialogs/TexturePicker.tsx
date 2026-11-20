@@ -1,12 +1,12 @@
-import { ActionIcon, Alert, Button, Group, Loader, Tabs, Text } from '@mantine/core';
-import { useEffect, useState, type MouseEvent, type ReactNode } from 'react';
+import { ActionIcon, Alert, Button, Group, Loader, Text } from '@mantine/core';
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { TbTrash, TbUpload } from 'react-icons/tb';
+import { TbArrowLeft, TbPhotoPlus, TbTrash } from 'react-icons/tb';
 
 import AppModal from '../app/AppModal';
 import { usePhone } from '../app/usePhone';
 import { asset, textureURL } from '../lib/config';
-import type { TextureSlot } from '../lib/document';
+import { EMPTY_TEXTURE, type TextureSlot } from '../lib/document';
 import {
   addUploadedImage, deleteImage, listImages, MAX_IMAGE_DIM, StorageFullError, type StoredImage,
 } from '../lib/localStore';
@@ -21,7 +21,45 @@ interface BuiltInTexture {
 }
 
 const TEXTURES: Record<string, BuiltInTexture[]> = TextureData;
-const CATEGORIES = Object.keys(TEXTURES);
+
+// The built-in textures' folders, in the order the picker lists them.
+const GROUPS: {key: string; title: string; caption: string}[] = [
+  {key: "photos", title: "Photos", caption: "Photographs, and a painting."},
+  {key: "special", title: "Noise", caption: "Random values to read in your code: noise, smooth noise, clouds and plasma."},
+  {key: "tiling", title: "Tiling surfaces", caption: "Stone, sand and rust that repeat without seams."},
+  {
+    key: "equirectangular", title: "Panoramas",
+    caption: "360° views in equirectangular form, for the sky and reflections in 3D scenes.",
+  },
+  {key: "fonts", title: "Font sheets", caption: "Text characters in a grid, for drawing text."},
+];
+
+const CAPTIONS: Record<string, string> = {
+  "photos/30573139680_ab8dd0e4c3_c.jpg": "Nebula",
+  "photos/36764351583_180cd1de97_c.jpg": "Forest",
+  "photos/50866961661_873602eafb_c.jpg": "Galaxy",
+  "photos/9155009434_9ef1f8deb8_z.jpg": "Leaves",
+  "photos/cats1.jpg": "Cats",
+  "photos/cats2.jpg": "Cat",
+  "photos/jorg-angeli-S56zN8cV5fk-unsplash.jpg": "Castle",
+  "photos/nickypainting.jpg": "Painting",
+  "photos/tiles.jpg": "Tiles",
+  "special/clouds.png": "Clouds",
+  "special/noise.png": "Noise",
+  "special/noise_gauss.png": "Smooth noise",
+  "special/noise_gauss_large.png": "Smooth noise, large",
+  "special/noise_large.png": "Noise, large",
+  "special/plasma.png": "Plasma",
+  "equirectangular/27450338940_708196e177_k.jpg": "Pine forest",
+  "equirectangular/49973646676_79dbc1a189_k.jpg": "Avenue of trees",
+  "equirectangular/world.png": "World map",
+  "fonts/1.png": "Courier Prime",
+  "fonts/2.png": "Arimo",
+  "fonts/3.png": "Tinos",
+  "fonts/4.png": "Inter",
+  "fonts/5.png": "Exo 2",
+  "fonts/6.png": "Exo 2 Bold",
+};
 
 interface TexturePickerProps {
   show: boolean;
@@ -36,10 +74,6 @@ interface TexturePickerProps {
 
 function uploadThumbURL(id: string): string {
   return textureURL({isUserUploaded: true, url: id});
-}
-
-function categoryOf(texture: TextureSlot): string {
-  return texture.isUserUploaded ? "uploads" : (texture.url.split("/")[0] ?? "");
 }
 
 function UploadForm({onUploaded, onMessage}: {onUploaded(): void; onMessage(text: string): void}) {
@@ -75,11 +109,11 @@ function UploadForm({onUploaded, onMessage}: {onUploaded(): void; onMessage(text
     setUploading(true);
     try {
       await addUploadedImage(selectedFile);
-      onMessage("Image uploaded.");
+      onMessage("Image added.");
       onUploaded();
     } catch (error) {
       console.log(error);
-      onMessage(error instanceof StorageFullError ? error.message : "Unable to upload image.");
+      onMessage(error instanceof StorageFullError ? error.message : "Couldn't add the image.");
       setUploading(false);
     }
   };
@@ -87,13 +121,13 @@ function UploadForm({onUploaded, onMessage}: {onUploaded(): void; onMessage(text
   return (
     <div {...getRootProps()} className={"dropzone" + (isDragActive ? " active" : "")}>
       <input {...getInputProps()} />
-      <TbUpload className="uploadIcon" />
-      <p>Drop image here, or click to select.</p>
+      <TbPhotoPlus className="uploadIcon" />
+      <p>Drop an image here, or click to choose one. It stays in this browser.</p>
       <div className="selectedFile">
         {selected && selectedFile &&
           <>
             <img src={selected.preview} alt={selectedFile.name} />  {selectedFile.name}
-            <Button onClick={handleUpload} disabled={uploading}>Upload</Button>
+            <Button onClick={handleUpload} disabled={uploading}>Add</Button>
             {uploading && <Loader size="xs" role="status" />}
           </>
         }
@@ -108,13 +142,14 @@ export default function TexturePicker(
   {show, slot, current, textures = [], onPick, onHide, onMessage = () => {}}: TexturePickerProps,
 ) {
   const [texture, setTexture] = useState(current);
-  const [activeKey, setActiveKey] = useState(categoryOf(current));
   // Bumped to remount (and so reset) the upload form each time it's opened.
   const [uploadFormKey, setUploadFormKey] = useState(0);
+  const [showUpload, setShowUpload] = useState(false);
   const [uploads, setUploads] = useState<StoredImage[]>([]);
   const [toDelete, setToDelete] = useState<StoredImage | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [wasShown, setWasShown] = useState(false);
+  const bodyRef = useRef<HTMLDivElement>(null);
   const imagesVersion = useImagesChanged();
   const phone = usePhone();
 
@@ -122,7 +157,7 @@ export default function TexturePicker(
     setWasShown(show);
     if (show) {
       setTexture(current);
-      setActiveKey(categoryOf(current));
+      setShowUpload(false);
     }
   }
 
@@ -134,6 +169,16 @@ export default function TexturePicker(
       });
     }
   }, [show, imagesVersion]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Opens on the slot's current image.
+  useEffect(() => {
+    if (!show) {
+      return;
+    }
+    const timer = window.setTimeout(() =>
+      bodyRef.current?.querySelector(".picker.selected")?.scrollIntoView?.({block: "center"}), 50);
+    return () => window.clearTimeout(timer);
+  }, [show]);
 
   // Uploads in this animation that aren't in this browser (e.g. from a file opened without its images).
   const uploadIds = new Set(uploads.map(image => image.id));
@@ -152,14 +197,23 @@ export default function TexturePicker(
     }
   };
 
-  const selectedKey = categoryOf(texture);
-  const pickerItem = (key: string, selected: boolean, onClick: () => void, image: ReactNode, label?: string) =>
-    <div className={"picker" + (selected ? " selected" : "")} key={key}>
-      <button type="button" onClick={onClick} className="select">
+  const pickerItem = (
+    key: string, selected: boolean, onClick: () => void, image: ReactNode, caption?: string, size?: string,
+  ) =>
+    <figure className={"picker" + (selected ? " selected" : "")} key={key}>
+      <button type="button" onClick={onClick} className="select" title={caption}>
         {image}
-        {label && <span className="resolution">{label}</span>}
+        {size && <span className="resolution">{size}</span>}
       </button>
-    </div>;
+      {caption && <figcaption>{caption}</figcaption>}
+    </figure>;
+
+  const section = (key: string, title: string, caption: string, items: ReactNode) =>
+    <section className="texturePickerSection" key={key} aria-label={title}>
+      <h3>{title}</h3>
+      <p>{caption}</p>
+      <div className="texturePickerGrid">{items}</div>
+    </section>;
 
   return (
     <>
@@ -167,63 +221,58 @@ export default function TexturePicker(
         opened={show} onClose={onHide} returnFocus={false} size="xl" fullScreen={phone} title={texture.id || "iTexture" + slot}
         classNames={{content: "texturePickerModal"}}
       >
-        <Tabs
-          value={activeKey} onChange={key => key && setActiveKey(key)} orientation="vertical"
-          variant="pills" className="texturePickerTabs" keepMounted={false}
-        >
-          <Tabs.List>
-            {CATEGORIES.map(key =>
-              <Tabs.Tab key={key} value={key} data-has-selection={key === selectedKey || undefined}>{key}</Tabs.Tab>,
-            )}
-            <Tabs.Tab value="uploads" data-has-selection={selectedKey === "uploads" || undefined}>user uploads</Tabs.Tab>
-          </Tabs.List>
-          {CATEGORIES.map(key =>
-            <Tabs.Panel key={key} value={key}>
-              <div className="texturePickerGrid">
-                {TEXTURES[key]!.map(t => pickerItem(
-                  t.fname, t.fname === texture.url, () => select(t.fname, false),
-                  <img src={asset("/images/textures/" + t.thumbnail_fname)} alt={t.fname + " preview"} />,
-                  `${t.width} × ${t.height}`,
-                ))}
-              </div>
-            </Tabs.Panel>,
-          )}
-          <Tabs.Panel value="uploads">
-            <div className="texturePickerGrid">
+        {showUpload
+          ? <>
+            <Button variant="subtle" color="gray" leftSection={<TbArrowLeft />} mb="sm" onClick={() => setShowUpload(false)}>
+              Back to the images
+            </Button>
+            <UploadForm key={uploadFormKey} onMessage={onMessage} onUploaded={() => setShowUpload(false)} />
+          </>
+          : <div className="texturePickerBody" ref={bodyRef}>
+            {section("uploads", "Your images", "Images you've added. They stay in this browser and aren't sent anywhere.", <>
               {pickerItem(
-                "upload", false, () => {setUploadFormKey(k => k + 1); setActiveKey("upload");},
-                <TbUpload className="thumbnail" />, "upload new image",
+                "upload", false, () => {setUploadFormKey(k => k + 1); setShowUpload(true);},
+                <TbPhotoPlus className="thumbnail" />, "Add image",
               )}
               {otherUploads.map(t => pickerItem(
                 "other-" + t.url, t.url === texture.url, () => select(t.url, true),
                 <img src={uploadThumbURL(t.url)} alt="texture preview" />,
               ))}
               {uploads.map(image =>
-                <div className={"picker" + (image.id === texture.url ? " selected" : "")} key={image.id}>
-                  <button type="button" onClick={() => select(image.id, true)} className="select">
+                <figure className={"picker" + (image.id === texture.url ? " selected" : "")} key={image.id}>
+                  <button type="button" onClick={() => select(image.id, true)} className="select" title={image.filename}>
                     <img src={uploadThumbURL(image.id)} alt={image.filename + " preview"} />
                     <span className="resolution">{image.width} &times; {image.height}</span>
                   </button>
+                  <figcaption>{image.filename}</figcaption>
                   {image.id !== texture.url &&
                     <ActionIcon
                       size="sm" color="red" className="delete" title="Delete" aria-label="Delete"
                       onClick={() => {setToDelete(image); setShowConfirm(true);}}
                     ><TbTrash /></ActionIcon>
                   }
-                </div>,
+                </figure>,
               )}
-            </div>
-          </Tabs.Panel>
-          <Tabs.Panel value="upload">
-            <UploadForm
-              key={uploadFormKey} onMessage={onMessage}
-              onUploaded={() => setActiveKey("uploads")}
-            />
-          </Tabs.Panel>
-        </Tabs>
-        <Group justify="flex-end" mt="lg">
-          <Button variant="default" onClick={onHide}>Cancel</Button>
-          <Button onClick={() => onPick(texture)}>Apply changes</Button>
+            </>)}
+            {GROUPS.map(({key, title, caption}) => section(key, title, caption,
+              TEXTURES[key]!.filter(t => t.fname !== EMPTY_TEXTURE).map(t => pickerItem(
+                t.fname, t.fname === texture.url, () => select(t.fname, false),
+                <img src={asset("/images/textures/" + t.thumbnail_fname)} alt={t.fname + " preview"} loading="lazy" />,
+                CAPTIONS[t.fname], `${t.width} × ${t.height}`,
+              )),
+            ))}
+          </div>}
+        <Group justify="space-between" mt="lg" wrap="nowrap" gap="xs">
+          <Button
+            variant="subtle" color="gray" size={phone ? "compact-sm" : "sm"} disabled={texture.url === EMPTY_TEXTURE && !texture.isUserUploaded}
+            onClick={() => setTexture({...texture, url: EMPTY_TEXTURE, isUserUploaded: false})}
+          >
+            Empty the slot
+          </Button>
+          <Group gap="xs" wrap="nowrap">
+            <Button variant="default" size={phone ? "compact-sm" : "sm"} onClick={onHide}>Cancel</Button>
+            <Button size={phone ? "compact-sm" : "sm"} onClick={() => onPick(texture)}>Apply changes</Button>
+          </Group>
         </Group>
       </AppModal>
       <AppModal

@@ -38,9 +38,10 @@ a {
   }
 }
 
-// Layout. Desktop: header, then the editor beside the canvas, then the bottom panel.
-// Phone: header, canvas, a Code/Timeline/Textures switch, then whichever pane it picks, with the
-// page scrolling and the switch sticking to the top.
+// Layout. Desktop: header, then the editor beside the canvas, then the bottom panel, with the
+// tutorial's Learn panel in a column on the right while it's open.
+// Phone: header, canvas, a Code/Timeline/Textures (and Learn) switch, then whichever pane it picks,
+// with the page scrolling and the switch sticking to the top.
 .app {
   --preview-width: min(#{$right-width}, 45vw);
   --panel-height: #{$footer-height};
@@ -63,6 +64,14 @@ a {
     height: auto;
     min-height: 0;
     grid-template-rows: $header-height calc(100dvh - #{$header-height}) auto;
+  }
+
+  @include desktop {
+    &[data-tutorial] {
+      --preview-width: min(#{$right-width}, 32vw);
+      grid-template-columns: minmax(0, 1fr) $learn-width;
+      grid-template-areas: "header header" "workspace learn" "panel learn";
+    }
   }
 
   &[data-wide] {
@@ -96,7 +105,9 @@ a {
     }
 
     &[data-mobile-tab="code"] .bottomPanel,
-    &:not([data-mobile-tab="code"]) .editorPane {
+    &[data-mobile-tab="learn"] .bottomPanel,
+    &:not([data-mobile-tab="code"]) .editorPane,
+    &:not([data-mobile-tab="learn"]) .learnPanel {
       display: none;
     }
   }
@@ -231,10 +242,14 @@ a {
     z-index: 10;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 
+    // Placed at the top of the code and stuck near the bottom of the screen, above the on-screen
+    // keyboard (see useKeyboardInset), so it never rises over the switch or the play bar.
     @include phone {
-      position: fixed;
-      right: 16px;
-      bottom: 16px;
+      position: sticky;
+      display: flex;
+      width: fit-content;
+      margin: 0 16px -36px auto;
+      top: calc(100dvh - 52px - var(--keyboard-inset, 0px));
     }
   }
 }
@@ -265,6 +280,23 @@ a {
   @include desktop {
     display: none;
   }
+
+  // A tick on Learn when the tutorial step is done, so you know to go back for the next one.
+  .learnTabLabel {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    svg {
+      color: $dt-green;
+      animation: learnTickIn 300ms ease-out;
+    }
+  }
+}
+
+@keyframes learnTickIn {
+  from { transform: scale(0); }
+  60% { transform: scale(1.3); }
+  to { transform: scale(1); }
 }
 
 .bottomPanel {
@@ -313,6 +345,33 @@ a {
   .toggleFooter {
     margin: auto 0 auto auto;
     transition: transform $transition-duration;
+  }
+}
+
+.learnPanel {
+  grid-area: learn;
+  border-left: 1px solid $dt-gray-darker;
+
+  // Landscape phones scroll the page, so the panel stays in view beside it.
+  @include short {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    max-height: 100dvh;
+  }
+
+  @include phone {
+    grid-area: pane;
+    min-height: $phone-pane-height;
+    border-left: none;
+    .learnBody {
+      overflow: visible;
+    }
+    .learnFooter {
+      position: sticky;
+      bottom: 0;
+      background: $dt-gray-darker;
+    }
   }
 }
 
@@ -464,7 +523,52 @@ div#textures {
         object-fit: contain;
         display: block;
       }
+
+      // An empty slot says so, rather than showing its black image.
+      &.empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        background: $dt-gray-dark;
+        border: 2px dashed $dt-gray;
+        color: $dt-gray-medium;
+        font-size: 12px;
+        line-height: 1.2;
+
+        svg {
+          width: 28px;
+          height: 28px;
+        }
+
+        &:hover, &:focus-visible {
+          border-color: $dt-green;
+          color: $dt-gray-light;
+        }
+      }
     }
+  }
+}
+
+div#textures .texturesHint {
+  // First, so it's in view before the strip scrolls.
+  order: -1;
+  align-self: center;
+  flex: 0 0 220px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: $dt-gray-medium;
+
+  @include phone {
+    flex-basis: 100%;
+  }
+
+  code {
+    font-family: var(--mantine-font-family-monospace);
+    font-size: 12px;
+    color: $dt-cyan;
   }
 }
 
@@ -482,34 +586,61 @@ div#textures {
   }
 }
 
-.exampleGrid {
+// The example gallery, in the welcome and Open dialogs.
+.exampleGallery {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.exampleCards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
   gap: 12px;
 
-  a {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    text-align: center;
-    font-size: 13px;
-    line-height: 1.3;
-    text-decoration: none;
-    color: $dt-gray-light;
+  @include phone {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 
-    &:hover img, &:focus-visible img {
-      outline: 2px solid $dt-green;
-    }
+.exampleCard {
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  overflow: hidden;
+  background: $dt-gray-darker;
+  color: $dt-gray-light;
+  text-decoration: none;
+  outline: 2px solid transparent;
+  transition: outline-color 150ms, transform 150ms;
+
+  &:hover, &:focus-visible {
+    outline-color: $dt-green;
+    transform: translateY(-2px);
   }
 
-  img {
+  video {
+    display: block;
     width: 100%;
-    max-width: 96px;
-    height: auto;
     aspect-ratio: 1;
-    border-radius: 6px;
     object-fit: cover;
+    // Taller examples, like the cellular automaton, have their action at the bottom.
+    object-position: bottom;
+    background: #000;
+  }
+
+  .exampleText {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 10px 10px;
+  }
+
+  .exampleTags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 2px;
   }
 }
 
@@ -568,31 +699,29 @@ div#textures {
 }
 
 // Texture picker.
-$texture-picker-height: 360px;
+.texturePickerBody {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 0 4px;
 
-.texturePickerTabs {
   @include phone {
-    flex-direction: column;
-    .mantine-Tabs-list {
-      flex-direction: row;
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      margin: 0 0 8px;
-    }
+    max-height: calc(100dvh - 140px);
+  }
+}
+
+.texturePickerSection {
+  margin-bottom: 20px;
+
+  h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
   }
 
-  .mantine-Tabs-list {
-    min-width: 140px;
-    margin-right: 12px;
-  }
-  .mantine-Tabs-tab {
-    white-space: nowrap;
-    &[data-has-selection] {
-      font-weight: 700;
-    }
-  }
-  .mantine-Tabs-panel {
-    min-width: 0;
+  > p {
+    margin: 2px 0 8px;
+    font-size: 13px;
+    color: $dt-gray-medium;
   }
 }
 
@@ -602,7 +731,7 @@ $texture-picker-height: 360px;
   background-color: $dt-gray-darker;
   color: $dt-gray-light;
   padding: 16px;
-  min-height: $texture-picker-height;
+  min-height: 360px;
   cursor: pointer;
   transition: border-color 150ms, background-color 150ms;
 
@@ -638,8 +767,6 @@ $texture-picker-height: 360px;
 }
 
 .texturePickerGrid {
-  height: $texture-picker-height;
-  overflow-y: auto;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
   gap: 10px;
@@ -647,25 +774,23 @@ $texture-picker-height: 360px;
   padding: 4px;
 
   @include phone {
-    height: 50dvh;
     grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   }
 
-  div.picker {
-    aspect-ratio: 1;
-    background: #fff;
+  figure.picker {
+    margin: 0;
     position: relative;
-    outline: 3px solid transparent;
-    border-radius: 6px;
-    overflow: hidden;
-    transition: outline-color 150ms;
+    min-width: 0;
 
-    &:hover {
-      outline-color: $dt-green;
-    }
-
-    &.selected {
-      outline-color: $dt-pink;
+    figcaption {
+      margin-top: 4px;
+      font-size: 12px;
+      line-height: 1.3;
+      color: $dt-gray-light;
+      text-align: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     span.resolution {
@@ -686,11 +811,17 @@ $texture-picker-height: 360px;
     }
 
     button.select {
+      display: block;
+      position: relative;
       border: none;
       width: 100%;
-      height: 100%;
+      aspect-ratio: 1;
       padding: 0;
-      background: none;
+      background: #fff;
+      border-radius: 6px;
+      overflow: hidden;
+      outline: 3px solid transparent;
+      transition: outline-color 150ms;
       cursor: pointer;
 
       img {
@@ -706,23 +837,27 @@ $texture-picker-height: 360px;
       }
     }
 
-    // The upload tile has no image, so its label always shows.
-    button.select:has(svg.thumbnail) {
-      background: $dt-gray-darker;
-      span.resolution {
-        opacity: 1;
-        top: auto;
-        bottom: 6px;
-        left: 0;
-        right: 0;
-        background: none;
-        text-align: center;
-      }
+    &:hover button.select {
+      outline-color: $dt-green;
     }
 
+    &.selected button.select {
+      outline-color: $dt-pink;
+    }
+
+    // The upload tile has an icon rather than an image.
+    button.select:has(svg.thumbnail) {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: $dt-gray-darker;
+      border: 2px dashed $dt-gray;
+    }
+
+    // Over the image, which is square like the figure's top.
     .delete {
       position: absolute;
-      bottom: 4px;
+      top: 4px;
       left: 4px;
     }
   }
@@ -735,6 +870,168 @@ $texture-picker-height: 360px;
   ul {
     padding-left: 20px;
   }
+}
+
+// Inline code in the help dialogs, the welcome tip and tip notifications.
+@mixin inline-code {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 0.9em;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: $dt-gray-darker;
+  color: $dt-cyan;
+}
+
+// Help → Keyboard shortcuts and Help → Shader inputs.
+.helpReference {
+  section + section {
+    margin-top: var(--mantine-spacing-lg);
+  }
+
+  code {
+    @include inline-code;
+  }
+
+  .mantine-Table-table {
+    margin-bottom: var(--mantine-spacing-md);
+    font-size: 14px;
+  }
+
+  .mantine-Table-td {
+    vertical-align: top;
+  }
+
+  .keysCell {
+    width: 1%;
+    white-space: nowrap;
+    padding-right: var(--mantine-spacing-lg);
+    color: $dt-gray-medium;
+    font-size: 13px;
+
+    @include phone {
+      width: 40%;
+      white-space: normal;
+      padding-right: var(--mantine-spacing-xs);
+    }
+  }
+
+  .keyCombo {
+    white-space: nowrap;
+  }
+
+  .keysPlus {
+    margin: 0 3px;
+  }
+
+  .inputType {
+    width: 1%;
+    white-space: nowrap;
+
+    code {
+      background: none;
+      padding: 0;
+      color: $dt-pink;
+    }
+  }
+
+  .inputNameCell {
+    width: 1%;
+    white-space: nowrap;
+    padding-right: var(--mantine-spacing-lg);
+  }
+
+  // On a phone, the type and name share a line, with the description below.
+  @include phone {
+    .inputTable .mantine-Table-tr {
+      display: grid;
+      grid-template-columns: auto 1fr;
+    }
+
+    .inputNameCell {
+      width: auto;
+    }
+
+    .inputTable .mantine-Table-td:last-child {
+      grid-column: 1 / -1;
+      padding-top: 0;
+    }
+  }
+
+  .inputName {
+    white-space: nowrap;
+    border-radius: 3px;
+
+    code {
+      color: $dt-green;
+    }
+
+    &:hover code, &:focus-visible code {
+      background: $dt-gray;
+    }
+  }
+
+  .codeBlock {
+    margin: 0 0 var(--mantine-spacing-xs);
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: $dt-gray-darker;
+    color: $dt-gray-light;
+    font-family: var(--mantine-font-family-monospace);
+    font-size: 13px;
+    overflow-x: auto;
+  }
+}
+
+// "Did you know?" on the welcome dialog.
+.welcomeTip {
+  position: relative;
+  padding: 10px 12px 8px;
+  border-radius: 6px;
+  border-left: 3px solid $dt-purple;
+  background: $dt-gray-darker;
+
+  .welcomeTipTitle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+
+    svg {
+      color: $dt-yellow;
+    }
+  }
+
+  .welcomeTipText {
+    min-height: 2lh;
+
+    code {
+      @include inline-code;
+      background: $dt-gray-dark;
+    }
+  }
+
+  .welcomeTipNext {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    color: $dt-gray-medium;
+    font-weight: 500;
+  }
+}
+
+.tipNotification code {
+  @include inline-code;
+}
+
+// A button that looks like a link, for links that open a dialog.
+.linkButton {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: $dt-purple;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 // The crash screen.

@@ -1,0 +1,95 @@
+@use "../styles/theme" as *;
+
+// driver.js's popover, in the app's colours.
+$bg: $dt-gray;
+
+.driver-popover.ssTour {
+  font-family: var(--mantine-font-family);
+  background: $bg;
+  color: $dt-gray-light;
+  border-radius: 8px;
+  padding: 16px 18px 14px;
+  max-width: 340px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+
+  .driver-popover-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .driver-popover-description {
+    font-size: 14px;
+    line-height: 1.5;
+    color: $dt-gray-light;
+
+    code, kbd {
+      font-family: var(--mantine-font-family-monospace);
+      font-size: 12.5px;
+      padding: 1px 4px;
+      border-radius: 3px;
+      background: $dt-gray-dark;
+      color: $dt-cyan;
+    }
+
+    kbd {
+      color: $dt-gray-light;
+      border: 1px solid $dt-gray-medium;
+    }
+  }
+
+  .driver-popover-close-btn {
+    color: $dt-gray-medium;
+    &:hover {
+      color: $dt-gray-light;
+    }
+  }
+
+  .driver-popover-progress-text {
+    color: $dt-gray-medium;
+    font-size: 12px;
+  }
+
+  .driver-popover-footer {
+    margin-top: 14px;
+
+    button {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      text-shadow: none;
+      padding: 5px 12px;
+      border-radius: 4px;
+      border: 1px solid $dt-gray-medium;
+      background: transparent;
+      color: $dt-gray-light;
+
+      &:hover {
+        background: $dt-gray-dark;
+      }
+    }
+
+    .driver-popover-next-btn {
+      background: $dt-purple;
+      border-color: $dt-purple;
+      color: $dt-gray-darker;
+
+      &:hover {
+        background: color-mix(in srgb, #{$dt-purple} 85%, white);
+      }
+    }
+  }
+
+  .driver-popover-arrow-side-left {
+    border-left-color: $bg;
+  }
+  .driver-popover-arrow-side-right {
+    border-right-color: $bg;
+  }
+  .driver-popover-arrow-side-top {
+    border-top-color: $bg;
+  }
+  .driver-popover-arrow-side-bottom {
+    border-bottom-color: $bg;
+  }
+}
