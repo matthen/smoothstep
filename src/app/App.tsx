@@ -150,15 +150,15 @@ export default function App() {
   const [held, setHeld] = useState<ReadonlyMap<number, number>>(new Map());
   const values = useMemo(() => variableValues(doc.variables, time).map((v, i) => held.get(i) ?? v),
     [doc.variables, time, held]);
-  const hold = (row: number, value: number | null) => setHeld(h => {
-    const next = new Map(h);
-    if (value === null) {
-      next.delete(row);
-    } else {
-      next.set(row, value);
+  const hold = (row: number, value: number) => setHeld(h => new Map(h).set(row, value));
+  // Playing hands every held value back to the timeline.
+  const [wasPlaying, setWasPlaying] = useState(isPlaying);
+  if (isPlaying !== wasPlaying) {
+    setWasPlaying(isPlaying);
+    if (isPlaying && held.size > 0) {
+      setHeld(new Map());
     }
-    return next;
-  });
+  }
   // Named in any shader's #defines, the image's first.
   const floatNameList = useMemo(() => floatNames([doc.code, doc.shared ?? "", ...bufferCodes(doc)].join("\n")), [doc]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -179,6 +179,7 @@ export default function App() {
     setBuiltCode(json.code);
     setBuiltExtras(shaderExtras(json));
     setCodeTab("image");
+    setHeld(new Map());
     setBuildId(id => id + 1);
     windowTitle(json.title);
     setHasUnsavedChanges(false);
@@ -362,6 +363,7 @@ export default function App() {
 
   const seek = useCallback((t: number) => {
     setTime(t);
+    setHeld(new Map());  // Moving the playhead shows the timeline's values again.
     if (t === 0) {
       setFrameIndex(0);
     }
@@ -790,7 +792,8 @@ export default function App() {
             <Sliders
               variables={doc.variables} values={values} names={floatNameList}
               code={[doc.code, doc.shared ?? "", ...bufferCodes(doc)].join("\n")}
-              onVariablesChange={(variables: Variable[]) => updateDoc({variables})} onHold={hold}
+              held={new Set(held.keys())} onVariablesChange={(variables: Variable[]) => updateDoc({variables})}
+              onHold={hold}
             />
           </Tabs.Panel>
           <Tabs.Panel value="textures">

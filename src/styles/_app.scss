@@ -1173,7 +1173,7 @@ div#textures .texturesHint {
 .sliderRow {
   display: grid;
   // The ends have fixed widths, so every row's track starts and stops in the same place.
-  grid-template-columns: minmax(90px, 160px) 56px 1fr 56px;
+  grid-template-columns: minmax(120px, 260px) 56px 1fr 56px;
   align-items: start;
   column-gap: 8px;
   padding-bottom: 6px;
@@ -1261,4 +1261,10 @@ div#textures .texturesHint {
 
 .sliderEnd input {
   color: $dt-gray-medium;
+}
+
+// An animated input held by its slider, until the animation plays.
+.sliderAnimated[data-held] {
+  color: $dt-orange;
+  border-color: $dt-orange;
 }

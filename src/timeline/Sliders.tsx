@@ -11,9 +11,11 @@ interface SlidersProps {
   names: (string | null)[];
   // All the code, to find which iFloats it uses.
   code: string;
+  // The animated variables held at a value by their sliders.
+  held: ReadonlySet<number>;
   onVariablesChange(variables: Variable[]): void;
-  // Holds an animated variable at a value while its slider is dragged, or lets it go (null).
-  onHold(row: number, value: number | null): void;
+  // Holds an animated variable at a value, until the animation plays or the playhead moves.
+  onHold(row: number, value: number): void;
 }
 
 // The iFloats the code uses, in order, ignoring comments.
@@ -57,8 +59,9 @@ function NumberBox({value, onChange, label, lo, hi, className}: {
 }
 
 // A slider for each iFloat the code uses. One without transitions keeps the value it's set to; one
-// animated on the timeline follows it, and holds still while its slider is dragged.
-export default function Sliders({variables, values, names, code, onVariablesChange, onHold}: SlidersProps) {
+// animated on the timeline follows it until its slider is moved, and the timeline takes over again
+// when the animation plays.
+export default function Sliders({variables, values, names, code, held, onVariablesChange, onHold}: SlidersProps) {
   const used = floatsInCode(code).filter(i => i < variables.length);
   const update = (row: number, change: Partial<Variable>) =>
     onVariablesChange(variables.map((v, i) => i === row ? {...v, ...change} : v));
@@ -85,7 +88,9 @@ export default function Sliders({variables, values, names, code, onVariablesChan
             <div className="sliderName">
               {name}
               {names[row] && <span className="floatName"> iFloat{row}</span>}
-              {animated && <span className="sliderAnimated" title="Set by the timeline">animated</span>}
+              {animated && (held.has(row)
+                ? <span className="sliderAnimated" data-held title="The timeline takes over again when you play">held</span>
+                : <span className="sliderAnimated" title="Set by the timeline">animated</span>)}
             </div>
             <NumberBox
               className="sliderEnd" label={name + " minimum"} value={lo} lo={lo} hi={hi}
@@ -96,15 +101,13 @@ export default function Sliders({variables, values, names, code, onVariablesChan
                 min={lo} max={top} step={(top - lo) / 1000} value={Math.min(Math.max(value, lo), top)} label={null}
                 thumbProps={{"aria-label": name}}
                 onChange={v => animated ? onHold(row, v) : update(row, {value: v})}
-                onChangeEnd={() => animated && onHold(row, null)}
               />
               {/* The value, under the handle and moving with it. */}
               <div className="sliderValue" style={{left: `${100 * fraction}%`}}>
-                {animated
-                  ? <span aria-label={name + " value"}>{show(value, lo, hi)}</span>
-                  : <NumberBox
-                      label={name + " value"} value={value} lo={lo} hi={hi} onChange={v => update(row, {value: v})}
-                    />}
+                <NumberBox
+                  label={name + " value"} value={value} lo={lo} hi={hi}
+                  onChange={v => animated ? onHold(row, v) : update(row, {value: v})}
+                />
               </div>
             </div>
             <NumberBox
