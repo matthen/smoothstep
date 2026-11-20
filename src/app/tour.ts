@@ -9,7 +9,7 @@ import { MOD_KEY } from './platform';
 export interface TourOptions {
   phone: boolean;
   // Shows a pane before its step: the code, or a bottom panel tab.
-  showPane(pane: "code" | "animation" | "textures"): void;
+  showPane(pane: "code" | "animation" | "sliders" | "textures"): void;
   onFinish(): void;
 }
 
@@ -76,6 +76,16 @@ function desktopSteps({showPane}: TourOptions): DriveStep[] {
     },
     {
       element: ".bottomPanel",
+      onHighlightStarted: () => showPane("sliders"),
+      popover: {
+        title: "Sliders",
+        description: "A slider for each <code>iFloat</code> your code uses. Drag one to try out values while " +
+          "you watch. One the timeline animates holds the value you set until you play.",
+        side: "top",
+      },
+    },
+    {
+      element: ".bottomPanel",
       onHighlightStarted: () => showPane("textures"),
       popover: {
         title: "Textures",
@@ -116,9 +126,9 @@ function phoneSteps({showPane}: TourOptions): DriveStep[] {
       element: ".mobileTabs",
       onHighlightStarted: () => showPane("code"),
       popover: {
-        title: "Code, timeline and textures",
-        description: "Switch between your shader's code, the timeline that animates its inputs, and the " +
-          "images it can use.",
+        title: "Code, timeline, sliders and textures",
+        description: "Switch between your shader's code, the timeline that animates its inputs, sliders to " +
+          "set them by hand, and the images it can use.",
         side: "bottom",
       },
     },

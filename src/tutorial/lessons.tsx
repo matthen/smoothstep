@@ -330,6 +330,22 @@ export const LESSONS: Lesson[] = [
         check: now => now.built && floatsUsed(now.builtCode).length > 0,
       },
       {
+        id: "slider",
+        title: "Try it with a slider",
+        body: <>
+          <p>
+            Before you animate a number, you can try out values by hand. Open the Sliders tab, or Sliders on a
+            phone, and drag the slider for <code>grow</code> to watch the circle change size.
+          </p>
+          <p>
+            The value you set is saved with the animation. Type in the numbers at either end of a slider to
+            change its range.
+          </p>
+        </>,
+        task: "Set iFloat0 with its slider.",
+        check: now => now.built && floatsUsed(now.builtCode).some(i => (now.variables[i]?.value ?? 0) !== 0),
+      },
+      {
         id: "transition",
         title: "Make a transition",
         body: <>

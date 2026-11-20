@@ -160,6 +160,15 @@ describe("lesson 4: the timeline", () => {
       .toBe(false);
   });
 
+  it("slider: a value set for an iFloat the code uses", () => {
+    const variables = newDocument().variables;
+    expect(check("slider", builtWith(code, {variables}))).toBe(false);
+    variables[2] = {transitions: [], value: 0.5};
+    expect(check("slider", builtWith(code, {variables}))).toBe(false);
+    variables[0] = {transitions: [], value: 0.5};
+    expect(check("slider", builtWith(code, {variables}))).toBe(true);
+  });
+
   it("transition types: another type, or a second transition", () => {
     expect(check("transition-types", builtWith(code, {variables: withTransition(0, {endValue: 1})}))).toBe(false);
     expect(check("transition-types", builtWith(code, {variables: withTransition(0, {type: "linear"})}))).toBe(true);
