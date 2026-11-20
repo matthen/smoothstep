@@ -353,7 +353,10 @@ export const LESSONS: Lesson[] = [
             In the Animation tab, drag along the <code>iFloat0</code> row to make a transition. On a phone, open
             Timeline and tap where it starts, then where it ends.
           </p>
-          <p>The new transition is selected. Set its end value to 1, then play and watch the circle grow.</p>
+          <p>
+            The new transition is selected, and starts from the value you set with the slider. Set its end value
+            to 1, or to 0 if it already starts at 1, then play and watch the circle change size.
+          </p>
         </>,
         task: "Give iFloat0 a transition that changes its value, and play it.",
         check: (now, atStart) => now.built && animatedFloats(now).length > 0 && played(now, atStart),

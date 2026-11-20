@@ -148,8 +148,11 @@ export default function App() {
 
   // Animated values held by their sliders, by row, until the animation plays or the playhead moves.
   const [held, setHeld] = useState<ReadonlyMap<number, number>>(new Map());
-  const values = useMemo(() => variableValues(doc.variables, time).map((v, i) => held.get(i) ?? v),
-    [doc.variables, time, held]);
+  // A hold only counts while the row is animated, so deleting its last transition lets it go.
+  const heldRows = useMemo(() => new Map([...held].filter(([i]) => doc.variables[i]!.transitions.length > 0)),
+    [held, doc.variables]);
+  const values = useMemo(() => variableValues(doc.variables, time).map((v, i) => heldRows.get(i) ?? v),
+    [doc.variables, time, heldRows]);
   const hold = (row: number, value: number) => setHeld(h => new Map(h).set(row, value));
   // Playing hands every held value back to the timeline.
   const [wasPlaying, setWasPlaying] = useState(isPlaying);
@@ -804,7 +807,7 @@ export default function App() {
             <Sliders
               variables={doc.variables} values={values} names={floatNameList}
               code={allCode}
-              held={new Set(held.keys())} onVariablesChange={(variables: Variable[]) => updateDoc({variables})}
+              held={new Set(heldRows.keys())} onVariablesChange={(variables: Variable[]) => updateDoc({variables})}
               onHold={hold}
             />
           </Tabs.Panel>
