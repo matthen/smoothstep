@@ -1,5 +1,5 @@
 import { ActionIcon, Tooltip, UnstyledButton } from '@mantine/core';
-import { TbPlus, TbX } from 'react-icons/tb';
+import { TbChevronRight, TbPlus, TbX } from 'react-icons/tb';
 
 import { MAX_BUFFERS } from '../lib/document';
 import type { ShaderId } from '../render/Renderer';
@@ -18,12 +18,14 @@ export function shaderName(shader: ShaderId): string {
   return shader === "image" ? "Image" : "Buffer " + shader;
 }
 
-// Tabs above the code for the image and each buffer, with buttons to add a buffer or remove the last.
+// Tabs above the code for each buffer and the image, in the order they draw each frame, with
+// buttons to add a buffer or remove the last.
 export default function ShaderTabs({numBuffers, current, error, onChoose, onAdd, onRemoveLast}: ShaderTabsProps) {
-  const shaders: ShaderId[] = ["image", ...Array.from({length: numBuffers}, (_, i) => i)];
+  const shaders: ShaderId[] = [...Array.from({length: numBuffers}, (_, i) => i), "image"];
   return (
-    <div className="shaderTabs" role="tablist" aria-label="Shaders">
-      {shaders.map(shader =>
+    <div className="shaderTabs" role="tablist" aria-label="Shaders, in the order they draw">
+      {shaders.map((shader, i) => [
+        i > 0 && <TbChevronRight key={"then" + shader} className="shaderThen" aria-hidden />,
         <UnstyledButton
           key={shader} role="tab" aria-selected={shader === current} className="shaderTab"
           data-error={shader === error || undefined} onClick={() => onChoose(shader)}
@@ -38,7 +40,8 @@ export default function ShaderTabs({numBuffers, current, error, onChoose, onAdd,
                 <TbX />
               </ActionIcon>
             </Tooltip>}
-        </UnstyledButton>)}
+        </UnstyledButton>,
+      ])}
       {numBuffers < MAX_BUFFERS &&
         <Tooltip label="Add a buffer: a shader that draws before the image, which any shader can read">
           <UnstyledButton className="shaderTab addBuffer" onClick={onAdd}>

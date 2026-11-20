@@ -1115,3 +1115,14 @@ div#textures .texturesHint {
     }
   }
 }
+
+// The arrow between tabs, showing which shader draws next.
+.shaderThen {
+  align-self: center;
+  color: $dt-blue;
+  font-size: 12px;
+}
+
+.shaderTabs .addBuffer {
+  margin-left: 8px;
+}

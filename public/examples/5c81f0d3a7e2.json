@@ -1,0 +1,160 @@
+{
+  "title": "Ink in water",
+  "code": "// IMAGE: draws after the buffers each frame. It reads the ink from Buffer 1 and shades it, with a\n// glossy sheen where the ink is thick. The water itself (Buffer 0) is invisible.\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  vec2 size = iResolution.xy;\n  vec2 uv = fragCoord / size;\n  vec2 px = 1.5 * iResolution.y / 400. / size;\n  vec3 ink = texture(iBuffer1, uv).rgb;\n  float thickness = dot(ink, vec3(0.33));\n  vec2 slope = vec2(\n    dot(texture(iBuffer1, uv + vec2(px.x, 0.)).rgb - texture(iBuffer1, uv - vec2(px.x, 0.)).rgb, vec3(0.33)),\n    dot(texture(iBuffer1, uv + vec2(0., px.y)).rgb - texture(iBuffer1, uv - vec2(0., px.y)).rgb, vec3(0.33)));\n  vec3 normal = normalize(vec3(-4. * slope, 1.));\n  float shine = pow(max(dot(reflect(normalize(vec3(0.4, -0.6, -1.)), normal), vec3(0., 0., 1.)), 0.), 20.);\n  vec3 col = vec3(0.02, 0.02, 0.04) + (1. - exp(-2. * ink)) + 0.8 * shine * min(thickness, 1.);\n  fragColor = vec4(col, 1.);\n}",
+  "buffers": [
+    {
+      "code": "// BUFFER 0: THE WATER. Each pixel holds the water's velocity there (x and y, in pixels a\n// frame), its pressure (z) and how fast it's spinning (w). It reads its own last frame, moves the\n// water along, and lets the jets push it. Buffer 1 reads this to carry the ink.\n\n// Two jets circle the middle, facing inwards, and spray water and ink. The timeline sets how\n// hard they spray and how far round they've gone.\n#define strength iFloat0\n#define turn iFloat1\n\nvec2 jetPosition(int i) {\n  float angle = turn + 3.1416 * float(i);\n  return 0.5 * iResolution.xy + 0.3 * iResolution.y * vec2(cos(angle), sin(angle));\n}\n\nvec2 jetDirection(int i) {\n  // Mostly towards the middle, a little to one side, so the streams swirl round each other.\n  float angle = turn + 3.1416 * float(i) + 3.1416 + 0.35;\n  return vec2(cos(angle), sin(angle));\n}\n\nfloat nearJet(int i, vec2 fragCoord) {\n  vec2 d = (fragCoord - jetPosition(i)) / (0.015 * iResolution.y);\n  return exp(-dot(d, d));\n}\n\n// Each jet's ink colour, drifting round the colour wheel as it plays.\nvec3 jetColour(int i) {\n  return 0.5 + 0.5 * cos(6.2832 * (0.04 * iTime + 0.45 * float(i) + vec3(0., 0.33, 0.67)));\n}\n\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  if (iFrame == 0) {\n    fragColor = vec4(0.);\n    return;\n  }\n  vec2 size = iResolution.xy;\n  float cell = iResolution.y / 400.;  // So it flows the same at any size.\n  vec4 here = texture(iBuffer0, fragCoord / size);\n  // The water carries itself along: take the velocity from where this water was a frame ago.\n  vec4 moved = texture(iBuffer0, (fragCoord - here.xy) / size);\n  vec4 left = texture(iBuffer0, (fragCoord - vec2(cell, 0.)) / size);\n  vec4 right = texture(iBuffer0, (fragCoord + vec2(cell, 0.)) / size);\n  vec4 down = texture(iBuffer0, (fragCoord - vec2(0., cell)) / size);\n  vec4 up = texture(iBuffer0, (fragCoord + vec2(0., cell)) / size);\n  // Water can't bunch up: pressure builds where it flows in, and pushes it back out.\n  float inflow = -0.5 * (right.x - left.x + up.y - down.y) / cell;\n  float pressure = 0.25 * (left.z + right.z + down.z + up.z) + 0.25 * cell * cell * inflow;\n  // A little viscosity smooths out the smallest ripples.\n  vec2 nearby = 0.25 * (left.xy + right.xy + down.xy + up.xy);\n  vec2 velocity = mix(moved.xy, nearby, 0.1) - 0.5 * vec2(right.z - left.z, up.z - down.z) / cell;\n  // Keep the swirls swirling: push sideways, away from where the neighbours spin faster. The push\n  // fades out where the spin barely changes, so it doesn't stir up noise.\n  float spin = 0.5 * (right.y - left.y - up.x + down.x) / cell;\n  vec2 towardsSpin = vec2(abs(right.w) - abs(left.w), abs(up.w) - abs(down.w));\n  towardsSpin /= length(towardsSpin) + 0.05;\n  velocity += 0.5 * cell * spin * vec2(towardsSpin.y, -towardsSpin.x);\n  for (int i = 0; i < 2; i++) {\n    velocity += 0.8 * cell * strength * nearJet(i, fragCoord) * jetDirection(i);\n  }\n  velocity *= 0.996;\n  float speed = length(velocity);\n  if (speed > 6. * cell) {\n    velocity *= 6. * cell / speed;\n  }\n  fragColor = vec4(velocity, pressure, spin);\n}"
+    },
+    {
+      "code": "// BUFFER 1: THE INK. Each pixel holds how much of each colour of ink is there. It reads its own\n// last frame and the water's velocity from Buffer 0, carries the ink along with the water, and\n// adds fresh ink at the jets. The Image tab draws it.\n\n// Two jets circle the middle, facing inwards, and spray water and ink. The timeline sets how\n// hard they spray and how far round they've gone.\n#define strength iFloat0\n#define turn iFloat1\n\nvec2 jetPosition(int i) {\n  float angle = turn + 3.1416 * float(i);\n  return 0.5 * iResolution.xy + 0.3 * iResolution.y * vec2(cos(angle), sin(angle));\n}\n\nvec2 jetDirection(int i) {\n  // Mostly towards the middle, a little to one side, so the streams swirl round each other.\n  float angle = turn + 3.1416 * float(i) + 3.1416 + 0.35;\n  return vec2(cos(angle), sin(angle));\n}\n\nfloat nearJet(int i, vec2 fragCoord) {\n  vec2 d = (fragCoord - jetPosition(i)) / (0.015 * iResolution.y);\n  return exp(-dot(d, d));\n}\n\n// Each jet's ink colour, drifting round the colour wheel as it plays.\nvec3 jetColour(int i) {\n  return 0.5 + 0.5 * cos(6.2832 * (0.04 * iTime + 0.45 * float(i) + vec3(0., 0.33, 0.67)));\n}\n\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  if (iFrame == 0) {\n    fragColor = vec4(0.);\n    return;\n  }\n  vec2 size = iResolution.xy;\n  vec2 velocity = texture(iBuffer0, fragCoord / size).xy;\n  vec3 ink = texture(iBuffer1, (fragCoord - velocity) / size).rgb * 0.997;\n  for (int i = 0; i < 2; i++) {\n    ink += 0.25 * strength * nearJet(i, fragCoord) * jetColour(i);\n  }\n  fragColor = vec4(min(ink, vec3(3.)), 1.);\n}"
+    }
+  ],
+  "duration": 15,
+  "aspectRatio": [
+    1,
+    1
+  ],
+  "textures": [
+    {
+      "id": "iTexture0",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture1",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture2",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture3",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture4",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture5",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture6",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture7",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    }
+  ],
+  "variables": [
+    {
+      "transitions": [
+        {
+          "startDSecs": 0,
+          "endDSecs": 5,
+          "startValue": 0,
+          "endValue": 1,
+          "type": "smoothstep"
+        },
+        {
+          "startDSecs": 15,
+          "endDSecs": 25,
+          "startValue": 1,
+          "endValue": 0,
+          "type": "smoothstep"
+        },
+        {
+          "startDSecs": 40,
+          "endDSecs": 45,
+          "startValue": 0,
+          "endValue": 1.4,
+          "type": "smoothstep"
+        },
+        {
+          "startDSecs": 60,
+          "endDSecs": 75,
+          "startValue": 1.4,
+          "endValue": 0,
+          "type": "smoothstep"
+        },
+        {
+          "startDSecs": 90,
+          "endDSecs": 95,
+          "startValue": 0,
+          "endValue": 1.2,
+          "type": "smoothstep"
+        },
+        {
+          "startDSecs": 130,
+          "endDSecs": 150,
+          "startValue": 1.2,
+          "endValue": 0,
+          "type": "smoothstep"
+        }
+      ]
+    },
+    {
+      "transitions": [
+        {
+          "startDSecs": 0,
+          "endDSecs": 150,
+          "startValue": 0,
+          "endValue": 7.5,
+          "type": "smoothstep"
+        }
+      ]
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    }
+  ]
+}
