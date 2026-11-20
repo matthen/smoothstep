@@ -558,6 +558,12 @@ div#textures {
   }
 }
 
+// Beside the last slot, level with the middle of its image.
+div#textures .addSlot {
+  flex-shrink: 0;
+  align-self: center;
+}
+
 div#textures .texturesHint {
   // First, so it's in view before the strip scrolls.
   order: -1;

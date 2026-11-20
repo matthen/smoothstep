@@ -62,7 +62,8 @@ test("on a phone, the panes switch and a transition can be added with two taps",
   await expect.poll(() => grid.evaluate(e => e.scrollLeft)).toBe(0);
 
   await panes.getByText("Textures", {exact: true}).tap();
-  await expect(page.locator("div#textures .texture")).toHaveCount(8);
+  await expect(page.locator("div#textures .texture")).toHaveCount(3);
+  await page.screenshot({path: "test-results/mobile-textures.png"});
   await expect(page.locator(".timeArea")).toBeHidden();
   expect(errors).toEqual([]);
 });

@@ -17,8 +17,8 @@ vi.mock('../lib/localStore', async importOriginal => {
 afterEach(cleanup);
 beforeEach(clearStore);
 
-function renderTextures(textures: TextureSlot[] = emptyTextures()) {
-  const props = {textures, onChange: vi.fn(), onMessage: vi.fn()};
+function renderTextures(textures: TextureSlot[] = emptyTextures(), count = 8) {
+  const props = {textures, count, onChange: vi.fn(), onAdd: vi.fn(), onMessage: vi.fn()};
   render(<Textures {...props} />);
   return props;
 }
@@ -38,6 +38,19 @@ describe("Textures and TexturePicker", () => {
     renderTextures(textures);
     expect(screen.getAllByRole("button", {name: /^iTexture\d is empty: choose an image$/}).length).toBe(7);
     expect(screen.getByAltText("iTexture1 preview")).toBeTruthy();
+  });
+
+  it("shows only the first slots it's given, and a button to add the next", async () => {
+    const props = renderTextures(emptyTextures(), 3);
+    expect(screen.getAllByRole("button", {name: /is empty/}).map(b => b.getAttribute("aria-label"))).toEqual(
+      [0, 1, 2].map(i => `iTexture${i} is empty: choose an image`));
+    await userEvent.click(screen.getByRole("button", {name: "Add a texture slot"}));
+    expect(props.onAdd).toHaveBeenCalled();
+  });
+
+  it("has no add button when every slot shows", () => {
+    renderTextures();
+    expect(screen.queryByRole("button", {name: "Add a texture slot"})).toBeNull();
   });
 
   it("picks a built-in texture", async () => {

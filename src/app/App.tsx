@@ -21,7 +21,7 @@ import ShaderTabs, { shaderName } from '../editor/ShaderTabs';
 import * as archive from '../lib/archive';
 import { asset, documentHref, DOCS_URL, REPO_URL, textureURL, TUTORIAL_HREF } from '../lib/config';
 import {
-  bufferCodes, DEFAULT_TITLE, MAX_TITLE_LENGTH, newBufferCode, newDocument, parseDocument, sameExtras, shaderExtras,
+  bufferCodes, DEFAULT_TITLE, EMPTY_TEXTURE, MAX_TITLE_LENGTH, newBufferCode, newDocument, parseDocument, sameExtras, shaderExtras,
   SHARED_PLACEHOLDER, variableValues, type ShaderExtras,
   type AnimationDocument, type AspectRatio, type TextureSlot, type Variable,
 } from '../lib/document';
@@ -34,7 +34,7 @@ import Canvas, { type CanvasHandle, type CanvasLayout, type Shaders } from '../r
 import type { CompileResult, ShaderId } from '../render/Renderer';
 import { floatNames } from '../timeline/names';
 import PlayerControls from '../timeline/PlayerControls';
-import Sliders, { floatsInCode } from '../timeline/Sliders';
+import Sliders, { floatsInCode, inputsInCode } from '../timeline/Sliders';
 import Timeline from '../timeline/Timeline';
 import { lessonTitle, type TutorialState } from '../tutorial/lessons';
 import { openingProgress } from '../tutorial/progress';
@@ -174,6 +174,15 @@ export default function App() {
     ];
     return Math.max(minRows, ...needed.map(i => i + 1));
   }, [allCode, doc.variables, minRows]);
+  // Texture slots, the same way: at least three, and enough for every one the code uses or that has an image.
+  const [minSlots, setMinSlots] = useState(3);
+  const slotCount = useMemo(() => {
+    const needed = [
+      ...inputsInCode(allCode, "iTexture"),
+      ...doc.textures.flatMap((t, i) => t.url !== EMPTY_TEXTURE || t.isUserUploaded ? [i] : []),
+    ];
+    return Math.min(doc.textures.length, Math.max(minSlots, ...needed.map(i => i + 1)));
+  }, [allCode, doc.textures, minSlots]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const textureURLs = useMemo(() => doc.textures.map(textureURL), [doc.textures, imagesVersion]);
 
@@ -814,6 +823,7 @@ export default function App() {
           <Tabs.Panel value="textures">
             <Textures
               textures={doc.textures} onChange={(textures: TextureSlot[]) => updateDoc({textures})}
+              count={slotCount} onAdd={() => setMinSlots(slotCount + 1)}
               onMessage={setAlert}
             />
           </Tabs.Panel>

@@ -1,5 +1,6 @@
+import { ActionIcon, Tooltip } from '@mantine/core';
 import { lazy, Suspense, useState } from 'react';
-import { TbPhotoPlus } from 'react-icons/tb';
+import { TbPhotoPlus, TbPlus } from 'react-icons/tb';
 
 import { textureURL } from '../lib/config';
 import { EMPTY_TEXTURE, type TextureSlot } from '../lib/document';
@@ -8,7 +9,11 @@ import { useImagesChanged } from './useImagesChanged';
 
 interface TexturesProps {
   textures: TextureSlot[];
+  // How many slots to show, from the first.
+  count: number;
   onChange(textures: TextureSlot[]): void;
+  // Shows the next slot.
+  onAdd(): void;
   onMessage(text: string): void;
 }
 
@@ -16,7 +21,7 @@ interface TexturesProps {
 const TexturePicker = lazy(() => import('./TexturePicker'));
 
 // The footer's Textures tab: a button per slot, which opens the texture picker.
-export default function Textures({textures, onChange, onMessage}: TexturesProps) {
+export default function Textures({textures, count, onChange, onAdd, onMessage}: TexturesProps) {
   const [slot, setSlot] = useState<number | null>(null);
   const [showPicker, setShowPicker] = useState(false);
   useImagesChanged();
@@ -25,7 +30,7 @@ export default function Textures({textures, onChange, onMessage}: TexturesProps)
   const current = slot === null ? undefined : textures[slot];
   return (
     <div id="textures">
-      {textures.map((texture, i) =>
+      {textures.slice(0, count).map((texture, i) =>
         <div className="texture" key={texture.id}>
           <h1>{texture.id}</h1>
           {texture.url === EMPTY_TEXTURE && !texture.isUserUploaded
@@ -38,6 +43,12 @@ export default function Textures({textures, onChange, onMessage}: TexturesProps)
             </button>}
         </div>,
       )}
+      {count < textures.length &&
+        <Tooltip label={`Add a slot for iTexture${count}`}>
+          <ActionIcon className="addSlot" variant="light" radius="xl" onClick={onAdd} aria-label="Add a texture slot">
+            <TbPlus />
+          </ActionIcon>
+        </Tooltip>}
       {textures.every(texture => texture.url === EMPTY_TEXTURE) &&
         <p className="texturesHint">
           {phone ? "Tap" : "Click"} a slot to choose an image. In your code, <code>texture(iTexture0, uv)</code> reads its colour,
