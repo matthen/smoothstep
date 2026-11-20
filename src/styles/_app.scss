@@ -277,6 +277,23 @@ a {
   @include desktop {
     display: none;
   }
+
+  // A tick on Learn when the tutorial step is done, so you know to go back for the next one.
+  .learnTabLabel {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    svg {
+      color: $dt-green;
+      animation: learnTickIn 300ms ease-out;
+    }
+  }
+}
+
+@keyframes learnTickIn {
+  from { transform: scale(0); }
+  60% { transform: scale(1.3); }
+  to { transform: scale(1); }
 }
 
 .bottomPanel {

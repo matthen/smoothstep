@@ -80,8 +80,11 @@ test.describe("on a phone", () => {
     await expect(page.locator(".cm-content")).toBeVisible();
     await expect(panel).toBeHidden();
     await page.getByRole("button", {name: "Build"}).tap();
+    // The Learn tab ticks once the step is done, until you go back to it.
+    await expect(panes.getByLabel("step done")).toBeVisible();
     await panes.getByText("Learn", {exact: true}).tap();
     await expect(panel.getByRole("status")).toHaveAttribute("data-done", "true");
+    await expect(panes.getByLabel("step done")).toBeHidden();
     expect(errors).toEqual([]);
   });
 });

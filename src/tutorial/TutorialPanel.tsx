@@ -18,6 +18,8 @@ export interface TutorialPanelProps {
   onPutCode(code: string): void;
   onLessonChange(lesson: number): void;
   onClose(): void;
+  // Told whether the current step is done, so the phone's Learn tab can show a tick.
+  onStepDoneChange?(done: boolean): void;
 }
 
 const TOKEN_CLASSES: Record<GlslToken, string> = {
@@ -46,7 +48,7 @@ function lessonDone(lesson: number, completed: string[]): boolean {
   return LESSONS[lesson]!.steps.every(step => completed.includes(step.id));
 }
 
-export default function TutorialPanel({initial, state, onPutCode, onLessonChange, onClose}:
+export default function TutorialPanel({initial, state, onPutCode, onLessonChange, onClose, onStepDoneChange}:
   TutorialPanelProps) {
   const [progress, setProgress] = useState(initial);
   const lesson = LESSONS[progress.lesson]!;
@@ -68,6 +70,7 @@ export default function TutorialPanel({initial, state, onPutCode, onLessonChange
   const done = progress.completed.includes(step.id) || passed;
 
   useEffect(() => saveProgress(progress), [progress]);
+  useEffect(() => onStepDoneChange?.(done), [done, onStepDoneChange]);
 
   const goTo = (lessonIndex: number, stepIndex: number) => {
     setProgress(p => ({...p, lesson: lessonIndex, step: stepIndex}));

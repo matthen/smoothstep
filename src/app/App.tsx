@@ -4,7 +4,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { flushSync } from 'react-dom';
 import {
   TbBook, TbBrandGithub, TbChevronDown, TbCopy, TbDeviceFloppy, TbDownload, TbFile, TbFolderOpen, TbHammer,
-  TbHeart, TbHelp, TbHome, TbMovie, TbRoute, TbSchool,
+  TbCircleCheckFilled, TbHeart, TbHelp, TbHome, TbMovie, TbRoute, TbSchool,
 } from 'react-icons/tb';
 
 import Acknowledgements from '../dialogs/Acknowledgements';
@@ -69,6 +69,7 @@ export default function App() {
   // Where the tutorial opens, when the URL asks for it.
   const [tutorialStart] = useState(() => initialRoute?.kind === "tutorial" ? openingProgress(initialRoute.lesson) : null);
   const [tutorialOpen, setTutorialOpen] = useState(tutorialStart !== null);
+  const [tutorialStepDone, setTutorialStepDone] = useState(false);
   const [doc, setDoc] = useState<AnimationDocument>(newDocument);
   const [documentId, setDocumentId] = useState<string | null>(initialRoute?.kind === "anim" ? initialRoute.id : null);
   const [loading, setLoading] = useState(initialRoute !== null);
@@ -551,7 +552,12 @@ export default function App() {
           fullWidth size="sm" value={mobileTab} onChange={value => chooseMobileTab(value as MobileTab)}
           data={[
             {value: "code", label: "Code"}, {value: "animation", label: "Timeline"}, {value: "textures", label: "Textures"},
-            ...(tutorialOpen ? [{value: "learn", label: "Learn"}] : []),
+            ...(tutorialOpen ? [{
+              value: "learn",
+              label: tutorialStepDone && mobileTab !== "learn"
+                ? <span className="learnTabLabel">Learn<TbCircleCheckFilled aria-label="step done" /></span>
+                : "Learn",
+            }] : []),
           ]}
         />
       </nav>
@@ -561,6 +567,7 @@ export default function App() {
           <TutorialPanel
             initial={tutorialStart} state={tutorialState} onPutCode={putTutorialCode}
             onLessonChange={changeTutorialLesson} onClose={closeTutorial}
+            onStepDoneChange={setTutorialStepDone}
           />
         </Suspense>}
 
