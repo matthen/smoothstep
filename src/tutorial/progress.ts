@@ -43,11 +43,10 @@ export function saveProgress(progress: TutorialProgress) {
   }
 }
 
-// The progress to open with: the saved place, or the start of `lesson` if the URL names another one.
+// The progress to open with: the start of the saved lesson, or of `lesson` if the URL names one. The
+// tutorial opens a new animation, so a later step could need code from the steps before it.
 export function openingProgress(lesson: number | null): TutorialProgress {
   const saved = loadProgress();
-  if (lesson === null || lesson === saved.lesson) {
-    return saved;
-  }
-  return {...saved, lesson: Math.max(0, Math.min(lesson, LESSONS.length - 1)), step: 0};
+  const opening = lesson === null ? saved.lesson : Math.max(0, Math.min(lesson, LESSONS.length - 1));
+  return {...saved, lesson: opening, step: 0};
 }

@@ -84,9 +84,20 @@ export function chooseTip(candidates: readonly TipId[], seen: ReadonlySet<TipId>
   return candidates.find(id => !seen.has(id)) ?? null;
 }
 
+// Used when storage is blocked, so each tip still shows only once a visit.
+let fallback: string | null = null;
+
+function read(): string | null {
+  try {
+    return window.localStorage.getItem(KEY);
+  } catch {
+    return fallback;
+  }
+}
+
 export function seenTips(): Set<TipId> | "off" {
   try {
-    const value = window.localStorage.getItem(KEY);
+    const value = read();
     if (value === "off") {
       return "off";
     }
@@ -101,7 +112,7 @@ function store(value: string) {
   try {
     window.localStorage.setItem(KEY, value);
   } catch {
-    // Not stored; see above.
+    fallback = value;
   }
 }
 

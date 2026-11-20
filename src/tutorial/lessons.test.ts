@@ -230,10 +230,10 @@ describe("progress", () => {
     expect(loadProgress().lesson).toBe(0);
   });
 
-  it("is saved, and a link to another lesson starts it from its first step", () => {
+  it("is saved, and reopening starts a lesson from its first step, as the code starts afresh", () => {
     saveProgress({lesson: 1, step: 3, completed: ["red-square"]});
-    expect(openingProgress(null)).toEqual({lesson: 1, step: 3, completed: ["red-square"]});
-    expect(openingProgress(1)).toEqual({lesson: 1, step: 3, completed: ["red-square"]});
+    expect(openingProgress(null)).toEqual({lesson: 1, step: 0, completed: ["red-square"]});
+    expect(openingProgress(1)).toEqual({lesson: 1, step: 0, completed: ["red-square"]});
     expect(openingProgress(2)).toEqual({lesson: 2, step: 0, completed: ["red-square"]});
     // A step past the end of the lesson lands on its last step.
     saveProgress({lesson: 2, step: 40, completed: []});

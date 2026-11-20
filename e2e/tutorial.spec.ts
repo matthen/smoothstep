@@ -43,10 +43,11 @@ test("the tutorial puts code in the editor, notices the build, and moves on", as
   await expect(page.getByRole("menuitem")).toHaveCount(8);
   await page.keyboard.press("Escape");
 
-  // Progress is remembered, and a lesson link opens that lesson in a new animation.
+  // The lesson is remembered, and starts again from its first step in the new animation; a lesson
+  // link opens that lesson.
   await page.goto("about:blank");
   await page.goto("./#tutorial");
-  await expect(panel.getByText("Step 2 of 3")).toBeVisible();
+  await expect(panel.getByText("Step 1 of 3")).toBeVisible();
   await page.goto("about:blank");
   await page.goto("./#tutorial/2");
   await expect(page.locator("#titleInput")).toHaveValue("Tutorial: Moving with time");

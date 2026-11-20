@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { emptyVariables } from '../lib/document';
 import { chooseTip, markTipSeen, seenTips, tipContent, tipsFor, turnOffTips, type TipId } from './tips';
@@ -72,6 +72,23 @@ describe("tip storage", () => {
     turnOffTips();
     markTipSeen("backup");
     expect(seenTips()).toBe("off");
+  });
+
+  it("remembers for the visit when storage is blocked", () => {
+    const blocked = () => {
+      throw new DOMException("blocked", "SecurityError");
+    };
+    const get = vi.spyOn(Storage.prototype, "getItem").mockImplementation(blocked);
+    const set = vi.spyOn(Storage.prototype, "setItem").mockImplementation(blocked);
+    try {
+      markTipSeen("errors");
+      expect(seenTips()).toEqual(new Set(["errors"]));
+      turnOffTips();
+      expect(seenTips()).toBe("off");
+    } finally {
+      get.mockRestore();
+      set.mockRestore();
+    }
   });
 
   it("reads bad stored values as nothing seen", () => {

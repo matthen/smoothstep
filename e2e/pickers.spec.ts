@@ -77,11 +77,17 @@ test("on a phone, each picker opens without the keyboard and follows a finger", 
   };
   const box = async (selector: string) => (await page.locator(selector).boundingBox())!;
 
-  // The ruler moves with the finger, so dragging left raises the value; the wobble mustn't zoom.
+  // The ruler moves with the finger, so dragging left raises the value. A touch drag either slides
+  // or zooms: unzoomed, the 256px ruler spans 2, so 60px adds 0.47, and the wobble mustn't zoom.
+  const value = async () => Number(/^float a = ([\d.]+);$/.exec((await line(0))!)![1]);
   await open("0.5");
-  await touchDrag(cdp, await center(page, ".ss-float-picker canvas"), -60, 6);
+  const ruler = await center(page, ".ss-float-picker canvas");
+  await touchDrag(cdp, ruler, -60, 6);
   await expect(picker).toBeVisible();
-  expect(Number(/^float a = ([\d.]+);$/.exec((await line(0))!)![1])).toBeGreaterThan(0.8);
+  expect(await value()).toBeCloseTo(0.969, 2);
+  // An upward drag zooms out without moving the value.
+  await touchDrag(cdp, ruler, 5, -40);
+  expect(await value()).toBeCloseTo(0.969, 2);
 
   await open("vec2(0.2");
   await touchDrag(cdp, await center(page, ".ss-vec2-picker canvas"), -40, -40);

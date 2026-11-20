@@ -159,7 +159,15 @@ export default function App() {
     setTourState("taken");
     setTourTaken(true);
     tourRunning.current = true;
-    const {startTour} = await import('./tour');
+    let startTour;
+    try {
+      ({startTour} = await import('./tour'));
+    } catch (error) {
+      // Offline after a new deploy, say: the tour's chunk isn't cached.
+      console.error(error);
+      tourRunning.current = false;
+      return;
+    }
     startTour({
       phone,
       // Applied at once, so the tour measures the pane it's about to highlight.
