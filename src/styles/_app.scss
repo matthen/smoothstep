@@ -1074,25 +1074,30 @@ div#textures .texturesHint {
   }
 }
 
+// A row of tabs on a line, which the open tab breaks to join the code below it.
 .shaderTabs {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
   gap: 2px;
-  padding: 0 8px 4px;
-  border-bottom: 1px solid $dt-gray-darker;
+  padding: 4px 8px 0;
+  border-bottom: 1px solid $dt-gray;
   margin-bottom: 4px;
+
+  > .shaderThen, > .mantine-ActionIcon-root {
+    align-self: center;
+  }
 }
 
-// Outlined, so they read as tabs you can click; the open one is filled, with a bar under it.
 .shaderTab {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 10px;
-  border: 1px solid $dt-gray;
-  border-bottom-width: 2px;
-  border-radius: 6px;
+  padding: 5px 12px;
+  margin-bottom: -1px;
+  border: 1px solid transparent;
+  border-top-width: 2px;
+  border-radius: 6px 6px 0 0;
   font-size: 13px;
   color: $dt-gray-medium;
   background: $dt-gray-darker;
@@ -1103,13 +1108,15 @@ div#textures .texturesHint {
 
   &:hover {
     color: $dt-gray-light;
-    border-color: $dt-gray-medium;
   }
 
+  // The same colour as the code, with no line between them.
   &[aria-selected="true"] {
     color: $dt-gray-light;
-    background: $dt-gray;
-    border-bottom-color: $dt-purple;
+    background: $dt-gray-dark;
+    border-color: $dt-gray;
+    border-top-color: $dt-purple;
+    border-bottom-color: $dt-gray-dark;
   }
 
   // The shader whose code didn't build.
