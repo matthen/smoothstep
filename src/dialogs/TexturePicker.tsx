@@ -1,7 +1,7 @@
 import { ActionIcon, Alert, Button, Group, Loader, Text } from '@mantine/core';
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { TbArrowLeft, TbTrash, TbUpload } from 'react-icons/tb';
+import { TbArrowLeft, TbPhotoPlus, TbTrash } from 'react-icons/tb';
 
 import AppModal from '../app/AppModal';
 import { usePhone } from '../app/usePhone';
@@ -109,11 +109,11 @@ function UploadForm({onUploaded, onMessage}: {onUploaded(): void; onMessage(text
     setUploading(true);
     try {
       await addUploadedImage(selectedFile);
-      onMessage("Image uploaded.");
+      onMessage("Image added.");
       onUploaded();
     } catch (error) {
       console.log(error);
-      onMessage(error instanceof StorageFullError ? error.message : "Unable to upload image.");
+      onMessage(error instanceof StorageFullError ? error.message : "Couldn't add the image.");
       setUploading(false);
     }
   };
@@ -121,13 +121,13 @@ function UploadForm({onUploaded, onMessage}: {onUploaded(): void; onMessage(text
   return (
     <div {...getRootProps()} className={"dropzone" + (isDragActive ? " active" : "")}>
       <input {...getInputProps()} />
-      <TbUpload className="uploadIcon" />
-      <p>Drop image here, or click to select.</p>
+      <TbPhotoPlus className="uploadIcon" />
+      <p>Drop an image here, or click to choose one. It stays in this browser.</p>
       <div className="selectedFile">
         {selected && selectedFile &&
           <>
             <img src={selected.preview} alt={selectedFile.name} />  {selectedFile.name}
-            <Button onClick={handleUpload} disabled={uploading}>Upload</Button>
+            <Button onClick={handleUpload} disabled={uploading}>Add</Button>
             {uploading && <Loader size="xs" role="status" />}
           </>
         }
@@ -229,10 +229,10 @@ export default function TexturePicker(
             <UploadForm key={uploadFormKey} onMessage={onMessage} onUploaded={() => setShowUpload(false)} />
           </>
           : <div className="texturePickerBody" ref={bodyRef}>
-            {section("uploads", "Your images", "Images you've uploaded, kept in this browser.", <>
+            {section("uploads", "Your images", "Images you've added. They stay in this browser and aren't sent anywhere.", <>
               {pickerItem(
                 "upload", false, () => {setUploadFormKey(k => k + 1); setShowUpload(true);},
-                <TbUpload className="thumbnail" />, "Upload",
+                <TbPhotoPlus className="thumbnail" />, "Add image",
               )}
               {otherUploads.map(t => pickerItem(
                 "other-" + t.url, t.url === texture.url, () => select(t.url, true),

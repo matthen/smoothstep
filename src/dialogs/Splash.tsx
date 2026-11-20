@@ -75,7 +75,7 @@ export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
             smoothstep.io is a toolkit for building animations in the WebGL Shader language.
           </Text>
           <Text mb="md" c="dimmed" size="sm">
-            Animations and uploaded textures are saved in this browser. Use File &rarr; Open
+            Animations and the images you add are saved in this browser. Use File &rarr; Open
             to download them as files, or to open files saved elsewhere.
           </Text>
           <WelcomeTip />

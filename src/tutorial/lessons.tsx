@@ -480,7 +480,7 @@ export const LESSONS: Lesson[] = [
           </p>
           <p>
             Build this. The canvas is black, because every slot starts out black. Open the Textures tab, click{" "}
-            <code>iTexture0</code> and choose a photo, or upload your own.
+            <code>iTexture0</code> and choose a photo, or add your own.
           </p>
         </>,
         code: shaders.TEXTURE,

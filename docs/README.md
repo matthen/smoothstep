@@ -2,7 +2,7 @@
 
 You make animations in smoothstep by writing a fragment shader in the WebGL shader language
 (GLSL). A timeline lets you animate the shader's inputs visually, and you can give it the
-built-in textures or upload your own images. When it's ready, you export it as video at any
+built-in textures or add your own images. When it's ready, you export it as video at any
 frame rate and resolution. It all runs in your browser at [smoothstep.io](https://smoothstep.io).
 
 [Start the tutorial](https://smoothstep.io/#tutorial), which runs in the app beside the editor, or
@@ -33,7 +33,7 @@ show tips" turns them off.
 
 ## Saving your work
 
-smoothstep saves your animations and uploaded textures in your browser. File → Open lists the
+smoothstep saves your animations and the images you add in your browser. File → Open lists the
 animations saved there. You can download each one from that list, or click "Download all files"
 to save everything as a zip. "Open file…" opens files you downloaded before. File → Download
 animation file saves the animation you have open as a `.smoothstep.json` file. Your browser is

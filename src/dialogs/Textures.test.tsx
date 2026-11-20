@@ -67,16 +67,16 @@ describe("Textures and TexturePicker", () => {
     expect(props.onChange).not.toHaveBeenCalled();
   });
 
-  it("uploads an image and picks it", async () => {
+  it("adds an image and picks it", async () => {
     const props = renderTextures();
     await openSlot("iTexture0");
-    await userEvent.click(within(picker()).getByRole("button", {name: "Upload"}));
+    await userEvent.click(within(picker()).getByRole("button", {name: "Add image"}));
     expect(within(picker()).getByText("Images larger than 4096 px are scaled down.")).toBeTruthy();
     const input = picker().querySelector<HTMLInputElement>(".dropzone input")!;
     await userEvent.upload(input, new File(["x"], "photo.png", {type: "image/png"}));
     expect(await within(picker()).findByText("photo.png")).toBeTruthy();
-    await userEvent.click(within(picker()).getByRole("button", {name: "Upload"}));
-    await waitFor(() => expect(props.onMessage).toHaveBeenCalledWith("Image uploaded."));
+    await userEvent.click(within(picker()).getByRole("button", {name: "Add"}));
+    await waitFor(() => expect(props.onMessage).toHaveBeenCalledWith("Image added."));
     await userEvent.click(await within(picker()).findByAltText("photo.png preview"));
     expect(within(picker()).getByText("64 × 32")).toBeTruthy();
     await userEvent.click(within(picker()).getByRole("button", {name: "Apply changes"}));

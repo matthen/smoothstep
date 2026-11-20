@@ -43,7 +43,7 @@ texture slots, `iTexture0` to `iTexture7`, which take built-in photos, noise, ti
 and font sheets, or your own images up to 4096px. smoothstep exports WebM, MP4, animated
 GIFs and PNG frames, all made in your browser.
 
-smoothstep keeps your animations and uploads in your browser's storage. You can download one
+smoothstep keeps your animations and the images you add in your browser's storage. You can download one
 animation, or all of them as a zip, to back them up, move them to another computer or share
 them, and open them again with File → Open → "Open file…".
 

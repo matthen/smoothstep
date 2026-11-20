@@ -14,7 +14,7 @@ export const WELCOME_TIPS: ReactNode[] = [
   <>File → Download animation file saves your code, timeline and textures, to back up or share.</>,
   <>Export video makes a WebM, MP4, animated GIF or PNG frames, at the size and frame rate you choose.</>,
   <><code>iPrevFrame</code> is the frame drawn just before. Mix it into the new one for trails, or use it to run a simulation.</>,
-  <>You can upload your own images in the Textures tab. Images up to 4096 px across are kept at full size.</>,
+  <>You can add your own images in the Textures tab. They stay in this browser, and images up to 4096 px across are kept at full size.</>,
   <>Click a built-in function like <code>smoothstep</code> or <code>mix</code> in your code to see what it does.</>,
   <><Kbd>Space</Kbd> plays and pauses, and the number keys jump through the animation: <Kbd>5</Kbd> goes halfway.</>,
   <>Help → Shader inputs lists everything your shader can use, and Help → Keyboard shortcuts lists the shortcuts.</>,
