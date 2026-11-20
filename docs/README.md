@@ -5,20 +5,20 @@ You make animations in smoothstep by writing a fragment shader in the WebGL shad
 built-in textures or add your own images. When it's ready, you export it as video at any
 frame rate and resolution. It all runs in your browser at [smoothstep.io](https://smoothstep.io).
 
-[Start the tutorial](https://smoothstep.io/#tutorial), which runs in the app beside the editor, or
+[Start the tutorial](https://smoothstep.io/app/#tutorial), which runs in the app beside the editor, or
 [open smoothstep.io](https://smoothstep.io).
 
 ## Contents
 
-- [Tutorial](tutorial/README.md), in the app at [smoothstep.io/#tutorial](https://smoothstep.io/#tutorial)
-  1. [Colour from position](https://smoothstep.io/#tutorial/1)
-  2. [Moving with time](https://smoothstep.io/#tutorial/2)
-  3. [Shapes](https://smoothstep.io/#tutorial/3)
-  4. [The timeline](https://smoothstep.io/#tutorial/4)
-  5. [Patterns](https://smoothstep.io/#tutorial/5)
-  6. [Textures](https://smoothstep.io/#tutorial/6)
-  7. [Memory with iPrevFrame](https://smoothstep.io/#tutorial/7)
-  8. [Share it](https://smoothstep.io/#tutorial/8)
+- [Tutorial](tutorial/README.md), in the app at [smoothstep.io/app/#tutorial](https://smoothstep.io/app/#tutorial)
+  1. [Colour from position](https://smoothstep.io/app/#tutorial/1)
+  2. [Moving with time](https://smoothstep.io/app/#tutorial/2)
+  3. [Shapes](https://smoothstep.io/app/#tutorial/3)
+  4. [The timeline](https://smoothstep.io/app/#tutorial/4)
+  5. [Patterns](https://smoothstep.io/app/#tutorial/5)
+  6. [Textures](https://smoothstep.io/app/#tutorial/6)
+  7. [Memory with iPrevFrame](https://smoothstep.io/app/#tutorial/7)
+  8. [Share it](https://smoothstep.io/app/#tutorial/8)
 - [Examples](examples.md)
 - [Keyboard shortcuts](keyboard-shortcuts.md), also in the app under Help → Keyboard shortcuts
 - [Coding specification](coding-specification.md), also in the app under Help → Shader inputs

@@ -1,17 +1,17 @@
 # Tutorial
 
-The tutorial is part of the app. **[Start it at smoothstep.io/#tutorial](https://smoothstep.io/#tutorial)**, or
+The tutorial is part of the app. **[Start it at smoothstep.io/app/#tutorial](https://smoothstep.io/app/#tutorial)**, or
 choose Help → Tutorial. It opens a new animation with the lessons beside the editor, and each step
 notices when you've done it.
 
-1. [Colour from position](https://smoothstep.io/#tutorial/1): a gradient from each pixel's position, and the colour picker.
-2. [Moving with time](https://smoothstep.io/#tutorial/2): `iTime`, waves and a cosine-palette shimmer.
-3. [Shapes](https://smoothstep.io/#tutorial/3): centred coordinates, circles from distances, and `smoothstep` edges.
-4. [The timeline](https://smoothstep.io/#tutorial/4): animating `iFloat0` and `iFloat1`, transition types, and the length.
-5. [Patterns](https://smoothstep.io/#tutorial/5): tiling with `fract`, rotation, and polar coordinates.
-6. [Textures](https://smoothstep.io/#tutorial/6): showing, warping and folding an image.
-7. [Memory with iPrevFrame](https://smoothstep.io/#tutorial/7): trails that fade, and setting up the first frame with `iFrame`.
-8. [Share it](https://smoothstep.io/#tutorial/8): saving, downloading and exporting video, and where to learn more.
+1. [Colour from position](https://smoothstep.io/app/#tutorial/1): a gradient from each pixel's position, and the colour picker.
+2. [Moving with time](https://smoothstep.io/app/#tutorial/2): `iTime`, waves and a cosine-palette shimmer.
+3. [Shapes](https://smoothstep.io/app/#tutorial/3): centred coordinates, circles from distances, and `smoothstep` edges.
+4. [The timeline](https://smoothstep.io/app/#tutorial/4): animating `iFloat0` and `iFloat1`, transition types, and the length.
+5. [Patterns](https://smoothstep.io/app/#tutorial/5): tiling with `fract`, rotation, and polar coordinates.
+6. [Textures](https://smoothstep.io/app/#tutorial/6): showing, warping and folding an image.
+7. [Memory with iPrevFrame](https://smoothstep.io/app/#tutorial/7): trails that fade, and setting up the first frame with `iFrame`.
+8. [Share it](https://smoothstep.io/app/#tutorial/8): saving, downloading and exporting video, and where to learn more.
 
 Each lesson builds one animation a step at a time, and most end with a related example to explore.
 

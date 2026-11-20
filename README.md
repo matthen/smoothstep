@@ -6,7 +6,7 @@
 <p align="center">
   Make animations in the WebGL shader language, right in your browser.<br>
   <b><a href="https://smoothstep.io">Open smoothstep.io</a></b> ·
-  <a href="https://smoothstep.io/#tutorial">Tutorial</a> ·
+  <a href="https://smoothstep.io/app/#tutorial">Tutorial</a> ·
   <a href="docs/">Documentation</a>
 </p>
 
@@ -25,7 +25,7 @@ animations from the old site with "Download my data", open that zip with File �
 file…".
 
 You can use it at **[smoothstep.io](https://smoothstep.io)**, or run your own copy. To learn, start
-the [tutorial](https://smoothstep.io/#tutorial): it runs in the app, beside the editor, and each step
+the [tutorial](https://smoothstep.io/app/#tutorial): it runs in the app, beside the editor, and each step
 notices when you've done it. The Help menu lists the shader inputs and the keyboard shortcuts, and the
 [documentation](docs/) has those and the examples.
 
