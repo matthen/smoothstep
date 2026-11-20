@@ -18,7 +18,7 @@ const INPUTS: {name: string; last?: string; type: string; description: string}[]
   {name: "iFrame", type: "int", description: "The frame number, counting from 0. See below for when it restarts."},
   {name: "iPrevFrame", type: "sampler2D", description: "The frame drawn just before this one."},
   {name: "iTexture0", last: "iTexture7", type: "sampler2D", description: "The 8 images set in the Textures tab."},
-  {name: "iFloat0", last: "iFloat15", type: "float", description: "The 16 numbers animated on the timeline."},
+  {name: "iFloat0", last: "iFloat15", type: "float", description: "The 16 numbers set on the timeline or with sliders."},
   {name: "iBuffer0", last: "iBuffer3", type: "sampler2D",
     description: "What each buffer drew most recently, when the animation has buffers."},
 ];

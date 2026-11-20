@@ -330,6 +330,22 @@ export const LESSONS: Lesson[] = [
         check: now => now.built && floatsUsed(now.builtCode).length > 0,
       },
       {
+        id: "slider",
+        title: "Try it with a slider",
+        body: <>
+          <p>
+            Before you animate a number, you can try out values by hand. Open the Sliders tab, or Sliders on a
+            phone, and drag the slider for <code>grow</code> to watch the circle change size.
+          </p>
+          <p>
+            The value you set is saved with the animation. Type in the numbers at either end of a slider to
+            change its range.
+          </p>
+        </>,
+        task: "Set iFloat0 with its slider.",
+        check: now => now.built && floatsUsed(now.builtCode).some(i => (now.variables[i]?.value ?? 0) !== 0),
+      },
+      {
         id: "transition",
         title: "Make a transition",
         body: <>
@@ -337,7 +353,10 @@ export const LESSONS: Lesson[] = [
             In the Animation tab, drag along the <code>iFloat0</code> row to make a transition. On a phone, open
             Timeline and tap where it starts, then where it ends.
           </p>
-          <p>The new transition is selected. Set its end value to 1, then play and watch the circle grow.</p>
+          <p>
+            The new transition is selected, and starts from the value you set with the slider. Set its end value
+            to 1, or to 0 if it already starts at 1, then play and watch the circle change size.
+          </p>
         </>,
         task: "Give iFloat0 a transition that changes its value, and play it.",
         check: (now, atStart) => now.built && animatedFloats(now).length > 0 && played(now, atStart),

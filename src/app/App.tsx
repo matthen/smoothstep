@@ -34,6 +34,7 @@ import Canvas, { type CanvasHandle, type CanvasLayout, type Shaders } from '../r
 import type { CompileResult, ShaderId } from '../render/Renderer';
 import { floatNames } from '../timeline/names';
 import PlayerControls from '../timeline/PlayerControls';
+import Sliders, { floatsInCode } from '../timeline/Sliders';
 import Timeline from '../timeline/Timeline';
 import { lessonTitle, type TutorialState } from '../tutorial/lessons';
 import { openingProgress } from '../tutorial/progress';
@@ -55,7 +56,8 @@ function windowTitle(title: string) {
 }
 
 // Which pane fills the screen below the canvas on a phone.
-type MobileTab = "code" | "animation" | "textures" | "learn";
+type MobileTab = "code" | "animation" | "sliders" | "textures" | "learn";
+type PanelTab = "animation" | "sliders" | "textures";
 
 // Loaded when the tutorial opens, with its lessons.
 const TutorialPanel = lazy(() => import('../tutorial/TutorialPanel'));
@@ -118,7 +120,7 @@ export default function App() {
   const phone = usePhone();
   useKeyboardInset();
   const [mobileTab, setMobileTab] = useState<MobileTab>(tutorialStart && phone ? "learn" : "code");
-  const [panelTab, setPanelTab] = useState<"animation" | "textures">("animation");
+  const [panelTab, setPanelTab] = useState<PanelTab>("animation");
   const [tourTaken, setTourTaken] = useState(() => tourState() === "taken");
   const [alert, setAlert] = useState<string | null>(null);
   const [dialog, setDialog] = useState<Dialog | null>(window.location.hash ? null : "splash");
@@ -144,9 +146,34 @@ export default function App() {
   // The link the animation opened from, which can be shared again while it's unchanged.
   const [sharedFrom, setSharedFrom] = useState<Route | null>(null);
 
-  const values = useMemo(() => variableValues(doc.variables, time), [doc.variables, time]);
-  // Named in any shader's #defines, the image's first.
-  const floatNameList = useMemo(() => floatNames([doc.code, doc.shared ?? "", ...bufferCodes(doc)].join("\n")), [doc]);
+  // Animated values held by their sliders, by row, until the animation plays or the playhead moves.
+  const [held, setHeld] = useState<ReadonlyMap<number, number>>(new Map());
+  // A hold only counts while the row is animated, so deleting its last transition lets it go.
+  const heldRows = useMemo(() => new Map([...held].filter(([i]) => doc.variables[i]!.transitions.length > 0)),
+    [held, doc.variables]);
+  const values = useMemo(() => variableValues(doc.variables, time).map((v, i) => heldRows.get(i) ?? v),
+    [doc.variables, time, heldRows]);
+  const hold = (row: number, value: number) => setHeld(h => new Map(h).set(row, value));
+  // Playing hands every held value back to the timeline.
+  const [wasPlaying, setWasPlaying] = useState(isPlaying);
+  if (isPlaying !== wasPlaying) {
+    setWasPlaying(isPlaying);
+    if (isPlaying && held.size > 0) {
+      setHeld(new Map());
+    }
+  }
+  // Every tab's code, the image's first, so its #define names win.
+  const allCode = useMemo(() => [doc.code, doc.shared ?? "", ...bufferCodes(doc)].join("\n"), [doc]);
+  const floatNameList = useMemo(() => floatNames(allCode), [allCode]);
+  // Timeline rows: at least three, and enough for every iFloat the code uses or the timeline sets.
+  const [minRows, setMinRows] = useState(3);
+  const rowCount = useMemo(() => {
+    const needed = [
+      ...floatsInCode(allCode),
+      ...doc.variables.flatMap((v, i) => v.transitions.length > 0 || v.value !== undefined ? [i] : []),
+    ];
+    return Math.max(minRows, ...needed.map(i => i + 1));
+  }, [allCode, doc.variables, minRows]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const textureURLs = useMemo(() => doc.textures.map(textureURL), [doc.textures, imagesVersion]);
 
@@ -165,6 +192,8 @@ export default function App() {
     setBuiltCode(json.code);
     setBuiltExtras(shaderExtras(json));
     setCodeTab("image");
+    setHeld(new Map());
+    setMinRows(3);
     setBuildId(id => id + 1);
     windowTitle(json.title);
     setHasUnsavedChanges(false);
@@ -172,7 +201,7 @@ export default function App() {
 
   const chooseMobileTab = (tab: MobileTab) => {
     setMobileTab(tab);
-    if (tab === "animation" || tab === "textures") {
+    if (tab === "animation" || tab === "sliders" || tab === "textures") {
       setPanelTab(tab);
     }
   };
@@ -348,6 +377,7 @@ export default function App() {
 
   const seek = useCallback((t: number) => {
     setTime(t);
+    setHeld(new Map());  // Moving the playhead shows the timeline's values again.
     if (t === 0) {
       setFrameIndex(0);
     }
@@ -722,7 +752,8 @@ export default function App() {
         <SegmentedControl
           fullWidth size="sm" value={mobileTab} onChange={value => chooseMobileTab(value as MobileTab)}
           data={[
-            {value: "code", label: "Code"}, {value: "animation", label: "Timeline"}, {value: "textures", label: "Textures"},
+            {value: "code", label: "Code"}, {value: "animation", label: "Timeline"}, {value: "sliders", label: "Sliders"},
+            {value: "textures", label: "Textures"},
             ...(tutorialOpen ? [{
               value: "learn",
               label: tutorialStepDone && mobileTab !== "learn"
@@ -745,10 +776,14 @@ export default function App() {
       <section className="bottomPanel">
         <Tabs
           value={panelTab} keepMounted
-          onChange={value => {setPanelTab(value === "textures" ? "textures" : "animation"); setShowFooter(true);}}
+          onChange={value => {
+            setPanelTab(value === "textures" || value === "sliders" ? value : "animation");
+            setShowFooter(true);
+          }}
         >
           <Tabs.List>
             <Tabs.Tab value="animation">Animation</Tabs.Tab>
+            <Tabs.Tab value="sliders">Sliders</Tabs.Tab>
             <Tabs.Tab value="textures">Textures</Tabs.Tab>
             <ActionIcon
               variant="subtle" color="gray" className="toggleFooter" aria-label="Toggle footer"
@@ -765,6 +800,15 @@ export default function App() {
                 updateDoc({variables});
               }}
               duration={doc.duration} currentTime={time} onSeek={seek} onDurationChange={onDurationChange}
+              rowCount={rowCount} onAddRow={() => setMinRows(rowCount + 1)}
+            />
+          </Tabs.Panel>
+          <Tabs.Panel value="sliders">
+            <Sliders
+              variables={doc.variables} values={values} names={floatNameList}
+              code={allCode}
+              held={new Set(heldRows.keys())} onVariablesChange={(variables: Variable[]) => updateDoc({variables})}
+              onHold={hold}
             />
           </Tabs.Panel>
           <Tabs.Panel value="textures">

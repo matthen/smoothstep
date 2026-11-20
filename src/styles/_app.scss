@@ -1157,3 +1157,108 @@ div#textures .texturesHint {
   margin: 0 6px;
   background: $dt-gray;
 }
+
+// The Sliders tab: a row for each iFloat the code uses.
+.sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 16px 16px;
+  overflow-y: auto;
+  height: 100%;
+  max-width: 900px;
+}
+
+// Name, then the minimum, the track with its value underneath, and the maximum.
+.sliderRow {
+  display: grid;
+  // The ends have fixed widths, so every row's track starts and stops in the same place.
+  grid-template-columns: minmax(120px, 260px) 56px 1fr 56px;
+  align-items: start;
+  column-gap: 8px;
+  padding-bottom: 6px;
+
+  > .sliderName, > .sliderEnd {
+    margin-top: 2px;
+  }
+
+  // The minimum, which comes after the name.
+  > :nth-child(2) {
+    justify-self: end;
+  }
+
+  > .sliderEnd:last-child {
+    justify-self: start;
+  }
+
+  @include phone {
+    grid-template-columns: 48px 1fr 48px;
+
+    .sliderName {
+      grid-column: 1 / -1;
+      margin-bottom: 4px;
+    }
+  }
+}
+
+.sliderTrack {
+  position: relative;
+  padding-top: 8px;
+  height: 46px;
+}
+
+// Under the handle, moving with it.
+.sliderValue {
+  position: absolute;
+  top: 22px;
+  transform: translateX(-50%);
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 12px;
+  color: $dt-gray-light;
+  white-space: nowrap;
+}
+
+.sliderName {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  .floatName {
+    color: $dt-gray-medium;
+    font-size: 11px;
+  }
+}
+
+
+// Plain numbers until pointed at or typed in, when they get an outline.
+.sliderNumber input {
+  min-height: 0;
+  height: 22px;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  text-align: center;
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 12px;
+
+  &:hover, &:focus {
+    border-color: $dt-gray;
+    background: $dt-gray-darker;
+  }
+}
+
+.sliderEnd input {
+  color: $dt-gray-medium;
+}
+
+// An animated input held by its slider, until the animation plays: the slider turns orange.
+.sliderRow[data-held] {
+  .mantine-Slider-root {
+    --slider-color: #{$dt-orange};
+  }
+  .sliderValue input {
+    color: $dt-orange;
+  }
+}

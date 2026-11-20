@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  canonicalJSON, MAX_BUFFERS, newDocument, parseDocument, InvalidDocumentError, variableValue,
+  canonicalJSON, MAX_BUFFERS, newDocument, parseDocument, InvalidDocumentError, sliderRange, variableValue,
+  variableValues,
   type Transition,
 } from './document';
 
@@ -37,6 +38,17 @@ describe("parseDocument", () => {
     (doc.variables[0]!.transitions as unknown[]).push(t);
     expect(parseDocument(doc).variables[0]!.transitions[0]).toEqual(
       {startDSecs: 0, endDSecs: 10, startValue: 0, endValue: 1, type: "linear"});
+  });
+
+  it("keeps a slider's value and range when they're numbers, and leaves them out otherwise", () => {
+    const doc = newDocument();
+    doc.variables[0] = {transitions: [], value: 0.4, min: -1, max: 2};
+    (doc.variables[1] as unknown as Record<string, unknown>).value = "0.4";
+    (doc.variables[2] as unknown as Record<string, unknown>).max = Infinity;
+    const parsed = parseDocument(JSON.parse(JSON.stringify(doc)));
+    expect(parsed.variables[0]).toEqual({transitions: [], value: 0.4, min: -1, max: 2});
+    expect(parsed.variables[1]).toEqual({transitions: []});
+    expect(parseDocument(doc).variables[2]).toEqual({transitions: []});
   });
 
   it("reads the old timeline's blank and string values as numbers", () => {
@@ -103,5 +115,27 @@ describe("variableValue", () => {
 describe("canonicalJSON", () => {
   it("ignores key order", () => {
     expect(canonicalJSON({b: 1, a: [{d: 2, c: 3}]})).toBe(canonicalJSON({a: [{c: 3, d: 2}], b: 1}));
+  });
+});
+
+describe("variableValues", () => {
+  it("uses a slider's value while a variable has no transitions, and the timeline once it has", () => {
+    const transition: Transition = {startDSecs: 0, endDSecs: 10, startValue: 2, endValue: 4, type: "linear"};
+    const values = variableValues([{transitions: []}, {transitions: [], value: 0.7}, {transitions: [transition], value: 9}], 1);
+    expect(values).toEqual([0, 0.7, 4]);
+  });
+});
+
+describe("sliderRange", () => {
+  it("covers 0 to 1, widened to the timeline's values and the slider's value", () => {
+    expect(sliderRange({transitions: []})).toEqual([0, 1]);
+    expect(sliderRange({transitions: [], value: 3})).toEqual([0, 3]);
+    expect(sliderRange({transitions: [{startDSecs: 0, endDSecs: 10, startValue: -1, endValue: 0.5, type: "step"}]}))
+      .toEqual([-1, 1]);
+  });
+
+  it("uses the ends set for it", () => {
+    expect(sliderRange({transitions: [], value: 3, min: 2, max: 10})).toEqual([2, 10]);
+    expect(sliderRange({transitions: [], max: 0.5})).toEqual([0, 0.5]);
   });
 });

@@ -9,6 +9,7 @@ export const WELCOME_TIPS: ReactNode[] = [
   <>Click a colour like <code>vec3(1.0, 0.5, 0.2)</code> in your code for a colour picker, or a <code>vec2</code> for a 2D one.</>,
   <><Kbd>Shift</Kbd> + <Kbd>Enter</Kbd> or <Kbd>{MOD_KEY}</Kbd> + <Kbd>Enter</Kbd> builds your code.</>,
   <>Put <code>#define size iFloat0</code> at the top of your code to give a timeline input a name, which the timeline then shows.</>,
+  <>The Sliders tab has a slider for each <code>iFloat</code> your code uses. Drag one to try out values, even ones the timeline animates.</>,
   <>Drag the line at the end of the timeline to make the animation longer or shorter.</>,
   <>Point at the canvas for the aspect ratio menu, to make square, wide or tall videos.</>,
   <>File → Download animation file saves your code, timeline and textures, to back up or move to another computer.</>,

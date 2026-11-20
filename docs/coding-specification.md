@@ -32,7 +32,7 @@ Animations may also use any of the following input variables (*uniforms*):
 | `int iFrame`  |  The frame number, counting from 0. See below for when it restarts. |
 | `sampler2D iPrevFrame`  |  The frame drawn just before this one. |
 | `sampler2D iTexture0` ... `iTexture7`  | The 8 images set in the *Textures* tab. |
-| `float iFloat0` ... `iFloat15`  | The 16 numbers animated on the timeline. |
+| `float iFloat0` ... `iFloat15`  | The 16 numbers set on the timeline or with sliders. |
 | `sampler2D iBuffer0` ... `iBuffer3`  | What each buffer drew most recently, when the animation has buffers. |
 
 ## Textures

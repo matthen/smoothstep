@@ -24,6 +24,11 @@ export interface Transition {
 
 export interface Variable {
   transitions: Transition[];
+  // Set with its slider: the value while it has no transitions (0 when left out).
+  value?: number;
+  // The slider's range, when set; otherwise sliderRange works one out.
+  min?: number;
+  max?: number;
 }
 
 export interface TextureSlot {
@@ -186,7 +191,15 @@ export function parseDocument(value: unknown): AnimationDocument {
         type: r.type as TransitionType,
       };
     });
-    return {transitions};
+    // The slider's fields are optional, and left out unless they're finite numbers.
+    const v = variable as Record<string, unknown>;
+    const slider: Partial<Variable> = {};
+    for (const key of ["value", "min", "max"] as const) {
+      if (typeof v[key] === "number" && Number.isFinite(v[key])) {
+        slider[key] = v[key];
+      }
+    }
+    return {transitions, ...slider};
   });
   if (json.buffers !== undefined && (!Array.isArray(json.buffers) || json.buffers.length > MAX_BUFFERS)) {
     fail("buffers");
@@ -264,5 +277,18 @@ export function variableValue(transitions: readonly Transition[], time: number):
 }
 
 export function variableValues(variables: readonly Variable[], time: number): number[] {
-  return variables.map(v => variableValue(v.transitions, time));
+  return variables.map(v => v.transitions.length > 0 ? variableValue(v.transitions, time) : v.value ?? 0);
+}
+
+// A slider's range: the one set for it, or one that covers its timeline values and its value,
+// starting from 0 to 1.
+export function sliderRange(variable: Variable): [number, number] {
+  let lo = 0;
+  let hi = 1;
+  const values = [variable.value ?? 0, ...variable.transitions.flatMap(t => [t.startValue, t.endValue])];
+  for (const value of values) {
+    lo = Math.min(lo, value);
+    hi = Math.max(hi, value);
+  }
+  return [variable.min ?? lo, variable.max ?? hi];
 }

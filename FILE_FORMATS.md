@@ -24,7 +24,9 @@ An animation is a JSON object, as produced by `App.toJSON()`:
   under `public/images/textures/`; an uploaded one has `isUserUploaded: true` and `url` set to
   the image's id.
 - `variables` has 16 entries. Each transition runs from `startDSecs` to `endDSecs`, in
-  tenths of a second, with `type` one of `step`, `linear` or `smoothstep`.
+  tenths of a second, with `type` one of `step`, `linear` or `smoothstep`. A variable can also
+  have `value`, the number its slider set, which it holds while it has no transitions (0 when left
+  out), and `min` and `max`, the ends of its slider. All three are optional.
 - `aspectRatio` is one of `[1,1]`, `[4,3]`, `[16,9]`, `[3,4]`, `[9,16]`.
 - `buffers` is optional: up to 4 entries, `[{"code": "..."}, ...]`, read in the code as
   `iBuffer0` to `iBuffer3`. An animation with no buffers leaves it out.

@@ -20,7 +20,7 @@ test("the welcome dialog offers the tour, which steps through the screen", async
   await page.getByRole("button", {name: "Take the tour"}).click();
   const titles = await stepThrough(page);
   expect(titles).toEqual([
-    "Welcome to smoothstep", "Your shader", "The canvas", "Play and scrub", "The timeline", "Textures",
+    "Welcome to smoothstep", "Your shader", "The canvas", "Play and scrub", "The timeline", "Sliders", "Textures",
     "Save, share, export and help", "Over to you",
   ]);
   await expect(page.getByRole("tab", {name: "Animation"})).toHaveAttribute("aria-selected", "true");

@@ -1,8 +1,8 @@
 import {useEffect, useEffectEvent, useLayoutEffect, useRef, useState} from "react";
 import type {MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent} from "react";
-import {ActionIcon, NativeSelect, TextInput} from "@mantine/core";
+import {ActionIcon, NativeSelect, TextInput, Tooltip} from "@mantine/core";
 import {useMediaQuery} from "@mantine/hooks";
-import {TbTrash} from "react-icons/tb";
+import {TbPlus, TbTrash} from "react-icons/tb";
 import {variableValue} from "../lib/document";
 import type {Transition, TransitionType, Variable} from "../lib/document";
 import {
@@ -24,6 +24,9 @@ export interface TimelineProps {
   names?: (string | null)[];
   variableValues: number[];
   onVariablesChange(variables: Variable[]): void;
+  // How many rows to show, from iFloat0, and a way to show one more.
+  rowCount: number;
+  onAddRow(): void;
   duration: number;
   currentTime: number;
   onSeek(time: number): void;
@@ -55,6 +58,7 @@ const TYPE_OPTIONS: readonly TransitionType[] = ["smoothstep", "step", "linear"]
 
 export default function Timeline(props: TimelineProps) {
   const {variables, variableValues, onVariablesChange, duration, currentTime, onSeek, onDurationChange} = props;
+  const rowCount = Math.min(props.rowCount, variables.length);
   const name = (row: number) => props.names?.[row] ?? null;
   const rootRef = useRef<HTMLDivElement>(null);
   const timeAreaRef = useRef<HTMLDivElement>(null);
@@ -152,7 +156,8 @@ export default function Timeline(props: TimelineProps) {
       setHover(null);
       return;
     }
-    const value = variableValue(transitions, startDSecs / 10);
+    // A first transition starts from the value its slider set.
+    const value = transitions.length > 0 ? variableValue(transitions, startDSecs / 10) : variables[row]!.value ?? 0;
     const inserted = insertTransition(transitions, {startDSecs, endDSecs, startValue: value, endValue: value, type: "smoothstep"});
     setRow(row, inserted.transitions);
     select({row, startDSecs});
@@ -165,7 +170,7 @@ export default function Timeline(props: TimelineProps) {
   }
 
   function updateHover(x: number, y: number) {
-    const row = rowAt(y, variables.length);
+    const row = rowAt(y, rowCount);
     if (row === null) {
       return;
     }
@@ -250,7 +255,7 @@ export default function Timeline(props: TimelineProps) {
       return;
     }
     const {x, y} = position(event);
-    const row = rowAt(y, variables.length);
+    const row = rowAt(y, rowCount);
     if (row === null) {
       return;
     }
@@ -387,7 +392,7 @@ export default function Timeline(props: TimelineProps) {
   const resizing = gesture.kind === "scrubbing" || gesture.kind === "duration" ||
     (gesture.kind === "dragging" && gesture.mode !== "move");
   const markerZ = creating ? 0 : 1000;
-  const rowsHeight = variables.length * ROW_HEIGHT;
+  const rowsHeight = rowCount * ROW_HEIGHT;
 
   return (
     <div id="animationControls" ref={rootRef}>
@@ -462,7 +467,7 @@ export default function Timeline(props: TimelineProps) {
             onPointerDown={handleDurationPointerDown}
           />
           <div className="filler" ref={rowsRef}>
-            {variables.map((variable, row) => (
+            {variables.slice(0, rowCount).map((variable, row) => (
               <div key={row} className="variableRow">
                 <div className="rowLabel" style={{left: scrollLeft}}>{name(row) ?? "iFloat" + row}</div>
                 {variable.transitions.length > 0 &&
@@ -495,6 +500,18 @@ export default function Timeline(props: TimelineProps) {
               </div>
             ))}
           </div>
+          {/* Under the last row, at the left like the labels; it mustn't start a transition. */}
+          {rowCount < variables.length &&
+            <div
+              className="addRow" style={{left: scrollLeft + 4, top: rowsHeight + 4}}
+              onPointerDown={event => event.stopPropagation()}
+            >
+              <Tooltip label={`Add a row for iFloat${rowCount}`}>
+                <ActionIcon variant="light" radius="xl" size="sm" onClick={props.onAddRow} aria-label="Add a row">
+                  <TbPlus />
+                </ActionIcon>
+              </Tooltip>
+            </div>}
         </div>
       </div>
     </div>

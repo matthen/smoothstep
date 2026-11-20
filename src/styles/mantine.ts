@@ -30,6 +30,7 @@ import '@mantine/core/styles/Modal.css';
 import '@mantine/core/styles/Notification.css';
 import '@mantine/core/styles/Progress.css';
 import '@mantine/core/styles/SegmentedControl.css';
+import '@mantine/core/styles/Slider.css';
 import '@mantine/core/styles/Table.css';
 import '@mantine/core/styles/Tabs.css';
 import '@mantine/core/styles/Tooltip.css';
