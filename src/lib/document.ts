@@ -97,8 +97,7 @@ export function sameExtras(a: ShaderExtras, b: ShaderExtras): boolean {
 }
 
 // What the Shared tab shows before anything's written in it.
-export const SHARED_PLACEHOLDER = `// Code here goes before every shader's own code: the image's and each buffer's.
-// Put functions, constants and #defines that more than one of them uses here.
+export const SHARED_PLACEHOLDER = `// Functions, constants and #defines here can be used in every tab: the image and each buffer.
 `;
 
 export function emptyTextures(): TextureSlot[] {
