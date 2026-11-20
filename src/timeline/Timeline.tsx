@@ -410,7 +410,10 @@ export default function Timeline(props: TimelineProps) {
           </p>}
         {/* Not on touch screens, where it would shift the rows between a transition's two taps. */}
         {!heading && !touch && variables.every(variable => variable.transitions.length === 0) &&
-          <p className="hint">Then use <code>iFloat0</code> to <code>iFloat15</code> in your code, like any number.</p>}
+          <p className="hint">
+            Then use <code>iFloat0</code> to <code>iFloat15</code> in your code, like any number.
+            {" "}<code>#define size iFloat0</code> names a row.
+          </p>}
         {selected &&
           <form className="transitionForm" onSubmit={e => e.preventDefault()}>
             {(["start", "end"] as const).map(field => {

@@ -2,6 +2,7 @@ import { Alert, Button, Group, Loader, NativeSelect, Progress, Stack, Text, Text
 import { useState } from 'react';
 
 import AppModal from '../app/AppModal';
+import { noVideoReason } from '../export/videoSupport';
 import type { ExportOptions, ExportProgress, ExportType } from './exportTypes';
 
 interface ExportSettingsProps {
@@ -49,7 +50,7 @@ export default function ExportSettings(
   const disabled = progress !== null;
   const widthValid = parseWidth(widthText) !== null;
   const fpsValid = parseFps(fpsText) !== null;
-  const noVideoEncoder = typeof VideoEncoder === "undefined" && (options.type === "webm" || options.type === "mp4");
+  const noVideo = options.type === "webm" || options.type === "mp4" ? noVideoReason() : null;
 
   const handleWidth = (text: string) => {
     setWidthText(text);
@@ -92,12 +93,7 @@ export default function ExportSettings(
             onChange={event => onOptionsChange({...options, type: event.target.value as ExportType})}
             data={FILE_TYPES.map(([value, label]) => ({value, label}))}
           />
-          {noVideoEncoder &&
-            <Alert color="yellow">
-              This browser can't encode video. Export a GIF or PNG frames instead, or use a
-              recent version of Chrome, Edge, Firefox or Safari.
-            </Alert>
-          }
+          {noVideo && <Alert color="yellow">{noVideo}</Alert>}
         </Stack>
       </form>
       {error && <Alert color="red" mt="md">{error}</Alert>}

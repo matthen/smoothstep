@@ -12,6 +12,7 @@ import { safeFilename, type DownloadableFile } from '../lib/archive';
 import { textureURL } from '../lib/config';
 import { variableValues, type AnimationDocument } from '../lib/document';
 import { Renderer } from '../render/Renderer';
+import { noVideoReason } from './videoSupport';
 
 export class ExportCancelled extends Error {}
 
@@ -34,8 +35,9 @@ interface Encoder {
 async function videoEncoder(
   canvas: HTMLCanvasElement, type: "webm" | "mp4", fps: number, width: number, height: number,
 ): Promise<Encoder> {
-  if (typeof VideoEncoder === "undefined") {
-    throw new Error("This browser can't encode video. Try Chrome, Edge or Firefox, or export a GIF or PNG frames.");
+  const noVideo = noVideoReason();
+  if (noVideo) {
+    throw new Error(noVideo);
   }
   const candidates: VideoCodec[] = type === "mp4" ? ["avc", "hevc", "av1"] : ["vp9", "vp8", "av1"];
   const codec = await getFirstEncodableVideoCodec(candidates, {width, height});

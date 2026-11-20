@@ -1,6 +1,7 @@
-import { Button, CopyButton, Group, Table, Text, Title, Tooltip, UnstyledButton } from '@mantine/core';
+import { Button, Group, Table, Text, Title, Tooltip, UnstyledButton } from '@mantine/core';
 
 import AppModal from '../app/AppModal';
+import CopyText from '../app/CopyText';
 import { usePhone } from '../app/usePhone';
 
 interface ShaderInputsProps {
@@ -22,14 +23,14 @@ const INPUTS: {name: string; last?: string; type: string; description: string}[]
 
 function Name({name, last}: {name: string; last?: string}) {
   return (
-    <CopyButton value={name} timeout={1200}>
+    <CopyText value={name} timeout={1200}>
       {({copied, copy}) =>
         <Tooltip label={copied ? "Copied" : "Copy " + name} openDelay={copied ? 0 : 400} opened={copied || undefined}>
           <UnstyledButton className="inputName" onClick={copy}>
             <code>{name}</code>{last && <> … <code>{last}</code></>}
           </UnstyledButton>
         </Tooltip>}
-    </CopyButton>
+    </CopyText>
   );
 }
 

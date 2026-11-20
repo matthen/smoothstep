@@ -1,9 +1,10 @@
-import { ActionIcon, Alert, Button, CopyButton, Group, Stack, Text, Textarea, TextInput, Title, Tooltip } from '@mantine/core';
+import { ActionIcon, Alert, Button, Group, Stack, Text, Textarea, TextInput, Title, Tooltip } from '@mantine/core';
 import { useMemo, useState } from 'react';
 import { TbCheck, TbCopy, TbDownload, TbQrcode } from 'react-icons/tb';
 import { encode, renderSVG } from 'uqr';
 
 import AppModal from '../app/AppModal';
+import CopyText from '../app/CopyText';
 import { download } from '../lib/archive';
 import { DOCS_URL } from '../lib/config';
 import type { AnimationDocument } from '../lib/document';
@@ -20,7 +21,7 @@ interface ShareProps {
 
 function Copy({value}: {value: string}) {
   return (
-    <CopyButton value={value}>
+    <CopyText value={value}>
       {({copied, copy}) => (
         <Tooltip label={copied ? "Copied" : "Copy"} withArrow>
           <ActionIcon variant="subtle" color={copied ? "teal" : "gray"} onClick={copy} aria-label="Copy">
@@ -28,7 +29,7 @@ function Copy({value}: {value: string}) {
           </ActionIcon>
         </Tooltip>
       )}
-    </CopyButton>
+    </CopyText>
   );
 }
 

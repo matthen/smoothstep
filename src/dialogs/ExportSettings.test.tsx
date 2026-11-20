@@ -52,8 +52,17 @@ describe("ExportSettings", () => {
     expect(screen.queryByText(/can't encode video/)).toBeNull();
     await userEvent.selectOptions(screen.getByLabelText("File type"), "PNG frames (.zip)");
     expect(props.onOptionsChange).toHaveBeenCalledWith({...GIF, type: "png"});
+    vi.stubGlobal("isSecureContext", true);
     rerender({options: {...GIF, type: "mp4"}});
     expect(screen.getByText(/can't encode video/)).toBeTruthy();
+    vi.unstubAllGlobals();
+  });
+
+  it("says video needs https on a page served over plain http", () => {
+    vi.stubGlobal("isSecureContext", false);
+    renderExport({...GIF, type: "webm"});
+    expect(screen.getByText(/only encode video for pages opened over https/)).toBeTruthy();
+    vi.unstubAllGlobals();
   });
 
   it("disables the form and shows progress while exporting", async () => {

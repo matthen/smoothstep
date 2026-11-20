@@ -69,7 +69,7 @@ function desktopSteps({showPane}: TourOptions): DriveStep[] {
         title: "The timeline",
         description: "Each row is a number you can animate, <code>iFloat0</code> to <code>iFloat15</code>. " +
           "Click or drag in a row to add a transition, then set the values it moves between. Use them in " +
-          "your code like any other number.",
+          "your code like any other number, and <code>#define size iFloat0</code> names a row.",
         side: "top",
       },
     },
@@ -137,7 +137,8 @@ function phoneSteps({showPane}: TourOptions): DriveStep[] {
       popover: {
         title: "The timeline",
         description: "Each row is a number you can animate, <code>iFloat0</code> to <code>iFloat15</code>. " +
-          "Tap where a transition starts, then where it ends, then set the values it moves between.",
+          "Tap where a transition starts, then where it ends, then set the values it moves between. " +
+          "<code>#define size iFloat0</code> in your code names a row.",
         side: "top",
       },
     },

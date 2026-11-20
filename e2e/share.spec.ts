@@ -173,3 +173,21 @@ test("timeline rows take their #define names", async ({page, context}) => {
   await expect(page.locator(".rowLabel").nth(0)).toHaveText("iFloat0");
   await expect(page.locator(".rowLabel").nth(1)).toHaveText("radius");
 });
+
+test("Copy still copies the link where the clipboard API is blocked", async ({page, context}) => {
+  const errors = await offline(context);
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  // As on a page served over plain http from another computer.
+  await context.addInitScript(() => {
+    navigator.clipboard.writeText = () => Promise.reject(new DOMException("Blocked", "NotAllowedError"));
+  });
+  await page.goto("./#example/534226b1d5ed");
+  await expect(page.locator("#titleInput")).toHaveValue("Minimal Animation");
+  const modal = await shareDialog(page);
+  const link = await modal.getByLabel("Link").inputValue();
+  await modal.getByRole("button", {name: "Copy"}).first().click();
+  await expect(page.getByText("Copied")).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(link);
+  await expect(modal).toBeVisible();
+  expect(errors).toEqual([]);
+});
