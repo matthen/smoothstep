@@ -1,4 +1,5 @@
 import { ActionIcon, Tooltip, UnstyledButton } from '@mantine/core';
+import { useEffect, useRef } from 'react';
 import { TbChevronRight, TbPlus, TbX } from 'react-icons/tb';
 
 import { MAX_BUFFERS } from '../lib/document';
@@ -24,8 +25,13 @@ export function shaderName(shader: ShaderId): string {
 export default function ShaderTabs({numBuffers, current, error, onChoose, onAdd, onRemoveLast}: ShaderTabsProps) {
   const shaders: ShaderId[] = [...Array.from({length: numBuffers}, (_, i) => i), "image"];
   const then = (key: string) => <TbChevronRight key={key} className="shaderThen" aria-hidden />;
+  const rowRef = useRef<HTMLDivElement>(null);
+  // When the row scrolls sideways, keep the open tab in view.
+  useEffect(() => {
+    rowRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({block: "nearest", inline: "nearest"});
+  }, [current, numBuffers]);
   return (
-    <div className="shaderTabs" role="tablist" aria-label="Shaders, in the order they draw">
+    <div className="shaderTabs" role="tablist" aria-label="Shaders, in the order they draw" ref={rowRef}>
       {shaders.map((shader, i) => [
         i > 0 && then("then" + shader),
         shader === "image" && numBuffers < MAX_BUFFERS && [
