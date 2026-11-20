@@ -146,7 +146,7 @@ export default function App() {
   // The link the animation opened from, which can be shared again while it's unchanged.
   const [sharedFrom, setSharedFrom] = useState<Route | null>(null);
 
-  // Animated values held still while their sliders are dragged, by row.
+  // Animated values held by their sliders, by row, until the animation plays or the playhead moves.
   const [held, setHeld] = useState<ReadonlyMap<number, number>>(new Map());
   const values = useMemo(() => variableValues(doc.variables, time).map((v, i) => held.get(i) ?? v),
     [doc.variables, time, held]);
