@@ -84,13 +84,11 @@ export default function Sliders({variables, values, names, code, held, onVariabl
         const top = hi > lo ? hi : lo + 1;
         const fraction = Math.min(Math.max((value - lo) / (top - lo), 0), 1);
         return (
-          <div className="sliderRow" key={row}>
+          <div className="sliderRow" key={row} data-held={held.has(row) || undefined}>
             <div className="sliderName">
               {name}
               {names[row] && <span className="floatName"> iFloat{row}</span>}
-              {animated && (held.has(row)
-                ? <span className="sliderAnimated" data-held title="The timeline takes over again when you play">held</span>
-                : <span className="sliderAnimated" title="Set by the timeline">animated</span>)}
+              {animated && <span className="sliderAnimated" title="Set by the timeline">animated</span>}
             </div>
             <NumberBox
               className="sliderEnd" label={name + " minimum"} value={lo} lo={lo} hi={hi}

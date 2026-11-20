@@ -1263,8 +1263,12 @@ div#textures .texturesHint {
   color: $dt-gray-medium;
 }
 
-// An animated input held by its slider, until the animation plays.
-.sliderAnimated[data-held] {
-  color: $dt-orange;
-  border-color: $dt-orange;
+// An animated input held by its slider, until the animation plays: the slider turns orange.
+.sliderRow[data-held] {
+  .mantine-Slider-root {
+    --slider-color: #{$dt-orange};
+  }
+  .sliderValue input {
+    color: $dt-orange;
+  }
 }
