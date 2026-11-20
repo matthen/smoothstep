@@ -1,6 +1,6 @@
 import { ActionIcon, Button, Group, Kbd, Loader, Menu, SegmentedControl, Tabs, Text, TextInput, Tooltip } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import {
   TbBook, TbBrandGithub, TbChevronDown, TbCopy, TbDeviceFloppy, TbDownload, TbFile, TbFolderOpen, TbHammer,
@@ -16,7 +16,7 @@ import Splash from '../dialogs/Splash';
 import Textures from '../dialogs/Textures';
 import CodeEditor from '../editor/CodeEditor';
 import * as archive from '../lib/archive';
-import { asset, documentHref, DOCS_URL, REPO_URL, textureURL, TUTORIAL_URL } from '../lib/config';
+import { asset, documentHref, DOCS_URL, REPO_URL, textureURL, TUTORIAL_HREF } from '../lib/config';
 import {
   DEFAULT_TITLE, MAX_TITLE_LENGTH, newDocument, parseDocument, variableValues,
   type AnimationDocument, type AspectRatio, type TextureSlot, type Variable,
@@ -27,6 +27,8 @@ import { useLatest } from '../lib/useLatest';
 import Canvas, { type CanvasHandle, type CanvasLayout } from '../render/Canvas';
 import PlayerControls from '../timeline/PlayerControls';
 import Timeline from '../timeline/Timeline';
+import { lessonTitle, type TutorialState } from '../tutorial/lessons';
+import { openingProgress } from '../tutorial/progress';
 import AppModal from './AppModal';
 import { setCrashDocument } from './crashState';
 import { setTourState, tourState } from './onboarding';
@@ -41,7 +43,10 @@ function windowTitle(title: string) {
 }
 
 // Which pane fills the screen below the canvas on a phone.
-type MobileTab = "code" | "animation" | "textures";
+type MobileTab = "code" | "animation" | "textures" | "learn";
+
+// Loaded when the tutorial opens, with its lessons.
+const TutorialPanel = lazy(() => import('../tutorial/TutorialPanel'));
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 const MOD_KEY = isMac ? "⌘" : "Ctrl";
@@ -60,6 +65,9 @@ function errorMessage(error: unknown, fallback: string): string {
 
 export default function App() {
   const initialRoute = useMemo(() => parseHash(window.location.hash), []);
+  // Where the tutorial opens, when the URL asks for it.
+  const [tutorialStart] = useState(() => initialRoute?.kind === "tutorial" ? openingProgress(initialRoute.lesson) : null);
+  const [tutorialOpen, setTutorialOpen] = useState(tutorialStart !== null);
   const [doc, setDoc] = useState<AnimationDocument>(newDocument);
   const [documentId, setDocumentId] = useState<string | null>(initialRoute?.kind === "anim" ? initialRoute.id : null);
   const [loading, setLoading] = useState(initialRoute !== null);
@@ -68,6 +76,8 @@ export default function App() {
   const [builtCode, setBuiltCode] = useState<string | null>(initialRoute ? null : doc.code);
   const [buildId, setBuildId] = useState(0);
   const [lineErrors, setLineErrors] = useState<LineError[]>([]);
+  // The code the canvas last compiled, and whether it compiled.
+  const [compiled, setCompiled] = useState<{code: string; ok: boolean} | null>(null);
   const [time, setTime] = useState(0);
   const [frameIndex, setFrameIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -76,9 +86,9 @@ export default function App() {
   const [layout, setLayout] = useState<CanvasLayout>({width: 0, height: 0, top: 0});
   const [showFooter, setShowFooter] = useState(true);
   const [wideCanvas, setWideCanvas] = useState(false);
-  const [mobileTab, setMobileTab] = useState<MobileTab>("code");
-  const [panelTab, setPanelTab] = useState<"animation" | "textures">("animation");
   const phone = usePhone();
+  const [mobileTab, setMobileTab] = useState<MobileTab>(tutorialStart && phone ? "learn" : "code");
+  const [panelTab, setPanelTab] = useState<"animation" | "textures">("animation");
   const [tourTaken, setTourTaken] = useState(() => tourState() === "taken");
   const [alert, setAlert] = useState<string | null>(null);
   const [dialog, setDialog] = useState<"open" | "saveCopy" | "export" | "splash" | "acknowledgements" | null>(
@@ -139,7 +149,7 @@ export default function App() {
   // Someone whose first visit is a link to an animation doesn't see the welcome dialog, so
   // offer them the tour once instead.
   const offerTourRef = useLatest(() => {
-    if (initialRoute && tourState() === null) {
+    if (initialRoute && initialRoute.kind !== "tutorial" && tourState() === null) {
       setTourState("offered");
       notifications.show({
         id: "tour", autoClose: 12000, title: "New to smoothstep?",
@@ -165,7 +175,10 @@ export default function App() {
         return;
       }
       try {
-        if (route.kind === "example") {
+        if (route.kind === "tutorial") {
+          // A new animation, so the tutorial never changes a saved one.
+          loadDocument({...newDocument(), title: lessonTitle(tutorialStart?.lesson ?? 0)});
+        } else if (route.kind === "example") {
           const response = await fetch(asset("examples/" + route.id + ".json"));
           if (!response.ok) {
             throw new Error("Example " + route.id + ": " + response.status);
@@ -193,7 +206,7 @@ export default function App() {
       }
     });
     return unsubscribe;
-  }, [initialRoute, loadDocument, offerTourRef]);
+  }, [initialRoute, loadDocument, offerTourRef, tutorialStart]);
 
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -360,17 +373,55 @@ export default function App() {
 
   const chooseMobileTab = (tab: MobileTab) => {
     setMobileTab(tab);
-    if (tab !== "code") {
+    if (tab === "animation" || tab === "textures") {
       setPanelTab(tab);
     }
   };
 
   const buildState = lineErrors.length > 0 ? "error" : builtCode === doc.code ? "built" : "changed";
 
+  const tutorialState: TutorialState = {
+    code: doc.code, builtCode: builtCode ?? "",
+    built: buildState === "built" && compiled?.ok === true && compiled.code === builtCode,
+    isPlaying, time, variables: doc.variables, textures: doc.textures, duration: doc.duration,
+    aspectRatio: doc.aspectRatio,
+  };
+
+  const putTutorialCode = (code: string) => {
+    updateDoc({code});
+    if (phone) {
+      chooseMobileTab("code");
+    }
+  };
+
+  const changeTutorialLesson = (lesson: number) => {
+    // Only the tutorial's own unsaved animation follows the lesson.
+    if (documentId !== null) {
+      return;
+    }
+    window.history.replaceState({}, "", TUTORIAL_HREF + "/" + (lesson + 1));
+    if (doc.title.startsWith("Tutorial: ")) {
+      const title = lessonTitle(lesson);
+      setDoc(d => ({...d, title}));
+      setTitleInput(title);
+      windowTitle(title);
+    }
+  };
+
+  const closeTutorial = () => {
+    setTutorialOpen(false);
+    if (mobileTab === "learn") {
+      setMobileTab("code");
+    }
+    if (window.location.hash.startsWith(TUTORIAL_HREF)) {
+      window.history.replaceState({}, "", "#new");
+    }
+  };
+
   return (
     <div
       className="app" data-footer={showFooter ? "open" : "closed"} data-wide={wideCanvas || undefined}
-      data-mobile-tab={mobileTab}
+      data-mobile-tab={mobileTab} data-tutorial={tutorialOpen || undefined}
     >
       <header className="appHeader">
         <a className="brand" href="./" aria-label="smoothstep home">
@@ -432,9 +483,7 @@ export default function App() {
             <Menu.Dropdown>
               <Menu.Item leftSection={<TbHome />} onClick={() => setDialog("splash")}>Welcome</Menu.Item>
               <Menu.Item leftSection={<TbRoute />} onClick={() => void takeTour()}>Take the tour</Menu.Item>
-              <Menu.Item component="a" href={TUTORIAL_URL} target="_blank" rel="noreferrer" leftSection={<TbSchool />}>
-                Tutorial
-              </Menu.Item>
+              <Menu.Item component="a" href={TUTORIAL_HREF} leftSection={<TbSchool />}>Tutorial</Menu.Item>
               <Menu.Item component="a" href={DOCS_URL} target="_blank" rel="noreferrer" leftSection={<TbBook />}>
                 Documentation
               </Menu.Item>
@@ -479,7 +528,11 @@ export default function App() {
             time={time} duration={doc.duration} frameIndex={frameIndex} variableValues={values}
             aspectRatio={doc.aspectRatio}
             onAspectRatioChange={(aspectRatio: AspectRatio) => updateDoc({aspectRatio})}
-            onBuilt={setLineErrors} onRestart={restartFrames} onLayout={setLayout} onToggleWide={() => setWideCanvas(w => !w)}
+            onBuilt={errors => {
+              setLineErrors(errors);
+              setCompiled({code: builtCode ?? "", ok: errors.length === 0});
+            }}
+            onRestart={restartFrames} onLayout={setLayout} onToggleWide={() => setWideCanvas(w => !w)}
           />
           <PlayerControls
             duration={doc.duration} currentTime={time} isPlaying={isPlaying}
@@ -494,9 +547,20 @@ export default function App() {
       <nav className="mobileTabs">
         <SegmentedControl
           fullWidth size="sm" value={mobileTab} onChange={value => chooseMobileTab(value as MobileTab)}
-          data={[{value: "code", label: "Code"}, {value: "animation", label: "Timeline"}, {value: "textures", label: "Textures"}]}
+          data={[
+            {value: "code", label: "Code"}, {value: "animation", label: "Timeline"}, {value: "textures", label: "Textures"},
+            ...(tutorialOpen ? [{value: "learn", label: "Learn"}] : []),
+          ]}
         />
       </nav>
+
+      {tutorialOpen && tutorialStart && !loading &&
+        <Suspense fallback={<div className="learnPanel" />}>
+          <TutorialPanel
+            initial={tutorialStart} state={tutorialState} onPutCode={putTutorialCode}
+            onLessonChange={changeTutorialLesson} onClose={closeTutorial}
+          />
+        </Suspense>}
 
       <section className="bottomPanel">
         <Tabs

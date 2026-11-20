@@ -24,8 +24,8 @@ function welcome(): DriveStep {
 function finish(): DriveStep {
   return {popover: {
     title: "Over to you",
-    description: "Try changing a number in the code and building it. For ideas, open one of the examples from " +
-      "File → Open. You can take this tour again from Help.",
+    description: "Try changing a number in the code and building it. Help → Tutorial teaches you step by " +
+      "step, and File → Open has examples for ideas. You can take this tour again from Help.",
   }};
 }
 

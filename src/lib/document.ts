@@ -41,7 +41,7 @@ export interface AnimationDocument {
   variables: Variable[];
 }
 
-export const DEFAULT_CODE = `// Getting started? Try the tutorial: https://github.com/matthen/smoothstep/blob/main/docs/tutorial/README.md
+export const DEFAULT_CODE = `// Getting started? Try the tutorial in Help → Tutorial.
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // Compute coordinates that range from x = 0 to 1 and y = 0 to 1.
   vec2 uv = fragCoord / iResolution.xy;

@@ -16,7 +16,7 @@ export default function Acknowledgements({show, onHide}: AcknowledgementsProps) 
   return (
     <AppModal opened={show} onClose={onHide} title="Acknowledgements" size="lg" classNames={{body: "prose"}}>
         <p>
-          smoothstep.io was developed by <Link href="https://twitter.com/matthen2">Matt Henderson</Link>.
+          smoothstep.io was developed by <Link href="https://www.matthen.com/">Matt Henderson</Link>.
         </p>
         <p>
           smoothstep.io is built on the work of a lot of open-source code,

@@ -3,7 +3,8 @@ import { imageURL } from './localStore';
 
 export const REPO_URL = "https://github.com/matthen/smoothstep";
 export const DOCS_URL = REPO_URL + "/tree/main/docs";
-export const TUTORIAL_URL = REPO_URL + "/blob/main/docs/tutorial/README.md";
+// Opens a new animation with the tutorial beside it; add "/<n>" for lesson n.
+export const TUTORIAL_HREF = "#tutorial";
 
 // URL of a file in public/, relative to the page so builds work from any path.
 export function asset(path: string): string {

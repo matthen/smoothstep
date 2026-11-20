@@ -6,7 +6,7 @@
 <p align="center">
   Make animations in the WebGL shader language, right in your browser.<br>
   <b><a href="https://smoothstep.io">Open smoothstep.io</a></b> ·
-  <a href="docs/tutorial/README.md">Tutorial</a> ·
+  <a href="https://smoothstep.io/#tutorial">Tutorial</a> ·
   <a href="docs/">Documentation</a>
 </p>
 
@@ -18,8 +18,16 @@ smoothstep is a toolkit for making animations in the WebGL shader language. You 
 GLSL fragment shader, animate its inputs on a timeline, give it image textures, and export
 the result as video. It all runs in your browser, with no server or sign-in.
 
-You can use it at **[smoothstep.io](https://smoothstep.io)**, or run your own copy. The
-[documentation](docs/) has a tutorial, examples and the full list of shader inputs.
+I started smoothstep.io in 2021 as a closed-source hosted site, with accounts that kept your
+animations on a server and let you share them with links. In November 2026 I rewrote it to run entirely in the browser, with no
+server or accounts, and released it here as open source under the MIT licence. If you saved your
+animations from the old site with "Download my data", open that zip with File → Open → "Open
+file…".
+
+You can use it at **[smoothstep.io](https://smoothstep.io)**, or run your own copy. To learn, start
+the [tutorial](https://smoothstep.io/#tutorial): it runs in the app, beside the editor, and each step
+notices when you've done it. The [documentation](docs/) has the examples and the full list of shader
+inputs.
 
 <p align="center">
   <img src="docs/images/examples.png" alt="Renders from four of the built-in examples">
@@ -39,9 +47,6 @@ smoothstep keeps your animations and uploads in your browser's storage. You can 
 animation, or all of them as a zip, to back them up, move them to another computer or share
 them, and open them again with File → Open → "Open file…".
 
-From 2021 to 2026, smoothstep.io was a hosted site with accounts. If you saved your
-animations from it with "Download my data", open that zip with "Open file…".
-
 ## Running it
 
 You need Node 24 (the version is in `.nvmrc`).
@@ -58,7 +63,8 @@ npm run test:e2e   # end-to-end tests in Chromium, against the build
 
 `npm run build` makes a plain static site in `dist/`. You can put it on any static host,
 such as GitHub Pages or Netlify, at any path. It works fully offline, including video export.
-Saved animations open at `#anim/<id>`, and the bundled examples at `#example/<id>`.
+Saved animations open at `#anim/<id>`, the bundled examples at `#example/<id>`, and the tutorial at
+`#tutorial` (or `#tutorial/<lesson>`), in a new animation.
 
 ## How it's built
 
@@ -77,6 +83,8 @@ Sass for the app's own styles, CodeMirror 6 for the code editor, and WebGL 2 for
   The pickers are adapted from [glslEditor](https://github.com/patriciogonzalezvivo/glslEditor).
 - `src/timeline/` is the timeline and the play and seek bar.
 - `src/dialogs/` has the welcome, Open, texture, export and other dialogs.
+- `src/tutorial/` is the tutorial: its lessons and their checks (`lessons.tsx`), and the Learn panel
+  that shows them beside the editor.
 - `src/export/` renders an animation frame by frame and encodes it in the browser. WebM and
   MP4 use the browser's WebCodecs encoder through [Mediabunny](https://mediabunny.dev), GIF
   uses [gifenc](https://github.com/mattdesl/gifenc), and PNG frames download as a zip.
@@ -98,4 +106,4 @@ request that isn't to your own machine, so they also check that the app works of
 The code is under the [MIT licence](LICENSE). The built-in textures and fonts keep their own
 licences, listed in [CREDITS.md](public/images/textures/CREDITS.md).
 
-smoothstep is made by [Matt Henderson](https://twitter.com/matthen2).
+smoothstep is made by [Matt Henderson](https://www.matthen.com/).

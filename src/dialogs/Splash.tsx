@@ -4,7 +4,7 @@ import { TbBook, TbBrandGithub, TbSchool } from 'react-icons/tb';
 
 import AppModal from '../app/AppModal';
 import { usePhone } from '../app/usePhone';
-import { asset, documentHref, DOCS_URL, REPO_URL, TUTORIAL_URL } from '../lib/config';
+import { asset, documentHref, DOCS_URL, REPO_URL, TUTORIAL_HREF } from '../lib/config';
 import { listDocuments, type DocumentSummary } from '../lib/localStore';
 import ExampleGallery from './ExampleGallery';
 import ImageWithFallback from './ImageWithFallback';
@@ -62,7 +62,7 @@ export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
         </div>
         <div>
           <div className="linkList">
-            <LinkItem href={TUTORIAL_URL} icon={<TbSchool />}>Getting started tutorial</LinkItem>
+            <LinkItem href={TUTORIAL_HREF} onClick={onHide} icon={<TbSchool />}>Getting started tutorial</LinkItem>
             <LinkItem href={DOCS_URL} icon={<TbBook />}>Documentation</LinkItem>
             <LinkItem href={REPO_URL} icon={<TbBrandGithub />}>Source code</LinkItem>
           </div>
@@ -86,7 +86,7 @@ export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
       <Title order={2} size="h5" mt="xl" mb="sm">Examples</Title>
       <ExampleGallery onOpen={onHide} />
       <Group justify="flex-end" mt="xl">
-        <Button variant="default" component="a" href={TUTORIAL_URL} target="_blank" rel="noreferrer">Tutorial</Button>
+        <Button variant="default" component="a" href={TUTORIAL_HREF} onClick={onHide}>Tutorial</Button>
         <Button variant={tourTaken ? "default" : "filled"} onClick={onTour} data-autofocus={!tourTaken || undefined}>
           Take the tour
         </Button>

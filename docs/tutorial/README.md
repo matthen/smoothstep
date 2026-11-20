@@ -1,24 +1,37 @@
 # Tutorial
 
-This guide will teach you the basics of creating animations with smoothstep.
+The tutorial is part of the app. **[Start it at smoothstep.io/#tutorial](https://smoothstep.io/#tutorial)**, or
+choose Help → Tutorial. It opens a new animation with the lessons beside the editor, and each step
+notices when you've done it.
 
-1. [Creating a simple shader](1-simple-shader.md)
-2. [Drawing a circle](2-drawing-a-circle.md)
-3. [Stateful animations](3-stateful-animations.md)
-4. [Next steps](4-next-steps.md)
+1. [Colour from position](https://smoothstep.io/#tutorial/1): a gradient from each pixel's position, and the colour picker.
+2. [Moving with time](https://smoothstep.io/#tutorial/2): `iTime`, waves and a cosine-palette shimmer.
+3. [Shapes](https://smoothstep.io/#tutorial/3): centred coordinates, circles from distances, and `smoothstep` edges.
+4. [The timeline](https://smoothstep.io/#tutorial/4): animating `iFloat0` and `iFloat1`, transition types, and the length.
+5. [Patterns](https://smoothstep.io/#tutorial/5): tiling with `fract`, rotation, and polar coordinates.
+6. [Textures](https://smoothstep.io/#tutorial/6): showing, warping and folding an image.
+7. [Memory with iPrevFrame](https://smoothstep.io/#tutorial/7): trails that fade, and setting up the first frame with `iFrame`.
+8. [Share it](https://smoothstep.io/#tutorial/8): saving, downloading and exporting video, and where to learn more.
+
+Each lesson builds one animation a step at a time, and most end with a related example to explore.
+
+The lessons are in [`src/tutorial/lessons.tsx`](../../src/tutorial/lessons.tsx), and their shaders in
+[`src/tutorial/shaders.ts`](../../src/tutorial/shaders.ts).
 
 ## Shaders
 
-Animations in smoothstep are actually *fragment shaders*, written in the WebGL2 shader language (*GLSL*). A shader computes the color of every pixel of each frame in parallel, using the location of the pixel, and variables like `iTime` that encode the frame timing. Your computer may run the code on its GPU, making the animations run fast. (But you can always export your animations at any frame rate, even if they do not run in real time.)
+Animations in smoothstep are fragment shaders, written in the WebGL 2 shader language (GLSL). A
+shader works out the colour of every pixel of each frame in parallel, from the pixel's position and
+inputs like `iTime`. Your computer can run it on its graphics card, so animations play fast, and
+you can always export them at any frame rate, even ones that don't play in real time.
 
-As you learn to code in GLSL, you can click on functions like `smoothstep` and input variables like `iTime` within the editor to see their definitions:
-
-![smoothstep definition](../images/tutorial/definition.png)
+As you learn GLSL, click a function like `smoothstep` or an input like `iTime` in the editor to see
+what it does.
 
 ## Shadertoy
 
-smoothstep is partly modeled after [Shadertoy](https://www.shadertoy.com/), but with features specifically for building animations. This means that you can use a lot of the resources for learning [Shadertoy](https://www.shadertoy.com/). In fact, a lot of code from [Shadertoy](https://www.shadertoy.com/) will also run on smoothstep.
-
-One excellent tutorial series is [TheArtofCode's Shadertoy tutorial](https://www.youtube.com/watch?v=u5HAYVHsasc&list=PLGmrMu-IwbguU_nY2egTFmlg691DN7uE5&ab_channel=TheArtofCode) on YouTube.
-
-[Start the tutorial](1-simple-shader.md)
+smoothstep is partly modelled on [Shadertoy](https://www.shadertoy.com/), with extra features for
+making animations. Much of what's written about Shadertoy applies here, and a lot of Shadertoy code
+runs in smoothstep with little or no change. [TheArtofCode's Shadertoy
+tutorials](https://www.youtube.com/watch?v=u5HAYVHsasc&list=PLGmrMu-IwbguU_nY2egTFmlg691DN7uE5) on
+YouTube are a good place to start.
