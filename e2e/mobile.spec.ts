@@ -84,3 +84,24 @@ test("on a phone, the button under the timeline's rows adds the next one", async
   await page.screenshot({path: "test-results/mobile-add-row.png"});
   expect(errors).toEqual([]);
 });
+
+test("on a phone, the canvas's overlays show for a few seconds after a tap", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#new");
+  const picker = page.locator("#canvasContainer .aspectRatioPicker");
+  const info = page.locator("#canvasContainer .fps");
+  await expect(picker).toHaveCSS("opacity", "0");
+  await expect(info).toHaveCSS("opacity", "0");
+  // Hidden, the picker lets the tap through to the canvas.
+  await picker.tap({force: true});
+  await expect(picker).toHaveCSS("opacity", "1");
+  await expect(info).toHaveCSS("opacity", "1");
+  await page.screenshot({path: "test-results/mobile-overlays.png"});
+  await expect(page.getByLabel("Aspect ratio")).not.toBeFocused();
+  // Once shown, it can be used.
+  await page.getByLabel("Aspect ratio").selectOption({label: "16:9"});
+  await expect(info).toContainText(/\d+×\d+px/);
+  await page.getByLabel("Aspect ratio").blur();
+  await expect(picker).toHaveCSS("opacity", "0", {timeout: 5000});
+  expect(errors).toEqual([]);
+});

@@ -418,10 +418,23 @@ div#canvasContainer {
     opacity: 1;
   }
 
-  // No hover on touch screens, so keep them visible.
+  // No hover on touch screens: a tap on the canvas shows them for a while. The picker can be tapped only once
+  // it's visible, a moment after, so the tap that shows it doesn't also open it.
   @media (hover: none) {
-    div.fps, div.aspectRatioPicker {
+    &, &:hover {
+      div.fps, div.aspectRatioPicker {
+        opacity: 0;
+      }
+
+      div.aspectRatioPicker {
+        visibility: hidden;
+        transition: opacity 150ms, visibility 0s 300ms;
+      }
+    }
+
+    &[data-overlays] div.fps, &[data-overlays] div.aspectRatioPicker, div.aspectRatioPicker:focus-within {
       opacity: 1;
+      visibility: visible;
     }
   }
 
