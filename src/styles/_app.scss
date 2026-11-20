@@ -221,6 +221,13 @@ a {
   min-width: 0;
   min-height: 0;
   padding: 4px 0;
+  display: flex;
+  flex-direction: column;
+
+  > .ss-code-editor {
+    flex: 1;
+    min-height: 0;
+  }
 
   @include desktop {
     grid-area: auto;
@@ -1065,4 +1072,88 @@ div#textures .texturesHint {
     max-height: 160px;
     overflow: auto;
   }
+}
+
+// One row of tabs on a line, which the open tab breaks to join the code below it. It scrolls
+// sideways when the tabs don't fit. The line is an inset shadow, since a scrolling row clips
+// anything drawn over its own border.
+.shaderTabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 4px 8px 0;
+  box-shadow: inset 0 -1px 0 $dt-gray;
+  margin-bottom: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  > * {
+    flex-shrink: 0;
+  }
+
+  > .shaderThen, > .mantine-ActionIcon-root {
+    align-self: center;
+  }
+}
+
+.shaderTab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  margin-bottom: 1px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-top-width: 2px;
+  border-radius: 6px 6px 0 0;
+  font-size: 13px;
+  white-space: nowrap;
+  color: $dt-gray-medium;
+  background: $dt-gray-darker;
+
+  @include phone {
+    padding: 5px 9px;
+  }
+
+  &[data-buffer] {
+    font-family: var(--mantine-font-family-monospace);
+  }
+
+  &:hover {
+    color: $dt-gray-light;
+  }
+
+  // The same colour as the code, and over the line, so nothing separates them.
+  &[aria-selected="true"] {
+    color: $dt-gray-light;
+    background: $dt-gray-dark;
+    border-color: $dt-gray;
+    border-top-color: $dt-purple;
+    margin-bottom: 0;
+    padding-bottom: 6px;
+  }
+
+  // The shader whose code didn't build.
+  &[data-error] {
+    color: $dt-red;
+  }
+}
+
+// The arrow between tabs, showing which shader draws next.
+.shaderThen {
+  color: $dt-blue;
+  font-size: 12px;
+}
+
+// Sets the Shared tab apart from the shaders that draw.
+.shaderDivider {
+  align-self: center;
+  width: 1px;
+  height: 18px;
+  margin: 0 6px;
+  background: $dt-gray;
 }

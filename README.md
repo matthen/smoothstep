@@ -40,8 +40,10 @@ The editor highlights GLSL, shows compile errors on the line they occur, and giv
 inline pickers for colours, numbers and vectors. The timeline drives 16 animated variables,
 `iFloat0` to `iFloat15`, each a sequence of step, linear or smoothstep transitions. You get 8
 texture slots, `iTexture0` to `iTexture7`, which take built-in photos, noise, tiling textures
-and font sheets, or your own images up to 4096px. smoothstep exports WebM, MP4, animated
-GIFs and PNG frames, all made in your browser.
+and font sheets, or your own images up to 4096px. Up to 4 buffers, `iBuffer0` to `iBuffer3`,
+are extra shaders that draw before the image each frame and hold any numbers, so you can run
+simulations across frames. smoothstep exports WebM, MP4, animated GIFs and PNG frames, all made
+in your browser.
 
 smoothstep keeps your animations and the images you add in your browser's storage. You can download one
 animation, or all of them as a zip, to back them up or move them to another computer, and open
@@ -88,9 +90,10 @@ Sass for the app's own styles, CodeMirror 6 for the code editor, and WebGL 2 for
   animations from links, gists and other websites.
 - `src/player/` is the bare player, without React, behind `embed.html` and the player files that
   Share downloads.
-- `src/render/` compiles and draws the shader, and maps compile errors back to lines of
-  your code.
-- `src/editor/` is the code editor, with GLSL highlighting, hints and the inline pickers.
+- `src/render/` compiles and draws the buffers and the image, and maps compile errors back to
+  lines of your code.
+- `src/editor/` is the code editor, with GLSL highlighting, hints, the inline pickers and the
+  tabs for the image, buffers and shared code.
   The pickers are adapted from [glslEditor](https://github.com/patriciogonzalezvivo/glslEditor).
 - `src/timeline/` is the timeline and the play and seek bar.
 - `src/dialogs/` has the welcome, Open, texture, export, help and other dialogs.

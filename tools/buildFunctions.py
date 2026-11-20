@@ -52,6 +52,13 @@ for i in range(16):
         signatures=[f"float iFloat{i}"],
     ),
 
+for i in range(4):
+    functions += dict(
+        functionName=f"iBuffer{i}",
+        oneLiner=f"What the buffer iBuffer{i} drew most recently.",
+        signatures=[f"sampler2D iBuffer{i}"],
+    ),
+
 
 builtins = (
     "greaterThanEqual acos acosh asin asinh atan atanh cos cosh degrees radians sin sinh tan tanh "  # NOQA: E501

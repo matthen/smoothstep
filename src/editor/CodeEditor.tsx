@@ -13,9 +13,11 @@ export interface CodeEditorProps {
   onBuild(): void;
   onSave(): void;
   lineErrors: LineError[];
+  // Kept but not shown, so another tab's editor keeps its undo history, cursor and scroll.
+  hidden?: boolean;
 }
 
-export default function CodeEditor({ value, onChange, onBuild, onSave, lineErrors }: CodeEditorProps) {
+export default function CodeEditor({ value, onChange, onBuild, onSave, lineErrors, hidden }: CodeEditorProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const extensionsRef = useRef<Extension | null>(null);
@@ -90,5 +92,12 @@ export default function CodeEditor({ value, onChange, onBuild, onSave, lineError
     });
   }, [lineErrors]);
 
-  return <div className="ss-code-editor" ref={parentRef} />;
+  // A hidden editor can't measure itself, so it does when it's shown again.
+  useEffect(() => {
+    if (!hidden) {
+      viewRef.current?.requestMeasure();
+    }
+  }, [hidden]);
+
+  return <div className="ss-code-editor" ref={parentRef} hidden={hidden} />;
 }

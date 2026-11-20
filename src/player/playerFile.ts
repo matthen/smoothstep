@@ -4,7 +4,7 @@ import script from 'virtual:player-script';
 
 import { safeFilename, type DownloadableFile } from '../lib/archive';
 import { textureURL } from '../lib/config';
-import type { AnimationDocument } from '../lib/document';
+import { bufferCodes, type AnimationDocument } from '../lib/document';
 
 async function dataURL(url: string): Promise<string> {
   const blob = await (await fetch(url)).blob();
@@ -27,9 +27,10 @@ function escapeHTML(text: string): string {
 
 // `link` opens the animation in smoothstep, from the corner of the player.
 export async function playerFile(doc: AnimationDocument, link: string | null): Promise<DownloadableFile> {
-  // Only the textures the code uses, as photos and panoramas can be several megabytes.
+  // Only the textures some tab's code uses, as photos and panoramas can be several megabytes.
+  const allCode = [doc.code, doc.shared ?? "", ...bufferCodes(doc)].join("\n");
   const textures = await Promise.all(doc.textures.map((slot, i) =>
-    new RegExp("\\biTexture" + i + "\\b").test(doc.code) ? dataURL(textureURL(slot)) : ""));
+    new RegExp("\\biTexture" + i + "\\b").test(allCode) ? dataURL(textureURL(slot)) : ""));
   const data = {document: doc, textures, link};
   const html = `<!DOCTYPE html>
 <html lang="en">

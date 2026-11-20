@@ -586,16 +586,35 @@ export const LESSONS: Lesson[] = [
         check: (now, atStart) => rebuilt(now, atStart) && uses(now.builtCode, /\biFrame\b/),
       },
       {
+        id: "buffers",
+        title: "Buffers",
+        body: <>
+          <p>
+            <code>iPrevFrame</code> remembers what the image looked like. To remember other things, such as where
+            water is flowing, add a buffer with the <span aria-label="add">⊕</span> button above the code.
+          </p>
+          <p>
+            A buffer is another shader, with its own tab, that draws before the image each frame. Every tab can read
+            what it drew as <code>iBuffer0</code>, and a buffer can read its own last frame the same way. Buffers
+            hold any numbers, not just colours, so they can run simulations that the image then draws.
+          </p>
+          <p>
+            Once there's a buffer, the Shared tab holds functions and <code>#define</code>s that every tab can use.
+          </p>
+        </>,
+      },
+      {
         id: "explore-memory",
         title: "Explore",
         body: <>
           <p>
             Glowing trails draws many dots this way, and the Game of Life example works out each frame
-            entirely from the last.
+            entirely from the last. Ink in water uses two buffers: one for the water's flow, and one for the
+            ink it carries.
           </p>
           {EXPLORE}
         </>,
-        examples: ["3156da0acaeb", "26d46785c1f6"],
+        examples: ["3156da0acaeb", "26d46785c1f6", "5c81f0d3a7e2"],
       },
     ],
   },

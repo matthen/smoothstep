@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { exportSize, frameCount } from '../export/exportVideo';
 import { fitCanvas } from './layout';
-import { fragmentSource, parseErrors } from './Renderer';
+import { buffersUsed, fragmentSource, locateErrors, parseErrors } from './Renderer';
 
 describe("parseErrors", () => {
   const code = "void mainImage(out vec4 c, in vec2 p) {\n  c = vec4(1.);\n  oops;\n}";
@@ -32,5 +32,39 @@ describe("sizes", () => {
     expect(exportSize({width: 511, fps: 30, type: "webm"}, [16, 9])).toEqual([512, 288]);
     expect(exportSize({width: 100, fps: 30, type: "gif"}, [3, 4])).toEqual([100, 134]);
     expect(frameCount(12, 30)).toBe(360);
+  });
+});
+
+describe("buffers and shared code", () => {
+  it("declares a sampler for each buffer, and keeps a buffer's alpha but not the image's", () => {
+    const image = fragmentSource("void mainImage(out vec4 c, in vec2 p) {}", 2);
+    expect(image).toContain("uniform sampler2D iBuffer0; uniform sampler2D iBuffer1;");
+    expect(image).not.toContain("iBuffer2");
+    expect(image).toContain("smoothstepColor.a = 1.");
+    expect(fragmentSource("void mainImage(out vec4 c, in vec2 p) {}", 2, true)).not.toContain(".a = 1.");
+  });
+
+  it("puts the shared code before each shader's own, keeping the prefix three lines", () => {
+    const source = fragmentSource("void mainImage(out vec4 c, in vec2 p) {}", 0, false, "float f() { return 1.; }");
+    const lines = source.split("\n");
+    expect(lines[3]).toBe("float f() { return 1.; }");
+    expect(lines[4]).toBe("void mainImage(out vec4 c, in vec2 p) {}");
+  });
+
+  it("works out which buffers the image needs, through the buffers it reads", () => {
+    const buffers = ["texture(iBuffer2, uv)", "nothing", "texture(iBuffer2, uv)", "texture(iBuffer0, uv)"];
+    expect(buffersUsed("texture(iBuffer3, uv)", buffers)).toEqual([0, 2, 3]);
+    expect(buffersUsed("no buffers", buffers)).toEqual([]);
+    // Reading a buffer that doesn't exist doesn't count.
+    expect(buffersUsed("texture(iBuffer7, uv)", buffers)).toEqual([]);
+  });
+
+  it("puts errors in the shared code or in the shader's own code", () => {
+    const shared = "float a;\nfloat b;";
+    expect(locateErrors([{line: 1, message: "in shared"}, {line: 3, message: "own"}], shared))
+      .toEqual({inShared: true, errors: [{line: 1, message: "in shared"}]});
+    expect(locateErrors([{line: 3, message: "own"}], shared))
+      .toEqual({inShared: false, errors: [{line: 1, message: "own"}]});
+    expect(locateErrors([{line: 0, message: "own"}], "")).toEqual({inShared: false, errors: [{line: 0, message: "own"}]});
   });
 });

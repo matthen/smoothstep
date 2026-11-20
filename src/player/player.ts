@@ -1,6 +1,6 @@
 // A bare player for one animation, without React or the editor: used by the embedded player
 // (embed.html) and the standalone player file. It loops the animation, and a click pauses it.
-import { variableValues, type AnimationDocument } from '../lib/document';
+import { bufferCodes, variableValues, type AnimationDocument } from '../lib/document';
 import { fitCanvas } from '../render/layout';
 import { Renderer } from '../render/Renderer';
 
@@ -44,7 +44,7 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link}: Pl
     showMessage(container, "This animation needs WebGL 2, which this browser or device doesn't support.");
     return;
   }
-  const result = renderer.setCode(doc.code);
+  const result = renderer.setCode(doc.code, bufferCodes(doc), doc.shared);
   if (!result.ok) {
     showMessage(container, "This animation's code has an error: " + result.errors.map(e => e.message).join(" "));
     return;

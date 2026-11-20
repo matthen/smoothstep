@@ -21,6 +21,7 @@ const POSTER_SECONDS = 4;
 // Seconds to skip, by example id.
 const START = {
   "26d46785c1f6": 40,  // The cellular automaton starts from an empty screen.
+  "5c81f0d3a7e2": 7,  // The ink takes a few seconds to swirl.
 };
 const posters = process.argv.includes("--posters");
 const args = process.argv.slice(2).filter(a => a !== "--posters");

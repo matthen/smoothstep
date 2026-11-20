@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  canonicalJSON, newDocument, parseDocument, InvalidDocumentError, variableValue,
+  canonicalJSON, MAX_BUFFERS, newDocument, parseDocument, InvalidDocumentError, variableValue,
   type Transition,
 } from './document';
 
@@ -15,6 +15,20 @@ describe("parseDocument", () => {
     const doc: Record<string, unknown> = {...newDocument()};
     delete doc.aspectRatio;
     expect(parseDocument(doc).aspectRatio).toEqual([1, 1]);
+  });
+
+  it("keeps buffers and shared code, and leaves them out when there are none", () => {
+    const doc = {...newDocument(), buffers: [{code: "a"}, {code: "b", extra: 1}], shared: "float x;"};
+    expect(parseDocument(doc)).toEqual({...newDocument(), buffers: [{code: "a"}, {code: "b"}], shared: "float x;"});
+    const empty = parseDocument({...newDocument(), buffers: [], shared: ""});
+    expect("buffers" in empty || "shared" in empty).toBe(false);
+  });
+
+  it("refuses more buffers than the renderer has, and code that isn't text", () => {
+    const fiveBuffers = Array.from({length: MAX_BUFFERS + 1}, () => ({code: ""}));
+    expect(() => parseDocument({...newDocument(), buffers: fiveBuffers})).toThrow(InvalidDocumentError);
+    expect(() => parseDocument({...newDocument(), buffers: [{code: 1}]})).toThrow(InvalidDocumentError);
+    expect(() => parseDocument({...newDocument(), shared: 1})).toThrow(InvalidDocumentError);
   });
 
   it("drops unknown fields, like the old editor's transition state", () => {

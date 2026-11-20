@@ -2,6 +2,7 @@
 
 export const NUM_TEXTURES = 8;
 export const NUM_VARIABLES = 16;
+export const MAX_BUFFERS = 4;
 export const DEFAULT_TITLE = "Untitled animation";
 export const MAX_TITLE_LENGTH = 32;
 export const DEFAULT_DURATION = 12;
@@ -32,9 +33,18 @@ export interface TextureSlot {
   isUserUploaded: boolean;
 }
 
+// A shader that renders before the image each frame, which every shader can read as iBuffer<index>.
+export interface Buffer {
+  code: string;
+}
+
 export interface AnimationDocument {
   title: string;
   code: string;
+  // Left out when there are none, so animations without buffers are saved as before.
+  buffers?: Buffer[];
+  // Code that goes before the image's and every buffer's own code. Left out when there's none.
+  shared?: string;
   duration: number;  // Seconds.
   aspectRatio: AspectRatio;
   textures: TextureSlot[];
@@ -55,6 +65,40 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 // The built-in image an empty texture slot holds.
 export const EMPTY_TEXTURE = "special/black.png";
+
+// A new buffer's code, which draws what it drew last frame, so the image can read it.
+export function newBufferCode(index: number): string {
+  return `// iBuffer${index} draws before the image each frame, and any shader can read what it drew:
+// try texture(iBuffer${index}, uv) in the Image tab. Reading itself gives what it drew last frame.
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 uv = fragCoord / iResolution.xy;
+  vec4 last = texture(iBuffer${index}, uv);
+  vec4 now = vec4(uv, 0.5 + 0.5 * sin(iTime), 1.);
+  fragColor = mix(last, now, 0.05);
+}`;
+}
+
+export function bufferCodes(doc: AnimationDocument): string[] {
+  return (doc.buffers ?? []).map(buffer => buffer.code);
+}
+
+// The code that compiles with the image's: the buffers', and the code they all share.
+export interface ShaderExtras {
+  buffers: string[];
+  shared: string;
+}
+
+export function shaderExtras(doc: AnimationDocument): ShaderExtras {
+  return {buffers: bufferCodes(doc), shared: doc.shared ?? ""};
+}
+
+export function sameExtras(a: ShaderExtras, b: ShaderExtras): boolean {
+  return a.shared === b.shared && a.buffers.length === b.buffers.length && a.buffers.every((c, i) => c === b.buffers[i]);
+}
+
+// What the Shared tab shows before anything's written in it.
+export const SHARED_PLACEHOLDER = `// Functions, constants and #defines here can be used in every tab: the image and each buffer.
+`;
 
 export function emptyTextures(): TextureSlot[] {
   return Array.from({length: NUM_TEXTURES}, (_, i) => (
@@ -144,9 +188,20 @@ export function parseDocument(value: unknown): AnimationDocument {
     });
     return {transitions};
   });
+  if (json.buffers !== undefined && (!Array.isArray(json.buffers) || json.buffers.length > MAX_BUFFERS)) {
+    fail("buffers");
+  }
+  const buffers = ((json.buffers ?? []) as unknown[]).map((buffer, i): Buffer => {
+    if (!isRecord(buffer) || typeof buffer.code !== "string") {fail("buffer " + i);}
+    return {code: (buffer as Record<string, unknown>).code as string};
+  });
+  if (json.shared !== undefined && typeof json.shared !== "string") {fail("shared");}
+  const shared = (json.shared ?? "") as string;
   return {
     title: json.title as string,
     code: json.code as string,
+    ...(buffers.length > 0 ? {buffers} : {}),
+    ...(shared ? {shared} : {}),
     duration: json.duration as number,
     aspectRatio: [aspectRatio[0], aspectRatio[1]] as AspectRatio,
     textures,
