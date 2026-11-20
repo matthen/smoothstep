@@ -19,13 +19,22 @@ export function shaderName(shader: ShaderId): string {
 }
 
 // Tabs above the code for each buffer and the image, in the order they draw each frame, with
-// buttons to add a buffer or remove the last.
+// a button to add a buffer where it will go, just before the image, and one to remove the last.
 export default function ShaderTabs({numBuffers, current, error, onChoose, onAdd, onRemoveLast}: ShaderTabsProps) {
   const shaders: ShaderId[] = [...Array.from({length: numBuffers}, (_, i) => i), "image"];
+  const then = (key: string) => <TbChevronRight key={key} className="shaderThen" aria-hidden />;
   return (
     <div className="shaderTabs" role="tablist" aria-label="Shaders, in the order they draw">
       {shaders.map((shader, i) => [
-        i > 0 && <TbChevronRight key={"then" + shader} className="shaderThen" aria-hidden />,
+        i > 0 && then("then" + shader),
+        shader === "image" && numBuffers < MAX_BUFFERS && [
+          <Tooltip key="add" label="Add a buffer: a shader that draws before the image, which any shader can read">
+            <ActionIcon variant="light" radius="xl" size="sm" onClick={onAdd} aria-label="Add a buffer">
+              <TbPlus />
+            </ActionIcon>
+          </Tooltip>,
+          then("thenImage"),
+        ],
         <UnstyledButton
           key={shader} role="tab" aria-selected={shader === current} className="shaderTab"
           data-error={shader === error || undefined} onClick={() => onChoose(shader)}
@@ -42,12 +51,6 @@ export default function ShaderTabs({numBuffers, current, error, onChoose, onAdd,
             </Tooltip>}
         </UnstyledButton>,
       ])}
-      {numBuffers < MAX_BUFFERS &&
-        <Tooltip label="Add a buffer: a shader that draws before the image, which any shader can read">
-          <UnstyledButton className="shaderTab addBuffer" onClick={onAdd}>
-            <TbPlus /> Buffer
-          </UnstyledButton>
-        </Tooltip>}
     </div>
   );
 }

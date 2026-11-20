@@ -1077,6 +1077,7 @@ div#textures .texturesHint {
 .shaderTabs {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 2px;
   padding: 0 8px 4px;
   border-bottom: 1px solid $dt-gray-darker;
@@ -1106,23 +1107,10 @@ div#textures .texturesHint {
   &[data-error] {
     color: $dt-red;
   }
-
-  &.addBuffer {
-    color: $dt-blue;
-
-    &:hover {
-      color: $dt-gray-light;
-    }
-  }
 }
 
 // The arrow between tabs, showing which shader draws next.
 .shaderThen {
-  align-self: center;
   color: $dt-blue;
   font-size: 12px;
-}
-
-.shaderTabs .addBuffer {
-  margin-left: 8px;
 }
