@@ -1094,8 +1094,8 @@ div#textures .texturesHint {
   align-items: center;
   gap: 4px;
   padding: 5px 12px;
-  margin-bottom: -1px;
   border: 1px solid transparent;
+  border-bottom: none;
   border-top-width: 2px;
   border-radius: 6px 6px 0 0;
   font-size: 13px;
@@ -1110,13 +1110,14 @@ div#textures .texturesHint {
     color: $dt-gray-light;
   }
 
-  // The same colour as the code, with no line between them.
+  // The same colour as the code, and over the line, so nothing separates them.
   &[aria-selected="true"] {
     color: $dt-gray-light;
     background: $dt-gray-dark;
     border-color: $dt-gray;
     border-top-color: $dt-purple;
-    border-bottom-color: $dt-gray-dark;
+    margin-bottom: -1px;
+    padding-bottom: 6px;
   }
 
   // The shader whose code didn't build.
