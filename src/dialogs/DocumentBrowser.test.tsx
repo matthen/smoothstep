@@ -39,7 +39,7 @@ describe("DocumentBrowser", () => {
   it("links to the bundled examples", async () => {
     const props = renderBrowser();
     await screen.findByText("Older");
-    const example = screen.getByRole("link", {name: /3D ray tracing/});
+    const example = screen.getByRole("link", {name: /3D ray marching/});
     expect(example.getAttribute("href")).toBe("#example/f9ad362373e4");
     await userEvent.click(example);
     expect(props.onHide).toHaveBeenCalled();
