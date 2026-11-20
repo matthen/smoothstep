@@ -24,23 +24,32 @@ export function floatsInCode(code: string): number[] {
   return [...new Set([...stripped.matchAll(/\biFloat(\d+)\b/g)].map(m => Number(m[1])))].sort((a, b) => a - b);
 }
 
-// Rounds for display, to about as many places as the range needs.
-function show(value: number, lo: number, hi: number): string {
-  const places = Math.max(0, Math.min(6, 3 - Math.floor(Math.log10(Math.max(hi - lo, 1e-6)))));
-  return String(Number(value.toFixed(places)));
+// As many decimal places as the range needs.
+function placesFor(lo: number, hi: number): number {
+  return Math.max(0, Math.min(6, 3 - Math.floor(Math.log10(Math.max(hi - lo, 1e-6)))));
 }
 
-// A number box that keeps what's typed while it's focused, and shows the value otherwise.
-function NumberBox({value, onChange, label, lo, hi, className}: {
+// A range end, without trailing zeros: as typed, more or less.
+function show(value: number, lo: number, hi: number): string {
+  return String(Number(value.toFixed(placesFor(lo, hi))));
+}
+
+// A number box that keeps what's typed while it's focused, and shows the value otherwise. A `steady`
+// one, under a moving handle, keeps the same decimal places and width, so it doesn't jitter.
+function NumberBox({value, onChange, label, lo, hi, className, steady}: {
   value: number; onChange(value: number): void; label: string; lo: number; hi: number; className?: string;
+  steady?: boolean;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
-  const text = draft ?? show(value, lo, hi);
+  const places = placesFor(lo, hi);
+  const shown = steady ? value.toFixed(places) : show(value, lo, hi);
+  const text = draft ?? shown;
+  const chars = steady ? Math.max(lo.toFixed(places).length, hi.toFixed(places).length, text.length) : text.length;
   return (
     <TextInput
       className={"sliderNumber " + (className ?? "")} size="xs" variant="unstyled" aria-label={label} value={text}
-      inputMode="decimal" styles={{input: {width: `${Math.max(text.length, 1) + 1.5}ch`}}}
-      onFocus={() => setDraft(show(value, lo, hi))}
+      inputMode="decimal" styles={{input: {width: `${Math.max(chars, 1) + 1.5}ch`}}}
+      onFocus={() => setDraft(shown)}
       onBlur={() => setDraft(null)}
       onChange={event => {
         setDraft(event.currentTarget.value);
@@ -102,7 +111,7 @@ export default function Sliders({variables, values, names, code, held, onVariabl
               {/* The value, under the handle and moving with it. */}
               <div className="sliderValue" style={{left: `${100 * fraction}%`}}>
                 <NumberBox
-                  label={name + " value"} value={value} lo={lo} hi={hi}
+                  label={name + " value"} value={value} lo={lo} hi={hi} steady
                   onChange={v => animated ? onHold(row, v) : update(row, {value: v})}
                 />
               </div>
