@@ -268,7 +268,7 @@ export class Renderer {
     } else {
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.width, this.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     }
-    // Buffers blend between pixels when read between them, as on Shadertoy; iPrevFrame doesn't.
+    // Buffers blend between pixels when read between them, which simulations rely on; iPrevFrame doesn't.
     const filter = isBuffer ? gl.LINEAR : gl.NEAREST;
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
