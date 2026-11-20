@@ -66,7 +66,7 @@ export const EMPTY_TEXTURE = "special/black.png";
 
 // A new buffer's code, which draws what it drew last frame, so the image can read it.
 export function newBufferCode(index: number): string {
-  return `// Buffer ${index} draws before the image each frame. Any shader can read it as iBuffer${index}:
+  return `// iBuffer${index} draws before the image each frame, and any shader can read what it drew:
 // try texture(iBuffer${index}, uv) in the Image tab. Reading itself gives what it drew last frame.
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   vec2 uv = fragCoord / iResolution.xy;

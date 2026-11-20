@@ -14,8 +14,9 @@ interface ShaderTabsProps {
   onRemoveLast(): void;
 }
 
+// A buffer is named as the code reads it.
 export function shaderName(shader: ShaderId): string {
-  return shader === "image" ? "Image" : "Buffer " + shader;
+  return shader === "image" ? "Image" : "iBuffer" + shader;
 }
 
 // Tabs above the code for each buffer and the image, in the order they draw each frame, with
@@ -37,7 +38,8 @@ export default function ShaderTabs({numBuffers, current, error, onChoose, onAdd,
         ],
         <UnstyledButton
           key={shader} role="tab" aria-selected={shader === current} className="shaderTab"
-          data-error={shader === error || undefined} onClick={() => onChoose(shader)}
+          data-error={shader === error || undefined} data-buffer={shader !== "image" || undefined}
+          onClick={() => onChoose(shader)}
         >
           {shaderName(shader)}
           {shader === numBuffers - 1 &&

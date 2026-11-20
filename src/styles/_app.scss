@@ -1084,23 +1084,32 @@ div#textures .texturesHint {
   margin-bottom: 4px;
 }
 
+// Outlined, so they read as tabs you can click; the open one is filled, with a bar under it.
 .shaderTab {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 3px 10px;
-  border-radius: 6px 6px 0 0;
+  border: 1px solid $dt-gray;
+  border-bottom-width: 2px;
+  border-radius: 6px;
   font-size: 13px;
   color: $dt-gray-medium;
+  background: $dt-gray-darker;
+
+  &[data-buffer] {
+    font-family: var(--mantine-font-family-monospace);
+  }
 
   &:hover {
     color: $dt-gray-light;
-    background: $dt-gray-darker;
+    border-color: $dt-gray-medium;
   }
 
   &[aria-selected="true"] {
     color: $dt-gray-light;
     background: $dt-gray;
+    border-bottom-color: $dt-purple;
   }
 
   // The shader whose code didn't build.

@@ -140,7 +140,9 @@ export class Renderer {
       throw new Error("Couldn't build the copy shader: " + copy.log);
     }
     this.copyProgram = copy.program;
-    this.floatBuffers = gl.getExtension("EXT_color_buffer_float") !== null;
+    // Some phones can only render to half floats, which is all the buffers need.
+    this.floatBuffers = gl.getExtension("EXT_color_buffer_float") !== null ||
+      gl.getExtension("EXT_color_buffer_half_float") !== null;
     // Uploaded images are flipped so texture coordinates start at the bottom left, as in GL.
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     for (let i = 0; i < NUM_TEXTURES; i++) {
