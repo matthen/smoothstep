@@ -627,10 +627,13 @@ export const LESSONS: Lesson[] = [
             the link as a QR code for a phone to scan.
           </p>
           <p>
+            A link can't carry images you added yourself. If you used any, download the animation file, put it
+            online, for example in a GitHub gist, and paste its address into Share to make a link that opens it.
+            {" "}<Link href={DOCS_URL + "/sharing.md"}>Sharing animations</Link> in the docs has the steps.
+          </p>
+          <p>
             Share also gives you code that shows the animation playing on a web page, and a player file: one web
-            page that plays it, which works offline. A link can't carry images you added yourself, so if you used
-            any, <Link href={DOCS_URL + "/sharing.md"}>Sharing animations</Link> in the docs explains how to put
-            the animation file in a GitHub gist instead.
+            page that plays it, which works offline.
           </p>
         </>,
       },

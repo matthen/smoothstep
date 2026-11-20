@@ -44,7 +44,8 @@ computer.
 ## Sharing
 
 Share gives you a link with the whole animation in it, a QR code of that link, code to show the
-animation playing on a website, and a player file. File → Open from link opens animations that
+animation playing on a website, and a player file. It also makes links that open an animation file
+you've put online, such as in a GitHub gist, which keeps your own images with it. File → Open from link opens animations that
 others have shared, including animation files in GitHub gists. [Sharing animations](sharing.md) has
 the details.
 

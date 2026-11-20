@@ -107,6 +107,11 @@ describe("routeFromLink", () => {
     expect(routeFromLink(" https://smoothstep.io/app/#example/534226b1d5ed ")).toEqual(
       {kind: "example", id: "534226b1d5ed"});
     expect(routeFromLink("https://gist.github.com/someone/aa11bb22")).toEqual({kind: "gist", id: "aa11bb22"});
+    expect(routeFromLink("https://gist.github.com/aa11bb22")).toEqual({kind: "gist", id: "aa11bb22"});
+    // A revision's address, or a file's raw address, opens the gist itself.
+    expect(routeFromLink("https://gist.github.com/someone/aa11bb22/ff00ee99")).toEqual({kind: "gist", id: "aa11bb22"});
+    expect(routeFromLink("https://gist.githubusercontent.com/someone/aa11bb22/raw/ff00ee99/a.smoothstep.json"))
+      .toEqual({kind: "gist", id: "aa11bb22"});
     expect(routeFromLink("https://github.com/o/r/blob/main/anims/a.smoothstep.json")).toEqual(
       {kind: "url", url: "https://raw.githubusercontent.com/o/r/main/anims/a.smoothstep.json"});
     expect(routeFromLink("https://example.com/a.json")).toEqual({kind: "url", url: "https://example.com/a.json"});

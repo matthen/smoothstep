@@ -61,14 +61,14 @@ test("a share link carries the animation", async ({page, context}) => {
   await expect(page.locator("#titleInput")).toHaveValue("Minimal Animation");
   // An unchanged example shares its own short link.
   let modal = await shareDialog(page);
-  await expect(modal.getByLabel("Link")).toHaveValue(/\/sub\/#example\/534226b1d5ed$/);
+  await expect(modal.getByLabel("Link", {exact: true})).toHaveValue(/\/sub\/#example\/534226b1d5ed$/);
   await page.keyboard.press("Escape");
 
   const code = "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  fragColor = vec4(0.86, 0.08, 0.78, 1.);\n}";
   await setCode(page, code);
   await page.keyboard.press("Shift+Enter");
   modal = await shareDialog(page);
-  const link = await modal.getByLabel("Link").inputValue();
+  const link = await modal.getByLabel("Link", {exact: true}).inputValue();
   expect(link).toMatch(/\/sub\/#share\/[\w-]+$/);
   await expect(modal.getByLabel("Code for a web page")).toHaveValue(/<iframe src="http:\/\/localhost:\d+\/sub\/embed\.html#share\//);
   await modal.getByRole("button", {name: "Show QR code"}).click();
@@ -90,7 +90,7 @@ test("opens an animation file from a URL with its images, and keeps them once sa
   expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
   // Not saved yet, so the image isn't among the user's images.
   const modal = await shareDialog(page);
-  await expect(modal.getByLabel("Link")).toHaveValue(/#url\/https:\/\/example\.com\//);
+  await expect(modal.getByLabel("Link", {exact: true})).toHaveValue(/#url\/https:\/\/example\.com\//);
   await expect(modal.getByText("can't carry the images")).toHaveCount(0);
 
   // The player file plays the animation with its image, opened straight from the download.
@@ -114,7 +114,7 @@ test("opens an animation file from a URL with its images, and keeps them once sa
   expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
   // Edited and saved, it now shares a link that leaves the image out.
   const saved = await shareDialog(page);
-  await expect(saved.getByLabel("Link")).toHaveValue(/#share\//);
+  await expect(saved.getByLabel("Link", {exact: true})).toHaveValue(/#share\//);
   await expect(saved.getByText("iTexture0 will be empty")).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -127,10 +127,10 @@ test("opens a gist from Open from link", async ({page, context}) => {
   await page.goto("./#new");
   await fileMenu(page, "Open from link");
   const modal = page.getByRole("dialog", {name: "Open from link"});
-  await modal.getByLabel("Link").fill("not a link");
+  await modal.getByLabel("Link", {exact: true}).fill("not a link");
   await modal.getByRole("button", {name: "Open"}).click();
   await expect(modal).toContainText("That isn't a link to an animation.");
-  await modal.getByLabel("Link").fill("https://gist.github.com/someone/abc123");
+  await modal.getByLabel("Link", {exact: true}).fill("https://gist.github.com/someone/abc123");
   await modal.getByRole("button", {name: "Open"}).click();
   await expect(page).toHaveURL(/#gist\/abc123$/);
   await expect(page.locator("#titleInput")).toHaveValue("Magenta file");
@@ -184,10 +184,40 @@ test("Copy still copies the link where the clipboard API is blocked", async ({pa
   await page.goto("./#example/534226b1d5ed");
   await expect(page.locator("#titleInput")).toHaveValue("Minimal Animation");
   const modal = await shareDialog(page);
-  const link = await modal.getByLabel("Link").inputValue();
+  const link = await modal.getByLabel("Link", {exact: true}).inputValue();
   await modal.getByRole("button", {name: "Copy"}).first().click();
   await expect(page.getByText("Copied")).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(link);
   await expect(modal).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("Share makes a link to an animation file put online", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#example/534226b1d5ed");
+  await expect(page.locator("#titleInput")).toHaveValue("Minimal Animation");
+  const modal = await shareDialog(page);
+  const download = page.waitForEvent("download");
+  await modal.getByRole("button", {name: "Download animation file"}).click();
+  expect((await download).suggestedFilename()).toMatch(/\.smoothstep\.json$/);
+
+  const address = modal.getByLabel("Address of the gist or file");
+  await address.fill("not a link");
+  await expect(modal.getByText("That isn't the address of a gist or a file.")).toBeVisible();
+  await address.fill("https://gist.github.com/someone/abc123");
+  await expect(modal.getByLabel("Link to the file")).toHaveValue(/\/sub\/#gist\/abc123$/);
+  await address.fill("https://github.com/o/r/blob/main/a.smoothstep.json");
+  await expect(modal.getByLabel("Link to the file")).toHaveValue(
+    /\/sub\/#url\/https:\/\/raw\.githubusercontent\.com\/o\/r\/main\/a\.smoothstep\.json$/);
+  await address.fill("gist.github.com/someone/abc123");
+  await expect(modal.getByLabel("Link to the file")).toHaveValue(/\/sub\/#gist\/abc123$/);
+  await address.fill("http://example.com/a.json");
+  await expect(modal.getByText(/Use the file's https address/)).toBeVisible();
+
+  // Closed and opened again, the dialog starts with an empty address.
+  await page.keyboard.press("Escape");
+  await expect(modal).toBeHidden();
+  await shareDialog(page);
+  await expect(address).toHaveValue("");
   expect(errors).toEqual([]);
 });

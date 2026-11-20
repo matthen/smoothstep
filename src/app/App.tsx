@@ -718,6 +718,7 @@ export default function App() {
       />
       <Share
         show={dialog === "share"} doc={doc} onHide={() => setDialog(null)} onMessage={setAlert}
+        onDownload={() => void download()}
         source={sharedFrom && documentId === null && !hasUnsavedChanges ? routeHash(sharedFrom) : null}
       />
       <SaveCopy
