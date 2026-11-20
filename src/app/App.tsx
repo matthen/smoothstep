@@ -33,6 +33,7 @@ import AppModal from './AppModal';
 import { setCrashDocument } from './crashState';
 import { setTourState, tourState } from './onboarding';
 import { hasConfirmedLeaving, parseHash, useHashLinks } from './routing';
+import { useKeyboardInset } from './useKeyboardInset';
 import { usePhone } from './usePhone';
 
 const STORAGE_BLOCKED = "This browser isn't letting smoothstep store data, so animations can't be saved here. " +
@@ -87,6 +88,7 @@ export default function App() {
   const [showFooter, setShowFooter] = useState(true);
   const [wideCanvas, setWideCanvas] = useState(false);
   const phone = usePhone();
+  useKeyboardInset();
   const [mobileTab, setMobileTab] = useState<MobileTab>(tutorialStart && phone ? "learn" : "code");
   const [panelTab, setPanelTab] = useState<"animation" | "textures">("animation");
   const [tourTaken, setTourTaken] = useState(() => tourState() === "taken");

@@ -242,10 +242,11 @@ a {
     z-index: 10;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 
+    // Above the on-screen keyboard while it's open (see useKeyboardInset).
     @include phone {
       position: fixed;
       right: 16px;
-      bottom: 16px;
+      bottom: calc(16px + var(--keyboard-inset, 0px));
     }
   }
 }
