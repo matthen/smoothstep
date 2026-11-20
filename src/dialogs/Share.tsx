@@ -23,12 +23,19 @@ interface ShareProps {
 
 // The link that opens an animation file from a pasted gist or file address, or why there isn't one.
 function linkToFile(address: string): {link: string} | {error: string} | null {
-  if (!address.trim()) {
+  let text = address.trim();
+  if (!text) {
     return null;
   }
-  const route = routeFromLink(address);
+  if (/^[\w-]+(\.[\w-]+)+\//.test(text)) {
+    text = "https://" + text;  // Typed without the https://.
+  }
+  const route = routeFromLink(text);
   if (route?.kind !== "gist" && route?.kind !== "url") {
     return {error: "That isn't the address of a gist or a file."};
+  }
+  if (route.kind === "url" && !route.url.startsWith("https:")) {
+    return {error: "Use the file's https address. Browsers won't let smoothstep read it over http."};
   }
   return {link: appLink(routeHash(route))};
 }
@@ -101,7 +108,9 @@ export default function Share({show, doc, source, onHide, onMessage, onDownload}
   };
 
   return (
-    <AppModal opened={show} onClose={() => {setShowQR(false); onHide();}} title="Share" size="lg">
+    <AppModal
+      opened={show} onClose={() => {setShowQR(false); setFileAddress(""); onHide();}} title="Share" size="lg"
+    >
       {shared &&
         <Stack gap="lg">
           <Stack gap="xs">
@@ -137,8 +146,9 @@ export default function Share({show, doc, source, onHide, onMessage, onDownload}
             <Title order={4}>Link to a file online</Title>
             <Text size="sm">
               A link can also open the animation file from somewhere online, such as a GitHub gist. The file keeps
-              the images you added, and when you update the file, the link opens the new version. Download the
-              animation file, put it online, and paste its address here to make the link.
+              the images you added, and a link to a gist opens its latest version, so you can edit the gist
+              without changing the link. Download the animation file, put it online, and paste its address here
+              to make the link.
               {" "}<a href={DOCS_URL + "/sharing.md"} target="_blank" rel="noreferrer">Sharing</a> in the docs has
               the steps for a gist.
             </Text>

@@ -19,16 +19,18 @@ share the images too, share an animation file instead, as below.
 File → Download animation file saves a `.smoothstep.json` file with your own images inside it.
 smoothstep can open one of these from any website that lets other sites read its files. Put the file
 online, then paste its address into "Link to a file online" in Share, and Share gives you a link that
-opens it. Whoever opens the link gets the latest version of the file, so you can update the animation
-without changing the link.
+opens it. The link reads the file each time it's opened, so if you change the file at that address, the
+link opens the new version.
 
 - **A GitHub gist.** Make a gist at [gist.github.com](https://gist.github.com): drag the animation file
-  onto the page, or paste in its contents and give it the same name, then click "Create secret gist".
-  Paste the gist's address into Share. Secret gists work too. The link is
-  `https://smoothstep.io/app/#gist/<id>`, where `<id>` is the last part of the gist's address. GitHub
-  lets each visitor open up to 60 gists an hour this way.
+  onto the page, or paste in its contents and name it with `.smoothstep.json` on the end, then click
+  "Create secret gist" or "Create public gist". Paste the gist's address into Share. The link is
+  `https://smoothstep.io/app/#gist/<id>`, where `<id>` is the gist's id, and it always opens the gist's
+  latest version, so you can edit the gist without changing the link. GitHub lets each visitor open up
+  to 60 gists an hour this way.
 - **Any other address,** such as a file in a GitHub repository or on your own website. Paste the file's
-  address into Share, or its page on github.com. The link is
+  `https` address into Share, or its page on github.com. A link to a file on a branch opens the latest
+  version after a few minutes, and a link to a particular commit always opens that version. The link is
   `https://smoothstep.io/app/#url/<address of the file>`. The site has to allow other websites to read
   the file (it must send an `Access-Control-Allow-Origin` header). GitHub, GitHub Pages and most
   static hosting do.

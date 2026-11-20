@@ -209,5 +209,15 @@ test("Share makes a link to an animation file put online", async ({page, context
   await address.fill("https://github.com/o/r/blob/main/a.smoothstep.json");
   await expect(modal.getByLabel("Link to the file")).toHaveValue(
     /\/sub\/#url\/https:\/\/raw\.githubusercontent\.com\/o\/r\/main\/a\.smoothstep\.json$/);
+  await address.fill("gist.github.com/someone/abc123");
+  await expect(modal.getByLabel("Link to the file")).toHaveValue(/\/sub\/#gist\/abc123$/);
+  await address.fill("http://example.com/a.json");
+  await expect(modal.getByText(/Use the file's https address/)).toBeVisible();
+
+  // Closed and opened again, the dialog starts with an empty address.
+  await page.keyboard.press("Escape");
+  await expect(modal).toBeHidden();
+  await shareDialog(page);
+  await expect(address).toHaveValue("");
   expect(errors).toEqual([]);
 });

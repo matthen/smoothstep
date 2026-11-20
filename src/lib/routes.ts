@@ -88,8 +88,11 @@ export function routeFromLink(text: string): Route | null {
   if (url.protocol !== "https:" && url.protocol !== "http:") {
     return null;
   }
-  if (url.hostname === "gist.github.com") {
-    const id = url.pathname.split("/").filter(Boolean).pop() ?? "";
+  // gist.github.com/[<owner>/]<id>[/<revision>], or a file's raw address, <owner>/<id>/raw/...: open the
+  // gist itself, so the link follows its latest version.
+  if (url.hostname === "gist.github.com" || url.hostname === "gist.githubusercontent.com") {
+    const parts = url.pathname.split("/").filter(Boolean);
+    const id = (parts.length === 1 && url.hostname === "gist.github.com" ? parts[0] : parts[1]) ?? "";
     return /^[a-f0-9]+$/i.test(id) ? {kind: "gist", id} : null;
   }
   // github.com/<owner>/<repo>/blob/<branch>/<path> is a web page; the file itself is on raw.githubusercontent.com.
