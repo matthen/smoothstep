@@ -2,6 +2,7 @@
 // you've done it in the editor.
 import type { ReactNode } from 'react';
 
+import { openHelpDialog, type HelpDialog } from '../app/helpDialogs';
 import type { AspectRatio, TextureSlot, Variable } from '../lib/document';
 import { EXAMPLES } from '../lib/config';
 import * as shaders from './shaders';
@@ -39,8 +40,6 @@ export interface Lesson {
   steps: Step[];
 }
 
-const REPO_DOCS = "https://github.com/matthen/smoothstep/blob/main/docs/";
-
 function stripComments(code: string): string {
   return code.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 }
@@ -69,6 +68,10 @@ export function floatsUsed(code: string): number[] {
 
 function Link({href, children}: {href: string; children: ReactNode}) {
   return <a href={href} target="_blank" rel="noreferrer">{children}</a>;
+}
+
+function HelpLink({dialog, children}: {dialog: HelpDialog; children: ReactNode}) {
+  return <button type="button" className="linkButton" onClick={() => openHelpDialog(dialog)}>{children}</button>;
 }
 
 
@@ -655,9 +658,8 @@ export const LESSONS: Lesson[] = [
             </li>
           </ul>
           <p>
-            The <Link href={REPO_DOCS + "coding-specification.md"}>coding specification</Link> lists everything
-            your shader can use, and there's a list of{" "}
-            <Link href={REPO_DOCS + "keyboard-shortcuts.md"}>keyboard shortcuts</Link>.
+            Help → <HelpLink dialog="inputs">Shader inputs</HelpLink> lists everything your shader can use, and
+            Help → <HelpLink dialog="shortcuts">Keyboard shortcuts</HelpLink> has the shortcuts.
           </p>
         </>,
         examples: EXAMPLES.filter(e => e.group === "showcase").map(e => e.id),

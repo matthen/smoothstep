@@ -20,8 +20,16 @@ frame rate and resolution. It all runs in your browser at [smoothstep.io](https:
   7. [Memory with iPrevFrame](https://smoothstep.io/#tutorial/7)
   8. [Share it](https://smoothstep.io/#tutorial/8)
 - [Examples](examples.md)
-- [Keyboard shortcuts](keyboard-shortcuts.md)
-- [Coding specification](coding-specification.md)
+- [Keyboard shortcuts](keyboard-shortcuts.md), also in the app under Help → Keyboard shortcuts
+- [Coding specification](coding-specification.md), also in the app under Help → Shader inputs
+
+## Help in the app
+
+The Help menu has the welcome dialog, the tour, the tutorial, and two references: Shader inputs
+lists everything your shader can use, and Keyboard shortcuts lists the shortcuts. The welcome dialog
+shows a different tip each visit. While you work, smoothstep shows a short tip the first time some
+things happen, such as your first compile error or your first save. Each tip shows once, and "Don't
+show tips" turns them off.
 
 ## Saving your work
 

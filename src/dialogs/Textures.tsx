@@ -10,6 +10,9 @@ interface TexturesProps {
   onMessage(text: string): void;
 }
 
+// The empty slot's image, in a new animation.
+const BLACK = "special/black.png";
+
 // Loaded on first open, with the upload dropzone and the list of built-in textures.
 const TexturePicker = lazy(() => import('./TexturePicker'));
 
@@ -30,6 +33,11 @@ export default function Textures({textures, onChange, onMessage}: TexturesProps)
           </button>
         </div>,
       )}
+      {textures.every(texture => texture.url === BLACK) &&
+        <p className="texturesHint">
+          Click a slot to choose an image. In your code, <code>texture(iTexture0, uv)</code> reads its colour,
+          with <code>uv</code> from 0 to 1.
+        </p>}
       {current && slot !== null &&
         <Suspense fallback={null}>
           <TexturePicker

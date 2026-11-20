@@ -131,6 +131,12 @@ div#animationControls {
 
     .hint {
       color: $dt-gray-medium;
+
+      code {
+        font-family: var(--mantine-font-family-monospace);
+        font-size: 12px;
+        color: $dt-cyan;
+      }
     }
 
     form.transitionForm {

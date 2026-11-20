@@ -4,14 +4,14 @@ import './tour.scss';
 
 import { driver, type DriveStep } from 'driver.js';
 
+import { MOD_KEY } from './platform';
+
 export interface TourOptions {
   phone: boolean;
   // Shows a pane before its step: the code, or a bottom panel tab.
   showPane(pane: "code" | "animation" | "textures"): void;
   onFinish(): void;
 }
-
-const MOD_KEY = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl";
 
 function welcome(): DriveStep {
   return {popover: {
@@ -25,7 +25,8 @@ function finish(): DriveStep {
   return {popover: {
     title: "Over to you",
     description: "Try changing a number in the code and building it. Help → Tutorial teaches you step by " +
-      "step, and File → Open has examples for ideas. You can take this tour again from Help.",
+      "step, and Help also has the shader inputs, the keyboard shortcuts and this tour. File → Open has " +
+      "examples for ideas.",
   }};
 }
 
@@ -89,7 +90,7 @@ function desktopSteps({showPane}: TourOptions): DriveStep[] {
         title: "Save, export and help",
         description: `File saves your animation in this browser (<kbd>${MOD_KEY}</kbd> + <kbd>S</kbd>) and ` +
           "downloads it as a file you can keep or share. Export video makes a WebM, MP4, GIF or PNG frames. " +
-          "Help has the tutorial and the examples.",
+          "Help has the tutorial, the shader inputs and the keyboard shortcuts.",
         side: "bottom", align: "start",
       },
     },

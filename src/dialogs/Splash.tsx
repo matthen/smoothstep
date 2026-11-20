@@ -1,6 +1,6 @@
 import { Button, Group, SimpleGrid, Text, Title } from '@mantine/core';
 import { useEffect, useState, type ReactNode } from 'react';
-import { TbBook, TbBrandGithub, TbSchool } from 'react-icons/tb';
+import { TbBook, TbBrandGithub, TbBulb, TbSchool } from 'react-icons/tb';
 
 import AppModal from '../app/AppModal';
 import { usePhone } from '../app/usePhone';
@@ -8,6 +8,7 @@ import { asset, documentHref, DOCS_URL, REPO_URL, TUTORIAL_HREF } from '../lib/c
 import { listDocuments, type DocumentSummary } from '../lib/localStore';
 import ExampleGallery from './ExampleGallery';
 import ImageWithFallback from './ImageWithFallback';
+import { WELCOME_TIPS, welcomeTipIndex, welcomeTipShown } from './welcomeTips';
 
 interface SplashProps {
   show: boolean;
@@ -28,6 +29,24 @@ function LinkItem({href, onClick, icon, children}: {
     >
       {icon}<span>{children}</span>
     </a>
+  );
+}
+
+// Mounted each time the dialog opens, so each visit starts on the next tip.
+function WelcomeTip() {
+  const [index, setIndex] = useState(welcomeTipIndex);
+  useEffect(() => welcomeTipShown(index), [index]);
+  return (
+    <section className="welcomeTip" aria-label="Did you know?">
+      <Text size="sm" fw={600} className="welcomeTipTitle"><TbBulb aria-hidden />Did you know?</Text>
+      <Text size="sm" className="welcomeTipText">{WELCOME_TIPS[index]}</Text>
+      <Button
+        variant="subtle" size="compact-xs" color="gray" className="welcomeTipNext"
+        onClick={() => setIndex(i => (i + 1) % WELCOME_TIPS.length)}
+      >
+        Next tip
+      </Button>
+    </section>
   );
 }
 
@@ -59,6 +78,7 @@ export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
             Animations and uploaded textures are saved in this browser. Use File &rarr; Open
             to download them as files, or to open files saved elsewhere.
           </Text>
+          <WelcomeTip />
         </div>
         <div>
           <div className="linkList">

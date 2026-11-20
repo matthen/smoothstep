@@ -524,6 +524,27 @@ div#textures {
   }
 }
 
+div#textures .texturesHint {
+  // First, so it's in view before the strip scrolls.
+  order: -1;
+  align-self: center;
+  flex: 0 0 220px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: $dt-gray-medium;
+
+  @include phone {
+    flex-basis: 100%;
+  }
+
+  code {
+    font-family: var(--mantine-font-family-monospace);
+    font-size: 12px;
+    color: $dt-cyan;
+  }
+}
+
 // The Open dialog.
 .documentBrowser {
   tr.opened td {
@@ -818,6 +839,168 @@ $texture-picker-height: 360px;
   ul {
     padding-left: 20px;
   }
+}
+
+// Inline code in the help dialogs, the welcome tip and tip notifications.
+@mixin inline-code {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 0.9em;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: $dt-gray-darker;
+  color: $dt-cyan;
+}
+
+// Help → Keyboard shortcuts and Help → Shader inputs.
+.helpReference {
+  section + section {
+    margin-top: var(--mantine-spacing-lg);
+  }
+
+  code {
+    @include inline-code;
+  }
+
+  .mantine-Table-table {
+    margin-bottom: var(--mantine-spacing-md);
+    font-size: 14px;
+  }
+
+  .mantine-Table-td {
+    vertical-align: top;
+  }
+
+  .keysCell {
+    width: 1%;
+    white-space: nowrap;
+    padding-right: var(--mantine-spacing-lg);
+    color: $dt-gray-medium;
+    font-size: 13px;
+
+    @include phone {
+      width: 40%;
+      white-space: normal;
+      padding-right: var(--mantine-spacing-xs);
+    }
+  }
+
+  .keyCombo {
+    white-space: nowrap;
+  }
+
+  .keysPlus {
+    margin: 0 3px;
+  }
+
+  .inputType {
+    width: 1%;
+    white-space: nowrap;
+
+    code {
+      background: none;
+      padding: 0;
+      color: $dt-pink;
+    }
+  }
+
+  .inputNameCell {
+    width: 1%;
+    white-space: nowrap;
+    padding-right: var(--mantine-spacing-lg);
+  }
+
+  // On a phone, the type and name share a line, with the description below.
+  @include phone {
+    .inputTable .mantine-Table-tr {
+      display: grid;
+      grid-template-columns: auto 1fr;
+    }
+
+    .inputNameCell {
+      width: auto;
+    }
+
+    .inputTable .mantine-Table-td:last-child {
+      grid-column: 1 / -1;
+      padding-top: 0;
+    }
+  }
+
+  .inputName {
+    white-space: nowrap;
+    border-radius: 3px;
+
+    code {
+      color: $dt-green;
+    }
+
+    &:hover code, &:focus-visible code {
+      background: $dt-gray;
+    }
+  }
+
+  .codeBlock {
+    margin: 0 0 var(--mantine-spacing-xs);
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: $dt-gray-darker;
+    color: $dt-gray-light;
+    font-family: var(--mantine-font-family-monospace);
+    font-size: 13px;
+    overflow-x: auto;
+  }
+}
+
+// "Did you know?" on the welcome dialog.
+.welcomeTip {
+  position: relative;
+  padding: 10px 12px 8px;
+  border-radius: 6px;
+  border-left: 3px solid $dt-purple;
+  background: $dt-gray-darker;
+
+  .welcomeTipTitle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+
+    svg {
+      color: $dt-yellow;
+    }
+  }
+
+  .welcomeTipText {
+    min-height: 2lh;
+
+    code {
+      @include inline-code;
+      background: $dt-gray-dark;
+    }
+  }
+
+  .welcomeTipNext {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    color: $dt-gray-medium;
+    font-weight: 500;
+  }
+}
+
+.tipNotification code {
+  @include inline-code;
+}
+
+// A button that looks like a link, for links that open a dialog.
+.linkButton {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: $dt-purple;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 // The crash screen.

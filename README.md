@@ -26,8 +26,8 @@ file…".
 
 You can use it at **[smoothstep.io](https://smoothstep.io)**, or run your own copy. To learn, start
 the [tutorial](https://smoothstep.io/#tutorial): it runs in the app, beside the editor, and each step
-notices when you've done it. The [documentation](docs/) has the examples and the full list of shader
-inputs.
+notices when you've done it. The Help menu lists the shader inputs and the keyboard shortcuts, and the
+[documentation](docs/) has those and the examples.
 
 <p align="center">
   <img src="docs/images/examples.png" alt="Renders from four of the built-in examples">
@@ -72,8 +72,9 @@ smoothstep is a React 19 app in TypeScript, built with Vite. It uses Mantine for
 Sass for the app's own styles, CodeMirror 6 for the code editor, and WebGL 2 for rendering.
 
 - `src/app/` has `App.tsx`, which holds the open animation and lays out the page, the URL
-  handling, and the crash screen. If the app ever hits an error, the crash screen lets you
-  download the animation you were editing and everything you've saved.
+  handling, the tour, the one-time tips (`tips.ts`), and the crash screen. If the app ever hits
+  an error, the crash screen lets you download the animation you were editing and everything
+  you've saved.
 - `src/lib/` has the animation format and its checks (`document.ts`), the IndexedDB store
   for animations and uploaded images (`localStore.ts`), and file downloads and imports
   (`archive.ts`), in the formats described in [FILE_FORMATS.md](FILE_FORMATS.md).
@@ -82,7 +83,7 @@ Sass for the app's own styles, CodeMirror 6 for the code editor, and WebGL 2 for
 - `src/editor/` is the code editor, with GLSL highlighting, hints and the inline pickers.
   The pickers are adapted from [glslEditor](https://github.com/patriciogonzalezvivo/glslEditor).
 - `src/timeline/` is the timeline and the play and seek bar.
-- `src/dialogs/` has the welcome, Open, texture, export and other dialogs.
+- `src/dialogs/` has the welcome, Open, texture, export, help and other dialogs.
 - `src/tutorial/` is the tutorial: its lessons and their checks (`lessons.tsx`), and the Learn panel
   that shows them beside the editor.
 - `src/export/` renders an animation frame by frame and encodes it in the browser. WebM and

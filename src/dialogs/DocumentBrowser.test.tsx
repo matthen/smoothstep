@@ -70,7 +70,7 @@ describe("DocumentBrowser", () => {
   it("shows a note when there are no animations", async () => {
     await clearStore();
     renderBrowser();
-    expect(await screen.findByText("You have no saved animations yet.")).toBeTruthy();
+    expect(await screen.findByText(/You have no saved animations yet\. File → Save/)).toBeTruthy();
     expect(screen.getByRole("button", {name: /Download all files/}).hasAttribute("disabled")).toBe(true);
   });
 

@@ -33,6 +33,27 @@ describe("Splash", () => {
   });
 });
 
+describe("Welcome tip", () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it("shows the next tip on each visit, and on Next tip", async () => {
+    const tip = () => screen.getByRole("region", {name: "Did you know?"}).textContent ?? "";
+    const view = render(<Splash show={true} onHide={() => {}} onTour={() => {}} tourTaken={true} />);
+    await screen.findByText("Examples");
+    const first = tip();
+    expect(first).toMatch(/Click a number/);
+    await userEvent.click(screen.getByRole("button", {name: "Next tip"}));
+    const second = tip();
+    expect(second).not.toBe(first);
+    view.unmount();
+
+    render(<Splash show={true} onHide={() => {}} onTour={() => {}} tourTaken={true} />);
+    await screen.findByText("Examples");
+    expect(tip()).not.toBe(second);
+    expect(tip()).not.toBe(first);
+  });
+});
+
 describe("AspectRatioPicker", () => {
   it("reports the picked ratio", async () => {
     const onChange = vi.fn();

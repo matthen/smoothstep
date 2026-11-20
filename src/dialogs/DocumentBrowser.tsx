@@ -144,7 +144,11 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
               </Table.Tbody>
             </Table>
           </ScrollArea.Autosize>}
-        {documents.length === 0 && <Text c="dimmed" size="sm">You have no saved animations yet.</Text>}
+        {documents.length === 0 &&
+          <Text c="dimmed" size="sm">
+            You have no saved animations yet. File → Save keeps the one you're working on here, and
+            "Open file…" below opens one you downloaded.
+          </Text>}
         <Text c="dimmed" size="sm" mt="sm">
           Animations are saved in this browser only. Download them to keep a backup
           or to move them to another computer.

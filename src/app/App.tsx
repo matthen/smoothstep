@@ -4,7 +4,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { flushSync } from 'react-dom';
 import {
   TbBook, TbBrandGithub, TbChevronDown, TbCopy, TbDeviceFloppy, TbDownload, TbFile, TbFolderOpen, TbHammer,
-  TbCircleCheckFilled, TbHeart, TbHelp, TbHome, TbMovie, TbRoute, TbSchool,
+  TbCircleCheckFilled, TbCode, TbHeart, TbHelp, TbHome, TbKeyboard, TbMovie, TbRoute, TbSchool,
 } from 'react-icons/tb';
 
 import Acknowledgements from '../dialogs/Acknowledgements';
@@ -29,9 +29,12 @@ import PlayerControls from '../timeline/PlayerControls';
 import Timeline from '../timeline/Timeline';
 import { lessonTitle, type TutorialState } from '../tutorial/lessons';
 import { openingProgress } from '../tutorial/progress';
-import AppModal from './AppModal';
+import AppModal, { anyModalOpen } from './AppModal';
 import { setCrashDocument } from './crashState';
+import { onHelpDialog } from './helpDialogs';
 import { setTourState, tourState } from './onboarding';
+import { MOD_KEY } from './platform';
+import { chooseTip, markTipSeen, seenTips, tipContent, tipsFor, turnOffTips, type TipEvent } from './tips';
 import { hasConfirmedLeaving, parseHash, useHashLinks } from './routing';
 import { useKeyboardInset } from './useKeyboardInset';
 import { usePhone } from './usePhone';
@@ -48,9 +51,16 @@ type MobileTab = "code" | "animation" | "textures" | "learn";
 
 // Loaded when the tutorial opens, with its lessons.
 const TutorialPanel = lazy(() => import('../tutorial/TutorialPanel'));
+// Loaded the first time they're opened.
+const KeyboardShortcuts = lazy(() => import('../dialogs/KeyboardShortcuts'));
+const ShaderInputs = lazy(() => import('../dialogs/ShaderInputs'));
 
-const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
-const MOD_KEY = isMac ? "⌘" : "Ctrl";
+type Dialog = "open" | "saveCopy" | "export" | "splash" | "acknowledgements" | "shortcuts" | "inputs";
+
+// Text with `code` in backticks.
+function withCode(text: string) {
+  return text.split("`").map((part, i) => i % 2 ? <code key={i}>{part}</code> : part);
+}
 
 function showMessage(text: string, loading = false) {
   const options = {id: "status", message: text, loading, autoClose: loading ? false : 1500, withCloseButton: !loading};
@@ -94,8 +104,9 @@ export default function App() {
   const [panelTab, setPanelTab] = useState<"animation" | "textures">("animation");
   const [tourTaken, setTourTaken] = useState(() => tourState() === "taken");
   const [alert, setAlert] = useState<string | null>(null);
-  const [dialog, setDialog] = useState<"open" | "saveCopy" | "export" | "splash" | "acknowledgements" | null>(
-    window.location.hash ? null : "splash");
+  const [dialog, setDialog] = useState<Dialog | null>(window.location.hash ? null : "splash");
+  // Help dialogs stay mounted once loaded, so they can animate closed.
+  const [helpLoaded, setHelpLoaded] = useState({shortcuts: false, inputs: false});
   const [exportOptions, setExportOptions] = useState<ExportOptions>({width: 512, fps: 30, type: "webm"});
   const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -106,6 +117,12 @@ export default function App() {
   const timeRef = useLatest(time);
   const docRef = useLatest(doc);
   const saving = useRef(false);
+  // What a one-time tip waits for: the tour, its offer, or another tip to finish.
+  const tourRunning = useRef(false);
+  const tourOfferShowing = useRef(false);
+  const tipShowing = useRef(false);
+  // The code as it was opened, so building it unchanged doesn't count as editing.
+  const openedCode = useRef(doc.code);
 
   const values = useMemo(() => variableValues(doc.variables, time), [doc.variables, time]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -120,6 +137,7 @@ export default function App() {
   useEffect(() => setCrashDocument({id: documentId, json: doc}), [documentId, doc]);
 
   const loadDocument = useCallback((json: AnimationDocument) => {
+    openedCode.current = json.code;
     setDoc(json);
     setTitleInput(json.title);
     setBuiltCode(json.code);
@@ -128,11 +146,19 @@ export default function App() {
     setHasUnsavedChanges(false);
   }, []);
 
+  const chooseMobileTab = (tab: MobileTab) => {
+    setMobileTab(tab);
+    if (tab === "animation" || tab === "textures") {
+      setPanelTab(tab);
+    }
+  };
+
   const takeTour = async () => {
     setDialog(null);
     notifications.hide("tour");
     setTourState("taken");
     setTourTaken(true);
+    tourRunning.current = true;
     const {startTour} = await import('./tour');
     startTour({
       phone,
@@ -145,7 +171,7 @@ export default function App() {
           setShowFooter(true);
         }
       }),
-      onFinish: () => {},
+      onFinish: () => {tourRunning.current = false;},
     });
   };
 
@@ -154,8 +180,10 @@ export default function App() {
   const offerTourRef = useLatest(() => {
     if (initialRoute && initialRoute.kind !== "tutorial" && tourState() === null) {
       setTourState("offered");
+      tourOfferShowing.current = true;
       notifications.show({
         id: "tour", autoClose: 12000, title: "New to smoothstep?",
+        onClose: () => {tourOfferShowing.current = false;},
         message: (
           <Group gap="xs" mt={4}>
             <Text size="sm">A one-minute tour shows you around.</Text>
@@ -165,6 +193,40 @@ export default function App() {
       });
     }
   });
+
+  const openHelp = useCallback((which: "shortcuts" | "inputs") => {
+    setHelpLoaded(loaded => loaded[which] ? loaded : {...loaded, [which]: true});
+    setDialog(which);
+  }, []);
+  useEffect(() => onHelpDialog(openHelp), [openHelp]);
+
+  // Shows a one-time tip for what just happened, unless something else has the user's attention.
+  const showTip = (event: TipEvent) => {
+    const blocked = tourRunning.current || tourOfferShowing.current || tipShowing.current || anyModalOpen() ||
+      dialog !== null || alert !== null || tutorialOpen || loading;
+    const id = chooseTip(tipsFor(event), seenTips(), blocked);
+    if (!id) {
+      return;
+    }
+    markTipSeen(id);
+    tipShowing.current = true;
+    const {title, message} = tipContent(id, phone);
+    notifications.show({
+      id: "tip", autoClose: 15000, title, className: "tipNotification",
+      onClose: () => {tipShowing.current = false;},
+      message: (
+        <>
+          <Text size="sm">{withCode(message)}</Text>
+          <Button
+            variant="subtle" color="gray" c="dimmed" fw={500} size="compact-xs" mt={4} ml={-6}
+            onClick={() => {turnOffTips(); notifications.hide("tip");}}
+          >
+            Don't show tips
+          </Button>
+        </>
+      ),
+    });
+  };
 
   // Open the storage, then the animation the URL names.
   useEffect(() => {
@@ -263,6 +325,10 @@ export default function App() {
   const onCodeChange = (code: string, isHelperChange: boolean) => {
     setDoc(d => ({...d, code}));
     setHasUnsavedChanges(true);
+    if (isHelperChange) {
+      // They've found the pickers, so there's no need for the tip about them.
+      markTipSeen("pickers");
+    }
     // Picker drags rebuild live, as long as the code was built before the drag.
     if (isHelperChange && builtCode === doc.code) {
       setBuiltCode(code);
@@ -293,6 +359,7 @@ export default function App() {
       // Edits made while saving are still unsaved.
       setHasUnsavedChanges(docRef.current !== json);
       showMessage("Animation saved.");
+      showTip({kind: "saved"});
     } catch (error) {
       console.error(error);
       notifications.hide("status");
@@ -373,13 +440,6 @@ export default function App() {
     setDialog(null);
   };
 
-
-  const chooseMobileTab = (tab: MobileTab) => {
-    setMobileTab(tab);
-    if (tab === "animation" || tab === "textures") {
-      setPanelTab(tab);
-    }
-  };
 
   const buildState = lineErrors.length > 0 ? "error" : builtCode === doc.code ? "built" : "changed";
 
@@ -487,6 +547,8 @@ export default function App() {
               <Menu.Item leftSection={<TbHome />} onClick={() => setDialog("splash")}>Welcome</Menu.Item>
               <Menu.Item leftSection={<TbRoute />} onClick={() => void takeTour()}>Take the tour</Menu.Item>
               <Menu.Item component="a" href={TUTORIAL_HREF} leftSection={<TbSchool />}>Tutorial</Menu.Item>
+              <Menu.Item leftSection={<TbCode />} onClick={() => openHelp("inputs")}>Shader inputs</Menu.Item>
+              <Menu.Item leftSection={<TbKeyboard />} onClick={() => openHelp("shortcuts")}>Keyboard shortcuts</Menu.Item>
               <Menu.Item component="a" href={DOCS_URL} target="_blank" rel="noreferrer" leftSection={<TbBook />}>
                 Documentation
               </Menu.Item>
@@ -534,6 +596,9 @@ export default function App() {
             onBuilt={errors => {
               setLineErrors(errors);
               setCompiled({code: builtCode ?? "", ok: errors.length === 0});
+              if (builtCode !== null) {
+                showTip({kind: "built", ok: errors.length === 0, code: builtCode, edited: builtCode !== openedCode.current});
+              }
             }}
             onRestart={restartFrames} onLayout={setLayout} onToggleWide={() => setWideCanvas(w => !w)}
           />
@@ -589,7 +654,10 @@ export default function App() {
           <Tabs.Panel value="animation">
             <Timeline
               variables={doc.variables} variableValues={values}
-              onVariablesChange={(variables: Variable[]) => updateDoc({variables})}
+              onVariablesChange={(variables: Variable[]) => {
+                showTip({kind: "variablesChanged", before: doc.variables, after: variables});
+                updateDoc({variables});
+              }}
               duration={doc.duration} currentTime={time} onSeek={seek} onDurationChange={onDurationChange}
             />
           </Tabs.Panel>
@@ -630,6 +698,10 @@ export default function App() {
         onTour={() => void takeTour()} tourTaken={tourTaken}
       />
       <Acknowledgements show={dialog === "acknowledgements"} onHide={() => setDialog(null)} />
+      <Suspense fallback={null}>
+        {helpLoaded.shortcuts && <KeyboardShortcuts show={dialog === "shortcuts"} onHide={() => setDialog(null)} />}
+        {helpLoaded.inputs && <ShaderInputs show={dialog === "inputs"} onHide={() => setDialog(null)} />}
+      </Suspense>
       <AppModal opened={alert !== null} onClose={() => setAlert(null)} withCloseButton={false} zIndex={400}>
         <p className="alertText">{alert}</p>
         <Group justify="flex-end"><Button onClick={() => setAlert(null)}>Ok</Button></Group>
