@@ -65,8 +65,7 @@ test("first visit: make and save an animation with an uploaded texture", async (
   await page.getByRole("tab", {name: "Textures"}).click();
   await page.locator("div#textures .texture button").first().click();
   const picker = page.getByRole("dialog", {name: "iTexture0"});
-  await picker.getByText("user uploads", {exact: true}).click();
-  await picker.locator(".picker", {hasText: "upload new image"}).locator("button.select").click();
+  await picker.getByRole("button", {name: "Upload", exact: true}).click();
   // Wider than 4096px, so it should be shrunk to 4096 x 3072.
   await picker.locator(".dropzone input[type=file]").setInputFiles(
     {name: "magenta.png", mimeType: "image/png", buffer: solidPNG(5000, 3750, MAGENTA)});

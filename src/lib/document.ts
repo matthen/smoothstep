@@ -53,9 +53,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   fragColor = vec4(col, 1.0);
 }`;
 
+// The built-in image an empty texture slot holds.
+export const EMPTY_TEXTURE = "special/black.png";
+
 export function emptyTextures(): TextureSlot[] {
   return Array.from({length: NUM_TEXTURES}, (_, i) => (
-    {id: "iTexture" + i, url: "special/black.png", isUserUploaded: false}));
+    {id: "iTexture" + i, url: EMPTY_TEXTURE, isUserUploaded: false}));
 }
 
 export function emptyVariables(): Variable[] {

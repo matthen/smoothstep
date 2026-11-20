@@ -523,6 +523,30 @@ div#textures {
         object-fit: contain;
         display: block;
       }
+
+      // An empty slot says so, rather than showing its black image.
+      &.empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        background: $dt-gray-dark;
+        border: 2px dashed $dt-gray;
+        color: $dt-gray-medium;
+        font-size: 12px;
+        line-height: 1.2;
+
+        svg {
+          width: 28px;
+          height: 28px;
+        }
+
+        &:hover, &:focus-visible {
+          border-color: $dt-green;
+          color: $dt-gray-light;
+        }
+      }
     }
   }
 }
@@ -675,31 +699,29 @@ div#textures .texturesHint {
 }
 
 // Texture picker.
-$texture-picker-height: 360px;
+.texturePickerBody {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 0 4px;
 
-.texturePickerTabs {
   @include phone {
-    flex-direction: column;
-    .mantine-Tabs-list {
-      flex-direction: row;
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      margin: 0 0 8px;
-    }
+    max-height: calc(100dvh - 140px);
+  }
+}
+
+.texturePickerSection {
+  margin-bottom: 20px;
+
+  h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
   }
 
-  .mantine-Tabs-list {
-    min-width: 140px;
-    margin-right: 12px;
-  }
-  .mantine-Tabs-tab {
-    white-space: nowrap;
-    &[data-has-selection] {
-      font-weight: 700;
-    }
-  }
-  .mantine-Tabs-panel {
-    min-width: 0;
+  > p {
+    margin: 2px 0 8px;
+    font-size: 13px;
+    color: $dt-gray-medium;
   }
 }
 
@@ -709,7 +731,7 @@ $texture-picker-height: 360px;
   background-color: $dt-gray-darker;
   color: $dt-gray-light;
   padding: 16px;
-  min-height: $texture-picker-height;
+  min-height: 360px;
   cursor: pointer;
   transition: border-color 150ms, background-color 150ms;
 
@@ -745,8 +767,6 @@ $texture-picker-height: 360px;
 }
 
 .texturePickerGrid {
-  height: $texture-picker-height;
-  overflow-y: auto;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
   gap: 10px;
@@ -754,25 +774,23 @@ $texture-picker-height: 360px;
   padding: 4px;
 
   @include phone {
-    height: 50dvh;
     grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   }
 
-  div.picker {
-    aspect-ratio: 1;
-    background: #fff;
+  figure.picker {
+    margin: 0;
     position: relative;
-    outline: 3px solid transparent;
-    border-radius: 6px;
-    overflow: hidden;
-    transition: outline-color 150ms;
+    min-width: 0;
 
-    &:hover {
-      outline-color: $dt-green;
-    }
-
-    &.selected {
-      outline-color: $dt-pink;
+    figcaption {
+      margin-top: 4px;
+      font-size: 12px;
+      line-height: 1.3;
+      color: $dt-gray-light;
+      text-align: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     span.resolution {
@@ -793,11 +811,17 @@ $texture-picker-height: 360px;
     }
 
     button.select {
+      display: block;
+      position: relative;
       border: none;
       width: 100%;
-      height: 100%;
+      aspect-ratio: 1;
       padding: 0;
-      background: none;
+      background: #fff;
+      border-radius: 6px;
+      overflow: hidden;
+      outline: 3px solid transparent;
+      transition: outline-color 150ms;
       cursor: pointer;
 
       img {
@@ -813,23 +837,27 @@ $texture-picker-height: 360px;
       }
     }
 
-    // The upload tile has no image, so its label always shows.
-    button.select:has(svg.thumbnail) {
-      background: $dt-gray-darker;
-      span.resolution {
-        opacity: 1;
-        top: auto;
-        bottom: 6px;
-        left: 0;
-        right: 0;
-        background: none;
-        text-align: center;
-      }
+    &:hover button.select {
+      outline-color: $dt-green;
     }
 
+    &.selected button.select {
+      outline-color: $dt-pink;
+    }
+
+    // The upload tile has an icon rather than an image.
+    button.select:has(svg.thumbnail) {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: $dt-gray-darker;
+      border: 2px dashed $dt-gray;
+    }
+
+    // Over the image, which is square like the figure's top.
     .delete {
       position: absolute;
-      bottom: 4px;
+      top: 4px;
       left: 4px;
     }
   }

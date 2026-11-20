@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 
 import { openHelpDialog, type HelpDialog } from '../app/helpDialogs';
-import type { AspectRatio, TextureSlot, Variable } from '../lib/document';
+import { EMPTY_TEXTURE, type AspectRatio, type TextureSlot, type Variable } from '../lib/document';
 import { EXAMPLES } from '../lib/config';
 import * as shaders from './shaders';
 
@@ -75,7 +75,6 @@ function HelpLink({dialog, children}: {dialog: HelpDialog; children: ReactNode})
 }
 
 
-const BLACK = "special/black.png";
 
 // The iFloat rows the code reads that have a transition between different values.
 function animatedFloats(now: TutorialState): number[] {
@@ -87,7 +86,7 @@ function animatedFloats(now: TutorialState): number[] {
 function textureChosen(now: TutorialState): boolean {
   return [...stripComments(now.builtCode).matchAll(/\biTexture(\d)\b/g)].some(m => {
     const slot = now.textures[Number(m[1])];
-    return slot !== undefined && (slot.isUserUploaded || slot.url !== BLACK);
+    return slot !== undefined && (slot.isUserUploaded || slot.url !== EMPTY_TEXTURE);
   });
 }
 
