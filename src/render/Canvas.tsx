@@ -4,10 +4,9 @@ import { TbChevronLeft } from 'react-icons/tb';
 
 import AspectRatioPicker from '../dialogs/AspectRatioPicker';
 import type { AspectRatio } from '../lib/document';
-import type { LineError } from '../lib/types';
 import { useLatest } from '../lib/useLatest';
 import { fitCanvas } from './layout';
-import { Renderer } from './Renderer';
+import { Renderer, type CompileResult } from './Renderer';
 
 export interface CanvasLayout {
   width: number;   // displayed size in CSS pixels
@@ -20,8 +19,14 @@ export interface CanvasHandle {
   captureFrame(): string | null;
 }
 
+// The image's code and each buffer's, as last built.
+export interface Shaders {
+  code: string;
+  buffers: string[];
+}
+
 interface CanvasProps {
-  code: string | null;  // the last built code
+  shaders: Shaders | null;
   buildId: number;      // bumps on every build, so building the same code again restarts iPrevFrame
   textureURLs: string[];
   time: number;
@@ -30,7 +35,7 @@ interface CanvasProps {
   variableValues: number[];
   aspectRatio: AspectRatio;
   onAspectRatioChange(aspectRatio: AspectRatio): void;
-  onBuilt(errors: LineError[]): void;
+  onBuilt(result: CompileResult): void;
   // The previous frame was cleared (new build, size or textures), so iFrame should restart at 0.
   onRestart(): void;
   onLayout(layout: CanvasLayout): void;
@@ -101,16 +106,16 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
 
   useEffect(() => {
     const renderer = rendererRef.current;
-    if (!renderer || props.code === null) {
+    if (!renderer || props.shaders === null) {
       return;
     }
-    const result = renderer.setCode(props.code);
-    props.onBuilt(result.ok ? [] : result.errors);
+    const result = renderer.setCode(props.shaders.code, props.shaders.buffers);
+    props.onBuilt(result);
     if (result.ok) {
       props.onRestart();
     }
     needsRender.current = true;
-  }, [props.code, props.buildId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [props.shaders, props.buildId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     rendererRef.current?.setTextures(props.textureURLs);

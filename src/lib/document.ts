@@ -2,6 +2,7 @@
 
 export const NUM_TEXTURES = 8;
 export const NUM_VARIABLES = 16;
+export const MAX_BUFFERS = 4;
 export const DEFAULT_TITLE = "Untitled animation";
 export const MAX_TITLE_LENGTH = 32;
 export const DEFAULT_DURATION = 12;
@@ -32,9 +33,16 @@ export interface TextureSlot {
   isUserUploaded: boolean;
 }
 
+// A shader that renders before the image each frame, which every shader can read as iBuffer<index>.
+export interface Buffer {
+  code: string;
+}
+
 export interface AnimationDocument {
   title: string;
   code: string;
+  // Left out when there are none, so animations without buffers are saved as before.
+  buffers?: Buffer[];
   duration: number;  // Seconds.
   aspectRatio: AspectRatio;
   textures: TextureSlot[];
@@ -55,6 +63,22 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 // The built-in image an empty texture slot holds.
 export const EMPTY_TEXTURE = "special/black.png";
+
+// A new buffer's code, which draws what it drew last frame, so the image can read it.
+export function newBufferCode(index: number): string {
+  return `// Buffer ${index} draws before the image each frame. Any shader can read it as iBuffer${index}:
+// try texture(iBuffer${index}, uv) in the Image tab. Reading itself gives what it drew last frame.
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 uv = fragCoord / iResolution.xy;
+  vec4 last = texture(iBuffer${index}, uv);
+  vec4 now = vec4(uv, 0.5 + 0.5 * sin(iTime), 1.);
+  fragColor = mix(last, now, 0.05);
+}`;
+}
+
+export function bufferCodes(doc: AnimationDocument): string[] {
+  return (doc.buffers ?? []).map(buffer => buffer.code);
+}
 
 export function emptyTextures(): TextureSlot[] {
   return Array.from({length: NUM_TEXTURES}, (_, i) => (
@@ -144,9 +168,17 @@ export function parseDocument(value: unknown): AnimationDocument {
     });
     return {transitions};
   });
+  if (json.buffers !== undefined && (!Array.isArray(json.buffers) || json.buffers.length > MAX_BUFFERS)) {
+    fail("buffers");
+  }
+  const buffers = ((json.buffers ?? []) as unknown[]).map((buffer, i): Buffer => {
+    if (!isRecord(buffer) || typeof buffer.code !== "string") {fail("buffer " + i);}
+    return {code: (buffer as Record<string, unknown>).code as string};
+  });
   return {
     title: json.title as string,
     code: json.code as string,
+    ...(buffers.length > 0 ? {buffers} : {}),
     duration: json.duration as number,
     aspectRatio: [aspectRatio[0], aspectRatio[1]] as AspectRatio,
     textures,

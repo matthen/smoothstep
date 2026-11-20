@@ -1,0 +1,125 @@
+{
+  "title": "Reaction-diffusion",
+  "code": "// The simulation runs in Buffers 0 and 1 (see their tabs). This draws its latest step,\n// lighting the pattern as if V were raised up from the surface.\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  vec2 px = 1. / iResolution.xy;\n  vec2 uv = fragCoord * px;\n  float v = texture(iBuffer1, uv).g;\n  vec2 slope = vec2(\n    texture(iBuffer1, uv + vec2(px.x, 0.)).g - texture(iBuffer1, uv - vec2(px.x, 0.)).g,\n    texture(iBuffer1, uv + vec2(0., px.y)).g - texture(iBuffer1, uv - vec2(0., px.y)).g);\n  float light = 1. + 4. * dot(slope, vec2(-0.6, 0.8));\n  vec3 low = vec3(0.04, 0.05, 0.12);\n  vec3 high = vec3(0.98, 0.62, 0.28);\n  vec3 col = mix(low, high, smoothstep(0.08, 0.35, v)) * light;\n  fragColor = vec4(col, 1.);\n}",
+  "buffers": [
+    {
+      "code": "// Gray-Scott reaction-diffusion. Two chemicals, U (red) and V (green), spread out and react:\n// V feeds on U, U is topped up at the feed rate, and V dies off at the kill rate.\n// Buffers 0 and 1 each take one step, reading the other, so it runs two steps a frame.\n#define previous iBuffer1\n#define feed iFloat0\n#define kill iFloat1\n\nfloat hash(vec2 p) {\n  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);\n}\n\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  if (iFrame == 0) {\n    // Start with U everywhere, and V in a scattering of small spots.\n    vec2 cell = floor(fragCoord / 20.);\n    vec2 centre = (cell + 0.25 + 0.5 * vec2(hash(cell), hash(cell + 7.))) * 20.;\n    float v = hash(cell + 3.) < 0.4 && length(fragCoord - centre) < 3. ? 1. : 0.;\n    fragColor = vec4(1., v, 0., 1.);\n    return;\n  }\n  vec2 px = 1. / iResolution.xy;\n  vec2 uv = fragCoord * px;\n  vec2 here = texture(previous, uv).rg;\n  // How different each point is from its neighbours (the Laplacian), which drives the spreading.\n  vec2 spread = -here\n    + 0.2 * (texture(previous, uv + vec2(px.x, 0.)).rg + texture(previous, uv - vec2(px.x, 0.)).rg\n           + texture(previous, uv + vec2(0., px.y)).rg + texture(previous, uv - vec2(0., px.y)).rg)\n    + 0.05 * (texture(previous, uv + px).rg + texture(previous, uv - px).rg\n            + texture(previous, uv + vec2(px.x, -px.y)).rg + texture(previous, uv - vec2(px.x, -px.y)).rg);\n  float reaction = here.x * here.y * here.y;\n  float u = here.x + 1.0 * spread.x - reaction + feed * (1. - here.x);\n  float v = here.y + 0.5 * spread.y + reaction - (kill + feed) * here.y;\n  fragColor = vec4(clamp(vec2(u, v), 0., 1.), 0., 1.);\n}"
+    },
+    {
+      "code": "// Gray-Scott reaction-diffusion. Two chemicals, U (red) and V (green), spread out and react:\n// V feeds on U, U is topped up at the feed rate, and V dies off at the kill rate.\n// Buffers 0 and 1 each take one step, reading the other, so it runs two steps a frame.\n#define previous iBuffer0\n#define feed iFloat0\n#define kill iFloat1\n\nfloat hash(vec2 p) {\n  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);\n}\n\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  if (iFrame == 0) {\n    // Start with U everywhere, and V in a scattering of small spots.\n    vec2 cell = floor(fragCoord / 20.);\n    vec2 centre = (cell + 0.25 + 0.5 * vec2(hash(cell), hash(cell + 7.))) * 20.;\n    float v = hash(cell + 3.) < 0.4 && length(fragCoord - centre) < 3. ? 1. : 0.;\n    fragColor = vec4(1., v, 0., 1.);\n    return;\n  }\n  vec2 px = 1. / iResolution.xy;\n  vec2 uv = fragCoord * px;\n  vec2 here = texture(previous, uv).rg;\n  // How different each point is from its neighbours (the Laplacian), which drives the spreading.\n  vec2 spread = -here\n    + 0.2 * (texture(previous, uv + vec2(px.x, 0.)).rg + texture(previous, uv - vec2(px.x, 0.)).rg\n           + texture(previous, uv + vec2(0., px.y)).rg + texture(previous, uv - vec2(0., px.y)).rg)\n    + 0.05 * (texture(previous, uv + px).rg + texture(previous, uv - px).rg\n            + texture(previous, uv + vec2(px.x, -px.y)).rg + texture(previous, uv - vec2(px.x, -px.y)).rg);\n  float reaction = here.x * here.y * here.y;\n  float u = here.x + 1.0 * spread.x - reaction + feed * (1. - here.x);\n  float v = here.y + 0.5 * spread.y + reaction - (kill + feed) * here.y;\n  fragColor = vec4(clamp(vec2(u, v), 0., 1.), 0., 1.);\n}"
+    }
+  ],
+  "duration": 20,
+  "aspectRatio": [
+    1,
+    1
+  ],
+  "textures": [
+    {
+      "id": "iTexture0",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture1",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture2",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture3",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture4",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture5",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture6",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture7",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    }
+  ],
+  "variables": [
+    {
+      "transitions": [
+        {
+          "startDSecs": 80,
+          "endDSecs": 160,
+          "startValue": 0.0367,
+          "endValue": 0.029,
+          "type": "smoothstep"
+        }
+      ]
+    },
+    {
+      "transitions": [
+        {
+          "startDSecs": 80,
+          "endDSecs": 160,
+          "startValue": 0.0649,
+          "endValue": 0.057,
+          "type": "smoothstep"
+        }
+      ]
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    }
+  ]
+}

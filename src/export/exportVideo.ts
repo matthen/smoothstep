@@ -10,7 +10,7 @@ import {
 import type { ExportOptions, ExportProgress } from '../dialogs/exportTypes';
 import { safeFilename, type DownloadableFile } from '../lib/archive';
 import { textureURL } from '../lib/config';
-import { variableValues, type AnimationDocument } from '../lib/document';
+import { bufferCodes, variableValues, type AnimationDocument } from '../lib/document';
 import { Renderer } from '../render/Renderer';
 import { noVideoReason } from './videoSupport';
 
@@ -114,7 +114,7 @@ export async function exportVideo(
   const frameContext = frameCanvas.getContext("2d", {willReadFrequently: options.type === "gif"})!;
   let encoder: Encoder | null = null;
   try {
-    const compiled = renderer.setCode(doc.code);
+    const compiled = renderer.setCode(doc.code, bufferCodes(doc));
     if (!compiled.ok) {
       throw new Error("The shader doesn't compile: " + (compiled.errors[0]?.message ?? ""));
     }

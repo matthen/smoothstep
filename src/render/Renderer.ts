@@ -1,6 +1,7 @@
-// Compiles the user's fragment shader and renders frames with WebGL 2. Each frame renders into one
-// of two framebuffers, so the shader can read the previous frame as iPrevFrame, then copies it to
-// the canvas.
+// Compiles the user's fragment shaders and renders frames with WebGL 2. Each frame first renders the
+// buffers the image uses, in order, then the image. Every shader renders into one of a pair of
+// framebuffers, so it can read its own previous frame: the image as iPrevFrame, and buffer k as
+// iBuffer<k>. Then the image is copied to the canvas.
 import { NUM_TEXTURES, NUM_VARIABLES } from '../lib/document';
 import type { LineError } from '../lib/types';
 
@@ -21,8 +22,9 @@ void main() {
 }
 `;
 
-// Everything before the user's code. Error line numbers are offset by its line count.
-function shaderPrefix(): string {
+// Everything before the user's code, with an iBuffer uniform for each of the animation's buffers.
+// It's always three lines, so error line numbers are offset by the same amount.
+function shaderPrefix(numBuffers = 0): string {
   let uniforms = "uniform vec2 iResolution; uniform float iTime; uniform float iDuration; uniform int iFrame; ";
   uniforms += "uniform sampler2D iPrevFrame; ";
   for (let i = 0; i < NUM_TEXTURES; i++) {
@@ -31,14 +33,36 @@ function shaderPrefix(): string {
   for (let i = 0; i < NUM_VARIABLES; i++) {
     uniforms += `uniform float iFloat${i}; `;
   }
+  for (let i = 0; i < numBuffers; i++) {
+    uniforms += `uniform sampler2D iBuffer${i}; `;
+  }
   return "#version 300 es\nprecision highp float;\n" + uniforms + "\n";
 }
 
-const SHADER_SUFFIX = "\nout vec4 smoothstepColor;\n" +
-  "void main() { mainImage(smoothstepColor, gl_FragCoord.xy); smoothstepColor.a = 1.; }\n";
+// The image is opaque; a buffer keeps its alpha, since it may hold any numbers.
+function shaderSuffix(isBuffer: boolean): string {
+  return "\nout vec4 smoothstepColor;\nvoid main() { mainImage(smoothstepColor, gl_FragCoord.xy);" +
+    (isBuffer ? "" : " smoothstepColor.a = 1.;") + " }\n";
+}
 
-export function fragmentSource(code: string): string {
-  return shaderPrefix() + code + SHADER_SUFFIX;
+export function fragmentSource(code: string, numBuffers = 0, isBuffer = false): string {
+  return shaderPrefix(numBuffers) + code + shaderSuffix(isBuffer);
+}
+
+// The buffers the image needs this frame: those it reads, and those they read in turn.
+export function buffersUsed(code: string, buffers: readonly string[]): number[] {
+  const used = new Set<number>();
+  const visit = (source: string) => {
+    for (const match of source.matchAll(/\biBuffer(\d+)\b/g)) {
+      const index = Number(match[1]);
+      if (index < buffers.length && !used.has(index)) {
+        used.add(index);
+        visit(buffers[index]!);
+      }
+    }
+  };
+  visit(code);
+  return [...used].sort((a, b) => a - b);
 }
 
 // Turns a WebGL info log into errors on lines of the user's code (0-based, clamped to the code).
@@ -66,19 +90,35 @@ export interface FrameInputs {
 interface Target {
   framebuffer: WebGLFramebuffer;
   texture: WebGLTexture;
-  unit: number;
 }
 
-export type CompileResult = {ok: true} | {ok: false; errors: LineError[]};
+// Which shader an error is in: the image, or buffer k.
+export type ShaderId = "image" | number;
+
+export type CompileResult = {ok: true} | {ok: false; shader: ShaderId; errors: LineError[]};
+
+// Texture units: the previous frame, then the texture slots, then the buffers.
+const PREV_FRAME_UNIT = 0;
+const TEXTURE_UNIT = 1;
+const BUFFER_UNIT = TEXTURE_UNIT + NUM_TEXTURES;  // Up to 13 units in all; WebGL 2 promises 16.
+
+type Program = WebGLProgram & {vao: WebGLVertexArrayObject | null};
 
 export class WebGLUnavailableError extends Error {}
 
 export class Renderer {
   readonly gl: WebGL2RenderingContext;
-  private program: WebGLProgram | null = null;
-  private copyProgram: WebGLProgram;
-  private uniforms = new Map<string, WebGLUniformLocation | null>();
+  private program: Program | null = null;
+  private bufferPrograms: Program[] = [];
+  // The buffers the image needs, in the order they render.
+  private used: number[] = [];
+  private copyProgram: Program;
+  private uniforms = new WeakMap<WebGLProgram, Map<string, WebGLUniformLocation | null>>();
+  // [last frame, the one before], for the image and for each buffer in use.
   private targets: [Target, Target] | null = null;
+  private bufferTargets = new Map<number, [Target, Target]>();
+  // Buffers hold half floats where the browser can render to them, and bytes otherwise.
+  private floatBuffers: boolean;
   private width = 1;
   private height = 1;
   private textureUnits: WebGLTexture[] = [];
@@ -100,6 +140,7 @@ export class Renderer {
       throw new Error("Couldn't build the copy shader: " + copy.log);
     }
     this.copyProgram = copy.program;
+    this.floatBuffers = gl.getExtension("EXT_color_buffer_float") !== null;
     // Uploaded images are flipped so texture coordinates start at the bottom left, as in GL.
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     for (let i = 0; i < NUM_TEXTURES; i++) {
@@ -120,7 +161,7 @@ export class Renderer {
     return {shader, log: ""};
   }
 
-  private link(fragmentSourceCode: string): {program: WebGLProgram | null; log: string; stage: "compile" | "link"} {
+  private link(fragmentSourceCode: string): {program: Program | null; log: string; stage: "compile" | "link"} {
     const gl = this.gl;
     const fragment = this.compile(gl.FRAGMENT_SHADER, fragmentSourceCode);
     if (!fragment.shader) {
@@ -143,22 +184,28 @@ export class Renderer {
     gl.bindVertexArray(vao);
     gl.enableVertexAttribArray(location);
     gl.vertexAttribPointer(location, 2, gl.FLOAT, false, 0, 0);
-    (program as WebGLProgram & {vao: WebGLVertexArrayObject | null}).vao = vao;
-    return {program, log: "", stage: "link"};
+    const linked = program as Program;
+    linked.vao = vao;
+    return {program: linked, log: "", stage: "link"};
   }
 
-  // Builds the user's shader. On failure the previous program keeps rendering.
-  setCode(code: string): CompileResult {
-    const result = this.link(fragmentSource(code));
-    if (!result.program) {
-      return {ok: false, errors: result.stage === "compile" ?
-        parseErrors(result.log, code) : [{line: 0, message: result.log.trim() || "Couldn't link the shader."}]};
+  // Builds the image's shader and the buffers'. If any fails, the previous ones keep rendering.
+  setCode(code: string, buffers: readonly string[] = []): CompileResult {
+    const sources: [ShaderId, string][] = [["image", code], ...buffers.map((c, i): [ShaderId, string] => [i, c])];
+    const programs: Program[] = [];
+    for (const [shader, source] of sources) {
+      const result = this.link(fragmentSource(source, buffers.length, shader !== "image"));
+      if (!result.program) {
+        programs.forEach(p => this.gl.deleteProgram(p));
+        return {ok: false, shader, errors: result.stage === "compile" ? parseErrors(result.log, source) :
+          [{line: 0, message: result.log.trim() || "Couldn't link the shader."}]};
+      }
+      programs.push(result.program);
     }
-    if (this.program) {
-      this.gl.deleteProgram(this.program);
-    }
-    this.program = result.program;
-    this.uniforms.clear();
+    [this.program, ...this.bufferPrograms].forEach(p => p && this.gl.deleteProgram(p));
+    this.program = programs[0]!;
+    this.bufferPrograms = programs.slice(1);
+    this.used = buffersUsed(code, buffers);
     this.clearTargets();
     return {ok: true};
   }
@@ -176,33 +223,40 @@ export class Renderer {
     return true;
   }
 
-  // Starts again from a blank previous frame (after a new shader or size, or a rewind).
+  // Starts again from a blank previous frame and blank buffers (after a new shader or size, or a rewind).
   clearTargets() {
     const gl = this.gl;
-    if (this.targets) {
-      for (const t of this.targets) {
+    for (const pair of [this.targets, ...this.bufferTargets.values()]) {
+      for (const t of pair ?? []) {
         gl.deleteFramebuffer(t.framebuffer);
         gl.deleteTexture(t.texture);
       }
     }
-    this.targets = [this.target(0), this.target(1)];
+    this.targets = [this.target(false), this.target(false)];
+    this.bufferTargets = new Map(this.used.map(i => [i, [this.target(true), this.target(true)]]));
   }
 
-  private target(unit: number): Target {
+  private target(isBuffer: boolean): Target {
     const gl = this.gl;
     const texture = gl.createTexture()!;
-    gl.activeTexture(gl.TEXTURE0 + unit);
+    gl.activeTexture(gl.TEXTURE0 + PREV_FRAME_UNIT);
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.width, this.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    if (isBuffer && this.floatBuffers) {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, this.width, this.height, 0, gl.RGBA, gl.HALF_FLOAT, null);
+    } else {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.width, this.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    }
+    // Buffers blend between pixels when read between them, as on Shadertoy; iPrevFrame doesn't.
+    const filter = isBuffer ? gl.LINEAR : gl.NEAREST;
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
     const framebuffer = gl.createFramebuffer()!;
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    return {framebuffer, texture, unit};
+    return {framebuffer, texture};
   }
 
   private blackTexture(): WebGLTexture {
@@ -281,11 +335,47 @@ export class Renderer {
   }
 
   private uniform(program: WebGLProgram, name: string): WebGLUniformLocation | null {
-    const key = (program === this.program ? "u:" : "c:") + name;
-    if (!this.uniforms.has(key)) {
-      this.uniforms.set(key, this.gl.getUniformLocation(program, name));
+    let locations = this.uniforms.get(program);
+    if (!locations) {
+      locations = new Map();
+      this.uniforms.set(program, locations);
     }
-    return this.uniforms.get(key) ?? null;
+    if (!locations.has(name)) {
+      locations.set(name, this.gl.getUniformLocation(program, name));
+    }
+    return locations.get(name) ?? null;
+  }
+
+  // Draws one shader into `output`. Every unit is bound afresh, so the texture being drawn into is
+  // never also bound for reading, which WebGL refuses.
+  private draw(program: Program, output: Target, inputs: FrameInputs, prevFrame: Target) {
+    const gl = this.gl;
+    gl.useProgram(program);
+    gl.bindVertexArray(program.vao);
+    gl.uniform1f(this.uniform(program, "iTime"), inputs.time);
+    gl.uniform1f(this.uniform(program, "iDuration"), inputs.duration);
+    gl.uniform2f(this.uniform(program, "iResolution"), this.width, this.height);
+    gl.uniform1i(this.uniform(program, "iFrame"), inputs.frameIndex);
+    gl.activeTexture(gl.TEXTURE0 + PREV_FRAME_UNIT);
+    gl.bindTexture(gl.TEXTURE_2D, prevFrame.texture);
+    gl.uniform1i(this.uniform(program, "iPrevFrame"), PREV_FRAME_UNIT);
+    this.textureUnits.forEach((texture, i) => {
+      gl.activeTexture(gl.TEXTURE0 + TEXTURE_UNIT + i);
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.uniform1i(this.uniform(program, "iTexture" + i), TEXTURE_UNIT + i);
+    });
+    this.bufferPrograms.forEach((_, i) => {
+      // A buffer's latest frame: this frame's if it has already rendered, otherwise the last one.
+      gl.activeTexture(gl.TEXTURE0 + BUFFER_UNIT + i);
+      gl.bindTexture(gl.TEXTURE_2D, this.bufferTargets.get(i)?.[0].texture ?? null);
+      gl.uniform1i(this.uniform(program, "iBuffer" + i), BUFFER_UNIT + i);
+    });
+    inputs.variableValues.forEach((value, i) => {
+      gl.uniform1f(this.uniform(program, "iFloat" + i), value);
+    });
+    gl.bindFramebuffer(gl.FRAMEBUFFER, output.framebuffer);
+    gl.viewport(0, 0, this.width, this.height);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
 
   render(inputs: FrameInputs) {
@@ -294,38 +384,20 @@ export class Renderer {
       return;
     }
     const [input, output] = this.targets;
+    for (const i of this.used) {
+      const [latest, older] = this.bufferTargets.get(i)!;
+      this.draw(this.bufferPrograms[i]!, older, inputs, input);
+      this.bufferTargets.set(i, [older, latest]);
+    }
+    this.draw(this.program, output, inputs, input);
     this.targets = [output, input];
-    const program = this.program;
-    gl.useProgram(program);
-    gl.bindVertexArray((program as WebGLProgram & {vao: WebGLVertexArrayObject | null}).vao);
-    gl.uniform1f(this.uniform(program, "iTime"), inputs.time);
-    gl.uniform1f(this.uniform(program, "iDuration"), inputs.duration);
-    gl.uniform2f(this.uniform(program, "iResolution"), this.width, this.height);
-    gl.uniform1i(this.uniform(program, "iFrame"), inputs.frameIndex);
-    gl.activeTexture(gl.TEXTURE0 + input.unit);
-    gl.bindTexture(gl.TEXTURE_2D, input.texture);
-    gl.uniform1i(this.uniform(program, "iPrevFrame"), input.unit);
-    this.textureUnits.forEach((texture, i) => {
-      gl.activeTexture(gl.TEXTURE0 + 2 + i);
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.uniform1i(this.uniform(program, "iTexture" + i), 2 + i);
-    });
-    inputs.variableValues.forEach((value, i) => {
-      gl.uniform1f(this.uniform(program, "iFloat" + i), value);
-    });
-    // The output target's texture mustn't also be bound for sampling while it's rendered to.
-    gl.activeTexture(gl.TEXTURE0 + output.unit);
-    gl.bindTexture(gl.TEXTURE_2D, null);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, output.framebuffer);
-    gl.viewport(0, 0, this.width, this.height);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
 
     gl.useProgram(this.copyProgram);
-    gl.bindVertexArray((this.copyProgram as WebGLProgram & {vao: WebGLVertexArrayObject | null}).vao);
+    gl.bindVertexArray(this.copyProgram.vao);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.activeTexture(gl.TEXTURE0 + output.unit);
+    gl.activeTexture(gl.TEXTURE0 + PREV_FRAME_UNIT);
     gl.bindTexture(gl.TEXTURE_2D, output.texture);
-    gl.uniform1i(this.uniform(this.copyProgram, "iTexture"), output.unit);
+    gl.uniform1i(this.uniform(this.copyProgram, "iTexture"), PREV_FRAME_UNIT);
     gl.uniform2f(this.uniform(this.copyProgram, "iResolution"), this.width, this.height);
     gl.viewport(0, 0, this.width, this.height);
     gl.drawArrays(gl.TRIANGLES, 0, 6);

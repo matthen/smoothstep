@@ -46,6 +46,8 @@ export const EXAMPLES: Example[] = [
     description: "A sphere, a box and a torus on a floor, drawn by ray marching, with shadows."},
   {id: "26d46785c1f6", title: "Stateful animations - iPrevFrame", group: "basics", teaches: ["iPrevFrame"],
     description: "Rule 30 feeding the Game of Life: each frame is worked out from the last."},
+  {id: "9e4b2c7a1d38", title: "Reaction-diffusion", group: "basics", teaches: ["iBuffer0", "buffers"],
+    description: "Two buffers take turns stepping a chemical simulation, as the timeline turns spots into stripes."},
   {id: "c6e454d960df", title: "Wobbling mirror ball", group: "showcase",
     teaches: ["ray marching", "equirectangular", "timeline"],
     description: "A mirror ball, pulled out of shape and left to spring back."},

@@ -17,10 +17,11 @@ import Share from '../dialogs/Share';
 import Splash from '../dialogs/Splash';
 import Textures from '../dialogs/Textures';
 import CodeEditor from '../editor/CodeEditor';
+import ShaderTabs, { shaderName } from '../editor/ShaderTabs';
 import * as archive from '../lib/archive';
 import { asset, documentHref, DOCS_URL, REPO_URL, textureURL, TUTORIAL_HREF } from '../lib/config';
 import {
-  DEFAULT_TITLE, MAX_TITLE_LENGTH, newDocument, parseDocument, variableValues,
+  bufferCodes, DEFAULT_TITLE, MAX_TITLE_LENGTH, newBufferCode, newDocument, parseDocument, variableValues,
   type AnimationDocument, type AspectRatio, type TextureSlot, type Variable,
 } from '../lib/document';
 import * as localStore from '../lib/localStore';
@@ -28,7 +29,8 @@ import { isBrokenShareLink, routeHash, type Route } from '../lib/routes';
 import { loadRoute, ShareError } from '../lib/share';
 import type { LineError } from '../lib/types';
 import { useLatest } from '../lib/useLatest';
-import Canvas, { type CanvasHandle, type CanvasLayout } from '../render/Canvas';
+import Canvas, { type CanvasHandle, type CanvasLayout, type Shaders } from '../render/Canvas';
+import type { CompileResult, ShaderId } from '../render/Renderer';
 import { floatNames } from '../timeline/names';
 import PlayerControls from '../timeline/PlayerControls';
 import Timeline from '../timeline/Timeline';
@@ -92,8 +94,16 @@ export default function App() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [titleInput, setTitleInput] = useState(doc.title);
   const [builtCode, setBuiltCode] = useState<string | null>(initialRoute ? null : doc.code);
+  const [builtBuffers, setBuiltBuffers] = useState<string[]>([]);
   const [buildId, setBuildId] = useState(0);
   const [lineErrors, setLineErrors] = useState<LineError[]>([]);
+  // The shader the code editor shows, and the one whose code didn't build.
+  const [codeTab, setCodeTab] = useState<ShaderId>("image");
+  const [errorShader, setErrorShader] = useState<ShaderId | null>(null);
+  const shaders = useMemo<Shaders | null>(
+    () => builtCode === null ? null : {code: builtCode, buffers: builtBuffers}, [builtCode, builtBuffers]);
+  const allBuilt = builtCode === doc.code && builtBuffers.join("\0") === bufferCodes(doc).join("\0") &&
+    builtBuffers.length === (doc.buffers?.length ?? 0);
   // The code the canvas last compiled, and whether it compiled.
   const [compiled, setCompiled] = useState<{code: string; ok: boolean} | null>(null);
   const [time, setTime] = useState(0);
@@ -134,7 +144,8 @@ export default function App() {
   const [sharedFrom, setSharedFrom] = useState<Route | null>(null);
 
   const values = useMemo(() => variableValues(doc.variables, time), [doc.variables, time]);
-  const floatNameList = useMemo(() => floatNames(doc.code), [doc.code]);
+  // Named in any shader's #defines, the image's first.
+  const floatNameList = useMemo(() => floatNames([doc.code, ...bufferCodes(doc)].join("\n")), [doc]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const textureURLs = useMemo(() => doc.textures.map(textureURL), [doc.textures, imagesVersion]);
 
@@ -151,6 +162,8 @@ export default function App() {
     setDoc(json);
     setTitleInput(json.title);
     setBuiltCode(json.code);
+    setBuiltBuffers(bufferCodes(json));
+    setCodeTab("image");
     setBuildId(id => id + 1);
     windowTitle(json.title);
     setHasUnsavedChanges(false);
@@ -286,6 +299,7 @@ export default function App() {
         setDocumentId(null);
         setDoc(d => ({...d, code: "// " + text}));
         setBuiltCode("// " + text);
+        setBuiltBuffers([]);
       } finally {
         setLoading(false);
         offerTourRef.current();
@@ -340,21 +354,66 @@ export default function App() {
 
   const build = () => {
     setBuiltCode(doc.code);
+    setBuiltBuffers(bufferCodes(doc));
     setBuildId(id => id + 1);
   };
 
   const onCodeChange = (code: string, isHelperChange: boolean) => {
-    setDoc(d => ({...d, code}));
+    const tab = codeTab;
+    const withCode = (d: AnimationDocument): AnimationDocument => tab === "image" ? {...d, code} :
+      {...d, buffers: (d.buffers ?? []).map((buffer, i) => i === tab ? {code} : buffer)};
+    setDoc(withCode);
     setHasUnsavedChanges(true);
     if (isHelperChange) {
       // They've found the pickers, so there's no need for the tip about them.
       markTipSeen("pickers");
     }
     // Picker drags rebuild live, as long as the code was built before the drag.
-    if (isHelperChange && builtCode === doc.code) {
-      setBuiltCode(code);
+    if (isHelperChange && allBuilt) {
+      setBuiltCode(withCode(doc).code);
+      setBuiltBuffers(bufferCodes(withCode(doc)));
     }
   };
+
+  const addBuffer = () => {
+    const buffers = doc.buffers ?? [];
+    updateDoc({buffers: [...buffers, {code: newBufferCode(buffers.length)}]});
+    setCodeTab(buffers.length);
+  };
+
+  const removeLastBuffer = () => {
+    const buffers = doc.buffers ?? [];
+    const last = buffers.length - 1;
+    if (buffers[last]!.code !== newBufferCode(last) &&
+        !window.confirm(`Remove ${shaderName(last)} and its code?`)) {
+      return;
+    }
+    const rest = buffers.slice(0, last);
+    setDoc(d => {
+      const next: AnimationDocument = {...d, buffers: rest};
+      if (rest.length === 0) {
+        delete next.buffers;  // Saved as an animation without buffers, as before it had any.
+      }
+      return next;
+    });
+    setHasUnsavedChanges(true);
+    setCodeTab(last > 0 ? last - 1 : "image");
+  };
+
+  const onBuilt = (result: CompileResult) => {
+    const errors = result.ok ? [] : result.errors;
+    setLineErrors(errors);
+    setErrorShader(result.ok ? null : result.shader);
+    if (!result.ok) {
+      setCodeTab(result.shader);  // Show the code with the error.
+    }
+    setCompiled({code: builtCode ?? "", ok: result.ok});
+    if (builtCode !== null) {
+      showTip({kind: "built", ok: result.ok, code: builtCode, edited: builtCode !== openedCode.current});
+    }
+  };
+
+  const tabCode = codeTab === "image" ? doc.code : doc.buffers?.[codeTab]?.code ?? "";
 
   const save = async (asCopy: boolean, copyTitle?: string) => {
     // Saving before the animation has loaded would overwrite it with the default document, and
@@ -462,7 +521,7 @@ export default function App() {
   };
 
 
-  const buildState = lineErrors.length > 0 ? "error" : builtCode === doc.code ? "built" : "changed";
+  const buildState = lineErrors.length > 0 ? "error" : allBuilt ? "built" : "changed";
 
   const tutorialState: TutorialState = {
     code: doc.code, builtCode: builtCode ?? "",
@@ -609,25 +668,23 @@ export default function App() {
                 Build
               </Button>
             </Tooltip>}
+          <ShaderTabs
+            numBuffers={doc.buffers?.length ?? 0} current={codeTab} error={errorShader}
+            onChoose={setCodeTab} onAdd={addBuffer} onRemoveLast={removeLastBuffer}
+          />
           <CodeEditor
-            value={doc.code} onChange={onCodeChange} onBuild={build} onSave={() => void save(false)}
-            lineErrors={lineErrors}
+            key={codeTab} value={tabCode} onChange={onCodeChange} onBuild={build} onSave={() => void save(false)}
+            lineErrors={errorShader === codeTab ? lineErrors : []}
           />
         </section>
         <section className="previewPane">
           <Canvas
             ref={canvasRef}
-            code={builtCode} buildId={buildId} textureURLs={textureURLs}
+            shaders={shaders} buildId={buildId} textureURLs={textureURLs}
             time={time} duration={doc.duration} frameIndex={frameIndex} variableValues={values}
             aspectRatio={doc.aspectRatio}
             onAspectRatioChange={(aspectRatio: AspectRatio) => updateDoc({aspectRatio})}
-            onBuilt={errors => {
-              setLineErrors(errors);
-              setCompiled({code: builtCode ?? "", ok: errors.length === 0});
-              if (builtCode !== null) {
-                showTip({kind: "built", ok: errors.length === 0, code: builtCode, edited: builtCode !== openedCode.current});
-              }
-            }}
+            onBuilt={onBuilt}
             onRestart={restartFrames} onLayout={setLayout} onToggleWide={() => setWideCanvas(w => !w)}
           />
           <PlayerControls
