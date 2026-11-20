@@ -572,10 +572,7 @@ export default function App() {
 
       <main className="workspace">
         <section className="editorPane">
-          <CodeEditor
-            value={doc.code} onChange={onCodeChange} onBuild={build} onSave={() => void save(false)}
-            lineErrors={lineErrors}
-          />
+          {/* Before the code, so on phones it can't stick higher than the code's first line. */}
           {buildState !== "built" &&
             <Tooltip label="Shift + Enter" position="top">
               <Button
@@ -585,6 +582,10 @@ export default function App() {
                 Build
               </Button>
             </Tooltip>}
+          <CodeEditor
+            value={doc.code} onChange={onCodeChange} onBuild={build} onSave={() => void save(false)}
+            lineErrors={lineErrors}
+          />
         </section>
         <section className="previewPane">
           <Canvas

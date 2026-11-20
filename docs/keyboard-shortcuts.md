@@ -39,7 +39,7 @@ Click the canvas or an empty part of the page first, so the code editor doesn't 
 
 ## Editor helpers
 
-Click a number in the code for a picker that you can drag to change it. A `vec2` value brings up a
-2D picker. A `vec3` brings up a colour picker when its values are between 0 and 1, and a 3D
-direction picker otherwise. Click a built-in function, like `smoothstep`, or an input, like
+Click a number in the code for a slider that you can drag sideways to change it, and up or down to
+zoom in or out. A `vec2` value brings up a 2D picker. A `vec3` brings up a colour picker when its
+values are between 0 and 1, and a 3D direction picker otherwise. Click a built-in function, like `smoothstep`, or an input, like
 `iTime`, to see its definition. The editor also suggests completions as you type.

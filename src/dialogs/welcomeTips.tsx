@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { MOD_KEY } from '../app/platform';
 
 export const WELCOME_TIPS: ReactNode[] = [
-  <>Click a number in your code and drag the picker to change it while the animation plays.</>,
+  <>Click a number in your code and drag the slider to change it while the animation plays. Drag up or down to zoom.</>,
   <>Click a colour like <code>vec3(1.0, 0.5, 0.2)</code> in your code for a colour picker, or a <code>vec2</code> for a 2D one.</>,
   <><Kbd>Shift</Kbd> + <Kbd>Enter</Kbd> or <Kbd>{MOD_KEY}</Kbd> + <Kbd>Enter</Kbd> builds your code.</>,
   <>Put <code>#define size iFloat0</code> at the top of your code to give a timeline input a name.</>,

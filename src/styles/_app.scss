@@ -242,11 +242,14 @@ a {
     z-index: 10;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 
-    // Above the on-screen keyboard while it's open (see useKeyboardInset).
+    // Placed at the top of the code and stuck near the bottom of the screen, above the on-screen
+    // keyboard (see useKeyboardInset), so it never rises over the switch or the play bar.
     @include phone {
-      position: fixed;
-      right: 16px;
-      bottom: calc(16px + var(--keyboard-inset, 0px));
+      position: sticky;
+      display: flex;
+      width: fit-content;
+      margin: 0 16px -36px auto;
+      top: calc(100dvh - 52px - var(--keyboard-inset, 0px));
     }
   }
 }
