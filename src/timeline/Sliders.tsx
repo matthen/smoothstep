@@ -88,7 +88,6 @@ export default function Sliders({variables, values, names, code, held, onVariabl
             <div className="sliderName">
               {name}
               {names[row] && <span className="floatName"> iFloat{row}</span>}
-              {animated && <span className="sliderAnimated" title="Set by the timeline">animated</span>}
             </div>
             <NumberBox
               className="sliderEnd" label={name + " minimum"} value={lo} lo={lo} hi={hi}

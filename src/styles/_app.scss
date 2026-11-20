@@ -1231,16 +1231,6 @@ div#textures .texturesHint {
   }
 }
 
-// Shown beside a slider whose value comes from the timeline.
-.sliderAnimated {
-  margin-left: 6px;
-  padding: 0 5px;
-  border-radius: 4px;
-  font-family: var(--mantine-font-family);
-  font-size: 10px;
-  color: $dt-purple;
-  border: 1px solid $dt-purple;
-}
 
 // Plain numbers until pointed at or typed in, when they get an outline.
 .sliderNumber input {
