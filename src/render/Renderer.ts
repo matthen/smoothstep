@@ -56,7 +56,7 @@ export function fragmentSource(code: string, numBuffers = 0, isBuffer = false, s
 
 // Splits errors in a shader's code, after the shared code, into those in the shared code and
 // those in its own, and returns the part the first error is in.
-function locateErrors(errors: LineError[], shared: string): {inShared: boolean; errors: LineError[]} {
+export function locateErrors(errors: LineError[], shared: string): {inShared: boolean; errors: LineError[]} {
   const sharedLines = shared ? shared.split("\n").length : 0;
   const inShared = (errors[0]?.line ?? sharedLines) < sharedLines;
   return {

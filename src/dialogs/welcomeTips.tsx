@@ -15,6 +15,7 @@ export const WELCOME_TIPS: ReactNode[] = [
   <>Share gives you a link with the whole animation in it. Anyone who opens it can play it and change their own copy.</>,
   <>Export video makes a WebM, MP4, animated GIF or PNG frames, at the size and frame rate you choose.</>,
   <><code>iPrevFrame</code> is the frame drawn just before. Mix it into the new one for trails, or use it to run a simulation.</>,
+  <>The ⊕ above the code adds a buffer: a shader that draws before the image, which every tab can read as <code>iBuffer0</code>. Buffers can run simulations.</>,
   <>You can add your own images in the Textures tab. They stay in this browser, and images up to 4096 px across are kept at full size.</>,
   <>Click a built-in function like <code>smoothstep</code> or <code>mix</code> in your code to see what it does.</>,
   <><Kbd>Space</Kbd> plays and pauses, and the number keys jump through the animation: <Kbd>5</Kbd> goes halfway.</>,

@@ -203,6 +203,34 @@
         ]
     },
     {
+        "functionName": "iBuffer0",
+        "oneLiner": "What the buffer iBuffer0 drew most recently.",
+        "signatures": [
+            "sampler2D iBuffer0"
+        ]
+    },
+    {
+        "functionName": "iBuffer1",
+        "oneLiner": "What the buffer iBuffer1 drew most recently.",
+        "signatures": [
+            "sampler2D iBuffer1"
+        ]
+    },
+    {
+        "functionName": "iBuffer2",
+        "oneLiner": "What the buffer iBuffer2 drew most recently.",
+        "signatures": [
+            "sampler2D iBuffer2"
+        ]
+    },
+    {
+        "functionName": "iBuffer3",
+        "oneLiner": "What the buffer iBuffer3 drew most recently.",
+        "signatures": [
+            "sampler2D iBuffer3"
+        ]
+    },
+    {
         "functionName": "greaterThanEqual",
         "oneLiner": "Perform a component-wise greater-than-or-equal comparison of two vectors.",
         "signatures": [

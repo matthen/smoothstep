@@ -13,8 +13,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 (This is the same as [Shadertoy](https://www.shadertoy.com/) shaders.)
 
 `fragCoord` is the pixel's position, from (0, 0) at the bottom left to `iResolution` at the top
-right. Set `fragColor` to its colour, with red, green and blue from 0 to 1. The alpha is always set
-to 1.
+right. Set `fragColor` to its colour, with red, green and blue from 0 to 1. The image's alpha is
+always set to 1.
 
 You write GLSL ES 3.00, the WebGL2 shader language. smoothstep adds `#version 300 es`,
 `precision highp float;` and the input uniforms below before your code, so you don't write them
@@ -33,6 +33,7 @@ Animations may also use any of the following input variables (*uniforms*):
 | `sampler2D iPrevFrame`  |  The frame drawn just before this one. |
 | `sampler2D iTexture0` ... `iTexture7`  | The 8 images set in the *Textures* tab. |
 | `float iFloat0` ... `iFloat15`  | The 16 numbers animated on the timeline. |
+| `sampler2D iBuffer0` ... `iBuffer3`  | What each buffer drew most recently, when the animation has buffers. |
 
 ## Textures
 
@@ -47,7 +48,26 @@ trails or simulations. It starts black, and is cleared each time you build, the 
 or a texture changes. `iFrame` goes back to 0 then too, and when the animation loops or goes back to
 the start, so `if (iFrame == 0)` is the place to set things up.
 
+## Buffers and shared code
+
+The ⊕ button above the code adds a buffer: another shader, with its own `mainImage`, that draws
+before the image each frame. Every tab can read what a buffer drew as `iBuffer0`, `iBuffer1` and
+so on, up to `iBuffer3`. The tabs go in the order they draw, so a buffer reading an earlier buffer
+gets this frame's picture, and a buffer reading itself or a later one gets the last frame's. That's
+how a buffer can run a simulation, with one buffer feeding the next.
+
+On almost every device, buffers hold floating-point numbers, not just colours from 0 to 1, so they can store positions,
+velocities or anything else, in all four channels. Reading between pixels blends them. Buffers start
+at zero and clear when `iPrevFrame` does. A buffer that nothing reads isn't drawn.
+
+Once an animation has a buffer, a **Shared** tab appears. Functions, constants and `#define`s in it
+can be used in every tab: the image and each buffer.
+
+The [Ink in water](https://smoothstep.io/app/#example/5c81f0d3a7e2) example uses two buffers: one
+for the water's flow, and one for the ink it carries.
+
 ## Coming from Shadertoy
 
 Shadertoy's other inputs, such as `iChannel0`, `iMouse` and `iDate`, don't exist in smoothstep.
-Use `iTexture0` and the other texture slots in place of `iChannel0`.
+Use `iTexture0` and the other texture slots in place of `iChannel0`, and `iBuffer0` to `iBuffer3`
+for buffers. Code in the Shared tab can be used in every tab.

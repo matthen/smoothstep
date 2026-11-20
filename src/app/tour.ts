@@ -40,7 +40,8 @@ function desktopSteps({showPane}: TourOptions): DriveStep[] {
         title: "Your shader",
         description: "This is GLSL code. <code>mainImage</code> works out the colour of each pixel. " +
           "Press <kbd>Shift</kbd> + <kbd>Enter</kbd> to build your changes. Click a number, colour or " +
-          "<code>vec2</code> in the code for a picker.",
+          "<code>vec2</code> in the code for a picker. The ⊕ above it adds a buffer, a shader that draws " +
+          "before the image.",
         side: "right", align: "start",
       },
     },
@@ -127,7 +128,8 @@ function phoneSteps({showPane}: TourOptions): DriveStep[] {
       popover: {
         title: "Your shader",
         description: "This is GLSL code. <code>mainImage</code> works out the colour of each pixel. " +
-          "Tap Build after a change to see it. Tap a number or colour in the code for a picker.",
+          "Tap Build after a change to see it. Tap a number or colour in the code for a picker. The ⊕ above " +
+          "it adds a buffer, a shader that draws before the image.",
         side: "top",
       },
     },

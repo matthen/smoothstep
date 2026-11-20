@@ -30,3 +30,5 @@ If you change an example, save it to keep it as one of your own animations.
 * [Using the animation timeline](https://smoothstep.io/app/#example/adb1df38284c)
 * [3D ray marching](https://smoothstep.io/app/#example/f9ad362373e4)
 * [Stateful animations - iPrevFrame](https://smoothstep.io/app/#example/26d46785c1f6)
+* [Ink in water](https://smoothstep.io/app/#example/5c81f0d3a7e2): one buffer simulates flowing water,
+  and a second carries ink along in it

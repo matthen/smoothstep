@@ -19,6 +19,8 @@ const INPUTS: {name: string; last?: string; type: string; description: string}[]
   {name: "iPrevFrame", type: "sampler2D", description: "The frame drawn just before this one."},
   {name: "iTexture0", last: "iTexture7", type: "sampler2D", description: "The 8 images set in the Textures tab."},
   {name: "iFloat0", last: "iFloat15", type: "float", description: "The 16 numbers animated on the timeline."},
+  {name: "iBuffer0", last: "iBuffer3", type: "sampler2D",
+    description: "What each buffer drew most recently, when the animation has buffers."},
 ];
 
 function Name({name, last}: {name: string; last?: string}) {
@@ -84,11 +86,24 @@ export default function ShaderInputs({show, onHide}: ShaderInputsProps) {
         back to the start, so <code>if (iFrame == 0)</code> is the place to set things up.
       </Text>
 
+      <Title order={2} size="h5" mt="lg" mb={4}>Buffers and shared code</Title>
+      <Text size="sm">
+        The ⊕ button above the code adds a buffer: another shader that draws before the image each frame. Every
+        tab can read what it drew as <code>iBuffer0</code>, <code>iBuffer1</code> and so on. The tabs go in the
+        order they draw, so reading an earlier buffer gives this frame's picture, and reading the same buffer or a
+        later one gives the last frame's. Buffers hold any numbers, not just colours, in all four channels, so
+        they can run simulations.
+      </Text>
+      <Text size="sm" mt="xs">
+        Functions, constants and <code>#define</code>s in the Shared tab can be used in every tab.
+      </Text>
+
       <Title order={2} size="h5" mt="lg" mb={4}>Coming from Shadertoy</Title>
       <Text size="sm">
         Shaders are GLSL ES 3.00 (WebGL 2). smoothstep adds the version, precision and these inputs before your
         code. Shadertoy's <code>iChannel0</code>, <code>iMouse</code> and <code>iDate</code> don't exist here:
-        use <code>iTexture0</code> for <code>iChannel0</code>.
+        use <code>iTexture0</code> for <code>iChannel0</code>, and <code>iBuffer0</code> to <code>iBuffer3</code> for
+        buffers.
       </Text>
       <Group justify="flex-end" mt="lg"><Button variant="default" onClick={onHide}>Close</Button></Group>
     </AppModal>

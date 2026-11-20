@@ -1,6 +1,8 @@
 // GLSL as a CodeMirror stream language: a port of CodeMirror 5's clike mode configured for GLSL.
 import { StreamLanguage, StringStream, type StreamParser } from '@codemirror/language';
 
+import { MAX_BUFFERS } from '../lib/document';
+
 export const KEYWORDS = (
   'sampler1D sampler2D sampler3D samplerCube sampler1DShadow sampler2DShadow ' +
   'const attribute uniform varying break continue discard return ' +
@@ -13,6 +15,7 @@ export const UNIFORMS = [
   'iFrame', 'iTime', 'iPrevFrame', 'iResolution', 'iDuration',
   ...Array.from({ length: 8 }, (_, i) => `iTexture${i}`),
   ...Array.from({ length: 16 }, (_, i) => `iFloat${i}`),
+  ...Array.from({ length: MAX_BUFFERS }, (_, i) => `iBuffer${i}`),
 ];
 
 export const BUILTINS = [

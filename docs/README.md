@@ -22,7 +22,8 @@ frame rate and resolution. It all runs in your browser at [smoothstep.io](https:
 - [Examples](examples.md)
 - [Sharing animations](sharing.md): links, gists, and playing animations on other websites
 - [Keyboard shortcuts](keyboard-shortcuts.md), also in the app under Help → Keyboard shortcuts
-- [Coding specification](coding-specification.md), also in the app under Help → Shader inputs
+- [Coding specification](coding-specification.md), also in the app under Help → Shader inputs: the
+  inputs your shader can use, buffers and shared code
 
 ## Help in the app
 

@@ -26,6 +26,10 @@ An animation is a JSON object, as produced by `App.toJSON()`:
 - `variables` has 16 entries. Each transition runs from `startDSecs` to `endDSecs`, in
   tenths of a second, with `type` one of `step`, `linear` or `smoothstep`.
 - `aspectRatio` is one of `[1,1]`, `[4,3]`, `[16,9]`, `[3,4]`, `[9,16]`.
+- `buffers` is optional: up to 4 entries, `[{"code": "..."}, ...]`, read in the code as
+  `iBuffer0` to `iBuffer3`. An animation with no buffers leaves it out.
+- `shared` is optional: code with definitions every tab can use. An animation with none leaves it
+  out.
 
 `archive.validateDocument` checks these rules on import.
 
