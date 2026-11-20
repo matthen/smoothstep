@@ -1169,20 +1169,53 @@ div#textures .texturesHint {
   max-width: 900px;
 }
 
+// Name, then the minimum, the track with its value underneath, and the maximum.
 .sliderRow {
   display: grid;
-  grid-template-columns: minmax(90px, 160px) 64px 1fr 64px 76px;
-  align-items: center;
-  gap: 10px;
+  // The ends have fixed widths, so every row's track starts and stops in the same place.
+  grid-template-columns: minmax(90px, 160px) 56px 1fr 56px;
+  align-items: start;
+  column-gap: 8px;
+  padding-bottom: 6px;
+
+  > .sliderName, > .sliderEnd {
+    margin-top: 2px;
+  }
+
+  // The minimum, which comes after the name.
+  > :nth-child(2) {
+    justify-self: end;
+  }
+
+  > .sliderEnd:last-child {
+    justify-self: start;
+  }
 
   @include phone {
-    grid-template-columns: 56px 1fr 56px 68px;
-    row-gap: 2px;
+    grid-template-columns: 48px 1fr 48px;
 
     .sliderName {
       grid-column: 1 / -1;
+      margin-bottom: 4px;
     }
   }
+}
+
+.sliderTrack {
+  position: relative;
+  padding-top: 8px;
+  height: 46px;
+}
+
+// Under the handle, moving with it.
+.sliderValue {
+  position: absolute;
+  top: 22px;
+  transform: translateX(-50%);
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 12px;
+  color: $dt-gray-light;
+  white-space: nowrap;
 }
 
 .sliderName {
@@ -1209,7 +1242,23 @@ div#textures .texturesHint {
   border: 1px solid $dt-purple;
 }
 
+// Plain numbers until pointed at or typed in, when they get an outline.
 .sliderNumber input {
-  text-align: right;
+  min-height: 0;
+  height: 22px;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  text-align: center;
   font-family: var(--mantine-font-family-monospace);
+  font-size: 12px;
+
+  &:hover, &:focus {
+    border-color: $dt-gray;
+    background: $dt-gray-darker;
+  }
+}
+
+.sliderEnd input {
+  color: $dt-gray-medium;
 }

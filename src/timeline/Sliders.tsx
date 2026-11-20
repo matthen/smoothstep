@@ -29,14 +29,15 @@ function show(value: number, lo: number, hi: number): string {
 }
 
 // A number box that keeps what's typed while it's focused, and shows the value otherwise.
-function NumberBox({value, onChange, label, lo, hi, disabled}: {
-  value: number; onChange(value: number): void; label: string; lo: number; hi: number; disabled?: boolean;
+function NumberBox({value, onChange, label, lo, hi, className}: {
+  value: number; onChange(value: number): void; label: string; lo: number; hi: number; className?: string;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
+  const text = draft ?? show(value, lo, hi);
   return (
     <TextInput
-      className="sliderNumber" size="xs" aria-label={label} value={draft ?? show(value, lo, hi)} disabled={disabled}
-      inputMode="decimal"
+      className={"sliderNumber " + (className ?? "")} size="xs" variant="unstyled" aria-label={label} value={text}
+      inputMode="decimal" styles={{input: {width: `${Math.max(text.length, 1) + 1.5}ch`}}}
       onFocus={() => setDraft(show(value, lo, hi))}
       onBlur={() => setDraft(null)}
       onChange={event => {
@@ -77,24 +78,38 @@ export default function Sliders({variables, values, names, code, onVariablesChan
         const animated = variable.transitions.length > 0;
         const name = names[row] ?? "iFloat" + row;
         const value = values[row] ?? 0;
+        const top = hi > lo ? hi : lo + 1;
+        const fraction = Math.min(Math.max((value - lo) / (top - lo), 0), 1);
         return (
           <div className="sliderRow" key={row}>
             <div className="sliderName">
               {name}
               {names[row] && <span className="floatName"> iFloat{row}</span>}
-              {animated && <span className="sliderAnimated">animated</span>}
+              {animated && <span className="sliderAnimated" title="Set by the timeline">animated</span>}
             </div>
-            <NumberBox label={name + " minimum"} value={lo} lo={lo} hi={hi} onChange={min => update(row, {min})} />
-            <Slider
-              className="slider" min={lo} max={hi > lo ? hi : lo + 1} step={(hi - lo) / 1000 || 0.001}
-              value={Math.min(Math.max(value, lo), hi)} label={null} thumbProps={{"aria-label": name}}
-              onChange={v => animated ? onHold(row, v) : update(row, {value: v})}
-              onChangeEnd={() => animated && onHold(row, null)}
-            />
-            <NumberBox label={name + " maximum"} value={hi} lo={lo} hi={hi} onChange={max => update(row, {max})} />
             <NumberBox
-              label={name + " value"} value={value} lo={lo} hi={hi} disabled={animated}
-              onChange={v => update(row, {value: v})}
+              className="sliderEnd" label={name + " minimum"} value={lo} lo={lo} hi={hi}
+              onChange={min => update(row, {min})}
+            />
+            <div className="sliderTrack">
+              <Slider
+                min={lo} max={top} step={(top - lo) / 1000} value={Math.min(Math.max(value, lo), top)} label={null}
+                thumbProps={{"aria-label": name}}
+                onChange={v => animated ? onHold(row, v) : update(row, {value: v})}
+                onChangeEnd={() => animated && onHold(row, null)}
+              />
+              {/* The value, under the handle and moving with it. */}
+              <div className="sliderValue" style={{left: `${100 * fraction}%`}}>
+                {animated
+                  ? <span aria-label={name + " value"}>{show(value, lo, hi)}</span>
+                  : <NumberBox
+                      label={name + " value"} value={value} lo={lo} hi={hi} onChange={v => update(row, {value: v})}
+                    />}
+              </div>
+            </div>
+            <NumberBox
+              className="sliderEnd" label={name + " maximum"} value={hi} lo={lo} hi={hi}
+              onChange={max => update(row, {max})}
             />
           </div>
         );
