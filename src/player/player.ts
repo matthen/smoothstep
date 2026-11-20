@@ -44,7 +44,7 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link}: Pl
     showMessage(container, "This animation needs WebGL 2, which this browser or device doesn't support.");
     return;
   }
-  const result = renderer.setCode(doc.code, bufferCodes(doc));
+  const result = renderer.setCode(doc.code, bufferCodes(doc), doc.shared);
   if (!result.ok) {
     showMessage(container, "This animation's code has an error: " + result.errors.map(e => e.message).join(" "));
     return;

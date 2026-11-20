@@ -1148,3 +1148,12 @@ div#textures .texturesHint {
   color: $dt-blue;
   font-size: 12px;
 }
+
+// Sets the Shared tab apart from the shaders that draw.
+.shaderDivider {
+  align-self: center;
+  width: 1px;
+  height: 18px;
+  margin: 0 6px;
+  background: $dt-gray;
+}

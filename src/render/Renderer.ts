@@ -45,8 +45,25 @@ function shaderSuffix(isBuffer: boolean): string {
     (isBuffer ? "" : " smoothstepColor.a = 1.;") + " }\n";
 }
 
-export function fragmentSource(code: string, numBuffers = 0, isBuffer = false): string {
-  return shaderPrefix(numBuffers) + code + shaderSuffix(isBuffer);
+// The shared code goes before each shader's own code.
+function userCode(code: string, shared: string): string {
+  return shared ? shared + "\n" + code : code;
+}
+
+export function fragmentSource(code: string, numBuffers = 0, isBuffer = false, shared = ""): string {
+  return shaderPrefix(numBuffers) + userCode(code, shared) + shaderSuffix(isBuffer);
+}
+
+// Splits errors in a shader's code, after the shared code, into those in the shared code and
+// those in its own, and returns the part the first error is in.
+function locateErrors(errors: LineError[], shared: string): {inShared: boolean; errors: LineError[]} {
+  const sharedLines = shared ? shared.split("\n").length : 0;
+  const inShared = (errors[0]?.line ?? sharedLines) < sharedLines;
+  return {
+    inShared,
+    errors: errors.filter(e => (e.line < sharedLines) === inShared)
+      .map(e => inShared ? e : {...e, line: e.line - sharedLines}),
+  };
 }
 
 // The buffers the image needs this frame: those it reads, and those they read in turn.
@@ -92,8 +109,8 @@ interface Target {
   texture: WebGLTexture;
 }
 
-// Which shader an error is in: the image, or buffer k.
-export type ShaderId = "image" | number;
+// A tab of code: the image, buffer k, or the code they share. Also which one an error is in.
+export type ShaderId = "image" | "shared" | number;
 
 export type CompileResult = {ok: true} | {ok: false; shader: ShaderId; errors: LineError[]};
 
@@ -192,22 +209,25 @@ export class Renderer {
   }
 
   // Builds the image's shader and the buffers'. If any fails, the previous ones keep rendering.
-  setCode(code: string, buffers: readonly string[] = []): CompileResult {
+  setCode(code: string, buffers: readonly string[] = [], shared = ""): CompileResult {
     const sources: [ShaderId, string][] = [["image", code], ...buffers.map((c, i): [ShaderId, string] => [i, c])];
     const programs: Program[] = [];
     for (const [shader, source] of sources) {
-      const result = this.link(fragmentSource(source, buffers.length, shader !== "image"));
+      const result = this.link(fragmentSource(source, buffers.length, shader !== "image", shared));
       if (!result.program) {
         programs.forEach(p => this.gl.deleteProgram(p));
-        return {ok: false, shader, errors: result.stage === "compile" ? parseErrors(result.log, source) :
-          [{line: 0, message: result.log.trim() || "Couldn't link the shader."}]};
+        if (result.stage === "link") {
+          return {ok: false, shader, errors: [{line: 0, message: result.log.trim() || "Couldn't link the shader."}]};
+        }
+        const located = locateErrors(parseErrors(result.log, userCode(source, shared)), shared);
+        return {ok: false, shader: located.inShared ? "shared" : shader, errors: located.errors};
       }
       programs.push(result.program);
     }
     [this.program, ...this.bufferPrograms].forEach(p => p && this.gl.deleteProgram(p));
     this.program = programs[0]!;
     this.bufferPrograms = programs.slice(1);
-    this.used = buffersUsed(code, buffers);
+    this.used = buffersUsed(userCode(code, shared), buffers.map(b => userCode(b, shared)));
     this.clearTargets();
     return {ok: true};
   }

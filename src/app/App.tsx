@@ -21,7 +21,8 @@ import ShaderTabs, { shaderName } from '../editor/ShaderTabs';
 import * as archive from '../lib/archive';
 import { asset, documentHref, DOCS_URL, REPO_URL, textureURL, TUTORIAL_HREF } from '../lib/config';
 import {
-  bufferCodes, DEFAULT_TITLE, MAX_TITLE_LENGTH, newBufferCode, newDocument, parseDocument, variableValues,
+  bufferCodes, DEFAULT_TITLE, MAX_TITLE_LENGTH, newBufferCode, newDocument, parseDocument, sameExtras, shaderExtras,
+  SHARED_PLACEHOLDER, variableValues, type ShaderExtras,
   type AnimationDocument, type AspectRatio, type TextureSlot, type Variable,
 } from '../lib/document';
 import * as localStore from '../lib/localStore';
@@ -94,16 +95,16 @@ export default function App() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [titleInput, setTitleInput] = useState(doc.title);
   const [builtCode, setBuiltCode] = useState<string | null>(initialRoute ? null : doc.code);
-  const [builtBuffers, setBuiltBuffers] = useState<string[]>([]);
+  // The buffers' code and the shared code, as last built.
+  const [builtExtras, setBuiltExtras] = useState<ShaderExtras>(() => shaderExtras(doc));
   const [buildId, setBuildId] = useState(0);
   const [lineErrors, setLineErrors] = useState<LineError[]>([]);
-  // The shader the code editor shows, and the one whose code didn't build.
+  // The code the editor shows, and the one whose code didn't build.
   const [codeTab, setCodeTab] = useState<ShaderId>("image");
   const [errorShader, setErrorShader] = useState<ShaderId | null>(null);
   const shaders = useMemo<Shaders | null>(
-    () => builtCode === null ? null : {code: builtCode, buffers: builtBuffers}, [builtCode, builtBuffers]);
-  const allBuilt = builtCode === doc.code && builtBuffers.join("\0") === bufferCodes(doc).join("\0") &&
-    builtBuffers.length === (doc.buffers?.length ?? 0);
+    () => builtCode === null ? null : {code: builtCode, ...builtExtras}, [builtCode, builtExtras]);
+  const allBuilt = builtCode === doc.code && sameExtras(builtExtras, shaderExtras(doc));
   // The code the canvas last compiled, and whether it compiled.
   const [compiled, setCompiled] = useState<{code: string; ok: boolean} | null>(null);
   const [time, setTime] = useState(0);
@@ -145,7 +146,7 @@ export default function App() {
 
   const values = useMemo(() => variableValues(doc.variables, time), [doc.variables, time]);
   // Named in any shader's #defines, the image's first.
-  const floatNameList = useMemo(() => floatNames([doc.code, ...bufferCodes(doc)].join("\n")), [doc]);
+  const floatNameList = useMemo(() => floatNames([doc.code, doc.shared ?? "", ...bufferCodes(doc)].join("\n")), [doc]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const textureURLs = useMemo(() => doc.textures.map(textureURL), [doc.textures, imagesVersion]);
 
@@ -162,7 +163,7 @@ export default function App() {
     setDoc(json);
     setTitleInput(json.title);
     setBuiltCode(json.code);
-    setBuiltBuffers(bufferCodes(json));
+    setBuiltExtras(shaderExtras(json));
     setCodeTab("image");
     setBuildId(id => id + 1);
     windowTitle(json.title);
@@ -299,7 +300,7 @@ export default function App() {
         setDocumentId(null);
         setDoc(d => ({...d, code: "// " + text}));
         setBuiltCode("// " + text);
-        setBuiltBuffers([]);
+        setBuiltExtras({buffers: [], shared: ""});
       } finally {
         setLoading(false);
         offerTourRef.current();
@@ -354,14 +355,26 @@ export default function App() {
 
   const build = () => {
     setBuiltCode(doc.code);
-    setBuiltBuffers(bufferCodes(doc));
+    setBuiltExtras(shaderExtras(doc));
     setBuildId(id => id + 1);
   };
 
   const onCodeChange = (code: string, isHelperChange: boolean) => {
     const tab = codeTab;
-    const withCode = (d: AnimationDocument): AnimationDocument => tab === "image" ? {...d, code} :
-      {...d, buffers: (d.buffers ?? []).map((buffer, i) => i === tab ? {code} : buffer)};
+    const withCode = (d: AnimationDocument): AnimationDocument => {
+      if (tab === "image") {
+        return {...d, code};
+      }
+      if (tab === "shared") {
+        // Only the placeholder, or nothing, isn't saved.
+        const next: AnimationDocument = {...d, shared: code};
+        if (!code.trim() || code === SHARED_PLACEHOLDER) {
+          delete next.shared;
+        }
+        return next;
+      }
+      return {...d, buffers: (d.buffers ?? []).map((buffer, i) => i === tab ? {code} : buffer)};
+    };
     setDoc(withCode);
     setHasUnsavedChanges(true);
     if (isHelperChange) {
@@ -371,7 +384,7 @@ export default function App() {
     // Picker drags rebuild live, as long as the code was built before the drag.
     if (isHelperChange && allBuilt) {
       setBuiltCode(withCode(doc).code);
-      setBuiltBuffers(bufferCodes(withCode(doc)));
+      setBuiltExtras(shaderExtras(withCode(doc)));
     }
   };
 
@@ -413,7 +426,10 @@ export default function App() {
     }
   };
 
-  const tabCode = codeTab === "image" ? doc.code : doc.buffers?.[codeTab]?.code ?? "";
+  const tabCode = codeTab === "image" ? doc.code : codeTab === "shared" ? doc.shared ?? SHARED_PLACEHOLDER :
+    doc.buffers?.[codeTab]?.code ?? "";
+  // Shared code only helps once there's more than one shader, so the tab appears with the first buffer.
+  const showShared = (doc.buffers?.length ?? 0) > 0 || doc.shared !== undefined || codeTab === "shared";
 
   const save = async (asCopy: boolean, copyTitle?: string) => {
     // Saving before the animation has loaded would overwrite it with the default document, and
@@ -669,7 +685,7 @@ export default function App() {
               </Button>
             </Tooltip>}
           <ShaderTabs
-            numBuffers={doc.buffers?.length ?? 0} current={codeTab} error={errorShader}
+            numBuffers={doc.buffers?.length ?? 0} showShared={showShared} current={codeTab} error={errorShader}
             onChoose={setCodeTab} onAdd={addBuffer} onRemoveLast={removeLastBuffer}
           />
           <CodeEditor

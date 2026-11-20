@@ -43,6 +43,8 @@ export interface AnimationDocument {
   code: string;
   // Left out when there are none, so animations without buffers are saved as before.
   buffers?: Buffer[];
+  // Code that goes before the image's and every buffer's own code. Left out when there's none.
+  shared?: string;
   duration: number;  // Seconds.
   aspectRatio: AspectRatio;
   textures: TextureSlot[];
@@ -79,6 +81,25 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 export function bufferCodes(doc: AnimationDocument): string[] {
   return (doc.buffers ?? []).map(buffer => buffer.code);
 }
+
+// The code that compiles with the image's: the buffers', and the code they all share.
+export interface ShaderExtras {
+  buffers: string[];
+  shared: string;
+}
+
+export function shaderExtras(doc: AnimationDocument): ShaderExtras {
+  return {buffers: bufferCodes(doc), shared: doc.shared ?? ""};
+}
+
+export function sameExtras(a: ShaderExtras, b: ShaderExtras): boolean {
+  return a.shared === b.shared && a.buffers.length === b.buffers.length && a.buffers.every((c, i) => c === b.buffers[i]);
+}
+
+// What the Shared tab shows before anything's written in it.
+export const SHARED_PLACEHOLDER = `// Code here goes before every shader's own code: the image's and each buffer's.
+// Put functions, constants and #defines that more than one of them uses here.
+`;
 
 export function emptyTextures(): TextureSlot[] {
   return Array.from({length: NUM_TEXTURES}, (_, i) => (
@@ -175,10 +196,13 @@ export function parseDocument(value: unknown): AnimationDocument {
     if (!isRecord(buffer) || typeof buffer.code !== "string") {fail("buffer " + i);}
     return {code: (buffer as Record<string, unknown>).code as string};
   });
+  if (json.shared !== undefined && typeof json.shared !== "string") {fail("shared");}
+  const shared = (json.shared ?? "") as string;
   return {
     title: json.title as string,
     code: json.code as string,
     ...(buffers.length > 0 ? {buffers} : {}),
+    ...(shared ? {shared} : {}),
     duration: json.duration as number,
     aspectRatio: [aspectRatio[0], aspectRatio[1]] as AspectRatio,
     textures,

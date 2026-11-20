@@ -114,7 +114,7 @@ export async function exportVideo(
   const frameContext = frameCanvas.getContext("2d", {willReadFrequently: options.type === "gif"})!;
   let encoder: Encoder | null = null;
   try {
-    const compiled = renderer.setCode(doc.code, bufferCodes(doc));
+    const compiled = renderer.setCode(doc.code, bufferCodes(doc), doc.shared);
     if (!compiled.ok) {
       throw new Error("The shader doesn't compile: " + (compiled.errors[0]?.message ?? ""));
     }

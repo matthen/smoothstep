@@ -19,10 +19,11 @@ export interface CanvasHandle {
   captureFrame(): string | null;
 }
 
-// The image's code and each buffer's, as last built.
+// The image's code, each buffer's and the code they share, as last built.
 export interface Shaders {
   code: string;
   buffers: string[];
+  shared: string;
 }
 
 interface CanvasProps {
@@ -109,7 +110,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     if (!renderer || props.shaders === null) {
       return;
     }
-    const result = renderer.setCode(props.shaders.code, props.shaders.buffers);
+    const result = renderer.setCode(props.shaders.code, props.shaders.buffers, props.shaders.shared);
     props.onBuilt(result);
     if (result.ok) {
       props.onRestart();

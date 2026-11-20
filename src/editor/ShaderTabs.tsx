@@ -7,8 +7,9 @@ import type { ShaderId } from '../render/Renderer';
 
 interface ShaderTabsProps {
   numBuffers: number;
+  showShared: boolean;
   current: ShaderId;
-  // The shader whose code didn't build, if one didn't.
+  // The code that didn't build, if some didn't.
   error: ShaderId | null;
   onChoose(shader: ShaderId): void;
   onAdd(): void;
@@ -17,22 +18,50 @@ interface ShaderTabsProps {
 
 // A buffer is named as the code reads it.
 export function shaderName(shader: ShaderId): string {
-  return shader === "image" ? "Image" : "iBuffer" + shader;
+  return shader === "image" ? "Image" : shader === "shared" ? "Shared" : "iBuffer" + shader;
 }
 
-// Tabs above the code for each buffer and the image, in the order they draw each frame, with
-// a button to add a buffer where it will go, just before the image, and one to remove the last.
-export default function ShaderTabs({numBuffers, current, error, onChoose, onAdd, onRemoveLast}: ShaderTabsProps) {
-  const shaders: ShaderId[] = [...Array.from({length: numBuffers}, (_, i) => i), "image"];
+// Tabs above the code: the shared code, set apart, then each buffer and the image in the order they
+// draw each frame, with a button to add a buffer where it will go, just before the image, and one to
+// remove the last.
+export default function ShaderTabs(
+  {numBuffers, showShared, current, error, onChoose, onAdd, onRemoveLast}: ShaderTabsProps,
+) {
+  const drawn: ShaderId[] = [...Array.from({length: numBuffers}, (_, i) => i), "image"];
   const then = (key: string) => <TbChevronRight key={key} className="shaderThen" aria-hidden />;
   const rowRef = useRef<HTMLDivElement>(null);
   // When the row scrolls sideways, keep the open tab in view.
   useEffect(() => {
     rowRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({block: "nearest", inline: "nearest"});
   }, [current, numBuffers]);
+
+  const tab = (shader: ShaderId) =>
+    <UnstyledButton
+      key={shader} role="tab" aria-selected={shader === current} className="shaderTab"
+      data-error={shader === error || undefined} data-buffer={typeof shader === "number" || undefined}
+      onClick={() => onChoose(shader)}
+    >
+      {shaderName(shader)}
+      {shader === numBuffers - 1 &&
+        <Tooltip label={"Remove " + shaderName(shader)}>
+          <ActionIcon
+            component="span" size="xs" variant="subtle" color="gray" aria-label={"Remove " + shaderName(shader)}
+            onClick={event => {event.stopPropagation(); onRemoveLast();}}
+          >
+            <TbX />
+          </ActionIcon>
+        </Tooltip>}
+    </UnstyledButton>;
+
   return (
-    <div className="shaderTabs" role="tablist" aria-label="Shaders, in the order they draw" ref={rowRef}>
-      {shaders.map((shader, i) => [
+    <div className="shaderTabs" role="tablist" aria-label="Code, in the order it draws" ref={rowRef}>
+      {showShared && [
+        <Tooltip key="shared" label="Code that goes before every shader's own code, like Shadertoy's Common tab">
+          {tab("shared")}
+        </Tooltip>,
+        <span key="divider" className="shaderDivider" aria-hidden />,
+      ]}
+      {drawn.map((shader, i) => [
         i > 0 && then("then" + shader),
         shader === "image" && numBuffers < MAX_BUFFERS && [
           <Tooltip key="add" label="Add a buffer: a shader that draws before the image, which any shader can read">
@@ -42,22 +71,7 @@ export default function ShaderTabs({numBuffers, current, error, onChoose, onAdd,
           </Tooltip>,
           then("thenImage"),
         ],
-        <UnstyledButton
-          key={shader} role="tab" aria-selected={shader === current} className="shaderTab"
-          data-error={shader === error || undefined} data-buffer={shader !== "image" || undefined}
-          onClick={() => onChoose(shader)}
-        >
-          {shaderName(shader)}
-          {shader === numBuffers - 1 &&
-            <Tooltip label={"Remove " + shaderName(shader)}>
-              <ActionIcon
-                component="span" size="xs" variant="subtle" color="gray" aria-label={"Remove " + shaderName(shader)}
-                onClick={event => {event.stopPropagation(); onRemoveLast();}}
-              >
-                <TbX />
-              </ActionIcon>
-            </Tooltip>}
-        </UnstyledButton>,
+        tab(shader),
       ])}
     </div>
   );
