@@ -70,7 +70,7 @@ function dataURLBytes(dataURL: string): Uint8Array {
   return base64ToBytes(dataURL.split(",")[1] ?? "");
 }
 
-function imageDataURLBytes(dataURL: unknown): Uint8Array {
+export function imageDataURLBytes(dataURL: unknown): Uint8Array {
   if (typeof dataURL !== "string" || !/^data:image\/[\w+.-]+;base64,/.test(dataURL)) {
     throw new Error("Bad image data");
   }

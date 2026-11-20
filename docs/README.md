@@ -20,6 +20,7 @@ frame rate and resolution. It all runs in your browser at [smoothstep.io](https:
   7. [Memory with iPrevFrame](https://smoothstep.io/app/#tutorial/7)
   8. [Share it](https://smoothstep.io/app/#tutorial/8)
 - [Examples](examples.md)
+- [Sharing animations](sharing.md): links, gists, and playing animations on other websites
 - [Keyboard shortcuts](keyboard-shortcuts.md), also in the app under Help → Keyboard shortcuts
 - [Coding specification](coding-specification.md), also in the app under Help → Shader inputs
 
@@ -39,6 +40,13 @@ to save everything as a zip. "Open file…" opens files you downloaded before. F
 animation file saves the animation you have open as a `.smoothstep.json` file. Your browser is
 the only place your work is kept, so download anything you want to back up or move to another
 computer.
+
+## Sharing
+
+Share gives you a link with the whole animation in it, a QR code of that link, code to show the
+animation playing on a website, and a player file. File → Open from link opens animations that
+others have shared, including animation files in GitHub gists. [Sharing animations](sharing.md) has
+the details.
 
 ## Acknowledgements
 

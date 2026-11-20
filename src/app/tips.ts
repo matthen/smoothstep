@@ -38,13 +38,13 @@ export function tipContent(id: TipId, phone: boolean): Tip {
       return {
         title: "Your first transition",
         message: "Set the values it moves between, and choose smoothstep, linear or step. In your code, " +
-          "`#define size iFloat0` gives the input a name.",
+          "`#define size iFloat0` gives the input a name, and the timeline shows it.",
       };
     case "backup":
       return {
         title: "Saved in this browser",
         message: "Your animations are kept in this browser only. File → Download animation file saves a copy " +
-          "you can back up or share.",
+          "you can back up, and Share gives you a link to send to people.",
       };
   }
 }

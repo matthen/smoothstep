@@ -319,7 +319,8 @@ export const LESSONS: Lesson[] = [
             <code>iFloat0</code> to <code>iFloat15</code>, which you can use anywhere in your code.
           </p>
           <p>
-            <code>#define grow iFloat0</code> gives the first one a name, and the radius is{" "}
+            <code>#define grow iFloat0</code> gives the first one a name, which the timeline shows on its row, and the
+            radius is{" "}
             <code>0.15 + 0.5 * grow</code>. Build this: until you animate it, <code>iFloat0</code> is 0, so
             the circle starts small.
           </p>
@@ -611,8 +612,12 @@ export const LESSONS: Lesson[] = [
             browser, and File → Open lists everything you've saved.
           </p>
           <p>
-            To keep a copy elsewhere or send it to someone, use File → Download animation file. It holds the
-            code, the timeline and the textures, and File → Open → "Open file…" opens it again.
+            To send it to someone, click Share. The link it gives you holds the whole animation, and whoever
+            opens it can play it and change their own copy.
+          </p>
+          <p>
+            To keep a copy elsewhere, use File → Download animation file. It holds the code, the timeline and the
+            textures, and File → Open → "Open file…" opens it again.
           </p>
         </>,
       },

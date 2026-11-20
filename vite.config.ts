@@ -1,11 +1,35 @@
 /// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import { build, defineConfig, type Plugin } from 'vite';
+
+// `import script from 'virtual:player-script'` gives the standalone player (src/player/standalone.ts)
+// bundled into one script, for the player files the app makes.
+function playerScript(): Plugin {
+  const id = '\0virtual:player-script';
+  return {
+    name: 'player-script',
+    resolveId: source => source === 'virtual:player-script' ? id : undefined,
+    async load(source) {
+      if (source !== id) {
+        return undefined;
+      }
+      const result = await build({
+        configFile: false, logLevel: 'warn',
+        build: {
+          write: false, minify: true,
+          lib: {entry: 'src/player/standalone.ts', formats: ['iife'], name: 'smoothstepPlayer'},
+        },
+      });
+      const output = (Array.isArray(result) ? result[0]! : result as {output: {code?: string}[]}).output[0]!;
+      return 'export default ' + JSON.stringify(output.code);
+    },
+  };
+}
 
 export default defineConfig({
   // Relative asset URLs, so the build works from any path on any static host.
   base: './',
-  plugins: [react()],
+  plugins: [react(), playerScript()],
   css: {
     preprocessorOptions: {
       // Bootstrap 5.3's Sass still uses @import and global functions.
@@ -16,6 +40,8 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
     rolldownOptions: {
+      // embed.html is the player for showing an animation on another website.
+      input: {main: 'index.html', embed: 'embed.html'},
       output: {
         // Large libraries in chunks of their own, so they load in parallel and stay cached
         // across app updates.

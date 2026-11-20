@@ -1,21 +1,10 @@
-// Animations open from the URL hash: #anim/<id> (saved in this browser), #example/<id>, #new, or
-// #tutorial/<lesson>, a new animation with the tutorial open.
+// Animations open from the URL hash (the routes are in lib/routes.ts), or #new.
 // Each one opens with a fresh page load, which keeps every bit of editor state starting clean.
 import { useEffect } from 'react';
 
 import { useLatest } from '../lib/useLatest';
 
-export type Route = {kind: "anim" | "example"; id: string} | {kind: "tutorial"; lesson: number | null};
-
-export function parseHash(hash: string): Route | null {
-  const tutorial = hash.match(/^#tutorial(?:\/(\d+))?$/);
-  if (tutorial) {
-    // Lessons are numbered from 1 in the URL.
-    return {kind: "tutorial", lesson: tutorial[1] ? Math.max(0, Number(tutorial[1]) - 1) : null};
-  }
-  const match = hash.match(/^#(anim|example)\/([a-f0-9]+)$/);
-  return match ? {kind: match[1] as "anim" | "example", id: match[2]!} : null;
-}
+export { parseHash, type Route } from '../lib/routes';
 
 // Set once the user has agreed to discard changes, so beforeunload doesn't ask again.
 let confirmedLeaving = false;
@@ -24,7 +13,19 @@ export function hasConfirmedLeaving(): boolean {
   return confirmedLeaving;
 }
 
-const APP_LINKS = 'a[href="#new"], a[href^="#anim/"], a[href^="#example/"], a[href^="#tutorial"]';
+// Opens what `hash` names with a fresh page load, after asking before unsaved changes are lost.
+// pushState doesn't fire hashchange, so the reload happens once.
+export function openHash(hash: string, hasUnsavedChanges: boolean) {
+  if (hasUnsavedChanges && !window.confirm("This animation has unsaved changes. Discard them?")) {
+    return;
+  }
+  confirmedLeaving = true;
+  window.history.pushState({}, "", hash);
+  window.location.reload();
+}
+
+const APP_LINKS = 'a[href="#new"], a[href^="#anim/"], a[href^="#example/"], a[href^="#tutorial"], ' +
+  'a[href^="#share/"], a[href^="#url/"], a[href^="#gist/"]';
 
 export function useHashLinks(hasUnsavedChanges: boolean) {
   const unsaved = useLatest(hasUnsavedChanges);
@@ -40,13 +41,7 @@ export function useHashLinks(hasUnsavedChanges: boolean) {
         return;
       }
       event.preventDefault();
-      if (unsaved.current && !window.confirm("This animation has unsaved changes. Discard them?")) {
-        return;
-      }
-      confirmedLeaving = true;
-      window.removeEventListener("hashchange", onHashChange);
-      window.history.pushState({}, "", link.getAttribute("href"));
-      window.location.reload();
+      openHash(link.getAttribute("href")!, unsaved.current);
     };
     window.addEventListener("hashchange", onHashChange);
     document.addEventListener("click", onClick, true);

@@ -37,6 +37,7 @@ export default function Acknowledgements({show, onHide}: AcknowledgementsProps) 
           <li><Link href="https://github.com/mattdesl/gifenc">gifenc</Link></li>
           <li><Link href="https://github.com/101arrowz/fflate">fflate</Link></li>
           <li><Link href="https://mantine.dev/">Mantine</Link></li>
+          <li><Link href="https://github.com/unjs/uqr">uqr</Link></li>
           <li><Link href="https://www.khronos.org/webgl/">WebGL</Link></li>
           <li><Link href="https://github.com/dracula/dracula-theme/">Dracula theme</Link></li>
         </ul>

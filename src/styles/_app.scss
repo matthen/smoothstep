@@ -698,6 +698,14 @@ div#textures .texturesHint {
   }
 }
 
+// Share dialog.
+.shareQR {
+  max-width: 100%;
+  height: auto;
+  align-self: center;
+  image-rendering: pixelated;
+}
+
 // Texture picker.
 .texturePickerBody {
   max-height: 60vh;

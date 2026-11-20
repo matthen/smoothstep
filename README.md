@@ -44,8 +44,12 @@ and font sheets, or your own images up to 4096px. smoothstep exports WebM, MP4, 
 GIFs and PNG frames, all made in your browser.
 
 smoothstep keeps your animations and the images you add in your browser's storage. You can download one
-animation, or all of them as a zip, to back them up, move them to another computer or share
-them, and open them again with File → Open → "Open file…".
+animation, or all of them as a zip, to back them up or move them to another computer, and open
+them again with File → Open → "Open file…".
+
+Sharing needs no server. Share gives you a link with the whole animation compressed into it,
+code to show it playing on any website, and a player file that works offline. smoothstep also opens
+animation files from GitHub gists and other websites ([docs/sharing.md](docs/sharing.md)).
 
 ## Running it
 
@@ -64,7 +68,9 @@ npm run test:e2e   # end-to-end tests in Chromium, against the build
 `npm run build` makes a plain static site in `dist/`. You can put it on any static host,
 such as GitHub Pages or Netlify, at any path. It works fully offline, including video export.
 Saved animations open at `#anim/<id>`, the bundled examples at `#example/<id>`, and the tutorial at
-`#tutorial` (or `#tutorial/<lesson>`), in a new animation.
+`#tutorial` (or `#tutorial/<lesson>`), in a new animation. Shared animations open at
+`#share/<data>`, `#gist/<id>` and `#url/<address>`, and `embed.html` takes the same addresses to
+play an animation on its own.
 
 ## How it's built
 
@@ -77,7 +83,11 @@ Sass for the app's own styles, CodeMirror 6 for the code editor, and WebGL 2 for
   you've saved.
 - `src/lib/` has the animation format and its checks (`document.ts`), the IndexedDB store
   for animations and uploaded images (`localStore.ts`), and file downloads and imports
-  (`archive.ts`), in the formats described in [FILE_FORMATS.md](FILE_FORMATS.md).
+  (`archive.ts`), in the formats described in [FILE_FORMATS.md](FILE_FORMATS.md). The
+  addresses the app opens are in `routes.ts`, and `share.ts` makes share links and loads
+  animations from links, gists and other websites.
+- `src/player/` is the bare player, without React, behind `embed.html` and the player files that
+  Share downloads.
 - `src/render/` compiles and draws the shader, and maps compile errors back to lines of
   your code.
 - `src/editor/` is the code editor, with GLSL highlighting, hints and the inline pickers.

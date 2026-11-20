@@ -4,14 +4,16 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { flushSync } from 'react-dom';
 import {
   TbBook, TbBrandGithub, TbChevronDown, TbCopy, TbDeviceFloppy, TbDownload, TbFile, TbFolderOpen, TbHammer,
-  TbCircleCheckFilled, TbCode, TbHeart, TbHelp, TbHome, TbKeyboard, TbMovie, TbRoute, TbSchool,
+  TbCircleCheckFilled, TbCode, TbHeart, TbHelp, TbHome, TbKeyboard, TbLink, TbMovie, TbRoute, TbSchool, TbShare,
 } from 'react-icons/tb';
 
 import Acknowledgements from '../dialogs/Acknowledgements';
 import DocumentBrowser from '../dialogs/DocumentBrowser';
 import ExportSettings from '../dialogs/ExportSettings';
 import type { ExportOptions, ExportProgress } from '../dialogs/exportTypes';
+import OpenLink from '../dialogs/OpenLink';
 import SaveCopy from '../dialogs/SaveCopy';
+import Share from '../dialogs/Share';
 import Splash from '../dialogs/Splash';
 import Textures from '../dialogs/Textures';
 import CodeEditor from '../editor/CodeEditor';
@@ -22,9 +24,12 @@ import {
   type AnimationDocument, type AspectRatio, type TextureSlot, type Variable,
 } from '../lib/document';
 import * as localStore from '../lib/localStore';
+import { routeHash, type Route } from '../lib/routes';
+import { loadRoute, ShareError } from '../lib/share';
 import type { LineError } from '../lib/types';
 import { useLatest } from '../lib/useLatest';
 import Canvas, { type CanvasHandle, type CanvasLayout } from '../render/Canvas';
+import { floatNames } from '../timeline/names';
 import PlayerControls from '../timeline/PlayerControls';
 import Timeline from '../timeline/Timeline';
 import { lessonTitle, type TutorialState } from '../tutorial/lessons';
@@ -35,7 +40,7 @@ import { onHelpDialog } from './helpDialogs';
 import { setTourState, tourState } from './onboarding';
 import { MOD_KEY } from './platform';
 import { chooseTip, markTipSeen, seenTips, tipContent, tipsFor, turnOffTips, type TipEvent } from './tips';
-import { hasConfirmedLeaving, parseHash, useHashLinks } from './routing';
+import { hasConfirmedLeaving, openHash, parseHash, useHashLinks } from './routing';
 import { useKeyboardInset } from './useKeyboardInset';
 import { usePhone } from './usePhone';
 
@@ -55,7 +60,8 @@ const TutorialPanel = lazy(() => import('../tutorial/TutorialPanel'));
 const KeyboardShortcuts = lazy(() => import('../dialogs/KeyboardShortcuts'));
 const ShaderInputs = lazy(() => import('../dialogs/ShaderInputs'));
 
-type Dialog = "open" | "saveCopy" | "export" | "splash" | "acknowledgements" | "shortcuts" | "inputs";
+type Dialog =
+  "open" | "openLink" | "saveCopy" | "share" | "export" | "splash" | "acknowledgements" | "shortcuts" | "inputs";
 
 // Text with `code` in backticks.
 function withCode(text: string) {
@@ -124,7 +130,11 @@ export default function App() {
   // The code as it was opened, so building it unchanged doesn't count as editing.
   const openedCode = useRef(doc.code);
 
+  // The link the animation opened from, which can be shared again while it's unchanged.
+  const [sharedFrom, setSharedFrom] = useState<Route | null>(null);
+
   const values = useMemo(() => variableValues(doc.variables, time), [doc.variables, time]);
+  const floatNameList = useMemo(() => floatNames(doc.code), [doc.code]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const textureURLs = useMemo(() => doc.textures.map(textureURL), [doc.textures, imagesVersion]);
 
@@ -251,22 +261,22 @@ export default function App() {
         if (route.kind === "tutorial") {
           // A new animation, so the tutorial never changes a saved one.
           loadDocument({...newDocument(), title: lessonTitle(tutorialStart?.lesson ?? 0)});
-        } else if (route.kind === "example") {
-          const response = await fetch(asset("examples/" + route.id + ".json"));
-          if (!response.ok) {
-            throw new Error("Example " + route.id + ": " + response.status);
-          }
-          loadDocument(parseDocument(await response.json()));
-        } else {
+        } else if (route.kind === "anim") {
           const record = await localStore.getDocument(route.id);
           if (!record) {
             throw new Error("Not found");
           }
           loadDocument(parseDocument(record.json));
+        } else {
+          // An example, or an animation shared by link.
+          const {doc, images} = await loadRoute(route);
+          images.forEach((blob, id) => localStore.addTemporaryImage(id, blob));
+          loadDocument(doc);
+          setSharedFrom(route);
         }
       } catch (error) {
         console.error(error);
-        const text = "Could not find that animation in this browser.";
+        const text = error instanceof ShareError ? error.message : "Could not find that animation in this browser.";
         setAlert(text);
         // Saving now creates a new animation rather than reusing the missing id.
         window.history.replaceState({}, "", "#new");
@@ -527,6 +537,7 @@ export default function App() {
             <Menu.Dropdown>
               <Menu.Item component="a" href="#new" leftSection={<TbFile />}>New</Menu.Item>
               <Menu.Item leftSection={<TbFolderOpen />} onClick={() => setDialog("open")}>Open</Menu.Item>
+              <Menu.Item leftSection={<TbLink />} onClick={() => setDialog("openLink")}>Open from link</Menu.Item>
               <Menu.Item
                 leftSection={<TbDeviceFloppy />} onClick={() => void save(false)} fw={hasUnsavedChanges ? 600 : undefined}
                 rightSection={<Kbd size="xs">{MOD_KEY} S</Kbd>}
@@ -544,6 +555,11 @@ export default function App() {
             onClick={() => {setExportError(null); setDialog("export");}}
           >
             <span className="desktopOnly">Export video</span>
+          </Button>
+          <Button
+            variant="subtle" color="gray" leftSection={<TbShare />} aria-label="Share" onClick={() => setDialog("share")}
+          >
+            <span className="desktopOnly">Share</span>
           </Button>
           <Menu position="bottom-end">
             <Menu.Target>
@@ -662,7 +678,7 @@ export default function App() {
           </Tabs.List>
           <Tabs.Panel value="animation">
             <Timeline
-              variables={doc.variables} variableValues={values}
+              variables={doc.variables} variableValues={values} names={floatNameList}
               onVariablesChange={(variables: Variable[]) => {
                 showTip({kind: "variablesChanged", before: doc.variables, after: variables});
                 updateDoc({variables});
@@ -692,6 +708,14 @@ export default function App() {
           }
         }}
         onMessage={setAlert}
+      />
+      <OpenLink
+        show={dialog === "openLink"} onHide={() => setDialog(null)}
+        onOpen={hash => openHash(hash, hasUnsavedChanges)}
+      />
+      <Share
+        show={dialog === "share"} doc={doc} onHide={() => setDialog(null)} onMessage={setAlert}
+        source={sharedFrom && documentId === null && !hasUnsavedChanges ? routeHash(sharedFrom) : null}
       />
       <SaveCopy
         show={dialog === "saveCopy"} title={doc.title} onHide={() => setDialog(null)}

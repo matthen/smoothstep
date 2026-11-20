@@ -97,3 +97,11 @@ the importer finds `manifest.json` and reads the other paths relative to it. Tim
 - A document without `aspectRatio` (saved before aspect ratios existed) gets `[1, 1]`.
 - An image whose id is already in the browser is skipped, since uploaded images never change.
 - An animation whose uploaded image is missing still opens; that texture slot is black.
+
+## Share links: `#share/<data>`
+
+A share link carries one document JSON: compressed with raw DEFLATE (RFC 1951), then written as
+base64url without padding (`src/lib/share.ts`). Texture slots holding the user's own images are
+set to the empty built-in texture first, since a link can't carry the images. Links to a file
+(`#url/<address>`) or a GitHub gist (`#gist/<id>`) open a `.smoothstep.json` file or a bare
+document JSON. A gist's file is the first one ending in `.smoothstep.json`, or else in `.json`.

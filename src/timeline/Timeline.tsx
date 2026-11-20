@@ -20,6 +20,8 @@ import "./timeline.scss";
 
 export interface TimelineProps {
   variables: Variable[];
+  // What the code calls each variable with #define, if anything (see names.ts).
+  names?: (string | null)[];
   variableValues: number[];
   onVariablesChange(variables: Variable[]): void;
   duration: number;
@@ -53,6 +55,7 @@ const TYPE_OPTIONS: readonly TransitionType[] = ["smoothstep", "step", "linear"]
 
 export default function Timeline(props: TimelineProps) {
   const {variables, variableValues, onVariablesChange, duration, currentTime, onSeek, onDurationChange} = props;
+  const name = (row: number) => props.names?.[row] ?? null;
   const rootRef = useRef<HTMLDivElement>(null);
   const timeAreaRef = useRef<HTMLDivElement>(null);
   const rowsRef = useRef<HTMLDivElement>(null);
@@ -377,7 +380,8 @@ export default function Timeline(props: TimelineProps) {
           </ActionIcon>}
         {heading &&
           <h4>
-            iFloat{heading.row}
+            {name(heading.row) ?? "iFloat" + heading.row}
+            {name(heading.row) && <span className="floatName"> iFloat{heading.row}</span>}
             <span> {(heading.startDSecs * 0.1).toFixed(1)}
               {heading.endDSecs !== null && <> &mdash; {(heading.endDSecs * 0.1).toFixed(1)}</>}s
             </span>
@@ -439,7 +443,7 @@ export default function Timeline(props: TimelineProps) {
           <div className="filler" ref={rowsRef}>
             {variables.map((variable, row) => (
               <div key={row} className="variableRow">
-                <div className="rowLabel" style={{left: scrollLeft}}>iFloat{row}</div>
+                <div className="rowLabel" style={{left: scrollLeft}}>{name(row) ?? "iFloat" + row}</div>
                 {variable.transitions.length > 0 &&
                   <div className="variableValue" style={{left: timeToX(currentTime), zIndex: markerZ}}>
                     {(variableValues[row] ?? 0).toFixed(2)}
