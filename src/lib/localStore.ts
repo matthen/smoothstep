@@ -113,7 +113,13 @@ async function storeTemporaryImages(json: AnimationDocument) {
   for (const slot of json.textures) {
     const blob = slot.isUserUploaded ? temporaryImages.get(slot.url) : undefined;
     if (blob) {
-      const image = await loadImage(blob);
+      let image: {width: number; height: number};
+      try {
+        image = await loadImage(blob);
+      } catch (error) {
+        console.warn(error);  // It never showed, so save the animation without it.
+        continue;
+      }
       await putImage({
         id: slot.url, filename: slot.url + "." + (blob.type.split("/")[1] ?? "png"),
         width: image.width, height: image.height, created: Date.now(), blob,

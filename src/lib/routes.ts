@@ -13,6 +13,21 @@ export type Route =
   | {kind: "gist"; id: string};
 
 export function parseHash(hash: string): Route | null {
+  const url = hash.match(/^#url\/(.+)$/);
+  if (url) {
+    // People may paste the URL as it is, or percent-encoded.
+    let text = url[1]!;
+    if (!/^https?:/i.test(text)) {
+      try {
+        text = decodeURIComponent(text);
+      } catch {
+        return null;
+      }
+    }
+    return /^https?:\/\/[^/]/i.test(text) ? {kind: "url", url: text} : null;
+  }
+  // Chat apps and sentences often leave punctuation stuck to the end of a link.
+  hash = hash.replace(/[.,;:!?)\]'"]+$/, "");
   const tutorial = hash.match(/^#tutorial(?:\/(\d+))?$/);
   if (tutorial) {
     // Lessons are numbered from 1 in the URL.
@@ -31,20 +46,12 @@ export function parseHash(hash: string): Route | null {
   if (gist) {
     return {kind: "gist", id: gist[1]!};
   }
-  const url = hash.match(/^#url\/(.+)$/);
-  if (url) {
-    // People may paste the URL as it is, or percent-encoded.
-    let text = url[1]!;
-    if (!/^https?:/i.test(text)) {
-      try {
-        text = decodeURIComponent(text);
-      } catch {
-        return null;
-      }
-    }
-    return /^https?:\/\/[^/]/i.test(text) ? {kind: "url", url: text} : null;
-  }
   return null;
+}
+
+// A link to a shared animation that parseHash couldn't read, usually because it was cut short.
+export function isBrokenShareLink(hash: string): boolean {
+  return /^#(share|gist|url)\//.test(hash) && parseHash(hash) === null;
 }
 
 export function routeHash(route: Route): string {
@@ -54,7 +61,8 @@ export function routeHash(route: Route): string {
     case "share":
       return "#share/" + route.data;
     case "url":
-      return "#url/" + route.url;
+      // The URL parser percent-encodes spaces, quotes and angle brackets, so they can't break the link.
+      return "#url/" + new URL(route.url).href;
     default:
       return "#" + route.kind + "/" + route.id;
   }

@@ -24,7 +24,7 @@ import {
   type AnimationDocument, type AspectRatio, type TextureSlot, type Variable,
 } from '../lib/document';
 import * as localStore from '../lib/localStore';
-import { routeHash, type Route } from '../lib/routes';
+import { isBrokenShareLink, routeHash, type Route } from '../lib/routes';
 import { loadRoute, ShareError } from '../lib/share';
 import type { LineError } from '../lib/types';
 import { useLatest } from '../lib/useLatest';
@@ -255,6 +255,9 @@ export default function App() {
       setAlert(STORAGE_BLOCKED);
     }).then(async () => {
       if (!route) {
+        if (isBrokenShareLink(window.location.hash)) {
+          setAlert("That link is incomplete, so there's no animation to open. Check you copied all of it.");
+        }
         return;
       }
       try {

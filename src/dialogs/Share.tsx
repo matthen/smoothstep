@@ -50,9 +50,9 @@ function qrCode(text: string): {src: string; width: number} | null {
 export function embedCode(doc: AnimationDocument, src: string): string {
   const [w, h] = doc.aspectRatio;
   const width = 512;
-  const title = doc.title.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
-  return `<iframe src="${src}" width="${width}" height="${Math.round(width * h / w)}" ` +
-    `title="${title}" style="border: 0" allowfullscreen></iframe>`;
+  const attribute = (text: string) => text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  return `<iframe src="${attribute(src)}" width="${width}" height="${Math.round(width * h / w)}" ` +
+    `title="${attribute(doc.title)}" style="border: 0" allowfullscreen></iframe>`;
 }
 
 // Ways to share the open animation: a link that carries it, a QR code of that link, code to show

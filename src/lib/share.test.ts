@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ANIMATION_FORMAT } from './archive';
 import { EMPTY_TEXTURE, newDocument, type AnimationDocument } from './document';
-import { parseHash, routeFromLink, routeHash } from './routes';
+import { embedCode } from '../dialogs/Share';
+import { isBrokenShareLink, parseHash, routeFromLink, routeHash } from './routes';
 import { appLink, decodeDocument, encodeDocument, loadRoute, readAnimationFile, ShareError } from './share';
 
 const PNG_DATA = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
@@ -74,6 +75,31 @@ describe("parseHash", () => {
     expect(parseHash("#gist/0123abcd")).toEqual({kind: "gist", id: "0123abcd"});
     expect(parseHash("#gist/matthen/0123abcd")).toEqual({kind: "gist", id: "0123abcd"});
   });
+
+  it("ignores punctuation stuck to the end of a link, and spots links cut short", () => {
+    expect(parseHash("#share/ab-c_1.")).toEqual({kind: "share", data: "ab-c_1"});
+    expect(parseHash("#gist/0123abcd).")).toEqual({kind: "gist", id: "0123abcd"});
+    expect(isBrokenShareLink("#share/")).toBe(true);
+    expect(isBrokenShareLink("#url/ftp://example.com/a.json")).toBe(true);
+    expect(isBrokenShareLink("#share/abc")).toBe(false);
+    expect(isBrokenShareLink("#new")).toBe(false);
+  });
+
+  it("writes file URLs percent-encoded, so quotes and spaces can't break the link", () => {
+    const route = {kind: "url" as const, url: 'https://example.com/a b.json?"><b>'};
+    expect(routeHash(route)).toBe("#url/https://example.com/a%20b.json?%22%3E%3Cb%3E");
+    expect(routeHash({kind: "url", url: "https://example.com/a%20b.json"})).toBe("#url/https://example.com/a%20b.json");
+  });
+});
+
+describe("embedCode", () => {
+  it("escapes the address and the title", () => {
+    const doc = {...newDocument(), title: 'A "B" <c>'};
+    const code = embedCode(doc, 'https://example.com/embed.html#x"><script>');
+    expect(code).not.toContain("<script>");
+    expect(code).toContain('src="https://example.com/embed.html#x&quot;>&lt;script>"');
+    expect(code).toContain('title="A &quot;B&quot; &lt;c>"');
+  });
 });
 
 describe("routeFromLink", () => {
@@ -102,6 +128,17 @@ describe("readAnimationFile", () => {
     const loaded = readAnimationFile(JSON.stringify(file));
     expect([...loaded.images.keys()]).toEqual(["abc123"]);
     expect(loaded.images.get("abc123")!.type).toBe("image/png");
+  });
+
+  it("empties texture slots whose image isn't a built-in texture or an image id", () => {
+    const doc = withUserImage();
+    doc.textures[3] = {id: "iTexture3", url: "../../secret", isUserUploaded: false};
+    doc.textures[4] = {id: "iTexture4", url: "/api/user", isUserUploaded: false};
+    doc.textures[5] = {id: "iTexture5", url: "../x", isUserUploaded: true};
+    const {textures} = readAnimationFile(JSON.stringify(doc)).doc;
+    expect(textures.slice(1, 6).map(t => t.url)).toEqual(
+      ["abc123", "photos/colourful.jpg", EMPTY_TEXTURE, EMPTY_TEXTURE, EMPTY_TEXTURE]);
+    expect(textures[5]!.isUserUploaded).toBe(false);
   });
 
   it("says when a file isn't an animation", () => {

@@ -61,9 +61,18 @@ export function decodeDocument(data: string): AnimationDocument {
   return parseShared(json);
 }
 
+// A built-in texture's path under images/textures/, with no way to climb out of it.
+const BUILT_IN_TEXTURE = /^[\w-][\w.-]*(?:\/[\w-][\w.-]*)*$/;
+const IMAGE_ID = /^[a-f0-9]{1,32}$/;
+
 function parseShared(json: unknown): AnimationDocument {
   try {
-    return parseDocument(json);
+    const doc = parseDocument(json);
+    // Anything else in a slot from someone else's link opens empty.
+    const textures = doc.textures.map(slot =>
+      (slot.isUserUploaded ? IMAGE_ID : BUILT_IN_TEXTURE).test(slot.url)
+        ? slot : {...slot, url: EMPTY_TEXTURE, isUserUploaded: false});
+    return {...doc, textures};
   } catch (error) {
     if (error instanceof InvalidDocumentError) {
       throw new ShareError("That isn't a smoothstep animation file.");
@@ -117,6 +126,9 @@ async function fetchText(url: string, what: string, notFound?: string): Promise<
   }
   if (!response.ok) {
     throw new ShareError(`Couldn't download ${what}: the site answered with error ${response.status}.`);
+  }
+  if (Number(response.headers.get("Content-Length")) > MAX_FILE_LENGTH) {
+    throw new ShareError("That file is too big to be a smoothstep animation.");
   }
   return response.text();
 }
