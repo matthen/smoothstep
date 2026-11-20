@@ -47,14 +47,17 @@ export function solidPNG(width: number, height: number, [r, g, b]: [number, numb
   return PNG.sync.write(png);
 }
 
+// The open tab's editor; the other tabs keep theirs, hidden.
+export const OPEN_EDITOR = ".ss-code-editor:not([hidden]) .cm-content";
+
 export async function setCode(page: Page, code: string) {
-  await page.locator(".cm-content").click();
+  await page.locator(OPEN_EDITOR).click();
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.insertText(code);
 }
 
 export async function editorCode(page: Page): Promise<string> {
-  return page.locator(".cm-content").evaluate(el =>
+  return page.locator(OPEN_EDITOR).evaluate(el =>
     Array.from(el.querySelectorAll(".cm-line"), line => line.textContent).join("\n"));
 }
 

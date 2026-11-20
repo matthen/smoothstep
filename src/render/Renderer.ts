@@ -158,13 +158,34 @@ export class Renderer {
     }
     this.copyProgram = copy.program;
     // Some phones can only render to half floats, which is all the buffers need.
-    this.floatBuffers = gl.getExtension("EXT_color_buffer_float") !== null ||
-      gl.getExtension("EXT_color_buffer_half_float") !== null;
+    this.floatBuffers = (gl.getExtension("EXT_color_buffer_float") !== null ||
+      gl.getExtension("EXT_color_buffer_half_float") !== null) && this.canRenderHalfFloats();
     // Uploaded images are flipped so texture coordinates start at the bottom left, as in GL.
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     for (let i = 0; i < NUM_TEXTURES; i++) {
       this.textureUnits.push(this.blackTexture());
     }
+  }
+
+  // Some drivers offer the extensions but still can't draw into a half-float texture.
+  private canRenderHalfFloats(): boolean {
+    const gl = this.gl;
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, 1, 1, 0, gl.RGBA, gl.HALF_FLOAT, null);
+    const framebuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+    const complete = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.deleteFramebuffer(framebuffer);
+    gl.deleteTexture(texture);
+    return complete;
+  }
+
+  private deleteProgram(program: Program) {
+    this.gl.deleteVertexArray(program.vao);
+    this.gl.deleteProgram(program);
   }
 
   private compile(type: number, source: string): {shader: WebGLShader | null; log: string} {
@@ -215,7 +236,7 @@ export class Renderer {
     for (const [shader, source] of sources) {
       const result = this.link(fragmentSource(source, buffers.length, shader !== "image", shared));
       if (!result.program) {
-        programs.forEach(p => this.gl.deleteProgram(p));
+        programs.forEach(p => this.deleteProgram(p));
         if (result.stage === "link") {
           return {ok: false, shader, errors: [{line: 0, message: result.log.trim() || "Couldn't link the shader."}]};
         }
@@ -224,7 +245,7 @@ export class Renderer {
       }
       programs.push(result.program);
     }
-    [this.program, ...this.bufferPrograms].forEach(p => p && this.gl.deleteProgram(p));
+    [this.program, ...this.bufferPrograms].forEach(p => p && this.deleteProgram(p));
     this.program = programs[0]!;
     this.bufferPrograms = programs.slice(1);
     this.used = buffersUsed(userCode(code, shared), buffers.map(b => userCode(b, shared)));

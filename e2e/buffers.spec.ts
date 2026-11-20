@@ -2,7 +2,7 @@
 // any tab, and keeping them when saved.
 import { expect, test, type Page } from '@playwright/test';
 
-import { canvasCenter, MAGENTA, near, offline, setCode } from './helpers';
+import { canvasCenter, MAGENTA, near, offline, OPEN_EDITOR, setCode } from './helpers';
 
 const MAGENTA_BUFFER = "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  fragColor = magenta();\n}";
 const SHARED = "vec4 magenta() {\n  return vec4(0.86, 0.08, 0.78, 1.);\n}";
@@ -54,7 +54,7 @@ test("a buffer draws before the image, using shared code, and is kept when saved
   await expect(page.getByRole("tab", {name: "Image"})).toHaveAttribute("aria-selected", "true");
   expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
   await openTab(page, "Shared");
-  await expect(page.locator(".cm-content")).toContainText("vec4 magenta()");
+  await expect(page.locator(OPEN_EDITOR)).toContainText("vec4 magenta()");
   expect(errors).toEqual([]);
 });
 

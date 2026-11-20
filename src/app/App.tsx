@@ -359,22 +359,12 @@ export default function App() {
     setBuildId(id => id + 1);
   };
 
-  const onCodeChange = (code: string, isHelperChange: boolean) => {
-    const tab = codeTab;
-    const withCode = (d: AnimationDocument): AnimationDocument => {
-      if (tab === "image") {
-        return {...d, code};
-      }
-      if (tab === "shared") {
-        // Only the placeholder, or nothing, isn't saved.
-        const next: AnimationDocument = {...d, shared: code};
-        if (!code.trim() || code === SHARED_PLACEHOLDER) {
-          delete next.shared;
-        }
-        return next;
-      }
-      return {...d, buffers: (d.buffers ?? []).map((buffer, i) => i === tab ? {code} : buffer)};
-    };
+  const onCodeChange = (tab: ShaderId, code: string, isHelperChange: boolean) => {
+    // Emptied shared code stays as "", so the editor doesn't jump back to the placeholder; opening
+    // the animation again drops it.
+    const withCode = (d: AnimationDocument): AnimationDocument =>
+      tab === "image" ? {...d, code} : tab === "shared" ? {...d, shared: code} :
+        {...d, buffers: (d.buffers ?? []).map((buffer, i) => i === tab ? {code} : buffer)};
     setDoc(withCode);
     setHasUnsavedChanges(true);
     if (isHelperChange) {
@@ -411,6 +401,11 @@ export default function App() {
     });
     setHasUnsavedChanges(true);
     setCodeTab(last > 0 ? last - 1 : "image");
+    if (errorShader === last) {
+      // Its error went with it, and mustn't show on a buffer added in its place.
+      setLineErrors([]);
+      setErrorShader(null);
+    }
   };
 
   const onBuilt = (result: CompileResult) => {
@@ -422,14 +417,20 @@ export default function App() {
     }
     setCompiled({code: builtCode ?? "", ok: result.ok});
     if (builtCode !== null) {
-      showTip({kind: "built", ok: result.ok, code: builtCode, edited: builtCode !== openedCode.current});
+      // Every tab's code, so a tip about iPrevFrame shows wherever it's used.
+      const code = [builtCode, builtExtras.shared, ...builtExtras.buffers].join("\n");
+      showTip({kind: "built", ok: result.ok, code, edited: builtCode !== openedCode.current});
     }
   };
 
-  const tabCode = codeTab === "image" ? doc.code : codeTab === "shared" ? doc.shared ?? SHARED_PLACEHOLDER :
-    doc.buffers?.[codeTab]?.code ?? "";
   // Shared code only helps once there's more than one shader, so the tab appears with the first buffer.
   const showShared = (doc.buffers?.length ?? 0) > 0 || doc.shared !== undefined || codeTab === "shared";
+  // Each tab has its own editor, hidden unless it's open, so it keeps its undo history and cursor.
+  const codeTabs: {tab: ShaderId; code: string}[] = [
+    ...(showShared ? [{tab: "shared" as const, code: doc.shared ?? SHARED_PLACEHOLDER}] : []),
+    ...(doc.buffers ?? []).map((buffer, i) => ({tab: i, code: buffer.code})),
+    {tab: "image", code: doc.code},
+  ];
 
   const save = async (asCopy: boolean, copyTitle?: string) => {
     // Saving before the animation has loaded would overwrite it with the default document, and
@@ -548,6 +549,7 @@ export default function App() {
 
   const putTutorialCode = (code: string) => {
     updateDoc({code});
+    setCodeTab("image");  // The tutorial's code is the image's.
     if (phone) {
       chooseMobileTab("code");
     }
@@ -688,10 +690,13 @@ export default function App() {
             numBuffers={doc.buffers?.length ?? 0} showShared={showShared} current={codeTab} error={errorShader}
             onChoose={setCodeTab} onAdd={addBuffer} onRemoveLast={removeLastBuffer}
           />
-          <CodeEditor
-            key={codeTab} value={tabCode} onChange={onCodeChange} onBuild={build} onSave={() => void save(false)}
-            lineErrors={errorShader === codeTab ? lineErrors : []}
-          />
+          {codeTabs.map(({tab, code}) =>
+            <CodeEditor
+              key={tab} value={code} hidden={tab !== codeTab}
+              onChange={(changed, isHelperChange) => onCodeChange(tab, changed, isHelperChange)}
+              onBuild={build} onSave={() => void save(false)}
+              lineErrors={errorShader === tab ? lineErrors : []}
+            />)}
         </section>
         <section className="previewPane">
           <Canvas
