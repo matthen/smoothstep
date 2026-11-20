@@ -1,4 +1,4 @@
-import {useEffect, useEffectEvent, useRef, useState} from "react";
+import {useEffect, useEffectEvent, useLayoutEffect, useRef, useState} from "react";
 import type {MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent} from "react";
 import {ActionIcon, NativeSelect, TextInput} from "@mantine/core";
 import {useMediaQuery} from "@mantine/hooks";
@@ -20,6 +20,8 @@ import "./timeline.scss";
 
 export interface TimelineProps {
   variables: Variable[];
+  // What the code calls each variable with #define, if anything (see names.ts).
+  names?: (string | null)[];
   variableValues: number[];
   onVariablesChange(variables: Variable[]): void;
   duration: number;
@@ -53,11 +55,30 @@ const TYPE_OPTIONS: readonly TransitionType[] = ["smoothstep", "step", "linear"]
 
 export default function Timeline(props: TimelineProps) {
   const {variables, variableValues, onVariablesChange, duration, currentTime, onSeek, onDurationChange} = props;
+  const name = (row: number) => props.names?.[row] ?? null;
   const rootRef = useRef<HTMLDivElement>(null);
   const timeAreaRef = useRef<HTMLDivElement>(null);
   const rowsRef = useRef<HTMLDivElement>(null);
   // How far the grid is scrolled sideways, so the row labels can stay at its left edge.
   const [scrollLeft, setScrollLeft] = useState(0);
+  // Each row label's width, so the variable's value can sit clear of it near the start.
+  const [labelWidths, setLabelWidths] = useState<number[]>([]);
+  const namesKey = props.names?.join(",") ?? "";
+  useLayoutEffect(() => {
+    const rows = rowsRef.current;
+    if (!rows) {
+      return;
+    }
+    // Measured again when the panel is shown, as a hidden one measures zero.
+    const measure = () => {
+      const widths = Array.from(rows.querySelectorAll<HTMLElement>(".rowLabel"), label => label.offsetWidth);
+      setLabelWidths(old => old.join() === widths.join() ? old : widths);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(rows);
+    return () => observer.disconnect();
+  }, [namesKey]);
   const gridRef = useRef<HTMLDivElement>(null);
   const lastTimeRef = useRef(currentTime);
   const [selection, setSelection] = useState<Selection | null>(null);
@@ -377,7 +398,8 @@ export default function Timeline(props: TimelineProps) {
           </ActionIcon>}
         {heading &&
           <h4>
-            iFloat{heading.row}
+            {name(heading.row) ?? "iFloat" + heading.row}
+            {name(heading.row) && <span className="floatName"> iFloat{heading.row}</span>}
             <span> {(heading.startDSecs * 0.1).toFixed(1)}
               {heading.endDSecs !== null && <> &mdash; {(heading.endDSecs * 0.1).toFixed(1)}</>}s
             </span>
@@ -388,7 +410,10 @@ export default function Timeline(props: TimelineProps) {
           </p>}
         {/* Not on touch screens, where it would shift the rows between a transition's two taps. */}
         {!heading && !touch && variables.every(variable => variable.transitions.length === 0) &&
-          <p className="hint">Then use <code>iFloat0</code> to <code>iFloat15</code> in your code, like any number.</p>}
+          <p className="hint">
+            Then use <code>iFloat0</code> to <code>iFloat15</code> in your code, like any number.
+            {" "}<code>#define size iFloat0</code> names a row.
+          </p>}
         {selected &&
           <form className="transitionForm" onSubmit={e => e.preventDefault()}>
             {(["start", "end"] as const).map(field => {
@@ -439,9 +464,12 @@ export default function Timeline(props: TimelineProps) {
           <div className="filler" ref={rowsRef}>
             {variables.map((variable, row) => (
               <div key={row} className="variableRow">
-                <div className="rowLabel" style={{left: scrollLeft}}>iFloat{row}</div>
+                <div className="rowLabel" style={{left: scrollLeft}}>{name(row) ?? "iFloat" + row}</div>
                 {variable.transitions.length > 0 &&
-                  <div className="variableValue" style={{left: timeToX(currentTime), zIndex: markerZ}}>
+                  <div
+                    className="variableValue"
+                    style={{left: Math.max(timeToX(currentTime), scrollLeft + (labelWidths[row] ?? 0)), zIndex: markerZ}}
+                  >
                     {(variableValues[row] ?? 0).toFixed(2)}
                   </div>}
                 {variable.transitions.map((transition, index) => {

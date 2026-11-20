@@ -97,6 +97,38 @@ export function imageURL(id: string): string | null {
   return imageURLs.get(id) ?? null;
 }
 
+// Images from an animation opened from a link, kept in memory until that animation is saved.
+const temporaryImages = new Map<string, Blob>();
+
+export function addTemporaryImage(id: string, blob: Blob) {
+  if (imageURLs.has(id)) {
+    return;  // Images never change, so one with the same id is already here.
+  }
+  temporaryImages.set(id, blob);
+  imageURLs.set(id, URL.createObjectURL(blob));
+  imagesChanged();
+}
+
+async function storeTemporaryImages(json: AnimationDocument) {
+  for (const slot of json.textures) {
+    const blob = slot.isUserUploaded ? temporaryImages.get(slot.url) : undefined;
+    if (blob) {
+      let image: {width: number; height: number};
+      try {
+        image = await loadImage(blob);
+      } catch (error) {
+        console.warn(error);  // It never showed, so save the animation without it.
+        continue;
+      }
+      await putImage({
+        id: slot.url, filename: slot.url + "." + (blob.type.split("/")[1] ?? "png"),
+        width: image.width, height: image.height, created: Date.now(), blob,
+      });
+      temporaryImages.delete(slot.url);
+    }
+  }
+}
+
 export async function listDocuments(): Promise<DocumentSummary[]> {
   const docs = await values<StoredDocument>(store("documents"));
   docs.sort((a, b) => b.modified - a.modified);
@@ -115,6 +147,7 @@ export async function getDocument(id: string): Promise<StoredDocument | undefine
 export async function saveDocument(
   id: string | null, json: AnimationDocument, frameDataURL: string | null,
 ): Promise<string> {
+  await storeTemporaryImages(json);
   const now = Date.now();
   const existing = id ? await getDocument(id) : undefined;
   const record: StoredDocument = {
@@ -144,6 +177,10 @@ export async function listImages(): Promise<StoredImage[]> {
 }
 
 export async function getImage(id: string): Promise<StoredImage | undefined> {
+  const temporary = temporaryImages.get(id);
+  if (temporary) {
+    return {id, filename: id + ".png", width: 0, height: 0, created: Date.now(), blob: temporary};
+  }
   return get<StoredImage>(id, store("images"));
 }
 
