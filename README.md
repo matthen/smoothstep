@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://smoothstep.io"><img src="docs/images/screenshot.png" alt="smoothstep, with the 3D ray marching example: GLSL code on the left, the rendered sphere on the right, and the animation timeline below"></a>
+  <a href="https://smoothstep.io"><img src="docs/images/screenshot.png" alt="smoothstep, with the 3D ray marching example: GLSL code on the left, the rendered scene on the right, and the animation timeline below"></a>
 </p>
 
 smoothstep is a toolkit for making animations in the WebGL shader language. You write a
@@ -33,7 +33,7 @@ notices when you've done it. The Help menu lists the shader inputs and the keybo
   <img src="docs/images/examples.png" alt="Renders from four of the built-in examples">
   <br>
   <sub>Four of the built-in examples: domain-warped noise, a kaleidoscope of a painting, a
-  ray-marched sphere, and Truchet tiles.</sub>
+  ray-marched scene, and Truchet tiles.</sub>
 </p>
 
 The editor highlights GLSL, shows compile errors on the line they occur, and gives you
