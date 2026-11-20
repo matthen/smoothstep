@@ -66,3 +66,20 @@ test("on a phone, the panes switch and a transition can be added with two taps",
   await expect(page.locator(".timeArea")).toBeHidden();
   expect(errors).toEqual([]);
 });
+
+test("on a phone, the button under the timeline's rows adds the next one", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#new");
+  await page.locator(".mobileTabs").getByText("Timeline", {exact: true}).tap();
+  const rows = page.locator(".timeArea .variableRow");
+  await expect(rows).toHaveCount(3);
+  // In sight without scrolling the timeline, which a person wouldn't know to do.
+  const area = (await page.locator(".timeArea").boundingBox())!;
+  const button = (await page.getByRole("button", {name: "Add a row"}).boundingBox())!;
+  expect(button.y + button.height).toBeLessThanOrEqual(area.y + area.height);
+  await page.getByRole("button", {name: "Add a row"}).tap();
+  await expect(rows).toHaveCount(4);
+  expect(await page.locator(".timeArea").evaluate(e => e.scrollTop)).toBe(0);
+  await page.screenshot({path: "test-results/mobile-add-row.png"});
+  expect(errors).toEqual([]);
+});
