@@ -34,7 +34,7 @@ import Canvas, { type CanvasHandle, type CanvasLayout, type Shaders } from '../r
 import type { CompileResult, ShaderId } from '../render/Renderer';
 import { floatNames } from '../timeline/names';
 import PlayerControls from '../timeline/PlayerControls';
-import Sliders from '../timeline/Sliders';
+import Sliders, { floatsInCode } from '../timeline/Sliders';
 import Timeline from '../timeline/Timeline';
 import { lessonTitle, type TutorialState } from '../tutorial/lessons';
 import { openingProgress } from '../tutorial/progress';
@@ -159,8 +159,18 @@ export default function App() {
       setHeld(new Map());
     }
   }
-  // Named in any shader's #defines, the image's first.
-  const floatNameList = useMemo(() => floatNames([doc.code, doc.shared ?? "", ...bufferCodes(doc)].join("\n")), [doc]);
+  // Every tab's code, the image's first, so its #define names win.
+  const allCode = useMemo(() => [doc.code, doc.shared ?? "", ...bufferCodes(doc)].join("\n"), [doc]);
+  const floatNameList = useMemo(() => floatNames(allCode), [allCode]);
+  // Timeline rows: at least three, and enough for every iFloat the code uses or the timeline sets.
+  const [minRows, setMinRows] = useState(3);
+  const rowCount = useMemo(() => {
+    const needed = [
+      ...floatsInCode(allCode),
+      ...doc.variables.flatMap((v, i) => v.transitions.length > 0 || v.value !== undefined ? [i] : []),
+    ];
+    return Math.max(minRows, ...needed.map(i => i + 1));
+  }, [allCode, doc.variables, minRows]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const textureURLs = useMemo(() => doc.textures.map(textureURL), [doc.textures, imagesVersion]);
 
@@ -180,6 +190,7 @@ export default function App() {
     setBuiltExtras(shaderExtras(json));
     setCodeTab("image");
     setHeld(new Map());
+    setMinRows(3);
     setBuildId(id => id + 1);
     windowTitle(json.title);
     setHasUnsavedChanges(false);
@@ -786,12 +797,13 @@ export default function App() {
                 updateDoc({variables});
               }}
               duration={doc.duration} currentTime={time} onSeek={seek} onDurationChange={onDurationChange}
+              rowCount={rowCount} onAddRow={() => setMinRows(rowCount + 1)}
             />
           </Tabs.Panel>
           <Tabs.Panel value="sliders">
             <Sliders
               variables={doc.variables} values={values} names={floatNameList}
-              code={[doc.code, doc.shared ?? "", ...bufferCodes(doc)].join("\n")}
+              code={allCode}
               held={new Set(held.keys())} onVariablesChange={(variables: Variable[]) => updateDoc({variables})}
               onHold={hold}
             />

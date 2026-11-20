@@ -232,6 +232,14 @@ div#animationControls {
         touch-action: pan-x pan-y;
       }
 
+      // Shows the next iFloat's row.
+      .addRow {
+        position: absolute;
+        z-index: 2;
+        padding-bottom: 8px;
+        cursor: default;
+      }
+
       .postDuration {
         cursor: default;
         background: repeating-linear-gradient(
