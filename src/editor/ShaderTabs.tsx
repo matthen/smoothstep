@@ -56,7 +56,7 @@ export default function ShaderTabs(
   return (
     <div className="shaderTabs" role="tablist" aria-label="Code, in the order it draws" ref={rowRef}>
       {showShared && [
-        <Tooltip key="shared" label="Functions, constants and #defines that every tab can use, like Shadertoy's Common tab">
+        <Tooltip key="shared" label="Functions, constants and #defines that every tab can use">
           {tab("shared")}
         </Tooltip>,
         <span key="divider" className="shaderDivider" aria-hidden />,
