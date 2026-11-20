@@ -8,6 +8,7 @@ import CopyText from '../app/CopyText';
 import { download } from '../lib/archive';
 import { DOCS_URL } from '../lib/config';
 import type { AnimationDocument } from '../lib/document';
+import { routeFromLink, routeHash } from '../lib/routes';
 import { appLink, encodeDocument, userImageSlots } from '../lib/share';
 
 interface ShareProps {
@@ -17,6 +18,19 @@ interface ShareProps {
   source: string | null;
   onHide(): void;
   onMessage(text: string): void;
+  onDownload(): void;
+}
+
+// The link that opens an animation file from a pasted gist or file address, or why there isn't one.
+function linkToFile(address: string): {link: string} | {error: string} | null {
+  if (!address.trim()) {
+    return null;
+  }
+  const route = routeFromLink(address);
+  if (route?.kind !== "gist" && route?.kind !== "url") {
+    return {error: "That isn't the address of a gist or a file."};
+  }
+  return {link: appLink(routeHash(route))};
 }
 
 function Copy({value}: {value: string}) {
@@ -55,11 +69,13 @@ export function embedCode(doc: AnimationDocument, src: string): string {
     `title="${attribute(doc.title)}" style="border: 0" allowfullscreen></iframe>`;
 }
 
-// Ways to share the open animation: a link that carries it, a QR code of that link, code to show
-// it playing on a website, and a player file.
-export default function Share({show, doc, source, onHide, onMessage}: ShareProps) {
+// Ways to share the open animation: a link that carries it, a QR code of that link, a link to its
+// file online, code to show it playing on a website, and a player file.
+export default function Share({show, doc, source, onHide, onMessage, onDownload}: ShareProps) {
   const [showQR, setShowQR] = useState(false);
   const [making, setMaking] = useState(false);
+  const [fileAddress, setFileAddress] = useState("");
+  const fileLink = useMemo(() => linkToFile(fileAddress), [fileAddress]);
   // Only worked out while the dialog is open, from the animation as it is then.
   const shared = useMemo(() => {
     if (!show) {
@@ -103,9 +119,8 @@ export default function Share({show, doc, source, onHide, onMessage}: ShareProps
             {shared.missing.length > 0 &&
               <Alert color="yellow">
                 A link can't carry the images you added yourself, so {shared.missing.join(", ")} will be empty
-                for anyone who opens it. To share those images too, download the animation file from File and put
-                it in a GitHub gist. <a href={DOCS_URL + "/sharing.md"} target="_blank" rel="noreferrer">Sharing</a> in
-                the docs explains how.
+                for anyone who opens it. To share those images too, put the animation file online and make a
+                link to it, below.
               </Alert>}
             <Group>
               <Button
@@ -117,6 +132,31 @@ export default function Share({show, doc, source, onHide, onMessage}: ShareProps
             {showQR && (qr
               ? <img src={qr.src} width={qr.width} alt="QR code of the link" className="shareQR" />
               : <Text size="sm" c="dimmed">This link is too long to fit in a QR code.</Text>)}
+          </Stack>
+          <Stack gap="xs">
+            <Title order={4}>Link to a file online</Title>
+            <Text size="sm">
+              A link can also open the animation file from somewhere online, such as a GitHub gist. The file keeps
+              the images you added, and when you update the file, the link opens the new version. Download the
+              animation file, put it online, and paste its address here to make the link.
+              {" "}<a href={DOCS_URL + "/sharing.md"} target="_blank" rel="noreferrer">Sharing</a> in the docs has
+              the steps for a gist.
+            </Text>
+            <Group>
+              <Button variant="default" leftSection={<TbDownload />} onClick={onDownload}>
+                Download animation file
+              </Button>
+            </Group>
+            <TextInput
+              value={fileAddress} onChange={event => setFileAddress(event.currentTarget.value)}
+              label="Address of the gist or file" placeholder="https://gist.github.com/…"
+              error={fileLink && "error" in fileLink ? fileLink.error : undefined}
+            />
+            {fileLink && "link" in fileLink &&
+              <TextInput
+                readOnly value={fileLink.link} aria-label="Link to the file" rightSection={<Copy value={fileLink.link} />}
+                onFocus={event => event.currentTarget.select()}
+              />}
           </Stack>
           <Stack gap="xs">
             <Title order={4}>On a website</Title>

@@ -17,12 +17,18 @@ share the images too, share an animation file instead, as below.
 ## An animation file
 
 File → Download animation file saves a `.smoothstep.json` file with your own images inside it.
-smoothstep can open one of these from any website that lets other sites read its files:
+smoothstep can open one of these from any website that lets other sites read its files. Put the file
+online, then paste its address into "Link to a file online" in Share, and Share gives you a link that
+opens it. Whoever opens the link gets the latest version of the file, so you can update the animation
+without changing the link.
 
-- **A GitHub gist.** Make a gist at [gist.github.com](https://gist.github.com) with the file in it,
-  then share `https://smoothstep.io/app/#gist/<id>`, where `<id>` is the last part of the gist's
-  address. Secret gists work too. GitHub lets each visitor open up to 60 gists an hour this way.
-- **Any other address,** such as a file in a GitHub repository or on your own website:
+- **A GitHub gist.** Make a gist at [gist.github.com](https://gist.github.com): drag the animation file
+  onto the page, or paste in its contents and give it the same name, then click "Create secret gist".
+  Paste the gist's address into Share. Secret gists work too. The link is
+  `https://smoothstep.io/app/#gist/<id>`, where `<id>` is the last part of the gist's address. GitHub
+  lets each visitor open up to 60 gists an hour this way.
+- **Any other address,** such as a file in a GitHub repository or on your own website. Paste the file's
+  address into Share, or its page on github.com. The link is
   `https://smoothstep.io/app/#url/<address of the file>`. The site has to allow other websites to read
   the file (it must send an `Access-Control-Allow-Origin` header). GitHub, GitHub Pages and most
   static hosting do.
