@@ -45,10 +45,10 @@ type Gesture =
   | {kind: "idle"}
   // A new transition: dragged out with the button held, or clicked twice (`released` after the first).
   | {kind: "creating"; row: number; startDSecs: number; endDSecs: number; released: boolean; byTouch: boolean}
+  // The scale stays put while dragging, though the timeline's length can change.
   | {kind: "dragging"; mode: GrabMode; row: number; index: number; original: Transition[]; startX: number;
-     moved: Transition}
+     moved: Transition; pxPerSecond: number}
   | {kind: "scrubbing"}
-  // The scale stays put while the end is dragged, though the timeline's length changes.
   | {kind: "duration"; startX: number; startDuration: number; latest: number; pxPerSecond: number};
 
 // Text typed into the value inputs, kept until it's valid and the input loses focus.
@@ -104,6 +104,9 @@ export default function Timeline(props: TimelineProps) {
   const [zoom, setZoom] = useState(1);
   const anchorRef = useRef<Anchor | null>(null);
   const pinchRef = useRef<Pinch | null>(null);
+  // The fingers down on the rows, and whether two were down at once since the last were lifted.
+  const touchesRef = useRef(new Set<number>());
+  const multiTouchRef = useRef(false);
   const lastTimeRef = useRef(currentTime);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [hover, setHover] = useState<Selection | null>(null);
@@ -117,7 +120,7 @@ export default function Timeline(props: TimelineProps) {
   const maxTime = maxTimeFor(variables, duration);
   const fitScale = view ? fitPxPerSecond(view.width, maxTime) : DEFAULT_PX_PER_SECOND;
   const zoomLevel = clampZoom(zoom, fitScale);
-  const pps = gesture.kind === "duration" ? gesture.pxPerSecond : fitScale * zoomLevel;
+  const pps = gesture.kind === "duration" || gesture.kind === "dragging" ? gesture.pxPerSecond : fitScale * zoomLevel;
   const pxPerDSec = pps / 10;
   const x = (seconds: number) => timeToX(seconds, pps);
   const width = timeAreaWidth(maxTime, pps);
@@ -324,15 +327,26 @@ export default function Timeline(props: TimelineProps) {
 
   function handlePointerDown(event: ReactPointerEvent) {
     const current = gestureRef.current;
-    // A touch can't hover, so the second tap of a click-twice creation sets the end where it lands.
-    // A second tap in another row, or where the transition can't end, cancels it instead.
+    // Two fingers are a pinch, which neither starts nor ends a transition.
+    if (event.pointerType === "touch") {
+      touchesRef.current.add(event.pointerId);
+      if (touchesRef.current.size > 1) {
+        multiTouchRef.current = true;
+        if (current.kind === "creating" && !current.released) {
+          cancelCreating();
+        }
+        return;
+      }
+      // The second tap of a two-tap creation counts once it lifts, in case it's the start of a pinch.
+      if (current.kind === "creating" && current.released) {
+        return;
+      }
+    }
+    // The second click of a click-twice creation sets the end where it lands.
     if (current.kind === "creating" && current.released) {
-      const {x, y} = position(event);
+      const {x} = position(event);
       const endDSecs = hoverEndDSecs(x, current.startDSecs, pps);
-      const fits = isInsertable(variables[current.row]!.transitions, current.startDSecs, endDSecs, maxDSecs);
-      if (event.pointerType === "touch" && (!fits || Math.floor(y / ROW_HEIGHT) !== current.row)) {
-        cancelCreating();
-      } else if (fits) {
+      if (isInsertable(variables[current.row]!.transitions, current.startDSecs, endDSecs, maxDSecs)) {
         setGesture({...current, endDSecs});
       }
       return;
@@ -362,8 +376,36 @@ export default function Timeline(props: TimelineProps) {
     }
   }
 
-  function handlePointerUp() {
+  // Forgets a lifted finger, and says whether it was part of a pinch.
+  function liftTouch(event: ReactPointerEvent): boolean {
+    const wasPinch = multiTouchRef.current;
+    touchesRef.current.delete(event.pointerId);
+    if (touchesRef.current.size === 0) {
+      multiTouchRef.current = false;
+    }
+    return wasPinch;
+  }
+
+  function handlePointerUp(event: ReactPointerEvent) {
     const gesture = gestureRef.current;
+    if (event.pointerType === "touch") {
+      if (liftTouch(event)) {
+        return;
+      }
+      // A touch can't hover, so the second tap sets the end where it lifts. A second tap in another
+      // row, or where the transition can't end, cancels it instead.
+      if (gesture.kind === "creating" && gesture.released) {
+        const {x, y} = position(event);
+        const endDSecs = hoverEndDSecs(x, gesture.startDSecs, pps);
+        const fits = isInsertable(variables[gesture.row]!.transitions, gesture.startDSecs, endDSecs, maxDSecs);
+        if (fits && Math.floor(y / ROW_HEIGHT) === gesture.row) {
+          create(gesture.row, gesture.startDSecs, endDSecs);
+        } else {
+          cancelCreating();
+        }
+        return;
+      }
+    }
     switch (gesture.kind) {
       case "creating":
         if (gesture.released || gesture.endDSecs > gesture.startDSecs + 1) {
@@ -408,7 +450,9 @@ export default function Timeline(props: TimelineProps) {
     const rect = event.currentTarget.getBoundingClientRect();
     const mode = grabMode(event.clientX - rect.left, rect.width);
     const original = transitions[index]!;
-    setGesture({kind: "dragging", mode, row, index, original: transitions, startX: position(event).x, moved: original});
+    setGesture({
+      kind: "dragging", mode, row, index, original: transitions, startX: position(event).x, moved: original, pxPerSecond: pps,
+    });
     capture(event);
   }
 
@@ -528,7 +572,11 @@ export default function Timeline(props: TimelineProps) {
       return;
     }
     const playheadX = x(currentTime);
-    const pastRight = currentTime > previous && playheadX > grid.scrollLeft + viewWidth - 8;
+    // While it plays, only when it was in view a moment ago, so you can scroll away from it. A seek,
+    // which jumps further than a frame's worth, always brings it into view.
+    const wasInView = x(previous) >= grid.scrollLeft && x(previous) <= grid.scrollLeft + viewWidth;
+    const seeked = playheadX - x(previous) > viewWidth / 4;
+    const pastRight = currentTime > previous && (wasInView || seeked) && playheadX > grid.scrollLeft + viewWidth - 8;
     const pastLeft = currentTime < previous && playheadX < grid.scrollLeft;
     if (pastRight || pastLeft) {
       grid.scrollLeft = Math.max(0, playheadX - 24);
@@ -711,7 +759,12 @@ export default function Timeline(props: TimelineProps) {
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
-            onPointerCancel={cancelCreating}
+            onPointerCancel={event => {
+              if (event.pointerType === "touch") {
+                liftTouch(event);
+              }
+              cancelCreating();
+            }}
             onPointerLeave={handlePointerLeave}
           >
             <div className="postDuration" style={postDuration} />

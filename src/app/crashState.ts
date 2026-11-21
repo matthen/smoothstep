@@ -20,12 +20,15 @@ export function hasMissedUpdate() {
   return missedUpdate;
 }
 
-// Reloads to get the new version when part of the app fails to load. If a reload in the last
-// minute didn't fix it, the error goes on to the crash screen instead, so being offline can't
-// loop. The page asks first if there are unsaved changes.
+// Reloads to get the new version when part of the app fails to load. Offline, or if a reload in
+// the last minute didn't fix it, the error goes on to the crash screen instead, which keeps the
+// app's state and offers downloads. The page asks first if there are unsaved changes.
 export function reloadOnMissedUpdate() {
   window.addEventListener("vite:preloadError", () => {
     missedUpdate = true;
+    if (!navigator.onLine) {
+      return;
+    }
     try {
       const last = Number(window.sessionStorage.getItem(RELOADED_KEY) ?? 0);
       if (Date.now() - last > 60_000) {

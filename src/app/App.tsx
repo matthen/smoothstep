@@ -552,6 +552,7 @@ export default function App() {
       "Help → Source code": () => window.open(REPO_URL, "_blank", "noopener"),
       "Help → Acknowledgements": () => setDialog("acknowledgements"),
       "Timeline": () => showPanel("animation"),
+      "Animation": () => showPanel("animation"),
       "Sliders": () => showPanel("sliders"),
       "Textures": () => showPanel("textures"),
       "Image": () => showCode("image"),

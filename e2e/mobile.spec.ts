@@ -65,6 +65,9 @@ test("on a phone, the panes switch and a transition can be added with two taps",
   const cdp = await context.newCDPSession(page);
   const y = area.y + 14;  // Across the first row, which has no transition.
   const middle = area.x + 100;
+  // A pinch between a transition's two taps, to place its end more precisely, doesn't end it.
+  await page.touchscreen.tap(middle - 60, y);
+  await cdp.send("Input.dispatchTouchEvent", {type: "touchStart", touchPoints: [{x: middle - 20, y, id: 0}]});
   await cdp.send("Input.dispatchTouchEvent", {type: "touchStart", touchPoints: [{x: middle - 20, y, id: 0}, {x: middle + 20, y, id: 1}]});
   for (let i = 1; i <= 10; i++) {
     await cdp.send("Input.dispatchTouchEvent", {type: "touchMove", touchPoints: [{x: middle - 20 - 8 * i, y, id: 0}, {x: middle + 20 + 8 * i, y, id: 1}]});

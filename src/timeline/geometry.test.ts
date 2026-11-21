@@ -95,10 +95,11 @@ describe("snapping", () => {
     expect(dragDeltaDSecs(60, 40)).toBe(15);
     expect(dragDeltaDSecs(60, 200)).toBe(3);
     // Zoomed in, a drag moves in finer steps, down to a hundredth of a second.
-    expect(dragDeltaDSecs(13, 200)).toBe(0.5);
+    expect(dragDeltaDSecs(13, 100)).toBe(1.5);
+    expect(dragDeltaDSecs(13, 200)).toBe(0.6);
+    // At full zoom, 400 pixels a second, a drag moves a hundredth of a second at a time.
     expect(dragDeltaDSecs(9, 400)).toBe(0.2);
-    expect(dragDeltaDSecs(7, 800)).toBe(0.1);
-    expect(dragDeltaDSecs(-7, 800)).toBe(-0.1);
+    expect(dragDeltaDSecs(-5, 400)).toBe(-0.1);
   });
 
   it("grabs the edges of a transition to resize it", () => {
