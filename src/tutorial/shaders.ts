@@ -51,7 +51,7 @@ export const PULSE = `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 export const WAVES = PULSE.replace(
   `  // sin(iTime) swings between -1 and 1, so t swings between 0 and 1.
   float t = 0.5 + 0.5 * sin(iTime);`,
-  `  // Pixels further right are a little behind, so the colours move across in waves.
+  `  // t now depends on how far across the pixel is too, which makes stripes that move.
   float t = 0.5 + 0.5 * sin(2.0 * iTime - 12.0 * uv.x);`);
 
 export const SHIMMER = `void mainImage(out vec4 fragColor, in vec2 fragCoord) {

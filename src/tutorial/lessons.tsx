@@ -220,15 +220,17 @@ export const LESSONS: Lesson[] = [
         id: "waves",
         title: "Make waves",
         body: <>
+          <p>This step changes one line, the one that works out <code>t</code>:</p>
+          <pre className="learnLine">float t = 0.5 + 0.5 * sin(2.0 * iTime - 12.0 * uv.x);</pre>
           <p>
-            In the last step every pixel had the same <code>t</code>, so the whole canvas changed colour
-            together. This version also takes away <code>12.0 * uv.x</code> inside the <code>sin</code>, so
-            pixels further to the right are a little behind. Each colour reaches them slightly later than the
-            pixels to their left, so the colours look like waves moving across the canvas.
+            Before, <code>t</code> depended only on the time, so every pixel was the same colour. Now it also
+            depends on <code>uv.x</code>, how far across the canvas the pixel is. So at any moment, pixels at
+            different places across the canvas get different colours, which makes stripes. And because{" "}
+            <code>t</code> still depends on <code>iTime</code>, the stripes slide along as the animation plays.
           </p>
           <p>
-            Build it and play. Then try other numbers: <code>2.0</code> sets how fast the colours change, and{" "}
-            <code>12.0</code> sets how many waves fit across.
+            Build it and play. Then try other numbers: <code>2.0</code> sets how fast the stripes move, and{" "}
+            <code>12.0</code> sets how many fit across.
           </p>
         </>,
         code: shaders.WAVES,
@@ -602,11 +604,15 @@ export const LESSONS: Lesson[] = [
         title: "Fold it",
         body: <>
           <p>
-            <code>abs</code> turns negative numbers positive: <code>abs(-0.3)</code> is 0.3.{" "}
-            <code>uv - 0.5</code> goes from -0.5 to 0.5, with 0 in the middle of the canvas, so{" "}
-            <code>abs(uv - 0.5)</code> is the same on both sides of the middle. Each half of the canvas shows
-            the same part of the image, mirrored left to right and top to bottom, like a kaleidoscope. Build it
-            and play.
+            This step adds one line before the wave:
+          </p>
+          <pre className="learnLine">uv = abs(uv - 0.5) * 2.0;</pre>
+          <p>
+            <code>abs</code> turns negative numbers positive: <code>abs(-0.3)</code> is 0.3. And{" "}
+            <code>uv - 0.5</code> is 0 in the middle of the canvas and negative to the left of it, so after{" "}
+            <code>abs</code> the left half gets the same numbers as the right half. The same happens top to
+            bottom, so the image is mirrored into each quarter of the canvas, like a kaleidoscope. Build it and
+            play.
           </p>
         </>,
         code: shaders.FOLDED_TEXTURE,

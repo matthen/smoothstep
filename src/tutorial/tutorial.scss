@@ -161,6 +161,17 @@
   p:last-child {
     margin-bottom: 0;
   }
+  // A line of code quoted in the text, which can wrap.
+  pre.learnLine {
+    margin: 0 0 10px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: $dt-gray-dark;
+    color: $dt-cyan;
+    font-family: var(--mantine-font-family-monospace);
+    font-size: 12.5px;
+    white-space: pre-wrap;
+  }
   ul {
     margin: 0 0 10px;
     padding-left: 20px;
