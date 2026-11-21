@@ -709,7 +709,7 @@ export default function App() {
             }
           }}
         />
-        <Group gap={4} wrap="nowrap" className="headerActions">
+        <Group gap={4} wrap="nowrap" className="headerActions headerEnd">
           <Menu>
             <Menu.Target>
               <Button
@@ -735,19 +735,14 @@ export default function App() {
               </Menu.Item>
             </Menu.Dropdown>
           </Menu>
-        </Group>
-        <Group gap={4} wrap="nowrap" className="headerActions headerEnd">
-          <Tooltip label={`Save (${MOD_KEY} S)`}>
-            <ActionIcon
-              variant={hasUnsavedChanges ? "light" : "subtle"} color={hasUnsavedChanges ? undefined : "gray"}
-              size="lg" aria-label="Save" className="saveButton" onClick={() => void save(false)}
-            >
-              <TbDeviceFloppy size={18} />
-            </ActionIcon>
-          </Tooltip>
           <Menu position="bottom-end">
             <Menu.Target>
-              <Button variant="subtle" color="gray" leftSection={<TbHelp />}>Help</Button>
+              <Button
+                variant="subtle" color="gray" leftSection={phone ? <TbHelp /> : undefined}
+                rightSection={phone ? undefined : <TbChevronDown />}
+              >
+                Help
+              </Button>
             </Menu.Target>
             <Menu.Dropdown>
               <Menu.Item leftSection={<TbHome />} onClick={() => setDialog("splash")}>Welcome</Menu.Item>
@@ -765,6 +760,14 @@ export default function App() {
               <Menu.Item leftSection={<TbHeart />} onClick={() => setDialog("acknowledgements")}>Acknowledgements</Menu.Item>
             </Menu.Dropdown>
           </Menu>
+          <Tooltip label={`Save (${MOD_KEY} S)`}>
+            <ActionIcon
+              variant={hasUnsavedChanges ? "light" : "subtle"} color={hasUnsavedChanges ? undefined : "gray"}
+              size="lg" aria-label="Save" className="saveButton" onClick={() => void save(false)}
+            >
+              <TbDeviceFloppy size={18} />
+            </ActionIcon>
+          </Tooltip>
           <Button variant="subtle" color="gray" leftSection={<TbShare />} onClick={() => setDialog("share")}>
             Share
           </Button>
