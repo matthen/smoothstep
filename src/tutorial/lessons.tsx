@@ -131,14 +131,21 @@ export const LESSONS: Lesson[] = [
         title: "A gradient",
         body: <>
           <p>
-            A shader is a small program that works out the colour of every pixel. Every smoothstep shader has
-            a function called <code>mainImage</code>, which runs once for each pixel, in every frame.
+            A shader is a small program that works out the colour of every pixel on the canvas. In smoothstep
+            it's a function called <code>mainImage</code>. Your computer runs it for every pixel at once, many
+            times a second.
           </p>
           <p>
-            <code>fragCoord</code> is the pixel's position, in pixels, and whatever you put in{" "}
-            <code>fragColor</code> is the colour it gets: red, green, blue and opacity, each from 0 to 1.
-            Dividing by <code>iResolution</code>, the canvas size, gives <code>uv</code>, which runs from 0 to
-            1 whatever the canvas size.
+            <code>fragCoord</code> is where the pixel is, counted in pixels from the bottom-left corner.
+            Whatever you put in <code>fragColor</code> is the colour that pixel gets. A colour is four numbers
+            from 0 to 1: red, green, blue, and opacity, where 1 means solid.
+          </p>
+          <p>
+            The canvas can be any size, so the code divides <code>fragCoord</code> by{" "}
+            <code>iResolution</code>, the canvas's width and height. That gives <code>uv</code>, which goes
+            from 0 at the left edge to 1 at the right, and from 0 at the bottom to 1 at the top. The colour
+            uses <code>uv.x</code> for red and <code>uv.y</code> for green, so the canvas gets redder to the
+            right and greener towards the top.
           </p>
           <p>
             Put this in the editor, then click Build, or press <kbd>Shift</kbd> + <kbd>Enter</kbd>.
@@ -153,7 +160,8 @@ export const LESSONS: Lesson[] = [
         title: "Pick a colour",
         body: <>
           <p>
-            A <code>vec3</code> holds three numbers, here the red, green and blue of a colour. Put this in the
+            A <code>vec3</code> is a group of three numbers. Here it holds the red, green and blue of an orange
+            colour. The code also makes the colour darker towards the bottom of the canvas. Put this in the
             editor and build it.
           </p>
           <p>
@@ -170,10 +178,14 @@ export const LESSONS: Lesson[] = [
         title: "Blend two colours",
         body: <>
           <p>
-            <code>mix(a, b, t)</code> blends from <code>a</code> to <code>b</code> as <code>t</code> goes from
-            0 to 1. Blending by <code>uv.x</code> puts one colour on the left and the other on the right.
+            <code>mix(a, b, t)</code> blends two colours. When <code>t</code> is 0 you get <code>a</code>, when
+            it's 1 you get <code>b</code>, and at 0.5 you get half of each.
           </p>
-          <p>Put this in the editor and build it, then pick your own two colours.</p>
+          <p>
+            Here <code>t</code> is <code>uv.x</code>, so the canvas fades from the <code>left</code> colour at
+            the left edge to the <code>right</code> colour at the right edge. Put this in the editor and build
+            it, then click in each <code>vec3</code> to pick your own two colours.
+          </p>
         </>,
         code: shaders.TWO_COLOURS,
         task: "Build a shader that uses mix().",
@@ -189,12 +201,14 @@ export const LESSONS: Lesson[] = [
         title: "Animate with iTime",
         body: <>
           <p>
-            <code>iTime</code> is the time in seconds since the animation started, so anything that uses it
-            changes as the animation plays.
+            <code>iTime</code> is the number of seconds since the animation started. Use it in your code and
+            the picture changes as the animation plays.
           </p>
           <p>
-            <code>sin</code> swings smoothly between -1 and 1, so <code>0.5 + 0.5 * sin(iTime)</code> swings
-            between 0 and 1. This version blends between the two colours with it.
+            As <code>iTime</code> goes up, <code>sin(iTime)</code> goes smoothly up to 1, down to -1, and back,
+            over and over. <code>mix</code> needs a number from 0 to 1, so the code halves it, giving -0.5 to
+            0.5, and adds 0.5, giving 0 to 1. Using that as <code>t</code> makes the whole canvas fade from one
+            colour to the other and back.
           </p>
           <p>Put it in the editor, build it, and press the play button under the canvas.</p>
         </>,
@@ -207,10 +221,15 @@ export const LESSONS: Lesson[] = [
         title: "Make waves",
         body: <>
           <p>
-            Now the whole canvas changes at once. Subtract <code>uv.x</code> inside the <code>sin</code>, and
-            each column swings a little later than the one to its left, so waves travel across.
+            In the last step every pixel had the same <code>t</code>, so the whole canvas changed colour
+            together. This version also takes away <code>12.0 * uv.x</code> inside the <code>sin</code>, so
+            pixels further to the right are a little behind. Each colour reaches them slightly later than the
+            pixels to their left, so the colours look like waves moving across the canvas.
           </p>
-          <p>Build it, then try other numbers in place of the <code>2.0</code> and <code>12.0</code>.</p>
+          <p>
+            Build it and play. Then try other numbers: <code>2.0</code> sets how fast the colours change, and{" "}
+            <code>12.0</code> sets how many waves fit across.
+          </p>
         </>,
         code: shaders.WAVES,
         task: "Build code that uses iTime and play it.",
@@ -222,12 +241,15 @@ export const LESSONS: Lesson[] = [
         title: "A colour shimmer",
         body: <>
           <p>
-            A cosine palette gives a whole rainbow from one number. Red, green and blue each follow a cosine
-            of <code>t</code>, a third of a turn apart, so as <code>t</code> changes the colour cycles.
+            A cosine palette is a trick for getting a whole rainbow from one number, <code>t</code>. Red, green
+            and blue each rise and fall with a cosine of <code>t</code>. The <code>vec3(0.0, 0.33, 0.67)</code>{" "}
+            offsets them, so they peak at different times. As <code>t</code> goes up, the colour goes round
+            the rainbow and back to where it started.
           </p>
           <p>
-            Here <code>t</code> drifts across the canvas and over time. Build it and play. Changing the{" "}
-            <code>vec3(0.0, 0.33, 0.67)</code> gives a different palette.
+            Here <code>t</code> depends on the pixel's position and on <code>iTime</code>, so the colours drift
+            across the canvas as it plays. Build it and play, then change the numbers in the{" "}
+            <code>vec3</code> to get a different set of colours.
           </p>
         </>,
         code: shaders.SHIMMER,
@@ -254,11 +276,16 @@ export const LESSONS: Lesson[] = [
         title: "Centred coordinates",
         body: <>
           <p>
-            For shapes it helps to put (0, 0) in the middle of the canvas. Dividing by{" "}
-            <code>iResolution.y</code> makes y run from -1 to 1, and keeps x in step with it, so circles stay
-            round on any shape of canvas.
+            So far <code>uv</code> has started at (0, 0) in the bottom-left corner. For drawing shapes it's
+            easier to have (0, 0) in the middle. This code moves it there, with y going from -1 at the bottom
+            to 1 at the top. x uses the same scale, so on a wide canvas it goes past 1 at the sides, and circles
+            stay round.
           </p>
-          <p>Put this in the editor and build it. Red shows x and green shows y.</p>
+          <p>
+            Put this in the editor and build it. Red shows x and green shows y, so the top-right quarter is
+            yellow, where both are positive. Negative numbers show as black, so the bottom-left quarter is
+            black.
+          </p>
         </>,
         code: shaders.CENTRED,
         task: "Build a shader that uses iResolution.",
@@ -269,13 +296,14 @@ export const LESSONS: Lesson[] = [
         title: "A circle",
         body: <>
           <p>
-            <code>length(uv)</code> is the distance from the centre, so <code>length(uv) - radius</code> is
-            negative inside a circle and positive outside. That number, the distance to the edge, is how most
-            shaders draw shapes.
+            <code>length(uv)</code> is how far the pixel is from the centre. Take away the radius and you get{" "}
+            <code>d</code>, which is negative for pixels inside the circle, 0 on its edge, and positive outside.
+            Most shaders draw shapes this way: they work out how far each pixel is from the shape's edge.
           </p>
           <p>
-            <code>step(0.0, d)</code> is 0 when <code>d</code> is below 0 and 1 above it, which picks the
-            inside or outside colour. Build it, and change the radius.
+            <code>step(0.0, d)</code> turns <code>d</code> into 0 inside the circle and 1 outside, and{" "}
+            <code>mix</code> uses that to choose the inside or outside colour. Build it, then change the
+            radius.
           </p>
         </>,
         code: shaders.HARD_CIRCLE,
@@ -287,12 +315,14 @@ export const LESSONS: Lesson[] = [
         title: "Soft edges",
         body: <>
           <p>
-            Look closely and the circle's edge is jagged. <code>smoothstep(a, b, d)</code> rises smoothly from
-            0 to 1 as <code>d</code> goes from <code>a</code> to <code>b</code>. It's the function this app is
-            named after.
+            Look closely and the circle's edge is jagged, because each pixel is either fully inside or fully
+            outside. <code>smoothstep(a, b, d)</code> fixes that. It's 0 when <code>d</code> is below{" "}
+            <code>a</code>, 1 when it's above <code>b</code>, and rises smoothly in between, so pixels right on
+            the edge get a blend of the two colours. It's the function this app is named after.
           </p>
           <p>
-            Build this, then change the <code>0.01</code>: bigger numbers give a softer, blurrier edge.
+            Build this, then change the <code>0.01</code>. A bigger number spreads the blend over a wider band,
+            so the edge looks blurrier.
           </p>
         </>,
         code: shaders.SOFT_CIRCLE,
@@ -304,8 +334,9 @@ export const LESSONS: Lesson[] = [
         title: "Move it",
         body: <>
           <p>
-            Measuring the distance from another point moves the circle there. This one follows{" "}
-            <code>sin(iTime)</code> from side to side. Build it and play.
+            To move the circle, measure the distance from a different point: <code>length(uv - centre)</code>.
+            Here <code>centre</code> goes left and right with <code>sin(iTime)</code>, so the circle slides
+            from side to side. Build it and play.
           </p>
         </>,
         code: shaders.MOVING_CIRCLE,
@@ -318,8 +349,10 @@ export const LESSONS: Lesson[] = [
         title: "Two circles",
         body: <>
           <p>
-            With two distances, <code>min</code> takes whichever is smaller, so a pixel is inside if it's in
-            either circle. Build it and play to watch them pass through each other.
+            Now there are two circles, each with its own distance, and <code>min</code> picks the smaller of
+            the two. A pixel inside either circle has a negative distance to it, so the smaller one is negative
+            too, and the pixel gets the inside colour. Build it and play to watch them slide through each
+            other.
           </p>
         </>,
         code: shaders.TWO_CIRCLES,
@@ -345,14 +378,15 @@ export const LESSONS: Lesson[] = [
         title: "A number from the timeline",
         body: <>
           <p>
-            The timeline lets you draw how numbers change instead of writing it as maths. It holds 16 of them,{" "}
-            <code>iFloat0</code> to <code>iFloat15</code>, which you can use anywhere in your code.
+            The timeline lets you animate numbers by drawing, without writing any maths. It gives you 16
+            numbers, <code>iFloat0</code> to <code>iFloat15</code>, each with its own row, and you can use them
+            anywhere in your code.
           </p>
           <p>
-            <code>#define grow iFloat0</code> gives the first one a name, which the timeline shows on its row, and the
-            radius is{" "}
-            <code>0.15 + 0.5 * grow</code>. Build this: until you animate it, <code>iFloat0</code> is 0, so
-            the circle starts small.
+            <code>#define grow iFloat0</code> gives the first one a name, <code>grow</code>, which makes the
+            code easier to read. The timeline shows that name on its row. The circle's radius is{" "}
+            <code>0.15 + 0.5 * grow</code>. Build this. <code>grow</code> is 0 until you change it, so the
+            circle is small.
           </p>
         </>,
         code: shaders.TIMELINE_CIRCLE,
@@ -365,11 +399,11 @@ export const LESSONS: Lesson[] = [
         body: <>
           <p>
             Before you animate a number, you can try out values by hand. Open the Sliders tab, or Sliders on a
-            phone, and drag the slider for <code>grow</code> to watch the circle change size.
+            phone, and drag the <code>grow</code> slider. The circle changes size as you drag.
           </p>
           <p>
-            The value you set is saved with the animation. Type in the numbers at either end of a slider to
-            change its range.
+            The value you set is saved with your animation. To change a slider's range, click the number at
+            either end and type a new one.
           </p>
         </>,
         task: "Set iFloat0 with its slider.",
@@ -380,12 +414,13 @@ export const LESSONS: Lesson[] = [
         title: "Make a transition",
         body: <>
           <p>
-            In the Animation tab, drag along the <code>iFloat0</code> row to make a transition. On a phone, open
-            Timeline and tap where it starts, then where it ends.
+            A transition changes a number from one value to another over a stretch of time. In the Animation
+            tab, drag along the <code>grow</code> row to make one. On a phone, open Timeline and tap where it
+            should start, then where it should end.
           </p>
           <p>
             The new transition is selected, and starts from the value you set with the slider. Set its end value
-            to 1, or to 0 if it already starts at 1, then play and watch the circle change size.
+            to 1, or to 0 if it already starts at 1. Then press play and watch the circle change size.
           </p>
         </>,
         task: "Give iFloat0 a transition that changes its value, and play it.",
@@ -395,15 +430,15 @@ export const LESSONS: Lesson[] = [
         id: "transition-types",
         title: "Transition types",
         body: <>
-          <p>The transition menu sets how the value moves:</p>
+          <p>A transition's type sets how the value gets from start to end:</p>
           <ul>
-            <li><b>smoothstep</b> eases in and out, like the function.</li>
-            <li><b>linear</b> moves at a steady speed.</li>
-            <li><b>step</b> jumps halfway through.</li>
+            <li><b>smoothstep</b> starts slowly, speeds up, then slows down at the end, like the function.</li>
+            <li><b>linear</b> moves at the same speed the whole way.</li>
+            <li><b>step</b> stays at the start value, then jumps to the end value halfway through.</li>
           </ul>
           <p>
-            Try another type, or add a second transition after the first, for example back to 0. A value
-            holds still between transitions.
+            Try another type. Or add a second transition after the first, for example back to 0. Between
+            transitions, the value stays where the last one ended.
           </p>
         </>,
         task: "Change a transition's type, or add a second one.",
@@ -417,8 +452,9 @@ export const LESSONS: Lesson[] = [
         title: "A second number",
         body: <>
           <p>
-            This version takes the circle's colour from <code>iFloat1</code>, from cool blue at 0 to warm
-            orange at 1. Build it, then give the <code>iFloat1</code> row a transition from 0 to 1.
+            This version also changes the circle's colour with a second number, <code>warmth</code>, which is{" "}
+            <code>iFloat1</code>. At 0 the circle is cool blue, and at 1 it's warm orange. Build it, then give
+            the <code>warmth</code> row a transition from 0 to 1.
           </p>
         </>,
         code: shaders.TWO_VARIABLES,
@@ -434,8 +470,8 @@ export const LESSONS: Lesson[] = [
             drag the end of the timeline.
           </p>
           <p>
-            You can change the shape of the frame too. Point at the canvas and use the menu in its top-left
-            corner, for example 16:9 for a widescreen video.
+            You can change the canvas's shape too. Move the pointer over the canvas, or tap it on a phone, and
+            use the menu in its top-left corner. For example, 16:9 is the shape of a widescreen video.
           </p>
         </>,
         task: "Change the animation's length.",
@@ -446,8 +482,8 @@ export const LESSONS: Lesson[] = [
         title: "Explore",
         body: <>
           <p>
-            In the Wobbling mirror ball example, <code>iFloat0</code> and <code>iFloat1</code> on the timeline
-            pull the ball out of shape and choose its shape. Try moving its transitions.
+            In the Wobbling mirror ball example, the timeline sets how hard the ball is pulled out of shape,
+            and which shape it's pulled into. Try moving its transitions.
           </p>
           {EXPLORE}
         </>,
@@ -463,13 +499,14 @@ export const LESSONS: Lesson[] = [
         title: "Tiles",
         body: <>
           <p>
-            <code>fract</code> keeps the part of a number after the decimal point, so{" "}
-            <code>fract(3.0 * uv)</code> runs from 0 to 1 over and over. Each tile gets its own coordinates,
-            and its own circle.
+            <code>fract</code> keeps only the part of a number after the decimal point: <code>fract(2.7)</code>{" "}
+            is 0.7. So as you move across the canvas, <code>fract(3.0 * uv)</code> counts up from 0 to 1, then
+            starts again from 0, over and over. That splits the canvas into tiles, each with its own
+            coordinates, and the code draws a circle in the middle of each one.
           </p>
           <p>
-            The shader still works out one distance for each pixel, so a hundred circles cost no more than
-            one. Build it, and change the <code>3.0</code>.
+            The shader still works out just one distance for each pixel, so a hundred circles are no slower to
+            draw than one. Build it, and change the <code>3.0</code> to get bigger or smaller tiles.
           </p>
         </>,
         code: shaders.TILES,
@@ -481,8 +518,10 @@ export const LESSONS: Lesson[] = [
         title: "Rotate",
         body: <>
           <p>
-            A <code>mat2</code> made of cosines and sines turns coordinates by an angle. Turn{" "}
-            <code>uv</code> before tiling and the whole pattern turns. Build it and play.
+            To turn the whole pattern, turn <code>uv</code> before making the tiles. A <code>mat2</code> is a
+            2 × 2 grid of numbers. Multiplying <code>uv</code> by this one, made from the cosine and sine of an
+            angle, turns it by that angle around the centre. The angle grows with <code>iTime</code>, so the
+            pattern slowly spins. Build it and play.
           </p>
         </>,
         code: shaders.ROTATED_TILES,
@@ -494,10 +533,15 @@ export const LESSONS: Lesson[] = [
         title: "Polar coordinates",
         body: <>
           <p>
-            <code>atan(uv.y, uv.x)</code> is the angle around the centre and <code>length(uv)</code> the
-            distance from it. Tile those instead of x and y, and the tiles become segments arranged in rings.
+            So far a position has been x and y: how far across and how far up. Polar coordinates describe it
+            another way, by the angle around the centre and the distance out from it.{" "}
+            <code>atan(uv.y, uv.x)</code> gives the angle, and <code>length(uv)</code> gives the distance.
           </p>
-          <p>Build it, and try other numbers in <code>vec2(12.0, 3.0)</code>.</p>
+          <p>
+            Make tiles from those instead of x and y, and the tiles curve round into rings. Build it, and try
+            other numbers in <code>vec2(12.0, 3.0)</code>. The first sets how many tiles go round each ring,
+            and the second sets how close together the rings are.
+          </p>
         </>,
         code: shaders.POLAR_TILES,
         task: "Build code that uses atan().",
@@ -525,12 +569,13 @@ export const LESSONS: Lesson[] = [
         title: "Show an image",
         body: <>
           <p>
-            Textures are images your shader can read. <code>texture(iTexture0, uv)</code> is the colour of the
-            image in slot <code>iTexture0</code> at <code>uv</code>, where 0 to 1 covers the whole image.
+            A texture is an image your shader can read. <code>texture(iTexture0, uv)</code> looks up the colour
+            of the image in slot <code>iTexture0</code> at the point <code>uv</code>, where 0 to 1 covers the
+            whole image.
           </p>
           <p>
-            Build this. The canvas is black, because every slot starts out black. Open the Textures tab, click{" "}
-            <code>iTexture0</code> and choose a photo, or add your own.
+            Build this. The canvas is black, because the slot is empty, and empty slots are black. Open the
+            Textures tab, click <code>iTexture0</code>, and choose a photo or add your own.
           </p>
         </>,
         code: shaders.TEXTURE,
@@ -542,8 +587,10 @@ export const LESSONS: Lesson[] = [
         title: "Warp it",
         body: <>
           <p>
-            Change <code>uv</code> before reading the texture and the image moves. Here each row shifts
-            sideways by a wave. Build it and play, then try a bigger <code>0.02</code>.
+            If you change <code>uv</code> before reading the texture, each pixel reads the image from a
+            different spot, so the image moves. Here each row of pixels shifts left or right by a wave that
+            moves over time, so the image wobbles. Build it and play, then try a bigger number than{" "}
+            <code>0.02</code> for a stronger wobble.
           </p>
         </>,
         code: shaders.WARPED_TEXTURE,
@@ -555,8 +602,11 @@ export const LESSONS: Lesson[] = [
         title: "Fold it",
         body: <>
           <p>
-            <code>abs</code> turns negative numbers positive, so <code>abs(uv - 0.5)</code> mirrors the canvas
-            about its centre, left to right and top to bottom, like a kaleidoscope. Build it and play.
+            <code>abs</code> turns negative numbers positive: <code>abs(-0.3)</code> is 0.3.{" "}
+            <code>uv - 0.5</code> goes from -0.5 to 0.5, with 0 in the middle of the canvas, so{" "}
+            <code>abs(uv - 0.5)</code> is the same on both sides of the middle. Each half of the canvas shows
+            the same part of the image, mirrored left to right and top to bottom, like a kaleidoscope. Build it
+            and play.
           </p>
         </>,
         code: shaders.FOLDED_TEXTURE,
@@ -585,12 +635,13 @@ export const LESSONS: Lesson[] = [
         title: "The previous frame",
         body: <>
           <p>
-            So far each frame starts from scratch. <code>iPrevFrame</code> is the frame drawn just before this
-            one, as a texture, so your shader can carry things over from one frame to the next.
+            So far each frame has been drawn from scratch, with no idea what was drawn before.{" "}
+            <code>iPrevFrame</code> changes that. It's the frame drawn just before this one, and you read it
+            like the images in the last lesson.
           </p>
           <p>
-            This reads it and makes it a little darker. Build it and play: it stays black, because there's
-            nothing to remember yet.
+            This shader reads the previous frame and makes it a little darker. Build it and play. The canvas
+            stays black, because the first frame was black, so there's nothing to remember yet.
           </p>
         </>,
         code: shaders.FADE,
@@ -602,13 +653,13 @@ export const LESSONS: Lesson[] = [
         title: "Leave a trail",
         body: <>
           <p>
-            Now draw a moving dot on top. Each frame keeps most of the last one, so the dot leaves a trail that
-            fades away.
+            Now add a moving dot on top. Each frame keeps 97% of the brightness of the last one, so everywhere
+            the dot has been fades out slowly, leaving a trail.
           </p>
           <p>
-            Build it and play. Try <code>0.99</code> in place of <code>0.97</code> for a longer trail. The
-            trail's length depends on the frame rate, which here depends on your computer. Exported videos
-            use the frame rate you choose.
+            Build it and play. Try <code>0.99</code> in place of <code>0.97</code> for a longer trail. How long
+            the trail is depends on how many frames a second your computer draws, but exported videos use the
+            frame rate you choose.
           </p>
         </>,
         code: shaders.TRAIL,
@@ -621,13 +672,14 @@ export const LESSONS: Lesson[] = [
         title: "The first frame",
         body: <>
           <p>
-            <code>iFrame</code> counts the frames since the animation started. It goes back to 0 when you
-            build, when the animation loops, and when you go back to the start.
+            <code>iFrame</code> counts the frames: 0 for the first one, then 1, 2, 3 and so on. It goes back to
+            0 when you build, when the animation loops back to the start, and when you rewind.
           </p>
           <p>
-            Checking <code>iFrame == 0</code> lets a shader set up where it starts. This one starts from a
-            gradient, which fades as the dot moves. Without it, the trail would carry over from one loop to the
-            next.
+            So the code inside <code>if (iFrame == 0)</code> only runs on the first frame, and you can use it
+            to set up a starting picture. This one starts with a gradient, which fades away as the dot moves.
+            It also clears the canvas each time the animation loops, so the trail from the end of one loop
+            isn't still there at the start of the next.
           </p>
         </>,
         code: shaders.FIRST_FRAME,
@@ -656,12 +708,14 @@ export const LESSONS: Lesson[] = [
         title: "Add a buffer",
         body: <>
           <p>
-            <code>iPrevFrame</code> remembers what the image looked like. A buffer can remember anything else,
-            such as how hot each pixel is, or where water is flowing.
+            <code>iPrevFrame</code> remembers the last picture. Sometimes you want to remember something that
+            isn't a picture, like how hot each spot is, or which way water is flowing. That's what buffers are
+            for.
           </p>
           <p>
-            A buffer is another shader, with its own tab, that draws before the image each frame. Add one with
-            the <span aria-label="add">⊕</span> button above the code. Its tab is <code>iBuffer0</code>.
+            A buffer is an extra shader with its own tab. Each frame it runs before the image, and what it draws
+            is kept for the other tabs to read. Add one with the <span aria-label="add">⊕</span> button above
+            the code. Its tab is called <code>iBuffer0</code>.
           </p>
         </>,
         task: "Add a buffer with the ⊕ above the code.",
@@ -672,12 +726,13 @@ export const LESSONS: Lesson[] = [
         title: "Store some heat",
         body: <>
           <p>
-            Every tab can read what a buffer drew as <code>iBuffer0</code>, and the buffer can read its own last
-            frame the same way. This buffer keeps most of the heat it had, and adds more under a moving dot.
+            Any tab can read what the buffer drew as <code>iBuffer0</code>, the same way you read a texture. That
+            includes the buffer itself, so each frame it can carry on from its last one. This buffer keeps track
+            of heat. Each frame it keeps 99% of the heat it had, and adds a little more under a moving dot.
           </p>
           <p>
-            Build it. The canvas doesn't change yet, because only the image is shown, and it doesn't read the
-            buffer.
+            Build it. Nothing changes on the canvas yet, because the canvas only shows the Image tab, and the
+            image doesn't read the buffer yet.
           </p>
         </>,
         tabs: [{tab: 0, code: shaders.HEAT_BUFFER}],
@@ -689,8 +744,9 @@ export const LESSONS: Lesson[] = [
         title: "Show the heat",
         body: <>
           <p>
-            Now the image reads <code>iBuffer0</code> and colours the heat. A buffer holds numbers, not just
-            colours from 0 to 1, so the heat can build up past 1, and the image turns it yellow, then white.
+            Now the image reads <code>iBuffer0</code> and turns the heat into colour: black where it's cold,
+            then red, yellow, and white where it's hottest. Colours only go from 0 to 1, but a buffer can hold
+            bigger numbers, so the heat can keep building up past 1. Build it and play.
           </p>
         </>,
         code: shaders.HEAT_IMAGE,
@@ -702,10 +758,15 @@ export const LESSONS: Lesson[] = [
         title: "Let it spread",
         body: <>
           <p>
-            Each frame, this buffer takes the average of a pixel and its four neighbours, so the heat spreads
-            out as it cools. Working out each frame from the last like this is how buffers run simulations.
+            Real heat spreads out. To copy that, each frame this buffer gives every pixel the average heat of
+            itself and its four neighbours: above, below, left and right. Hot pixels share their heat with the
+            cooler ones around them, so it spreads out as it cools.
           </p>
-          <p>Build it and play. Try <code>0.995</code> in place of <code>0.99</code> to make it cool more slowly.</p>
+          <p>
+            Updating every pixel from the last frame like this is how buffers simulate things like heat, smoke
+            and water. Build it and play. Try <code>0.995</code> in place of <code>0.99</code> to make it cool
+            down more slowly.
+          </p>
         </>,
         tabs: [{tab: 0, code: shaders.SPREADING_HEAT_BUFFER}],
         task: "Change the buffer's code and build it.",
@@ -717,12 +778,15 @@ export const LESSONS: Lesson[] = [
         title: "Share code between tabs",
         body: <>
           <p>
-            Once there's a buffer, the Shared tab appears to the left of the code tabs. Functions,
-            constants and <code>#define</code>s there can be used in every tab.
+            Say you want the image to draw the dot too. Both tabs then need to know where the dot is. Rather
+            than writing the same code twice, you can put it in the Shared tab, which appears to the left of the
+            code tabs once you have a buffer. Functions, constants and <code>#define</code>s there can be used
+            in every tab.
           </p>
           <p>
-            This moves the dot's path into a <code>dotPosition</code> function in the Shared tab. The buffer uses
-            it to heat the dot, and the image uses it to draw a ring around the dot, so the two always agree.
+            This puts the dot's path in a function called <code>dotPosition</code> in the Shared tab. The
+            buffer uses it to heat the dot, and the image uses it to draw a ring around the dot, so the two
+            always line up. This step fills in three tabs, so build it and play.
           </p>
         </>,
         tabs: [
@@ -780,8 +844,8 @@ export const LESSONS: Lesson[] = [
             {" "}<Link href={DOCS_URL + "/sharing.md"}>Sharing animations</Link> in the docs has the steps.
           </p>
           <p>
-            Share also gives you code that shows the animation playing on a web page, and a player file: one web
-            page that plays it, which works offline.
+            Share also gives you code to put the animation on your own web page, and a player file: a single
+            web page that plays your animation, even offline.
           </p>
         </>,
       },
