@@ -1,6 +1,6 @@
 import { Button, Group, SimpleGrid, Text, Title } from '@mantine/core';
 import { useEffect, useState, type ReactNode } from 'react';
-import { TbBook, TbBrandGithub, TbBulb, TbSchool } from 'react-icons/tb';
+import { TbBulb } from 'react-icons/tb';
 
 import AppModal from '../app/AppModal';
 import { usePhone } from '../app/usePhone';
@@ -83,14 +83,9 @@ export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
           <WelcomeTip />
         </div>
         <div>
-          <div className="linkList">
-            <LinkItem href={TUTORIAL_HREF} onClick={onHide} icon={<TbSchool />}>Getting started tutorial</LinkItem>
-            <LinkItem href={DOCS_URL} icon={<TbBook />}>Documentation</LinkItem>
-            <LinkItem href={REPO_URL} icon={<TbBrandGithub />}>Source code</LinkItem>
-          </div>
           {recentDocs.length > 0 &&
             <>
-              <Title order={2} size="h5" mt="lg" mb="xs">Your recent animations</Title>
+              <Title order={2} size="h5" mb="xs">Your recent animations</Title>
               <div className="linkList">
                 {recentDocs.map(doc =>
                   <LinkItem
@@ -107,6 +102,11 @@ export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
       </SimpleGrid>
       <Title order={2} size="h5" mt="xl" mb="sm">Examples</Title>
       <ExampleGallery onOpen={onHide} />
+      <Text size="sm" c="dimmed" mt="lg" className="splashFooter">
+        <a href={DOCS_URL} target="_blank" rel="noreferrer">Documentation</a>
+        {" · "}
+        <a href={REPO_URL} target="_blank" rel="noreferrer">Source code</a>
+      </Text>
       <Group justify="flex-end" mt="xl" className="splashActions" wrap={phone ? "nowrap" : "wrap"}>
         <Button variant="default" component="a" href={TUTORIAL_HREF} onClick={onHide}>Tutorial</Button>
         <Button variant={tourTaken ? "default" : "filled"} onClick={onTour} data-autofocus={!tourTaken || undefined}>

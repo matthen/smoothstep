@@ -15,7 +15,7 @@ test.beforeEach(async ({context}) => {
 test("the tutorial puts code in the editor, notices the build, and moves on", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./");
-  await page.getByRole("dialog").getByRole("link", {name: "Getting started tutorial"}).click();
+  await page.getByRole("dialog").getByRole("link", {name: "Tutorial", exact: true}).click();
   await expect(page).toHaveURL(/#tutorial$/);
   await expect(page.locator("#titleInput")).toHaveValue("Tutorial: Colour from position");
 

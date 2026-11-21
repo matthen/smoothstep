@@ -687,6 +687,13 @@ div#textures .texturesHint {
   }
 }
 
+.splash .splashFooter a {
+  color: inherit;
+  &:hover {
+    color: $dt-gray-light;
+  }
+}
+
 // On a phone the buttons stay pinned to the bottom, so the way into the app is always in sight.
 .splash .splashActions {
   @include phone {
