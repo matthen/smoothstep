@@ -5,6 +5,22 @@ import { offline } from './helpers';
 
 test.use(devices['Pixel 7']);
 
+test("on a phone, the welcome screen has no ✕ and keeps its buttons on screen", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./");
+  const welcome = page.getByRole("dialog");
+  await expect(welcome.getByRole("heading", {name: "Welcome"})).toBeVisible();
+  await expect(welcome.locator(".mantine-Modal-close")).toHaveCount(0);
+  const viewport = page.viewportSize()!;
+  for (const name of ["Tutorial", "Take the tour", "Continue"]) {
+    const box = (await welcome.locator(".splashActions").getByText(name, {exact: true}).boundingBox())!;
+    expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
+  }
+  await welcome.getByRole("button", {name: "Continue"}).tap();
+  await expect(welcome).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
 test("on a phone, the panes switch and a transition can be added with two taps", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./#new");

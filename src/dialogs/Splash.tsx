@@ -66,6 +66,8 @@ export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
   return (
     <AppModal
       opened={show} onClose={onHide} size={960} fullScreen={phone} classNames={{content: "splash"}}
+      // On a phone the dialog fills the screen, where a ✕ reads as closing the site, so the pinned buttons do it.
+      withCloseButton={!phone}
       title={<span className="splashTitle"><img src={asset("images/logo.svg")} width="20" height="20" alt="" /><span>smoothstep<i>.io</i></span></span>}
     >
       <SimpleGrid cols={{base: 1, sm: 2}} spacing="xl">
@@ -105,7 +107,7 @@ export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
       </SimpleGrid>
       <Title order={2} size="h5" mt="xl" mb="sm">Examples</Title>
       <ExampleGallery onOpen={onHide} />
-      <Group justify="flex-end" mt="xl">
+      <Group justify="flex-end" mt="xl" className="splashActions" wrap={phone ? "nowrap" : "wrap"}>
         <Button variant="default" component="a" href={TUTORIAL_HREF} onClick={onHide}>Tutorial</Button>
         <Button variant={tourTaken ? "default" : "filled"} onClick={onTour} data-autofocus={!tourTaken || undefined}>
           Take the tour

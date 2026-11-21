@@ -687,6 +687,26 @@ div#textures .texturesHint {
   }
 }
 
+// On a phone the buttons stay pinned to the bottom, so the way into the app is always in sight.
+.splash .splashActions {
+  @include phone {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin: 0 calc(-1 * var(--mantine-spacing-md));
+    padding: 12px var(--mantine-spacing-md) calc(12px + env(safe-area-inset-bottom));
+    gap: 8px;
+    background: var(--mantine-color-body);
+    border-top: 1px solid $dt-gray;
+
+    .mantine-Button-root {
+      flex: 1 1 0;
+      min-width: 0;
+      padding-inline: 4px;
+    }
+  }
+}
+
 .linkList {
   display: flex;
   flex-direction: column;
