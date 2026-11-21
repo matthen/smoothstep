@@ -35,7 +35,7 @@ function linkToFile(address: string): {link: string} | {error: string} | null {
     return {error: "That isn't the address of a gist or a file."};
   }
   if (route.kind === "url" && !route.url.startsWith("https:")) {
-    return {error: "Use the file's https address. Browsers won't let smoothstep read it over http."};
+    return {error: "Use the file's https address. Browsers won't let smoothstep.io read it over http."};
   }
   return {link: appLink(routeHash(route))};
 }

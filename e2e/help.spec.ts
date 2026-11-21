@@ -80,3 +80,23 @@ test("a compile error shows a tip once, which can turn tips off", async ({page, 
   expect(await page.evaluate(() => window.localStorage.getItem("smoothstep.tips"))).toBe("off");
   expect(errors).toEqual([]);
 });
+
+test("a part of the app that's gone after an update reloads the page, then explains", async ({page, context}) => {
+  await offline(context);
+  // An older page asking for a file the new version doesn't have gets the app's HTML instead.
+  await page.route(/\/assets\/KeyboardShortcuts-.*\.js$/, route =>
+    route.fulfill({contentType: "text/html", body: "<!doctype html>"}));
+  let loads = 0;
+  page.on("load", () => loads++);
+  await page.goto("./#new");
+  await expect(page.locator("#canvas")).toBeVisible();
+
+  await helpMenu(page, "Keyboard shortcuts");
+  await expect.poll(() => loads).toBe(2);
+  await expect(page.locator("#canvas")).toBeVisible();
+
+  // A second failure soon after doesn't reload again.
+  await helpMenu(page, "Keyboard shortcuts");
+  await expect(page.getByText(/a new version came out while this page was open/)).toBeVisible();
+  expect(loads).toBe(2);
+});

@@ -59,6 +59,20 @@ describe("parseDocument", () => {
     expect([t.startValue, t.endValue]).toEqual([0, 2.5]);
   });
 
+  it("keeps transition times to a hundredth of a second", () => {
+    const doc = newDocument();
+    (doc.variables[0]!.transitions as unknown[]).push(
+      {startDSecs: 12.5, endDSecs: 20.04, startValue: 0, endValue: 1, type: "linear"});
+    const t = parseDocument(doc).variables[0]!.transitions[0]!;
+    expect([t.startDSecs, t.endDSecs]).toEqual([12.5, 20]);
+  });
+
+  it("keeps a custom aspect ratio", () => {
+    const doc = newDocument() as unknown as Record<string, unknown>;
+    doc.aspectRatio = [21, 9];
+    expect(parseDocument(doc).aspectRatio).toEqual([21, 9]);
+  });
+
   it.each([
     ["a non-numeric value", (d: Record<string, unknown>) => {
       (d.variables as {transitions: unknown[]}[])[0]!.transitions.push(
@@ -66,7 +80,9 @@ describe("parseDocument", () => {
     }],
     ["a missing title", (d: Record<string, unknown>) => {delete d.title;}],
     ["a zero duration", (d: Record<string, unknown>) => {d.duration = 0;}],
-    ["an unknown aspect ratio", (d: Record<string, unknown>) => {d.aspectRatio = [2, 1];}],
+    ["a fractional aspect ratio", (d: Record<string, unknown>) => {d.aspectRatio = [2.5, 1];}],
+    ["an aspect ratio wider than 10:1", (d: Record<string, unknown>) => {d.aspectRatio = [11, 1];}],
+    ["an aspect ratio over 100", (d: Record<string, unknown>) => {d.aspectRatio = [200, 100];}],
     ["string aspect ratios", (d: Record<string, unknown>) => {d.aspectRatio = ["1", "1"];}],
     ["15 variables", (d: Record<string, unknown>) => {(d.variables as unknown[]).pop();}],
     ["a misnumbered texture", (d: Record<string, unknown>) => {
@@ -109,6 +125,18 @@ describe("variableValue", () => {
     [9, 3],     // after the last transition
   ])("at %s seconds is %s", (time, expected) => {
     expect(variableValue(transitions, time)).toBeCloseTo(expected, 10);
+  });
+
+  it("eases in, eases out, and overshoots then settles", () => {
+    const at = (type: Transition["type"], time: number) =>
+      variableValue([{startDSecs: 0, endDSecs: 10, startValue: 0, endValue: 1, type}], time);
+    expect(at("easeIn", 0.5)).toBeCloseTo(0.125, 10);
+    expect(at("easeOut", 0.5)).toBeCloseTo(0.875, 10);
+    expect(at("overshoot", 0.58)).toBeCloseTo(1.1, 3);
+    for (const type of ["easeIn", "easeOut", "overshoot"] as const) {
+      expect(at(type, 0)).toBeCloseTo(0, 10);
+      expect(at(type, 1)).toBeCloseTo(1, 10);
+    }
   });
 });
 

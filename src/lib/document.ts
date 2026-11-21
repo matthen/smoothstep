@@ -8,7 +8,19 @@ export const MAX_TITLE_LENGTH = 32;
 export const DEFAULT_DURATION = 12;
 
 export const ASPECT_RATIOS: readonly AspectRatio[] = [[1, 1], [4, 3], [16, 9], [3, 4], [9, 16]];
-export const TRANSITION_TYPES = ["step", "linear", "smoothstep"] as const;
+// A custom ratio is two whole numbers up to this, no wider or taller than 10:1.
+export const MAX_ASPECT_TERM = 100;
+
+export function isAspectRatio(value: unknown): value is AspectRatio {
+  if (!Array.isArray(value) || value.length !== 2) {
+    return false;
+  }
+  const [w, h] = value as unknown[];
+  return Number.isInteger(w) && Number.isInteger(h) &&
+    (w as number) >= 1 && (h as number) >= 1 && (w as number) <= MAX_ASPECT_TERM && (h as number) <= MAX_ASPECT_TERM &&
+    (w as number) / (h as number) <= 10 && (h as number) / (w as number) <= 10;
+}
+export const TRANSITION_TYPES = ["step", "linear", "smoothstep", "easeIn", "easeOut", "overshoot"] as const;
 
 export type AspectRatio = [number, number];
 export type TransitionType = (typeof TRANSITION_TYPES)[number];
@@ -161,9 +173,7 @@ export function parseDocument(value: unknown): AnimationDocument {
   if (typeof json.title !== "string") {fail("title");}
   if (typeof json.code !== "string") {fail("code");}
   if (typeof json.duration !== "number" || !(json.duration > 0)) {fail("duration");}
-  if (!Array.isArray(aspectRatio) || aspectRatio.length !== 2 ||
-      !aspectRatio.every(Number.isInteger) ||
-      !ASPECT_RATIOS.some(([w, h]) => w === aspectRatio[0] && h === aspectRatio[1])) {
+  if (!isAspectRatio(aspectRatio)) {
     fail("aspectRatio");
   }
   if (!Array.isArray(json.textures)) {fail("textures");}
@@ -181,13 +191,16 @@ export function parseDocument(value: unknown): AnimationDocument {
       const r = isRecord(t) ? t : {};
       const startValue = numericValue(r.startValue);
       const endValue = numericValue(r.endValue);
-      const ok = isRecord(t) && Number.isInteger(r.startDSecs) && (r.startDSecs as number) >= 0 &&
-        Number.isInteger(r.endDSecs) && (r.endDSecs as number) > (r.startDSecs as number) &&
+      // Times are kept to a hundredth of a second, one decimal place of a tenth.
+      const startDSecs = typeof r.startDSecs === "number" ? Math.round(r.startDSecs * 10) / 10 : NaN;
+      const endDSecs = typeof r.endDSecs === "number" ? Math.round(r.endDSecs * 10) / 10 : NaN;
+      const ok = isRecord(t) && Number.isFinite(startDSecs) && startDSecs >= 0 &&
+        Number.isFinite(endDSecs) && endDSecs > startDSecs &&
         startValue !== null && endValue !== null &&
         (TRANSITION_TYPES as readonly unknown[]).includes(r.type);
       if (!ok) {fail("transition in variable " + i);}
       return {
-        startDSecs: r.startDSecs as number, endDSecs: r.endDSecs as number,
+        startDSecs, endDSecs,
         startValue: startValue!, endValue: endValue!,
         type: r.type as TransitionType,
       };
@@ -244,15 +257,30 @@ export function transitionValue(transition: Transition, time: number): number {
   const t = clamp01((timeDSecs - transition.startDSecs) / (transition.endDSecs - transition.startDSecs));
   const a = transition.startValue;
   const b = transition.endValue;
-  switch (transition.type) {
-    case "smoothstep": {
-      const s = t * t * (3 - 2 * t);
-      return a * (1 - s) + b * s;
+  if (transition.type === "step") {
+    return t > 0.5 ? b : a;
+  }
+  const s = easing(transition.type, t);
+  return a * (1 - s) + b * s;
+}
+
+// How far through a transition the value is, 0 to 1 (overshoot goes a little past 1), at fraction t
+// of its time.
+function easing(type: TransitionType, t: number): number {
+  switch (type) {
+    case "smoothstep":
+      return t * t * (3 - 2 * t);
+    case "easeIn":
+      return t * t * t;
+    case "easeOut":
+      return 1 - (1 - t) ** 3;
+    case "overshoot": {
+      // The usual "back" ease out, which overshoots by about 10%.
+      const c = 1.70158;
+      return 1 + (c + 1) * (t - 1) ** 3 + c * (t - 1) ** 2;
     }
-    case "step":
-      return t > 0.5 ? b : a;
     default:
-      return (1 - t) * a + t * b;
+      return t;
   }
 }
 

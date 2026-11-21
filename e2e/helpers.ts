@@ -85,3 +85,9 @@ export async function canvasCenter(page: Page): Promise<[number, number, number]
 export function near(color: number[], target: number[], tolerance = 40): boolean {
   return color.every((c, i) => Math.abs(c - target[i]!) <= tolerance);
 }
+
+// The selected transition's start and end times, from their boxes, like "1 — 4.1".
+export async function transitionTimes(page: Page): Promise<string> {
+  const time = async (id: string) => (await page.locator(id).inputValue()).replace(/ s$/, "");
+  return `${await time("#startTimeInput")} — ${await time("#endTimeInput")}`;
+}

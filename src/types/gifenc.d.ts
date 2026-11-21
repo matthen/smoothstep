@@ -1,4 +1,4 @@
-// gifenc ships without types; these cover the calls smoothstep makes.
+// gifenc ships without types; these cover the calls smoothstep.io makes.
 declare module 'gifenc' {
   export type Palette = number[][];
   export function quantize(rgba: Uint8Array | Uint8ClampedArray, maxColors: number,

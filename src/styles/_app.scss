@@ -185,19 +185,36 @@ a {
   }
 
   .headerActions {
-    margin-right: auto;
-    @include phone {
-      margin-right: 0;
-    }
     .mantine-Button-root {
       font-weight: 500;
+      // On phones, a small label under each icon.
       @include phone {
-        padding: 0 8px;
+        height: 44px;
+        padding: 0 6px;
+        .mantine-Button-inner {
+          flex-direction: column;
+          gap: 1px;
+        }
         .mantine-Button-section[data-position="left"] {
           margin-inline-end: 0;
+          font-size: 18px;
+        }
+        .mantine-Button-label {
+          font-size: 10px;
+          line-height: 1.2;
+        }
+        // A menu's label ends with a small ▾, as on bigger screens.
+        .menuChevron {
+          margin-left: 1px;
+          vertical-align: -1px;
         }
       }
     }
+  }
+
+  // The menus and actions sit at the right, ending with the main way out: Export video.
+  .headerEnd {
+    margin-left: auto;
   }
 
   .saveButton {
@@ -274,6 +291,11 @@ a {
   @include phone {
     height: min(max(52dvh, 240px), 100vw);
     padding: 8px 12px 0;
+
+    // Reading or writing code needs the room more than the canvas does.
+    [data-mobile-tab="code"] &, [data-mobile-tab="learn"] & {
+      height: min(max(34dvh, 200px), 100vw);
+    }
   }
 }
 
@@ -312,7 +334,7 @@ a {
   min-height: 0;
   overflow: hidden;
   border-top: 1px solid $dt-gray-darker;
-  background: linear-gradient(180deg, $dt-gray-darker, $dt-gray-dark 42px);
+  background: $dt-gray-dark;
   transition: height $transition-duration;
 
   .mantine-Tabs-root, .mantine-Tabs-panel {
@@ -408,33 +430,24 @@ div#canvasContainer {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   }
 
-  div.fps, div.aspectRatioPicker {
+  div.fps {
     position: absolute;
     opacity: 0;
     transition: opacity 150ms;
   }
 
-  &:hover div.fps, &:hover div.aspectRatioPicker, div.aspectRatioPicker:focus-within {
+  &:hover div.fps {
     opacity: 1;
   }
 
-  // No hover on touch screens: a tap on the canvas shows them for a while. The picker can be tapped only once
-  // it's visible, a moment after, so the tap that shows it doesn't also open it.
+  // No hover on touch screens: a tap on the canvas shows them for a while.
   @media (hover: none) {
-    &, &:hover {
-      div.fps, div.aspectRatioPicker {
-        opacity: 0;
-      }
-
-      div.aspectRatioPicker {
-        visibility: hidden;
-        transition: opacity 150ms, visibility 0s 300ms;
-      }
+    &:hover div.fps {
+      opacity: 0;
     }
 
-    &[data-overlays] div.fps, &[data-overlays] div.aspectRatioPicker, div.aspectRatioPicker:focus-within {
+    &[data-overlays] div.fps {
       opacity: 1;
-      visibility: visible;
     }
   }
 
@@ -455,14 +468,16 @@ div#canvasContainer {
     }
   }
 
-  div.aspectRatioPicker select {
-    background: rgba($dt-gray-darker, 0.75);
-    border: none;
-    width: 96px;
-  }
-
   .webglError {
     margin: auto;
+  }
+}
+
+div.playerButtons .aspectRatioPicker {
+  flex: none;
+  select {
+    width: 84px;
+    font-variant-numeric: tabular-nums;
   }
 }
 
@@ -1205,21 +1220,26 @@ div#textures .texturesHint {
 }
 
 // The Sliders tab: a row for each iFloat the code uses.
+// As many columns of sliders as fit, so wide screens don't need to scroll.
 .sliders {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+  align-content: start;
+  gap: 10px 40px;
   padding: 4px 16px 16px;
   overflow-y: auto;
   height: 100%;
-  max-width: 900px;
+
+  @include phone {
+    grid-template-columns: 1fr;
+  }
 }
 
 // Name, then the minimum, the track with its value underneath, and the maximum.
 .sliderRow {
   display: grid;
   // The ends have fixed widths, so every row's track starts and stops in the same place.
-  grid-template-columns: minmax(120px, 260px) 56px 1fr 56px;
+  grid-template-columns: minmax(96px, 180px) 56px 1fr 56px;
   align-items: start;
   column-gap: 8px;
   padding-bottom: 6px;

@@ -150,9 +150,9 @@ export const LESSONS: Lesson[] = [
         title: "A gradient",
         body: <>
           <p>
-            A shader is a small program that works out the colour of every pixel on the canvas. In smoothstep
-            it's a function called <code>mainImage</code>. Your computer runs it for every pixel at once, many
-            times a second.
+            A shader is a small program that works out the colour of every pixel on the canvas. In
+            smoothstep.io it's a function called <code>mainImage</code>. Your computer runs it for every pixel at
+            once, many times a second.
           </p>
           <p>
             <code>fragCoord</code> is where the pixel is, counted in pixels from the bottom-left corner.
@@ -491,9 +491,9 @@ float radius = 0.15 + 0.5 * grow;`}</Lines>
         title: "Make a transition",
         body: <>
           <p>
-            A transition changes a number from one value to another over a stretch of time. In the Animation
-            tab, drag along the <code>grow</code> row to make one. On a phone, open Timeline and tap where it
-            should start, then where it should end.
+            A transition changes a number from one value to another over a stretch of time. In the Timeline
+            tab, drag along the <code>grow</code> row to make one. On a phone, tap where it should start, then
+            where it should end.
           </p>
           <p>
             The new transition is selected, and starts from the value you set with the slider. Set its end value
@@ -512,7 +512,11 @@ float radius = 0.15 + 0.5 * grow;`}</Lines>
             <li><b>smoothstep</b> starts slowly, speeds up, then slows down at the end, like the function.</li>
             <li><b>linear</b> moves at the same speed the whole way.</li>
             <li><b>step</b> stays at the start value, then jumps to the end value halfway through.</li>
+            <li><b>ease in</b> starts slowly and speeds up, like something falling.</li>
+            <li><b>ease out</b> starts fast and slows to a stop, like something thrown that comes to rest.</li>
+            <li><b>overshoot</b> goes a little past the end value, then settles back, like a spring.</li>
           </ul>
+          <p>Each transition's block on the timeline draws its curve, so you can see the shape.</p>
           <p>
             Try another type. Or add a second transition after the first, for example back to 0. Between
             transitions, the value stays where the last one ended.
@@ -549,8 +553,8 @@ vec3 inside = mix(vec3(0.3, 0.55, 1.0), vec3(1.0, 0.6, 0.2), warmth);`}</Lines>
             drag the end of the timeline.
           </p>
           <p>
-            You can change the canvas's shape too. Move the pointer over the canvas, or tap it on a phone, and
-            use the menu in its top-left corner. For example, 16:9 is the shape of a widescreen video.
+            You can change the canvas's shape too, with the menu at the very end of the play bar. For example,
+            16:9 is the shape of a widescreen video.
           </p>
         </>,
         task: "Change the animation's length.",
@@ -1041,7 +1045,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         title: "Keep learning",
         body: <>
           <p>
-            The examples are a good next step: open one, read its code and change it. smoothstep works much
+            The examples are a good next step: open one, read its code and change it. smoothstep.io works much
             like <Link href="https://www.shadertoy.com/">Shadertoy</Link>, so a lot of what's written for
             Shadertoy applies here too.
           </p>

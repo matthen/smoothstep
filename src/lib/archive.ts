@@ -282,7 +282,7 @@ async function importZip(bytes: Uint8Array, summary: ImportSummary, known: Known
   const prefix = manifestName.slice(0, -"manifest.json".length);
   const manifest = JSON.parse(strFromU8(files[manifestName]!)) as Record<string, unknown>;
   if (manifest.format !== EXPORT_FORMAT) {
-    throw new Error("Not a smoothstep export");
+    throw new Error("Not a smoothstep.io export");
   }
   const file = (name: unknown) => typeof name === "string" ? files[prefix + name] : undefined;
   for (const image of (manifest.images ?? []) as (ImageEntry & {file?: unknown})[]) {

@@ -1,0 +1,104 @@
+{
+ "aspectRatio": [
+  16,
+  9
+ ],
+ "code": "// Writing text with a font texture. iTexture0 is a font: a grid of 16 x 6 characters, from !\n// (code 33) to ~ (code 126) in ASCII order. Pick another font in the [Textures] tab.\n\n// How high the letters bounce. Try it in the [Sliders] tab.\n#define waveHeight iFloat0\n\n// The message, as ASCII codes: S M O O T H S T E P.\n#define LENGTH 10\nconst int MESSAGE[LENGTH] = int[](83, 77, 79, 79, 84, 72, 83, 84, 69, 80);\n\n// How much ink character `code` has at p, where p runs from 0 to 1 across its square.\nfloat character(int code, vec2 p) {\n  if (p.x < 0.0 || p.y < 0.0 || p.x > 1.0 || p.y > 1.0) {\n    return 0.0;\n  }\n  // Which square of the grid the character is in. Row 0 is the top row of the image.\n  int index = code - 33;\n  vec2 square = vec2(index % 16, 5 - index / 16);\n  // The font is black on white, so ink is 1 minus the brightness.\n  float ink = 1.0 - texture(iTexture0, (square + p) / vec2(16.0, 6.0)).r;\n  // The font is small, so its edges blur when it's drawn big. smoothstep sharpens them again.\n  return smoothstep(0.35, 0.65, ink);\n}\n\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  // Centred coordinates: y runs from -1 to 1.\n  vec2 p = (2.0 * fragCoord - iResolution.xy) / iResolution.y;\n\n  // A dark background, a little lighter at the top.\n  vec3 col = mix(vec3(0.05, 0.05, 0.1), vec3(0.15, 0.1, 0.25), 0.5 + 0.5 * p.y);\n\n  // How far through the animation we are, from 0 to 1, so that it loops.\n  float t = iTime / iDuration;\n  float size = 0.6;      // The height of each character's square.\n  float spacing = 0.5 * size;\n\n  for (int i = 0; i < LENGTH; i++) {\n    // Each letter bounces a little after the one before it.\n    float x = (float(i) - 0.5 * float(LENGTH - 1)) * spacing;\n    float y = 0.2 + waveHeight * sin(6.28318 * (2.0 * t - 0.08 * float(i)));\n    // Where this pixel is in the letter's square, from 0 to 1.\n    vec2 q = (p - vec2(x, y)) / size + 0.5;\n\n    float shadow = character(MESSAGE[i], q + vec2(-0.04, 0.05));\n    float ink = character(MESSAGE[i], q);\n    vec3 letterColour = 0.6 + 0.4 * cos(6.28318 * (t + 0.08 * float(i)) + vec3(0.0, 2.0, 4.0));\n\n    col = mix(col, vec3(0.0), 0.6 * shadow);\n    col = mix(col, letterColour, ink);\n  }\n\n  // A timer underneath, showing iTime like 03.25s. The digits 0 to 9 are codes 48 to 57, so a\n  // digit's code is 48 plus the digit. % 10 keeps the last digit of a whole number.\n  int hundredths = int(iTime * 100.0);\n  int timer[6] = int[](\n    48 + hundredths / 1000 % 10,\n    48 + hundredths / 100 % 10,\n    46,  // .\n    48 + hundredths / 10 % 10,\n    48 + hundredths % 10,\n    115  // s\n  );\n  float timerSize = 0.3;\n  for (int i = 0; i < 6; i++) {\n    float x = (float(i) - 2.5) * 0.5 * timerSize;\n    vec2 q = (p - vec2(x, -0.55)) / timerSize + 0.5;\n    col = mix(col, vec3(0.85), character(timer[i], q));\n  }\n\n  fragColor = vec4(col, 1.0);\n}\n",
+ "duration": 6,
+ "textures": [
+  {
+   "id": "iTexture0",
+   "isUserUploaded": false,
+   "url": "fonts/1.png"
+  },
+  {
+   "id": "iTexture1",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  },
+  {
+   "id": "iTexture2",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  },
+  {
+   "id": "iTexture3",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  },
+  {
+   "id": "iTexture4",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  },
+  {
+   "id": "iTexture5",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  },
+  {
+   "id": "iTexture6",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  },
+  {
+   "id": "iTexture7",
+   "isUserUploaded": false,
+   "url": "special/black.png"
+  }
+ ],
+ "title": "Text from a font",
+ "variables": [
+  {
+   "transitions": [],
+   "value": 0.12,
+   "min": 0,
+   "max": 0.4
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  },
+  {
+   "transitions": []
+  }
+ ]
+}

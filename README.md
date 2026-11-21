@@ -1,6 +1,6 @@
 <h1 align="center">
   <img src="public/images/logo.svg" width="48" height="48" alt=""><br>
-  smoothstep
+  smoothstep.io
 </h1>
 
 <p align="center">
@@ -11,10 +11,10 @@
 </p>
 
 <p align="center">
-  <a href="https://smoothstep.io"><img src="docs/images/screenshot.png" alt="smoothstep, with the 3D ray marching example: GLSL code on the left, the rendered scene on the right, and the animation timeline below"></a>
+  <a href="https://smoothstep.io"><img src="docs/images/screenshot.png" alt="smoothstep.io, with the 3D ray marching example: GLSL code on the left, the rendered scene on the right, and the animation timeline below"></a>
 </p>
 
-smoothstep is a toolkit for making animations in the WebGL shader language. You write a
+smoothstep.io is a toolkit for making animations in the WebGL shader language. You write a
 GLSL fragment shader, animate its inputs on a timeline, give it image textures, and export
 the result as video. It all runs in your browser, with no server or sign-in.
 
@@ -38,20 +38,21 @@ notices when you've done it. The Help menu lists the shader inputs and the keybo
 
 The editor highlights GLSL, shows compile errors on the line they occur, and gives you
 inline pickers for colours, numbers and vectors. The timeline drives 16 animated variables,
-`iFloat0` to `iFloat15`, each a sequence of step, linear or smoothstep transitions. The Sliders
-tab has a slider for each one your code uses, to set it or try out values while you watch. You get 8
+`iFloat0` to `iFloat15`, each a sequence of transitions that step, move steadily, ease in or out, or
+overshoot and settle. The Sliders tab has a slider for each one your code uses, to set it or try out
+values while you watch. You get 8
 texture slots, `iTexture0` to `iTexture7`, which take built-in photos, noise, tiling textures
 and font sheets, or your own images up to 4096px. Up to 4 buffers, `iBuffer0` to `iBuffer3`,
 are extra shaders that draw before the image each frame and hold any numbers, so you can run
-simulations across frames. smoothstep exports WebM, MP4, animated GIFs and PNG frames, all made
+simulations across frames. smoothstep.io exports WebM, MP4, animated GIFs and PNG frames, all made
 in your browser.
 
-smoothstep keeps your animations and the images you add in your browser's storage. You can download one
+smoothstep.io keeps your animations and the images you add in your browser's storage. You can download one
 animation, or all of them as a zip, to back them up or move them to another computer, and open
 them again with File → Open → "Open file…".
 
 Sharing needs no server. Share gives you a link with the whole animation compressed into it,
-code to show it playing on any website, and a player file that works offline. smoothstep also opens
+code to show it playing on any website, and a player file that works offline. smoothstep.io also opens
 animation files from GitHub gists and other websites ([docs/sharing.md](docs/sharing.md)).
 
 ## Running it
@@ -77,7 +78,7 @@ play an animation on its own.
 
 ## How it's built
 
-smoothstep is a React 19 app in TypeScript, built with Vite. It uses Mantine for its interface,
+smoothstep.io is a React 19 app in TypeScript, built with Vite. It uses Mantine for its interface,
 Sass for the app's own styles, CodeMirror 6 for the code editor, and WebGL 2 for rendering.
 
 - `src/app/` has `App.tsx`, which holds the open animation and lays out the page, the URL
@@ -121,4 +122,4 @@ request that isn't to your own machine, so they also check that the app works of
 The code is under the [MIT licence](LICENSE). The built-in textures and fonts keep their own
 licences, listed in [CREDITS.md](public/images/textures/CREDITS.md).
 
-smoothstep is made by [Matt Henderson](https://www.matthen.com/).
+smoothstep.io is made by [Matt Henderson](https://www.matthen.com/).

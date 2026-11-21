@@ -1,4 +1,4 @@
-import { cleanup, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -57,8 +57,27 @@ describe("Welcome tip", () => {
 describe("AspectRatioPicker", () => {
   it("reports the picked ratio", async () => {
     const onChange = vi.fn();
-    render(<AspectRatioPicker value={[1, 1]} onChange={onChange} top={0} left={0} />);
+    render(<AspectRatioPicker value={[1, 1]} onChange={onChange} />);
     await userEvent.selectOptions(screen.getByLabelText("Aspect ratio"), "16:9");
     expect(onChange).toHaveBeenCalledWith([16, 9]);
+  });
+
+  it("takes a custom ratio, and lists it once chosen", async () => {
+    const onChange = vi.fn();
+    const {rerender} = render(<AspectRatioPicker value={[1, 1]} onChange={onChange} />);
+    await userEvent.selectOptions(screen.getByLabelText("Aspect ratio"), "Custom…");
+    fireEvent.change(await screen.findByLabelText("Ratio width"), {target: {value: "21"}});
+    fireEvent.change(screen.getByLabelText("Ratio height"), {target: {value: "9"}});
+    fireEvent.click(screen.getByRole("button", {name: "Use", hidden: true}));
+    expect(onChange).toHaveBeenCalledWith([21, 9]);
+    rerender(<AspectRatioPicker value={[21, 9]} onChange={onChange} />);
+    expect((screen.getByLabelText("Aspect ratio") as HTMLSelectElement).selectedOptions[0]!.text).toBe("21:9");
+  });
+
+  it("won't use a ratio wider than 10:1", async () => {
+    render(<AspectRatioPicker value={[1, 1]} onChange={vi.fn()} />);
+    await userEvent.selectOptions(screen.getByLabelText("Aspect ratio"), "Custom…");
+    fireEvent.change(await screen.findByLabelText("Ratio width"), {target: {value: "11"}});
+    expect(screen.getByRole("button", {name: "Use", hidden: true}).hasAttribute("disabled")).toBe(true);
   });
 });

@@ -36,6 +36,7 @@ Click the canvas or an empty part of the page first, so the code editor doesn't 
 | `,` or `.` | back or forward one frame (1/60 second) |
 | `0` to `9` | jump to 0%, 10%, … 90% of the way through |
 | `Backspace` or `Delete` | delete the selected transition on the timeline |
+| `Ctrl` (`⌘` on a Mac) and scroll, or pinch | zoom the timeline in or out, around the pointer |
 
 ## Editor helpers
 
@@ -46,6 +47,5 @@ values are between 0 and 1, and a 3D direction picker otherwise. Click a built-i
 
 Links in comments are underlined, and you can click them. A web address opens in a new tab. A menu
 item or tab named in square brackets, like `[Help → Tutorial]` or `the [Sliders] tab`, opens that
-menu item or tab. The names that work are the File and Help menu items, `[Animation]` (or
-`[Timeline]`, its name on phones), `[Sliders]`,
+menu item or tab. The names that work are the File and Help menu items, `[Timeline]`, `[Sliders]`,
 `[Textures]`, and the code tabs `[Image]`, `[Shared]` and `[iBuffer0]` to `[iBuffer3]`.

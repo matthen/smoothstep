@@ -25,7 +25,7 @@ function escapeHTML(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-// `link` opens the animation in smoothstep, from the corner of the player.
+// `link` opens the animation in smoothstep.io, from the corner of the player.
 export async function playerFile(doc: AnimationDocument, link: string | null): Promise<DownloadableFile> {
   // Only the textures some tab's code uses, as photos and panoramas can be several megabytes.
   const allCode = [doc.code, doc.shared ?? "", ...bufferCodes(doc)].join("\n");

@@ -6,8 +6,9 @@ export const MENU_PATHS = [
   "Help → Keyboard shortcuts", "Help → Documentation", "Help → Source code", "Help → Acknowledgements",
 ] as const;
 
-// The panels under the canvas, and the code tabs. The Animation tab is called Timeline on phones.
-export const TABS = ["Animation", "Timeline","Sliders", "Textures", "Image", "Shared", "iBuffer0", "iBuffer1", "iBuffer2", "iBuffer3"] as const;
+// The panels under the canvas, and the code tabs. "Animation" is the Timeline tab's old name, kept so
+// comments written with it still link.
+export const TABS = ["Timeline", "Animation", "Sliders", "Textures", "Image", "Shared", "iBuffer0", "iBuffer1", "iBuffer2", "iBuffer3"] as const;
 
 export const APP_LINKS = [...MENU_PATHS, ...TABS] as const;
 

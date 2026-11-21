@@ -8,7 +8,10 @@ import { createRoot } from 'react-dom/client';
 
 import App from './app/App';
 import ErrorBoundary from './app/CrashScreen';
+import { reloadOnMissedUpdate } from './app/crashState';
 import { theme } from './app/theme';
+
+reloadOnMissedUpdate();
 
 createRoot(document.getElementById("appRoot")!).render(
   <StrictMode>

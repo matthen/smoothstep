@@ -40,6 +40,8 @@ export const EXAMPLES: Example[] = [
     description: "A Julia set, coloured by how quickly each point escapes."},
   {id: "b2482911f435", title: "Using textures", group: "basics", teaches: ["iTexture0"],
     description: "A photo, warped with sine waves."},
+  {id: "4605c2f31ecc", title: "Text from a font", group: "basics", teaches: ["iTexture0", "fonts"],
+    description: "Bouncing letters and a timer, each character cut out of a font texture by its code."},
   {id: "adb1df38284c", title: "Using the animation timeline", group: "basics", teaches: ["iFloat0", "timeline"],
     description: "A circle whose size and colour follow the timeline."},
   {id: "f9ad362373e4", title: "3D ray marching", group: "basics", teaches: ["ray marching"],
