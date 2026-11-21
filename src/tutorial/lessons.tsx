@@ -41,6 +41,8 @@ export interface Step {
   check?(now: TutorialState, atStart: TutorialState): boolean;
   // Ids of bundled examples to explore, shown as links.
   examples?: string[];
+  // For a challenge: shown only when asked for.
+  hint?: ReactNode;
 }
 
 export interface Lesson {
@@ -104,6 +106,10 @@ function HelpLink({dialog, children}: {dialog: HelpDialog; children: ReactNode})
   return <button type="button" className="linkButton" onClick={() => openHelpDialog(dialog)}>{children}</button>;
 }
 
+// The lines of code a step is about, quoted in its text.
+function Lines({children}: {children: string}) {
+  return <pre className="learnLine">{children}</pre>;
+}
 
 
 // The iFloat rows the code reads that have a transition between different values.
@@ -121,6 +127,19 @@ function textureChosen(now: TutorialState): boolean {
 }
 
 const EXPLORE = <p>Examples open in a new tab, so your animation stays here.</p>;
+
+// A lesson's challenges: things to try on your own, with hints but no answers.
+function challenges(lesson: string, list: ReactNode, hint: ReactNode): Step {
+  return {
+    id: "challenges-" + lesson,
+    title: "Challenges",
+    body: <>
+      <p>Try these on your own, starting from the code you have now. There's no single right answer.</p>
+      <ul>{list}</ul>
+    </>,
+    hint: <ul>{hint}</ul>,
+  };
+}
 
 export const LESSONS: Lesson[] = [
   {
@@ -177,6 +196,8 @@ export const LESSONS: Lesson[] = [
         id: "mix-colours",
         title: "Blend two colours",
         body: <>
+          <p>This step adds a second colour, and blends the two with one new line:</p>
+          <Lines>vec3 colour = mix(left, right, uv.x);</Lines>
           <p>
             <code>mix(a, b, t)</code> blends two colours. When <code>t</code> is 0 you get <code>a</code>, when
             it's 1 you get <code>b</code>, and at 0.5 you get half of each.
@@ -191,6 +212,13 @@ export const LESSONS: Lesson[] = [
         task: "Build a shader that uses mix().",
         check: (now, atStart) => rebuilt(now, atStart) && uses(now.builtCode, /\bmix\s*\(/),
       },
+      challenges("colour", <>
+        <li><b>Bottom to top.</b> Make the colours blend from the bottom of the canvas to the top.</li>
+        <li><b>Sunset.</b> Make the canvas look like the sky at sunset.</li>
+      </>, <>
+        <li><b>Bottom to top:</b> <code>uv.x</code> goes from 0 to 1 left to right. Which number goes from 0 to 1 bottom to top?</li>
+        <li><b>Sunset:</b> pick two colours with the colour picker, and blend them bottom to top.</li>
+      </>),
     ],
   },
   {
@@ -201,14 +229,20 @@ export const LESSONS: Lesson[] = [
         title: "Animate with iTime",
         body: <>
           <p>
-            <code>iTime</code> is the number of seconds since the animation started. Use it in your code and
-            the picture changes as the animation plays.
+            This step blends the two colours by a number <code>t</code> that changes with time, in place of{" "}
+            <code>uv.x</code>:
+          </p>
+          <Lines>{`float t = 0.5 + 0.5 * sin(iTime);
+vec3 colour = mix(left, right, t);`}</Lines>
+          <p>
+            <code>iTime</code> is the number of seconds since the animation started. As it goes up,{" "}
+            <code>sin(iTime)</code> goes smoothly up to 1, down to -1, and back, over and over.{" "}
+            <code>mix</code> needs a number from 0 to 1, so the code halves it, giving -0.5 to 0.5, and adds
+            0.5, giving 0 to 1.
           </p>
           <p>
-            As <code>iTime</code> goes up, <code>sin(iTime)</code> goes smoothly up to 1, down to -1, and back,
-            over and over. <code>mix</code> needs a number from 0 to 1, so the code halves it, giving -0.5 to
-            0.5, and adds 0.5, giving 0 to 1. Using that as <code>t</code> makes the whole canvas fade from one
-            colour to the other and back.
+            Every pixel gets the same <code>t</code>, so the whole canvas fades from one colour to the other and
+            back.
           </p>
           <p>Put it in the editor, build it, and press the play button under the canvas.</p>
         </>,
@@ -221,7 +255,7 @@ export const LESSONS: Lesson[] = [
         title: "Make waves",
         body: <>
           <p>This step changes one line, the one that works out <code>t</code>:</p>
-          <pre className="learnLine">float t = 0.5 + 0.5 * sin(2.0 * iTime - 12.0 * uv.x);</pre>
+          <Lines>float t = 0.5 + 0.5 * sin(2.0 * iTime - 12.0 * uv.x);</Lines>
           <p>
             Before, <code>t</code> depended only on the time, so every pixel was the same colour. Now it also
             depends on <code>uv.x</code>, how far across the canvas the pixel is. So at any moment, pixels at
@@ -242,11 +276,13 @@ export const LESSONS: Lesson[] = [
         id: "shimmer",
         title: "A colour shimmer",
         body: <>
+          <p>This step is a new shader. The line that matters works out the colour from a number <code>t</code>:</p>
+          <Lines>vec3 colour = 0.5 + 0.5 * cos(6.28318 * (t + vec3(0.0, 0.33, 0.67)));</Lines>
           <p>
-            A cosine palette is a trick for getting a whole rainbow from one number, <code>t</code>. Red, green
-            and blue each rise and fall with a cosine of <code>t</code>. The <code>vec3(0.0, 0.33, 0.67)</code>{" "}
-            offsets them, so they peak at different times. As <code>t</code> goes up, the colour goes round
-            the rainbow and back to where it started.
+            This is a cosine palette, a trick for getting a whole rainbow from one number. Red, green and blue
+            each rise and fall with a cosine of <code>t</code>, and the <code>vec3(0.0, 0.33, 0.67)</code>{" "}
+            offsets them, so they peak at different times. Each time <code>t</code> goes up by 1, the colour
+            goes round the rainbow and back to where it started.
           </p>
           <p>
             Here <code>t</code> depends on the pixel's position and on <code>iTime</code>, so the colours drift
@@ -259,6 +295,22 @@ export const LESSONS: Lesson[] = [
         check: (now, atStart) => rebuilt(now, atStart) && uses(now.builtCode, /\bcos\s*\(/) &&
           uses(now.builtCode, /\biTime\b/),
       },
+      challenges("time", <>
+        <li>
+          <b>A perfect loop.</b> Play to the end of the animation and watch it start again: the colours jump.
+          Change the code so it loops smoothly, with no jump.
+        </li>
+        <li><b>Rising waves.</b> Go back to the waves, and make them move up the canvas instead of across.</li>
+        <li><b>Your own palette.</b> Change the palette's numbers to make colours for the sea, a fire or a forest.</li>
+      </>, <>
+        <li>
+          <b>A perfect loop:</b> <code>iDuration</code> is the animation's length in seconds, so{" "}
+          <code>iTime / iDuration</code> goes from 0 to 1 over the whole animation. The palette comes back
+          round each time <code>t</code> goes up by 1, and <code>sin</code> comes back round every 6.28318.
+        </li>
+        <li><b>Rising waves:</b> which part of the waves' code makes them depend on how far across a pixel is?</li>
+        <li><b>Your own palette:</b> try numbers above 1 in the <code>vec3</code>, or put a smaller number in front of the cosine.</li>
+      </>),
       {
         id: "explore-time",
         title: "Explore",
@@ -277,9 +329,11 @@ export const LESSONS: Lesson[] = [
         id: "centred",
         title: "Centred coordinates",
         body: <>
+          <p>This step works out <code>uv</code> a new way:</p>
+          <Lines>vec2 uv = (2.0 * fragCoord - iResolution.xy) / iResolution.y;</Lines>
           <p>
             So far <code>uv</code> has started at (0, 0) in the bottom-left corner. For drawing shapes it's
-            easier to have (0, 0) in the middle. This code moves it there, with y going from -1 at the bottom
+            easier to have (0, 0) in the middle. This line moves it there, with y going from -1 at the bottom
             to 1 at the top. x uses the same scale, so on a wide canvas it goes past 1 at the sides, and circles
             stay round.
           </p>
@@ -297,6 +351,8 @@ export const LESSONS: Lesson[] = [
         id: "circle",
         title: "A circle",
         body: <>
+          <p>This step draws a circle. The key line works out a number <code>d</code> for each pixel:</p>
+          <Lines>float d = length(uv) - radius;</Lines>
           <p>
             <code>length(uv)</code> is how far the pixel is from the centre. Take away the radius and you get{" "}
             <code>d</code>, which is negative for pixels inside the circle, 0 on its edge, and positive outside.
@@ -316,9 +372,10 @@ export const LESSONS: Lesson[] = [
         id: "soft-edge",
         title: "Soft edges",
         body: <>
+          <p>This step changes <code>step(0.0, d)</code> to <code>smoothstep(0.0, 0.01, d)</code>.</p>
           <p>
-            Look closely and the circle's edge is jagged, because each pixel is either fully inside or fully
-            outside. <code>smoothstep(a, b, d)</code> fixes that. It's 0 when <code>d</code> is below{" "}
+            Look closely at the last step's circle and its edge is jagged, because each pixel is either fully
+            inside or fully outside. <code>smoothstep(a, b, d)</code> fixes that. It's 0 when <code>d</code> is below{" "}
             <code>a</code>, 1 when it's above <code>b</code>, and rises smoothly in between, so pixels right on
             the edge get a blend of the two colours. It's the function this app is named after.
           </p>
@@ -335,10 +392,12 @@ export const LESSONS: Lesson[] = [
         id: "move-circle",
         title: "Move it",
         body: <>
+          <p>This step adds a centre point that moves, and measures the distance from it instead of from the middle:</p>
+          <Lines>{`vec2 centre = vec2(0.6 * sin(iTime), 0.0);
+float d = length(uv - centre) - radius;`}</Lines>
           <p>
-            To move the circle, measure the distance from a different point: <code>length(uv - centre)</code>.
-            Here <code>centre</code> goes left and right with <code>sin(iTime)</code>, so the circle slides
-            from side to side. Build it and play.
+            <code>sin(iTime)</code> swings between -1 and 1, so <code>centre</code> moves between -0.6 and 0.6
+            across the canvas, and the circle slides from side to side with it. Build it and play.
           </p>
         </>,
         code: shaders.MOVING_CIRCLE,
@@ -350,9 +409,10 @@ export const LESSONS: Lesson[] = [
         id: "two-circles",
         title: "Two circles",
         body: <>
+          <p>This step has two moving centres, <code>a</code> and <code>b</code>, and works out <code>d</code> from both:</p>
+          <Lines>float d = min(length(uv - a) - 0.4, length(uv - b) - 0.3);</Lines>
           <p>
-            Now there are two circles, each with its own distance, and <code>min</code> picks the smaller of
-            the two. A pixel inside either circle has a negative distance to it, so the smaller one is negative
+            That's the distance to each circle, and <code>min</code> picks the smaller of the two. A pixel inside either circle has a negative distance to it, so the smaller one is negative
             too, and the pixel gets the inside colour. Build it and play to watch them slide through each
             other.
           </p>
@@ -361,6 +421,19 @@ export const LESSONS: Lesson[] = [
         task: "Build two shapes joined with min().",
         check: (now, atStart) => rebuilt(now, atStart) && uses(now.builtCode, /\bmin\s*\(/),
       },
+      challenges("shapes", <>
+        <li><b>A ring.</b> Draw a ring instead of a filled circle.</li>
+        <li><b>An orbit.</b> Make one circle go round and round the middle of the canvas.</li>
+        <li><b>A picture.</b> Draw a snowman, a face or a traffic light out of circles.</li>
+      </>, <>
+        <li>
+          <b>A ring:</b> <code>length(uv) - radius</code> is 0 on the circle's edge, and{" "}
+          <code>abs</code> of it is how far a pixel is from the edge, inside or out. What shape is close to
+          the edge?
+        </li>
+        <li><b>An orbit:</b> a point at <code>vec2(cos(iTime), sin(iTime))</code> goes round in a circle.</li>
+        <li><b>A picture:</b> <code>min</code> can join as many shapes as you like, and each can have its own colour.</li>
+      </>),
       {
         id: "explore-shapes",
         title: "Explore",
@@ -384,11 +457,13 @@ export const LESSONS: Lesson[] = [
             numbers, <code>iFloat0</code> to <code>iFloat15</code>, each with its own row, and you can use them
             anywhere in your code.
           </p>
+          <p>This step's code uses the first one to set the circle's size:</p>
+          <Lines>{`#define grow iFloat0
+float radius = 0.15 + 0.5 * grow;`}</Lines>
           <p>
-            <code>#define grow iFloat0</code> gives the first one a name, <code>grow</code>, which makes the
-            code easier to read. The timeline shows that name on its row. The circle's radius is{" "}
-            <code>0.15 + 0.5 * grow</code>. Build this. <code>grow</code> is 0 until you change it, so the
-            circle is small.
+            <code>#define</code> gives <code>iFloat0</code> a name, <code>grow</code>, which makes the code
+            easier to read, and the timeline shows that name on its row. Build this. <code>grow</code> is 0
+            until you change it, so the circle is small.
           </p>
         </>,
         code: shaders.TIMELINE_CIRCLE,
@@ -453,10 +528,12 @@ export const LESSONS: Lesson[] = [
         id: "second-variable",
         title: "A second number",
         body: <>
+          <p>This step adds a second number, <code>warmth</code>, and uses it for the circle's colour:</p>
+          <Lines>{`#define warmth iFloat1
+vec3 inside = mix(vec3(0.3, 0.55, 1.0), vec3(1.0, 0.6, 0.2), warmth);`}</Lines>
           <p>
-            This version also changes the circle's colour with a second number, <code>warmth</code>, which is{" "}
-            <code>iFloat1</code>. At 0 the circle is cool blue, and at 1 it's warm orange. Build it, then give
-            the <code>warmth</code> row a transition from 0 to 1.
+            At 0 the circle is cool blue, and at 1 it's warm orange. Build it, then give the{" "}
+            <code>warmth</code> row a transition from 0 to 1.
           </p>
         </>,
         code: shaders.TWO_VARIABLES,
@@ -479,6 +556,17 @@ export const LESSONS: Lesson[] = [
         task: "Change the animation's length.",
         check: (now, atStart) => now.duration !== atStart.duration,
       },
+      challenges("timeline", <>
+        <li><b>Slide.</b> Add a third timeline number that slides the circle left and right, and animate it.</li>
+        <li><b>A heartbeat.</b> Make the circle beat twice, rest, then beat twice again.</li>
+      </>, <>
+        <li>
+          <b>Slide:</b> give <code>iFloat2</code> a name with <code>#define</code>, like <code>grow</code> and{" "}
+          <code>warmth</code>. Then measure the distance from a point that moves with it, as in the Move it
+          step of the Shapes lesson.
+        </li>
+        <li><b>A heartbeat:</b> put several short transitions one after another on the <code>grow</code> row.</li>
+      </>),
       {
         id: "explore-timeline",
         title: "Explore",
@@ -500,11 +588,14 @@ export const LESSONS: Lesson[] = [
         id: "tiles",
         title: "Tiles",
         body: <>
+          <p>This step splits the canvas into tiles with one new line:</p>
+          <Lines>vec2 cell = fract(3.0 * uv) * 2.0 - 1.0;</Lines>
           <p>
             <code>fract</code> keeps only the part of a number after the decimal point: <code>fract(2.7)</code>{" "}
             is 0.7. So as you move across the canvas, <code>fract(3.0 * uv)</code> counts up from 0 to 1, then
-            starts again from 0, over and over. That splits the canvas into tiles, each with its own
-            coordinates, and the code draws a circle in the middle of each one.
+            starts again from 0, over and over. That splits the canvas into tiles. The{" "}
+            <code>* 2.0 - 1.0</code> turns each tile's 0 to 1 into -1 to 1, so (0, 0) is in the middle of
+            every tile, and the circle code draws a circle there.
           </p>
           <p>
             The shader still works out just one distance for each pixel, so a hundred circles are no slower to
@@ -520,8 +611,13 @@ export const LESSONS: Lesson[] = [
         title: "Rotate",
         body: <>
           <p>
-            To turn the whole pattern, turn <code>uv</code> before making the tiles. A <code>mat2</code> is a
-            2 × 2 grid of numbers. Multiplying <code>uv</code> by this one, made from the cosine and sine of an
+            This step adds two lines before the tiles, which turn <code>uv</code> and so turn the whole
+            pattern:
+          </p>
+          <Lines>{`float angle = 0.3 * iTime;
+uv = mat2(cos(angle), -sin(angle), sin(angle), cos(angle)) * uv;`}</Lines>
+          <p>
+            A <code>mat2</code> is a 2 × 2 grid of numbers. Multiplying <code>uv</code> by this one, made from the cosine and sine of an
             angle, turns it by that angle around the centre. The angle grows with <code>iTime</code>, so the
             pattern slowly spins. Build it and play.
           </p>
@@ -534,13 +630,17 @@ export const LESSONS: Lesson[] = [
         id: "polar",
         title: "Polar coordinates",
         body: <>
+          <p>This step makes the tiles from polar coordinates instead of x and y:</p>
+          <Lines>{`vec2 polar = vec2(atan(uv.y, uv.x) / 6.28318, length(uv));
+vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
           <p>
             So far a position has been x and y: how far across and how far up. Polar coordinates describe it
             another way, by the angle around the centre and the distance out from it.{" "}
-            <code>atan(uv.y, uv.x)</code> gives the angle, and <code>length(uv)</code> gives the distance.
+            <code>atan(uv.y, uv.x)</code> gives the angle, and dividing by 6.28318 makes one whole turn add up
+            to 1. <code>length(uv)</code> gives the distance.
           </p>
           <p>
-            Make tiles from those instead of x and y, and the tiles curve round into rings. Build it, and try
+            Tiles made from those curve round into rings. Build it, and try
             other numbers in <code>vec2(12.0, 3.0)</code>. The first sets how many tiles go round each ring,
             and the second sets how close together the rings are.
           </p>
@@ -549,6 +649,23 @@ export const LESSONS: Lesson[] = [
         task: "Build code that uses atan().",
         check: (now, atStart) => rebuilt(now, atStart) && uses(now.builtCode, /\batan\s*\(/),
       },
+      challenges("patterns", <>
+        <li><b>A checkerboard.</b> Give every other tile a different colour.</li>
+        <li><b>A flower.</b> Make the pattern look like a flower.</li>
+        <li><b>Your own pattern.</b> Mix tiles, turns and polar coordinates to make a pattern you like.</li>
+      </>, <>
+        <li>
+          <b>A checkerboard:</b> <code>floor</code> keeps the part of a number before the decimal point, so it
+          gives each tile its own whole numbers. Add a tile's two numbers together: next-door tiles
+          take turns being odd and even. <code>mod(n, 2.0)</code> is 0 when <code>n</code> is even and 1
+          when it's odd.
+        </li>
+        <li>
+          <b>A flower:</b> a circle is everywhere closer to the centre than its radius. Make the radius change
+          with the angle from <code>atan</code>, like <code>0.5 + 0.2 * cos(5.0 * angle)</code>, and the circle
+          gets petals.
+        </li>
+      </>),
       {
         id: "explore-patterns",
         title: "Explore",
@@ -570,6 +687,8 @@ export const LESSONS: Lesson[] = [
         id: "texture",
         title: "Show an image",
         body: <>
+          <p>This step is a new shader, and its one new line reads an image:</p>
+          <Lines>fragColor = texture(iTexture0, uv);</Lines>
           <p>
             A texture is an image your shader can read. <code>texture(iTexture0, uv)</code> looks up the colour
             of the image in slot <code>iTexture0</code> at the point <code>uv</code>, where 0 to 1 covers the
@@ -588,11 +707,15 @@ export const LESSONS: Lesson[] = [
         id: "warp",
         title: "Warp it",
         body: <>
+          <p>This step adds one line before reading the texture:</p>
+          <Lines>uv.x += 0.02 * sin(10.0 * uv.y + iTime);</Lines>
           <p>
-            If you change <code>uv</code> before reading the texture, each pixel reads the image from a
-            different spot, so the image moves. Here each row of pixels shifts left or right by a wave that
-            moves over time, so the image wobbles. Build it and play, then try a bigger number than{" "}
-            <code>0.02</code> for a stronger wobble.
+            <code>+=</code> adds to <code>uv.x</code>, so each pixel reads the image from a spot a little to
+            the left or right. The amount depends on <code>uv.y</code>, so each row shifts by a different
+            amount, and on <code>iTime</code>, so it changes as the animation plays and the image wobbles.
+          </p>
+          <p>
+            Build it and play, then try a bigger number than <code>0.02</code> for a stronger wobble.
           </p>
         </>,
         code: shaders.WARPED_TEXTURE,
@@ -606,7 +729,7 @@ export const LESSONS: Lesson[] = [
           <p>
             This step adds one line before the wave:
           </p>
-          <pre className="learnLine">uv = abs(uv - 0.5) * 2.0;</pre>
+          <Lines>uv = abs(uv - 0.5) * 2.0;</Lines>
           <p>
             <code>abs</code> turns negative numbers positive: <code>abs(-0.3)</code> is 0.3. And{" "}
             <code>uv - 0.5</code> is 0 in the middle of the canvas and negative to the left of it, so after{" "}
@@ -619,6 +742,16 @@ export const LESSONS: Lesson[] = [
         task: "Build code that folds uv with abs().",
         check: (now, atStart) => rebuilt(now, atStart) && uses(now.builtCode, /\babs\s*\(/),
       },
+      challenges("textures", <>
+        <li><b>Black and white.</b> Show the image in black and white.</li>
+        <li><b>Underwater.</b> Make the image look like you're seeing it from under water.</li>
+      </>, <>
+        <li>
+          <b>Black and white:</b> a colour is grey when its red, green and blue are the same. Try averaging
+          the three.
+        </li>
+        <li><b>Underwater:</b> wobble the image both ways, up and down as well as sideways, and tint it blue.</li>
+      </>),
       {
         id: "explore-textures",
         title: "Explore",
@@ -645,8 +778,11 @@ export const LESSONS: Lesson[] = [
             <code>iPrevFrame</code> changes that. It's the frame drawn just before this one, and you read it
             like the images in the last lesson.
           </p>
+          <p>This step is a new shader. Its main line reads the previous frame and makes it a little darker:</p>
+          <Lines>vec3 colour = 0.97 * texture(iPrevFrame, uv).rgb;</Lines>
           <p>
-            This shader reads the previous frame and makes it a little darker. Build it and play. The canvas
+            <code>.rgb</code> takes the red, green and blue, and multiplying by 0.97 makes them 3% darker.
+            Build it and play. The canvas
             stays black, because the first frame was black, so there's nothing to remember yet.
           </p>
         </>,
@@ -659,8 +795,9 @@ export const LESSONS: Lesson[] = [
         title: "Leave a trail",
         body: <>
           <p>
-            Now add a moving dot on top. Each frame keeps 97% of the brightness of the last one, so everywhere
-            the dot has been fades out slowly, leaving a trail.
+            This step adds a block of code, under <code>// A dot moving in a loop</code>, that draws a dot on
+            top of the faded frame. Each frame keeps 97% of the brightness of the last one, so everywhere the
+            dot has been fades out slowly, leaving a trail.
           </p>
           <p>
             Build it and play. Try <code>0.99</code> in place of <code>0.97</code> for a longer trail. How long
@@ -681,6 +818,10 @@ export const LESSONS: Lesson[] = [
             <code>iFrame</code> counts the frames: 0 for the first one, then 1, 2, 3 and so on. It goes back to
             0 when you build, when the animation loops back to the start, and when you rewind.
           </p>
+          <p>This step adds three lines before the dot:</p>
+          <Lines>{`if (iFrame == 0) {
+  colour = 0.5 * vec3(uv, 1.0);
+}`}</Lines>
           <p>
             So the code inside <code>if (iFrame == 0)</code> only runs on the first frame, and you can use it
             to set up a starting picture. This one starts with a gradient, which fades away as the dot moves.
@@ -692,6 +833,16 @@ export const LESSONS: Lesson[] = [
         task: "Build code that uses iFrame.",
         check: (now, atStart) => rebuilt(now, atStart) && uses(now.builtCode, /\biFrame\b/),
       },
+      challenges("memory", <>
+        <li><b>Smoke.</b> Make the trail drift upwards, like smoke.</li>
+        <li><b>A spiral.</b> Make the dot draw a spiral.</li>
+      </>, <>
+        <li>
+          <b>Smoke:</b> each frame copies the last one from the same place. What if each pixel copied from a
+          little below itself instead?
+        </li>
+        <li><b>A spiral:</b> make the dot go round, and get further from the centre as time goes on.</li>
+      </>),
       {
         id: "explore-memory",
         title: "Explore",
@@ -732,9 +883,15 @@ export const LESSONS: Lesson[] = [
         title: "Store some heat",
         body: <>
           <p>
-            Any tab can read what the buffer drew as <code>iBuffer0</code>, the same way you read a texture. That
-            includes the buffer itself, so each frame it can carry on from its last one. This buffer keeps track
-            of heat. Each frame it keeps 99% of the heat it had, and adds a little more under a moving dot.
+            This step puts code in the <code>iBuffer0</code> tab. It keeps track of heat, and its first line
+            reads the heat from the buffer's own last frame:
+          </p>
+          <Lines>float heat = 0.99 * texture(iBuffer0, uv).r;</Lines>
+          <p>
+            Any tab can read what the buffer drew as <code>iBuffer0</code>, the same way you read a texture,
+            and that includes the buffer itself. <code>.r</code> takes just the first number, which is where
+            the heat is kept. So each frame the buffer keeps 99% of the heat it had, then adds a little more
+            under a moving dot.
           </p>
           <p>
             Build it. Nothing changes on the canvas yet, because the canvas only shows the Image tab, and the
@@ -750,7 +907,8 @@ export const LESSONS: Lesson[] = [
         title: "Show the heat",
         body: <>
           <p>
-            Now the image reads <code>iBuffer0</code> and turns the heat into colour: black where it's cold,
+            This step's image code reads the heat from the buffer, with{" "}
+            <code>float heat = texture(iBuffer0, uv).r;</code>, and turns it into colour: black where it's cold,
             then red, yellow, and white where it's hottest. Colours only go from 0 to 1, but a buffer can hold
             bigger numbers, so the heat can keep building up past 1. Build it and play.
           </p>
@@ -764,8 +922,9 @@ export const LESSONS: Lesson[] = [
         title: "Let it spread",
         body: <>
           <p>
-            Real heat spreads out. To copy that, each frame this buffer gives every pixel the average heat of
-            itself and its four neighbours: above, below, left and right. Hot pixels share their heat with the
+            This step changes how the buffer reads its last frame. Real heat spreads out, so instead of one
+            reading, the buffer now takes five and averages them: the pixel itself and its four neighbours,
+            above, below, left and right. Hot pixels share their heat with the
             cooler ones around them, so it spreads out as it cools.
           </p>
           <p>
@@ -803,6 +962,17 @@ export const LESSONS: Lesson[] = [
         task: "Build with dotPosition in the Shared tab, used by the image.",
         check: now => now.built && uses(now.builtShared, /\bdotPosition\b/) && uses(now.builtCode, /\bdotPosition\b/),
       },
+      challenges("buffers", <>
+        <li><b>Two dots.</b> Add a second dot that heats up the buffer too.</li>
+        <li><b>Something else.</b> Change the colours so the heat looks like lava, ink, or a thermal camera.</li>
+      </>, <>
+        <li>
+          <b>Two dots:</b> <code>dotPosition(iTime)</code> is where the dot is now, so{" "}
+          <code>dotPosition(iTime + 3.0)</code> is where it will be in 3 seconds: another point on the same
+          path.
+        </li>
+        <li><b>Something else:</b> the colours come from one line in the Image tab.</li>
+      </>),
       {
         id: "explore-buffers",
         title: "Explore",

@@ -1,9 +1,9 @@
 // The Learn panel: the tutorial's steps beside the editor, with checks that notice when you've
 // done each one.
 import { Button, CloseButton, Menu, UnstyledButton } from '@mantine/core';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
-  TbArrowLeft, TbArrowRight, TbCheck, TbChevronDown, TbCircleCheckFilled, TbCircleDashed, TbFileImport,
+  TbArrowLeft, TbArrowRight, TbBulb, TbCheck, TbChevronDown, TbCircleCheckFilled, TbCircleDashed, TbFileImport,
 } from 'react-icons/tb';
 
 import { tokenizeGlsl, type GlslToken } from '../editor/glslLanguage';
@@ -43,6 +43,14 @@ function HighlightedCode({code}: {code: string}) {
       )}
     </pre>
   );
+}
+
+// Hidden until asked for, and hidden again on each new step, since the step's body is keyed by it.
+function Hints({children}: {children: ReactNode}) {
+  const [shown, setShown] = useState(false);
+  return shown
+    ? <section className="learnHints learnProse" aria-label="Hints"><h3><TbBulb aria-hidden />Hints</h3>{children}</section>
+    : <Button variant="light" size="compact-sm" leftSection={<TbBulb />} onClick={() => setShown(true)}>Show hints</Button>;
 }
 
 function lessonDone(lesson: number, completed: string[]): boolean {
@@ -167,6 +175,7 @@ export default function TutorialPanel({initial, state, onPutCode, onLessonChange
               </Fragment>,
             )}
           </div>}
+        {step.hint && <Hints>{step.hint}</Hints>}
         {step.examples &&
           <div className="linkList learnExamples">
             {step.examples.flatMap(id => EXAMPLES.filter(e => e.id === id)).map(e =>

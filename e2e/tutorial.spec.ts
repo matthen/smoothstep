@@ -20,7 +20,7 @@ test("the tutorial puts code in the editor, notices the build, and moves on", as
   await expect(page.locator("#titleInput")).toHaveValue("Tutorial: Colour from position");
 
   const panel = page.getByRole("complementary", {name: "Tutorial"});
-  await expect(panel.getByText("Step 1 of 3")).toBeVisible();
+  await expect(panel.getByText("Step 1 of 4")).toBeVisible();
   const status = panel.getByRole("status");
   await expect(status).not.toHaveAttribute("data-done");
 
@@ -34,7 +34,7 @@ test("the tutorial puts code in the editor, notices the build, and moves on", as
   await expect(panel.getByRole("button", {name: "Next"})).toHaveAttribute("data-variant", "filled");
 
   await panel.getByRole("button", {name: "Next"}).click();
-  await expect(panel.getByText("Step 2 of 3")).toBeVisible();
+  await expect(panel.getByText("Step 2 of 4")).toBeVisible();
   await expect(panel.getByRole("heading", {name: "Pick a colour"})).toBeVisible();
   await expect(status).not.toHaveAttribute("data-done");
 
@@ -47,11 +47,22 @@ test("the tutorial puts code in the editor, notices the build, and moves on", as
   // link opens that lesson.
   await page.goto("about:blank");
   await page.goto("./#tutorial");
-  await expect(panel.getByText("Step 1 of 3")).toBeVisible();
+  await expect(panel.getByText("Step 1 of 4")).toBeVisible();
   await page.goto("about:blank");
   await page.goto("./#tutorial/2");
   await expect(page.locator("#titleInput")).toHaveValue("Tutorial: Moving with time");
   await expect(panel.getByRole("heading", {name: "Animate with iTime"})).toBeVisible();
+
+  // A lesson's challenges keep their hints hidden until asked for, and again on the next visit.
+  await panel.getByRole("button", {name: /Challenges$/}).click();
+  await expect(panel.getByRole("heading", {name: "Challenges"})).toBeVisible();
+  const hints = panel.getByRole("region", {name: "Hints"});
+  await expect(hints).toHaveCount(0);
+  await panel.getByRole("button", {name: "Show hints"}).click();
+  await expect(hints).toContainText("iDuration");
+  await panel.getByRole("button", {name: "Next"}).click();
+  await panel.getByRole("button", {name: "Back"}).click();
+  await expect(hints).toHaveCount(0);
 
   // Closing it leaves an ordinary new animation.
   await panel.getByRole("button", {name: "Close tutorial"}).click();
@@ -118,7 +129,7 @@ test.describe("on a phone", () => {
     const panes = page.locator(".mobileTabs");
     await expect(panes.getByText("Learn", {exact: true})).toBeVisible();
     const panel = page.getByRole("complementary", {name: "Tutorial"});
-    await expect(panel.getByText("Step 1 of 3")).toBeVisible();
+    await expect(panel.getByText("Step 1 of 4")).toBeVisible();
     await expect(page.locator(".cm-content")).toBeHidden();
 
     // Putting code in shows the editor, ready to build.

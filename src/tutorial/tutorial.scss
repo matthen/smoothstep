@@ -233,6 +233,26 @@
   .tok-operator { color: $dt-pink; }
 }
 
+.learnHints {
+  align-self: stretch;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border-left: 3px solid $dt-yellow;
+  background: $dt-gray-dark;
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 6px;
+    font-size: 14px;
+    font-weight: 600;
+    svg {
+      color: $dt-yellow;
+    }
+  }
+}
+
 .learnExamples {
   align-self: stretch;
   gap: 6px;

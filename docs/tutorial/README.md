@@ -14,7 +14,8 @@ notices when you've done it.
 8. [Buffers](https://smoothstep.io/app/#tutorial/8): a heat map that a moving dot paints into a buffer, spreading it out, and the Shared tab.
 9. [Share it](https://smoothstep.io/app/#tutorial/9): saving, sharing a link, downloading and exporting video, and where to learn more.
 
-Each lesson builds one animation a step at a time, and most end with a related example to explore.
+Each lesson builds one animation a step at a time. Most end with challenges to try on your own,
+with hints but no answers, and a related example to explore.
 
 The lessons are in [`src/tutorial/lessons.tsx`](../../src/tutorial/lessons.tsx), and their shaders in
 [`src/tutorial/shaders.ts`](../../src/tutorial/shaders.ts).

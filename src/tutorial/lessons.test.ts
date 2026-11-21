@@ -72,6 +72,16 @@ describe("lessons", () => {
     expect(LESSONS).toHaveLength(9);
   });
 
+  it("end every lesson but the last with challenges that have hints and no code", () => {
+    for (const lesson of LESSONS.slice(0, -1)) {
+      const s = lesson.steps.find(step => step.id.startsWith("challenges-"));
+      expect(s, lesson.title).toBeDefined();
+      expect(s!.hint, s!.id).toBeDefined();
+      expect(stepCode(s!), s!.id).toEqual([]);
+      expect(s!.check, s!.id).toBeUndefined();
+    }
+  });
+
   it("finds code use, ignoring comments", () => {
     expect(uses("x = iTime;", /\biTime\b/)).toBe(true);
     expect(uses("// iTime\nx = 1.; /* iTime */", /\biTime\b/)).toBe(false);
