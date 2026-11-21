@@ -59,6 +59,12 @@ describe("parseDocument", () => {
     expect([t.startValue, t.endValue]).toEqual([0, 2.5]);
   });
 
+  it("keeps a custom aspect ratio", () => {
+    const doc = newDocument() as unknown as Record<string, unknown>;
+    doc.aspectRatio = [21, 9];
+    expect(parseDocument(doc).aspectRatio).toEqual([21, 9]);
+  });
+
   it.each([
     ["a non-numeric value", (d: Record<string, unknown>) => {
       (d.variables as {transitions: unknown[]}[])[0]!.transitions.push(
@@ -66,7 +72,9 @@ describe("parseDocument", () => {
     }],
     ["a missing title", (d: Record<string, unknown>) => {delete d.title;}],
     ["a zero duration", (d: Record<string, unknown>) => {d.duration = 0;}],
-    ["an unknown aspect ratio", (d: Record<string, unknown>) => {d.aspectRatio = [2, 1];}],
+    ["a fractional aspect ratio", (d: Record<string, unknown>) => {d.aspectRatio = [2.5, 1];}],
+    ["an aspect ratio wider than 10:1", (d: Record<string, unknown>) => {d.aspectRatio = [11, 1];}],
+    ["an aspect ratio over 100", (d: Record<string, unknown>) => {d.aspectRatio = [200, 100];}],
     ["string aspect ratios", (d: Record<string, unknown>) => {d.aspectRatio = ["1", "1"];}],
     ["15 variables", (d: Record<string, unknown>) => {(d.variables as unknown[]).pop();}],
     ["a misnumbered texture", (d: Record<string, unknown>) => {

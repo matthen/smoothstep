@@ -27,7 +27,8 @@ An animation is a JSON object, as produced by `App.toJSON()`:
   tenths of a second, with `type` one of `step`, `linear` or `smoothstep`. A variable can also
   have `value`, the number its slider set, which it holds while it has no transitions (0 when left
   out), and `min` and `max`, the ends of its slider. All three are optional.
-- `aspectRatio` is one of `[1,1]`, `[4,3]`, `[16,9]`, `[3,4]`, `[9,16]`.
+- `aspectRatio` is the canvas's width and height as two whole numbers from 1 to 100, such as `[16,9]`
+  or `[21,9]`, no wider or taller than 10:1.
 - `buffers` is optional: up to 4 entries, `[{"code": "..."}, ...]`, read in the code as
   `iBuffer0` to `iBuffer3`. An animation with no buffers leaves it out.
 - `shared` is optional: code with definitions every tab can use. An animation with none leaves it

@@ -8,6 +8,18 @@ export const MAX_TITLE_LENGTH = 32;
 export const DEFAULT_DURATION = 12;
 
 export const ASPECT_RATIOS: readonly AspectRatio[] = [[1, 1], [4, 3], [16, 9], [3, 4], [9, 16]];
+// A custom ratio is two whole numbers up to this, no wider or taller than 10:1.
+export const MAX_ASPECT_TERM = 100;
+
+export function isAspectRatio(value: unknown): value is AspectRatio {
+  if (!Array.isArray(value) || value.length !== 2) {
+    return false;
+  }
+  const [w, h] = value as unknown[];
+  return Number.isInteger(w) && Number.isInteger(h) &&
+    (w as number) >= 1 && (h as number) >= 1 && (w as number) <= MAX_ASPECT_TERM && (h as number) <= MAX_ASPECT_TERM &&
+    (w as number) / (h as number) <= 10 && (h as number) / (w as number) <= 10;
+}
 export const TRANSITION_TYPES = ["step", "linear", "smoothstep"] as const;
 
 export type AspectRatio = [number, number];
@@ -161,9 +173,7 @@ export function parseDocument(value: unknown): AnimationDocument {
   if (typeof json.title !== "string") {fail("title");}
   if (typeof json.code !== "string") {fail("code");}
   if (typeof json.duration !== "number" || !(json.duration > 0)) {fail("duration");}
-  if (!Array.isArray(aspectRatio) || aspectRatio.length !== 2 ||
-      !aspectRatio.every(Number.isInteger) ||
-      !ASPECT_RATIOS.some(([w, h]) => w === aspectRatio[0] && h === aspectRatio[1])) {
+  if (!isAspectRatio(aspectRatio)) {
     fail("aspectRatio");
   }
   if (!Array.isArray(json.textures)) {fail("textures");}
