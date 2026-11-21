@@ -13,15 +13,25 @@ export interface RowPaths {
   held: string;
 }
 
-// The y in a row for each value, with the row's lowest value at the bottom of its band and the
-// highest at the top. A row whose values are all the same is drawn across the middle.
-export function valueToY(transitions: readonly Transition[]): (value: number) => number {
+export interface ValueRange {
+  lo: number;
+  hi: number;
+}
+
+// The lowest and highest values a row's transitions reach.
+export function valueRange(transitions: readonly Transition[]): ValueRange {
   // An overshoot goes past its end value, so its peak counts too.
   const values = transitions.flatMap(t => t.type === "overshoot" ?
     [t.startValue, t.endValue, transitionValue(t, (t.startDSecs + 0.58 * (t.endDSecs - t.startDSecs)) / 10)] :
     [t.startValue, t.endValue]).filter(Number.isFinite);
-  const lo = Math.min(...values);
-  const hi = Math.max(...values);
+  return {lo: Math.min(...values), hi: Math.max(...values)};
+}
+
+// The y in a row for each value, with the range's lowest value at the bottom of the row's band and
+// its highest at the top: the row's own range unless another is given, such as one easing to it.
+// A row whose values are all the same is drawn across the middle.
+export function valueToY(transitions: readonly Transition[], range = valueRange(transitions)): (value: number) => number {
+  const {lo, hi} = range;
   const top = ROW_BAND_TOP + INSET;
   const bottom = ROW_BAND_BOTTOM - INSET;
   if (!(hi - lo > 1e-9)) {
@@ -32,11 +42,13 @@ export function valueToY(transitions: readonly Transition[]): (value: number) =>
 
 const round = (x: number) => Math.round(x * 10) / 10;
 
-export function rowPaths(transitions: readonly Transition[], pxPerSecond: number, endX: number): RowPaths {
+export function rowPaths(
+  transitions: readonly Transition[], pxPerSecond: number, endX: number, range?: ValueRange,
+): RowPaths {
   if (transitions.length === 0) {
     return {curves: [], held: ""};
   }
-  const y = valueToY(transitions);
+  const y = valueToY(transitions, range);
   const pxPerDSec = pxPerSecond / 10;
   const curves = transitions.map(t => {
     const x0 = t.startDSecs * pxPerDSec;

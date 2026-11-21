@@ -5,7 +5,7 @@ import {useMediaQuery} from "@mantine/hooks";
 import {TbArrowAutofitWidth, TbPlus, TbTrash, TbZoomIn, TbZoomOut} from "react-icons/tb";
 import {variableValue} from "../lib/document";
 import type {Transition, TransitionType, Variable} from "../lib/document";
-import {rowPaths} from "./curves";
+import {rowPaths, valueRange} from "./curves";
 import {
   clampTime, clampZoom, DEFAULT_PX_PER_SECOND, dragDeltaDSecs, draggedDuration, durationDSecs, fitPxPerSecond,
   grabMode, hoverEndDSecs, hoverStartDSecs, maxTimeFor, ROW_HEIGHT, roundDSecs, roundDuration, rowAt, rulerTicks,
@@ -17,6 +17,7 @@ import {
   dragTransition, insertTransition, isInsertable, parseValue, removeTransition, replaceTransition,
   withTransitions,
 } from "./transitions";
+import {useEasedRanges} from "./useEasedRanges";
 import "./timeline.scss";
 
 export interface TimelineProps {
@@ -124,6 +125,7 @@ export default function Timeline(props: TimelineProps) {
   const ruler = rulerTicks(pps, Math.max(0, xToTime(scrollLeft, pps) - 1),
     Math.min(maxTime, xToTime(scrollLeft + viewWidth, pps) + 1), maxTime);
   const currentDSecs = currentTime * 10;
+  const ranges = useEasedRanges(variables.slice(0, rowCount).map(v => valueRange(v.transitions)));
 
   // Measured again when the panel is shown, as a hidden one measures zero.
   useLayoutEffect(() => {
@@ -724,7 +726,7 @@ export default function Timeline(props: TimelineProps) {
               onPointerDown={handleDurationPointerDown}
             />
             {variables.slice(0, rowCount).map((variable, row) => {
-              const paths = rowPaths(variable.transitions, pps, width);
+              const paths = rowPaths(variable.transitions, pps, width, ranges[row]);
               return (
                 <div key={row} className="variableRow">
                   {variable.transitions.map((transition, index) => {

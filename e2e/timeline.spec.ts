@@ -206,3 +206,17 @@ test("the number boxes step with their arrows", async ({page, context}) => {
   await expect(duration).toHaveValue("10 s");
   expect(errors).toEqual([]);
 });
+
+test("stepping a value moves the curve, then the row rescales to fit it", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#example/f9ad362373e4");
+  // lightTurn has one transition, so it's drawn the same at any end value once rescaled.
+  await page.locator(".timeArea .variableRow").nth(4).locator(".transition").first().click();
+  const curve = page.locator(".timeArea .variableRow").nth(4).locator("svg.curves path.selected");
+  const before = (await curve.getAttribute("d"))!;
+  await page.locator("#endValueInput").focus();
+  await page.keyboard.press("ArrowUp");
+  await expect.poll(() => curve.getAttribute("d"), {intervals: [20]}).not.toBe(before);
+  await expect.poll(() => curve.getAttribute("d")).toBe(before);
+  expect(errors).toEqual([]);
+});
