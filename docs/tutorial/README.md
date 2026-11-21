@@ -10,8 +10,9 @@ notices when you've done it.
 4. [The timeline](https://smoothstep.io/app/#tutorial/4): animating `iFloat0` and `iFloat1`, transition types, and the length.
 5. [Patterns](https://smoothstep.io/app/#tutorial/5): tiling with `fract`, rotation, and polar coordinates.
 6. [Textures](https://smoothstep.io/app/#tutorial/6): showing, warping and folding an image.
-7. [Memory with iPrevFrame](https://smoothstep.io/app/#tutorial/7): trails that fade, setting up the first frame with `iFrame`, and buffers.
-8. [Share it](https://smoothstep.io/app/#tutorial/8): saving, sharing a link, downloading and exporting video, and where to learn more.
+7. [Memory with iPrevFrame](https://smoothstep.io/app/#tutorial/7): trails that fade, and setting up the first frame with `iFrame`.
+8. [Buffers](https://smoothstep.io/app/#tutorial/8): a heat map that a moving dot paints into a buffer, spreading it out, and the Shared tab.
+9. [Share it](https://smoothstep.io/app/#tutorial/9): saving, sharing a link, downloading and exporting video, and where to learn more.
 
 Each lesson builds one animation a step at a time, and most end with a related example to explore.
 

@@ -37,7 +37,7 @@ test("Help opens the keyboard shortcuts and the shader inputs", async ({page, co
   await expect(inputs).toBeHidden();
 
   // The tutorial's last step links to both.
-  await page.goto("./#tutorial/8");
+  await page.goto("./#tutorial/9");
   const panel = page.getByRole("complementary", {name: "Tutorial"});
   while (!await panel.getByRole("heading", {name: "Keep learning"}).isVisible()) {
     await panel.getByRole("button", {name: "Next"}).click();

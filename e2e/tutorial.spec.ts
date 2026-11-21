@@ -38,9 +38,9 @@ test("the tutorial puts code in the editor, notices the build, and moves on", as
   await expect(panel.getByRole("heading", {name: "Pick a colour"})).toBeVisible();
   await expect(status).not.toHaveAttribute("data-done");
 
-  // The lesson picker lists all eight lessons.
+  // The lesson picker lists all nine lessons.
   await panel.getByRole("button", {name: "Choose a lesson"}).click();
-  await expect(page.getByRole("menuitem")).toHaveCount(8);
+  await expect(page.getByRole("menuitem")).toHaveCount(9);
   await page.keyboard.press("Escape");
 
   // The lesson is remembered, and starts again from its first step in the new animation; a lesson
@@ -57,6 +57,51 @@ test("the tutorial puts code in the editor, notices the build, and moves on", as
   await panel.getByRole("button", {name: "Close tutorial"}).click();
   await expect(panel).toHaveCount(0);
   await expect(page).toHaveURL(/#new$/);
+  expect(errors).toEqual([]);
+});
+
+test("the buffers lesson adds a buffer, fills several tabs, and checks every tab's code", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#tutorial/8");
+  const panel = page.getByRole("complementary", {name: "Tutorial"});
+  const status = panel.getByRole("status");
+  const next = () => panel.getByRole("button", {name: "Next"}).click();
+  const tab = (name: string) => page.getByRole("tab", {name: new RegExp("^" + name)});
+
+  // Add a buffer.
+  await expect(panel.getByRole("heading", {name: "Add a buffer"})).toBeVisible();
+  await page.locator(".shaderTabs").getByRole("button", {name: "Add a buffer"}).click();
+  await expect(status).toHaveAttribute("data-done", "true");
+
+  // The buffer's code goes in its tab. The image doesn't read it yet, so the canvas stays as it was.
+  await next();
+  await panel.getByRole("button", {name: "Put this in the editor"}).click();
+  await expect(tab("iBuffer0")).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("button", {name: "Build"}).click();
+  await expect(status).toHaveAttribute("data-done", "true");
+
+  // The image shows the heat.
+  await next();
+  await panel.getByRole("button", {name: "Put this in the editor"}).click();
+  await expect(tab("Image")).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("button", {name: "Build"}).click();
+  await page.locator(".playerButtons button").nth(1).click();
+  await expect(status).toHaveAttribute("data-done", "true");
+
+  await next();
+  await panel.getByRole("button", {name: "Put this in the editor"}).click();
+  await page.getByRole("button", {name: "Build"}).click();
+  await expect(status).toHaveAttribute("data-done", "true");
+
+  // One button fills the Shared tab, the buffer and the image.
+  await next();
+  await expect(panel.locator(".learnCodeTab")).toHaveText(["Shared", "iBuffer0", "Image"]);
+  await panel.getByRole("button", {name: "Put this in the editor"}).click();
+  await expect(tab("Shared")).toBeVisible();
+  await page.getByRole("button", {name: "Build"}).click();
+  await expect(status).toHaveAttribute("data-done", "true");
+  // Every tab compiled.
+  await expect(page.locator(".shaderTab[data-error]")).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 

@@ -37,7 +37,7 @@ import { floatNames } from '../timeline/names';
 import PlayerControls from '../timeline/PlayerControls';
 import Sliders, { floatsInCode, inputsInCode } from '../timeline/Sliders';
 import Timeline from '../timeline/Timeline';
-import { lessonTitle, type TutorialState } from '../tutorial/lessons';
+import { lessonTitle, type TabCode, type TutorialState } from '../tutorial/lessons';
 import { openingProgress } from '../tutorial/progress';
 import AppModal, { anyModalOpen } from './AppModal';
 import { setCrashDocument } from './crashState';
@@ -625,14 +625,31 @@ export default function App() {
 
   const tutorialState: TutorialState = {
     code: doc.code, builtCode: builtCode ?? "",
+    shared: doc.shared ?? "", buffers: bufferCodes(doc), builtShared: builtExtras.shared, builtBuffers: builtExtras.buffers,
     built: buildState === "built" && compiled?.ok === true && compiled.code === builtCode,
     isPlaying, time, variables: doc.variables, textures: doc.textures, duration: doc.duration,
     aspectRatio: doc.aspectRatio,
   };
 
-  const putTutorialCode = (code: string) => {
-    updateDoc({code});
-    setCodeTab("image");  // The tutorial's code is the image's.
+  // Puts a step's code in each of its tabs, adding buffers up to the highest it fills, and opens the last.
+  const putTutorialCode = (code: TabCode[]) => {
+    const change: Partial<AnimationDocument> = {};
+    const buffers = [...doc.buffers ?? []];
+    for (const {tab, code: text} of code) {
+      if (tab === "image") {
+        change.code = text;
+      } else if (tab === "shared") {
+        change.shared = text;
+      } else {
+        while (buffers.length <= tab) {
+          buffers.push({code: newBufferCode(buffers.length)});
+        }
+        buffers[tab] = {code: text};
+        change.buffers = buffers;
+      }
+    }
+    updateDoc(change);
+    setCodeTab(code[code.length - 1]!.tab);
     if (phone) {
       chooseMobileTab("code");
     }

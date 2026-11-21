@@ -8,14 +8,15 @@ import {
 
 import { tokenizeGlsl, type GlslToken } from '../editor/glslLanguage';
 import { EXAMPLES, exampleHref, exampleThumbnail } from '../lib/config';
-import { LESSONS, type Step, type TutorialState } from './lessons';
+import { shaderName } from '../editor/ShaderTabs';
+import { codeIn, LESSONS, stepCode, type Step, type TabCode, type TutorialState } from './lessons';
 import { saveProgress, type TutorialProgress } from './progress';
 import './tutorial.scss';
 
 export interface TutorialPanelProps {
   initial: TutorialProgress;
   state: TutorialState;
-  onPutCode(code: string): void;
+  onPutCode(code: TabCode[]): void;
   onLessonChange(lesson: number): void;
   onClose(): void;
   // Told whether the current step is done, so the phone's Learn tab can show a tick.
@@ -98,7 +99,8 @@ export default function TutorialPanel({initial, state, onPutCode, onLessonChange
     }
   };
 
-  const inEditor = step.code !== undefined && state.code === step.code;
+  const code = stepCode(step);
+  const inEditor = code.length > 0 && code.every(c => codeIn(state, c.tab) === c.code);
   const emphasiseNext = done;
 
   return (
@@ -145,19 +147,25 @@ export default function TutorialPanel({initial, state, onPutCode, onLessonChange
       <div className="learnBody" key={key}>
         <h2 className="learnTitle">{step.title}</h2>
         <div className="learnProse">{step.body}</div>
-        {step.code !== undefined &&
+        {code.length > 0 &&
           <div className="learnCode">
             <div className="learnCodeBar">
-              <span>GLSL</span>
+              {/* Which tab the code goes in, when it isn't just the image. */}
+              <span>{step.tabs && code.length === 1 ? shaderName(code[0]!.tab) : "GLSL"}</span>
               <Button
                 size="compact-sm" variant={inEditor ? "subtle" : "light"} disabled={inEditor}
                 leftSection={inEditor ? <TbCheck /> : <TbFileImport />}
-                onClick={() => onPutCode(step.code!)}
+                onClick={() => onPutCode(code)}
               >
                 {inEditor ? "In the editor" : "Put this in the editor"}
               </Button>
             </div>
-            <HighlightedCode code={step.code} />
+            {code.map(c =>
+              <Fragment key={String(c.tab)}>
+                {code.length > 1 && <div className="learnCodeTab">{shaderName(c.tab)}</div>}
+                <HighlightedCode code={c.code} />
+              </Fragment>,
+            )}
           </div>}
         {step.examples &&
           <div className="linkList learnExamples">

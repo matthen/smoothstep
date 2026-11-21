@@ -5,12 +5,18 @@ import type { ReactNode } from 'react';
 import { openHelpDialog, type HelpDialog } from '../app/helpDialogs';
 import { EMPTY_TEXTURE, type AspectRatio, type TextureSlot, type Variable } from '../lib/document';
 import { DOCS_URL, EXAMPLES } from '../lib/config';
+import type { ShaderId } from '../render/Renderer';
 import * as shaders from './shaders';
 
 // What a step's check can see of the editor.
 export interface TutorialState {
   code: string;
   builtCode: string;
+  // The Shared tab's and each buffer's code, as in the editor and as last built.
+  shared: string;
+  buffers: string[];
+  builtShared: string;
+  builtBuffers: string[];
   // Compiled without errors, and the editor hasn't changed since.
   built: boolean;
   isPlaying: boolean;
@@ -27,6 +33,8 @@ export interface Step {
   body: ReactNode;
   // Offered with a button that replaces the code in the editor.
   code?: string;
+  // In place of `code`, code for several tabs, which the button puts in each, adding buffers as needed.
+  tabs?: TabCode[];
   // What the check is waiting for, shown until it passes.
   task?: string;
   // `atStart` is the state when the step was entered.
@@ -40,6 +48,26 @@ export interface Lesson {
   steps: Step[];
 }
 
+export interface TabCode {
+  tab: ShaderId;
+  code: string;
+}
+
+// The code a step offers, for each tab it goes in.
+export function stepCode(step: Step): TabCode[] {
+  return step.tabs ?? (step.code === undefined ? [] : [{tab: "image", code: step.code}]);
+}
+
+// A tab's code in the editor.
+export function codeIn(state: TutorialState, tab: ShaderId): string | undefined {
+  return tab === "image" ? state.code : tab === "shared" ? state.shared : state.buffers[tab];
+}
+
+// A tab's code as last built.
+function builtIn(state: TutorialState, tab: ShaderId): string {
+  return (tab === "image" ? state.builtCode : tab === "shared" ? state.builtShared : state.builtBuffers[tab]) ?? "";
+}
+
 function stripComments(code: string): string {
   return code.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 }
@@ -48,8 +76,10 @@ export function uses(code: string, pattern: RegExp): boolean {
   return pattern.test(stripComments(code));
 }
 
+// Built again with a change in any tab.
 function rebuilt(now: TutorialState, atStart: TutorialState): boolean {
-  return now.built && now.builtCode !== atStart.builtCode;
+  const all = (s: TutorialState) => [s.builtCode, s.builtShared, ...s.builtBuffers].join("\0");
+  return now.built && all(now) !== all(atStart);
 }
 
 // Rebuilt, and with something other than the step's own code: changed with a picker or by hand.
@@ -605,35 +635,115 @@ export const LESSONS: Lesson[] = [
         check: (now, atStart) => rebuilt(now, atStart) && uses(now.builtCode, /\biFrame\b/),
       },
       {
-        id: "buffers",
-        title: "Buffers",
-        body: <>
-          <p>
-            <code>iPrevFrame</code> remembers what the image looked like. To remember other things, such as where
-            water is flowing, add a buffer with the <span aria-label="add">⊕</span> button above the code.
-          </p>
-          <p>
-            A buffer is another shader, with its own tab, that draws before the image each frame. Every tab can read
-            what it drew as <code>iBuffer0</code>, and a buffer can read its own last frame the same way. Buffers
-            hold any numbers, not just colours, so they can run simulations that the image then draws.
-          </p>
-          <p>
-            Once there's a buffer, the Shared tab holds functions and <code>#define</code>s that every tab can use.
-          </p>
-        </>,
-      },
-      {
         id: "explore-memory",
         title: "Explore",
         body: <>
           <p>
             Glowing trails draws many dots this way, and the Game of Life example works out each frame
-            entirely from the last. Ink in water uses two buffers: one for the water's flow, and one for the
-            ink it carries.
+            entirely from the last.
           </p>
           {EXPLORE}
         </>,
-        examples: ["3156da0acaeb", "26d46785c1f6", "5c81f0d3a7e2"],
+        examples: ["3156da0acaeb", "26d46785c1f6"],
+      },
+    ],
+  },
+  {
+    title: "Buffers",
+    steps: [
+      {
+        id: "add-buffer",
+        title: "Add a buffer",
+        body: <>
+          <p>
+            <code>iPrevFrame</code> remembers what the image looked like. A buffer can remember anything else,
+            such as how hot each pixel is, or where water is flowing.
+          </p>
+          <p>
+            A buffer is another shader, with its own tab, that draws before the image each frame. Add one with
+            the <span aria-label="add">⊕</span> button above the code. Its tab is <code>iBuffer0</code>.
+          </p>
+        </>,
+        task: "Add a buffer with the ⊕ above the code.",
+        check: now => now.buffers.length > 0,
+      },
+      {
+        id: "heat",
+        title: "Store some heat",
+        body: <>
+          <p>
+            Every tab can read what a buffer drew as <code>iBuffer0</code>, and the buffer can read its own last
+            frame the same way. This buffer keeps most of the heat it had, and adds more under a moving dot.
+          </p>
+          <p>
+            Build it. The canvas doesn't change yet, because only the image is shown, and it doesn't read the
+            buffer.
+          </p>
+        </>,
+        tabs: [{tab: 0, code: shaders.HEAT_BUFFER}],
+        task: "Build a buffer that reads iBuffer0.",
+        check: (now, atStart) => rebuilt(now, atStart) && uses(builtIn(now, 0), /\biBuffer0\b/),
+      },
+      {
+        id: "heat-image",
+        title: "Show the heat",
+        body: <>
+          <p>
+            Now the image reads <code>iBuffer0</code> and colours the heat. A buffer holds numbers, not just
+            colours from 0 to 1, so the heat can build up past 1, and the image turns it yellow, then white.
+          </p>
+        </>,
+        code: shaders.HEAT_IMAGE,
+        task: "Build an image that reads iBuffer0, and play it.",
+        check: (now, atStart) => rebuilt(now, atStart) && uses(now.builtCode, /\biBuffer0\b/) && played(now, atStart),
+      },
+      {
+        id: "spread",
+        title: "Let it spread",
+        body: <>
+          <p>
+            Each frame, this buffer takes the average of a pixel and its four neighbours, so the heat spreads
+            out as it cools. Working out each frame from the last like this is how buffers run simulations.
+          </p>
+          <p>Build it and play. Try <code>0.995</code> in place of <code>0.99</code> to make it cool more slowly.</p>
+        </>,
+        tabs: [{tab: 0, code: shaders.SPREADING_HEAT_BUFFER}],
+        task: "Change the buffer's code and build it.",
+        check: (now, atStart) => rebuilt(now, atStart) && builtIn(now, 0) !== builtIn(atStart, 0) &&
+          uses(builtIn(now, 0), /\biBuffer0\b/),
+      },
+      {
+        id: "shared",
+        title: "Share code between tabs",
+        body: <>
+          <p>
+            Once there's a buffer, the Shared tab appears to the left of the code tabs. Functions,
+            constants and <code>#define</code>s there can be used in every tab.
+          </p>
+          <p>
+            This moves the dot's path into a <code>dotPosition</code> function in the Shared tab. The buffer uses
+            it to heat the dot, and the image uses it to draw a ring around the dot, so the two always agree.
+          </p>
+        </>,
+        tabs: [
+          {tab: "shared", code: shaders.DOT_SHARED},
+          {tab: 0, code: shaders.SHARED_HEAT_BUFFER},
+          {tab: "image", code: shaders.HEAT_IMAGE_WITH_DOT},
+        ],
+        task: "Build with dotPosition in the Shared tab, used by the image.",
+        check: now => now.built && uses(now.builtShared, /\bdotPosition\b/) && uses(now.builtCode, /\bdotPosition\b/),
+      },
+      {
+        id: "explore-buffers",
+        title: "Explore",
+        body: <>
+          <p>
+            Ink in water uses two buffers. <code>iBuffer0</code> moves the water, and <code>iBuffer1</code> carries
+            the ink along with it. The Shared tab has the jets that both of them use.
+          </p>
+          {EXPLORE}
+        </>,
+        examples: ["5c81f0d3a7e2"],
       },
     ],
   },
