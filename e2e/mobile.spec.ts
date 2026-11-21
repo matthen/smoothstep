@@ -5,6 +5,22 @@ import { offline } from './helpers';
 
 test.use(devices['Pixel 7']);
 
+test("on a phone, the welcome screen has no ✕ and keeps its buttons on screen", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./");
+  const welcome = page.getByRole("dialog");
+  await expect(welcome.getByRole("heading", {name: "Welcome"})).toBeVisible();
+  await expect(welcome.locator(".mantine-Modal-close")).toHaveCount(0);
+  const viewport = page.viewportSize()!;
+  for (const name of ["Tutorial", "Take the tour", "Continue"]) {
+    const box = (await welcome.locator(".splashActions").getByText(name, {exact: true}).boundingBox())!;
+    expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
+  }
+  await welcome.getByRole("button", {name: "Continue"}).tap();
+  await expect(welcome).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
 test("on a phone, the panes switch and a transition can be added with two taps", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./#new");
@@ -62,7 +78,46 @@ test("on a phone, the panes switch and a transition can be added with two taps",
   await expect.poll(() => grid.evaluate(e => e.scrollLeft)).toBe(0);
 
   await panes.getByText("Textures", {exact: true}).tap();
-  await expect(page.locator("div#textures .texture")).toHaveCount(8);
+  await expect(page.locator("div#textures .texture")).toHaveCount(3);
+  await page.screenshot({path: "test-results/mobile-textures.png"});
   await expect(page.locator(".timeArea")).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test("on a phone, the button under the timeline's rows adds the next one", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#new");
+  await page.locator(".mobileTabs").getByText("Timeline", {exact: true}).tap();
+  const rows = page.locator(".timeArea .variableRow");
+  await expect(rows).toHaveCount(3);
+  // In sight without scrolling the timeline, which a person wouldn't know to do.
+  const area = (await page.locator(".timeArea").boundingBox())!;
+  const button = (await page.getByRole("button", {name: "Add a row"}).boundingBox())!;
+  expect(button.y + button.height).toBeLessThanOrEqual(area.y + area.height);
+  await page.getByRole("button", {name: "Add a row"}).tap();
+  await expect(rows).toHaveCount(4);
+  expect(await page.locator(".timeArea").evaluate(e => e.scrollTop)).toBe(0);
+  await page.screenshot({path: "test-results/mobile-add-row.png"});
+  expect(errors).toEqual([]);
+});
+
+test("on a phone, the canvas's overlays show for a few seconds after a tap", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#new");
+  const picker = page.locator("#canvasContainer .aspectRatioPicker");
+  const info = page.locator("#canvasContainer .fps");
+  await expect(picker).toHaveCSS("opacity", "0");
+  await expect(info).toHaveCSS("opacity", "0");
+  // Hidden, the picker lets the tap through to the canvas.
+  await picker.tap({force: true});
+  await expect(picker).toHaveCSS("opacity", "1");
+  await expect(info).toHaveCSS("opacity", "1");
+  await page.screenshot({path: "test-results/mobile-overlays.png"});
+  await expect(page.getByLabel("Aspect ratio")).not.toBeFocused();
+  // Once shown, it can be used.
+  await page.getByLabel("Aspect ratio").selectOption({label: "16:9"});
+  await expect(info).toContainText(/\d+×\d+px/);
+  await page.getByLabel("Aspect ratio").blur();
+  await expect(picker).toHaveCSS("opacity", "0", {timeout: 5000});
   expect(errors).toEqual([]);
 });

@@ -18,11 +18,14 @@ interface SlidersProps {
   onHold(row: number, value: number): void;
 }
 
-// The iFloats the code uses, in order, ignoring comments.
-export function floatsInCode(code: string): number[] {
+// The numbers of the inputs called `prefix`N that the code uses, in order, ignoring comments.
+export function inputsInCode(code: string, prefix: "iFloat" | "iTexture"): number[] {
   const stripped = code.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
-  return [...new Set([...stripped.matchAll(/\biFloat(\d+)\b/g)].map(m => Number(m[1])))].sort((a, b) => a - b);
+  const found = stripped.matchAll(new RegExp(`\\b${prefix}(\\d+)\\b`, "g"));
+  return [...new Set([...found].map(m => Number(m[1])))].sort((a, b) => a - b);
 }
+
+export const floatsInCode = (code: string) => inputsInCode(code, "iFloat");
 
 // As many decimal places as the range needs.
 function placesFor(lo: number, hi: number): number {

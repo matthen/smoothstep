@@ -3,7 +3,7 @@
   1,
   1
  ],
- "code": "// Rename animated iFloat variables\n#define colorBlend iFloat0\n#define radius iFloat1\n\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  // Compute coordinates with (0, 0) in the middle, and y from -1 to 1.\n  vec2 uv = (2. * fragCoord - iResolution.xy) / iResolution.y;\n  \n  // The signed distance to the edge of a circle.\n  float circleDist = length(uv) - radius;\n \n  vec3 circleColor = mix(\n    vec3(0.800, 0.184, 0.277),  // red\n    vec3(0.800, 0.740, 0.234),  // yellow\n    colorBlend\n  );\n  vec3 col = mix(\n    circleColor,\n    vec3(0.049, 0.111, 0.215),  // dark blue\n    smoothstep(0., 2. / iResolution.y, circleDist)\n  );\n  \n  fragColor = vec4(col, 1.0);\n}",
+ "code": "// iFloat0 and iFloat1 are animated on the [Timeline]. These #defines give them names,\n// which the timeline and the [Sliders] tab show too.\n#define colorBlend iFloat0\n#define radius iFloat1\n\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  // Compute coordinates with (0, 0) in the middle, and y from -1 to 1.\n  vec2 uv = (2. * fragCoord - iResolution.xy) / iResolution.y;\n  \n  // The signed distance to the edge of a circle.\n  float circleDist = length(uv) - radius;\n \n  vec3 circleColor = mix(\n    vec3(0.800, 0.184, 0.277),  // red\n    vec3(0.800, 0.740, 0.234),  // yellow\n    colorBlend\n  );\n  vec3 col = mix(\n    circleColor,\n    vec3(0.049, 0.111, 0.215),  // dark blue\n    smoothstep(0., 2. / iResolution.y, circleDist)\n  );\n  \n  fragColor = vec4(col, 1.0);\n}",
  "duration": 5,
  "textures": [
   {

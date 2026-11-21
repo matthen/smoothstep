@@ -161,6 +161,17 @@
   p:last-child {
     margin-bottom: 0;
   }
+  // A line of code quoted in the text, which can wrap.
+  pre.learnLine {
+    margin: 0 0 10px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: $dt-gray-dark;
+    color: $dt-cyan;
+    font-family: var(--mantine-font-family-monospace);
+    font-size: 12.5px;
+    white-space: pre-wrap;
+  }
   ul {
     margin: 0 0 10px;
     padding-left: 20px;
@@ -189,6 +200,18 @@
     }
   }
 
+  // The tab each block of code goes in, when a step fills several.
+  .learnCodeTab {
+    padding: 8px 12px 0;
+    color: $dt-gray-medium;
+    font-size: 12px;
+    font-weight: 600;
+
+    &:not(:nth-child(2)) {
+      border-top: 1px solid $dt-gray-darker;
+    }
+  }
+
   .learnCodeText {
     margin: 0;
     padding: 10px 12px;
@@ -208,6 +231,26 @@
   .tok-comment { color: $dt-blue; }
   .tok-string { color: $dt-yellow; }
   .tok-operator { color: $dt-pink; }
+}
+
+.learnHints {
+  align-self: stretch;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border-left: 3px solid $dt-yellow;
+  background: $dt-gray-dark;
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 6px;
+    font-size: 14px;
+    font-weight: 600;
+    svg {
+      color: $dt-yellow;
+    }
+  }
 }
 
 .learnExamples {

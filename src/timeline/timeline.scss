@@ -232,6 +232,12 @@ div#animationControls {
         touch-action: pan-x pan-y;
       }
 
+      // The page scrolls instead, so the rows can't scroll out of sight; room under them for the add-a-row button.
+      @include phone {
+        overflow: clip visible;
+        padding-bottom: 40px;
+      }
+
       // Shows the next iFloat's row.
       .addRow {
         position: absolute;

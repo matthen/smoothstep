@@ -418,10 +418,23 @@ div#canvasContainer {
     opacity: 1;
   }
 
-  // No hover on touch screens, so keep them visible.
+  // No hover on touch screens: a tap on the canvas shows them for a while. The picker can be tapped only once
+  // it's visible, a moment after, so the tap that shows it doesn't also open it.
   @media (hover: none) {
-    div.fps, div.aspectRatioPicker {
+    &, &:hover {
+      div.fps, div.aspectRatioPicker {
+        opacity: 0;
+      }
+
+      div.aspectRatioPicker {
+        visibility: hidden;
+        transition: opacity 150ms, visibility 0s 300ms;
+      }
+    }
+
+    &[data-overlays] div.fps, &[data-overlays] div.aspectRatioPicker, div.aspectRatioPicker:focus-within {
       opacity: 1;
+      visibility: visible;
     }
   }
 
@@ -558,6 +571,12 @@ div#textures {
   }
 }
 
+// Beside the last slot, level with the middle of its image.
+div#textures .addSlot {
+  flex-shrink: 0;
+  align-self: center;
+}
+
 div#textures .texturesHint {
   // First, so it's in view before the strip scrolls.
   order: -1;
@@ -665,6 +684,33 @@ div#textures .texturesHint {
     font-style: normal;
     font-weight: normal;
     color: $dt-gray-medium;
+  }
+}
+
+.splash .splashFooter a {
+  color: inherit;
+  &:hover {
+    color: $dt-gray-light;
+  }
+}
+
+// On a phone the buttons stay pinned to the bottom, so the way into the app is always in sight.
+.splash .splashActions {
+  @include phone {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin: 0 calc(-1 * var(--mantine-spacing-md));
+    padding: 12px var(--mantine-spacing-md) calc(12px + env(safe-area-inset-bottom));
+    gap: 8px;
+    background: var(--mantine-color-body);
+    border-top: 1px solid $dt-gray;
+
+    .mantine-Button-root {
+      flex: 1 1 0;
+      min-width: 0;
+      padding-inline: 4px;
+    }
   }
 }
 

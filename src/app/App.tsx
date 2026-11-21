@@ -21,11 +21,12 @@ import ShaderTabs, { shaderName } from '../editor/ShaderTabs';
 import * as archive from '../lib/archive';
 import { asset, documentHref, DOCS_URL, REPO_URL, textureURL, TUTORIAL_HREF } from '../lib/config';
 import {
-  bufferCodes, DEFAULT_TITLE, MAX_TITLE_LENGTH, newBufferCode, newDocument, parseDocument, sameExtras, shaderExtras,
+  bufferCodes, DEFAULT_TITLE, EMPTY_TEXTURE, MAX_TITLE_LENGTH, newBufferCode, newDocument, parseDocument, sameExtras, shaderExtras,
   SHARED_PLACEHOLDER, variableValues, type ShaderExtras,
   type AnimationDocument, type AspectRatio, type TextureSlot, type Variable,
 } from '../lib/document';
 import * as localStore from '../lib/localStore';
+import { onAppLink, type AppLink } from '../lib/appLinks';
 import { isBrokenShareLink, routeHash, type Route } from '../lib/routes';
 import { loadRoute, ShareError } from '../lib/share';
 import type { LineError } from '../lib/types';
@@ -34,9 +35,9 @@ import Canvas, { type CanvasHandle, type CanvasLayout, type Shaders } from '../r
 import type { CompileResult, ShaderId } from '../render/Renderer';
 import { floatNames } from '../timeline/names';
 import PlayerControls from '../timeline/PlayerControls';
-import Sliders, { floatsInCode } from '../timeline/Sliders';
+import Sliders, { floatsInCode, inputsInCode } from '../timeline/Sliders';
 import Timeline from '../timeline/Timeline';
-import { lessonTitle, type TutorialState } from '../tutorial/lessons';
+import { lessonTitle, type TabCode, type TutorialState } from '../tutorial/lessons';
 import { openingProgress } from '../tutorial/progress';
 import AppModal, { anyModalOpen } from './AppModal';
 import { setCrashDocument } from './crashState';
@@ -174,6 +175,15 @@ export default function App() {
     ];
     return Math.max(minRows, ...needed.map(i => i + 1));
   }, [allCode, doc.variables, minRows]);
+  // Texture slots, the same way: at least three, and enough for every one the code uses or that has an image.
+  const [minSlots, setMinSlots] = useState(3);
+  const slotCount = useMemo(() => {
+    const needed = [
+      ...inputsInCode(allCode, "iTexture"),
+      ...doc.textures.flatMap((t, i) => t.url !== EMPTY_TEXTURE || t.isUserUploaded ? [i] : []),
+    ];
+    return Math.min(doc.textures.length, Math.max(minSlots, ...needed.map(i => i + 1)));
+  }, [allCode, doc.textures, minSlots]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const textureURLs = useMemo(() => doc.textures.map(textureURL), [doc.textures, imagesVersion]);
 
@@ -510,6 +520,50 @@ export default function App() {
     }
   }, [doc, documentId]);
 
+  // A link clicked in a code comment, like "[Help → Tutorial]" or "[Sliders]", opens that menu item or tab.
+  const appLinkRef = useLatest((link: AppLink) => {
+    const showPanel = (tab: PanelTab) => {
+      if (phone) {
+        chooseMobileTab(tab);
+      } else {
+        setPanelTab(tab);
+        setShowFooter(true);
+      }
+    };
+    const showCode = (tab: ShaderId) => {
+      if (tab === "image" || tab === "shared" || tab < (doc.buffers?.length ?? 0)) {
+        setCodeTab(tab);
+      }
+    };
+    const actions: Record<AppLink, () => void> = {
+      "File → New": () => openHash("#new", hasUnsavedChanges),
+      "File → Open": () => setDialog("open"),
+      "File → Open from link": () => setDialog("openLink"),
+      "File → Save": () => void save(false),
+      "File → Download animation file": () => void download(),
+      "Help → Welcome": () => setDialog("splash"),
+      "Help → Take the tour": () => void takeTour(),
+      "Help → Tutorial": () => openHash(TUTORIAL_HREF, hasUnsavedChanges),
+      "Help → Shader inputs": () => openHelp("inputs"),
+      "Help → Keyboard shortcuts": () => openHelp("shortcuts"),
+      "Help → Documentation": () => window.open(DOCS_URL, "_blank", "noopener"),
+      "Help → Source code": () => window.open(REPO_URL, "_blank", "noopener"),
+      "Help → Acknowledgements": () => setDialog("acknowledgements"),
+      "Animation": () => showPanel("animation"),
+      "Timeline": () => showPanel("animation"),
+      "Sliders": () => showPanel("sliders"),
+      "Textures": () => showPanel("textures"),
+      "Image": () => showCode("image"),
+      "Shared": () => showCode("shared"),
+      "iBuffer0": () => showCode(0),
+      "iBuffer1": () => showCode(1),
+      "iBuffer2": () => showCode(2),
+      "iBuffer3": () => showCode(3),
+    };
+    actions[link]();
+  });
+  useEffect(() => onAppLink(link => appLinkRef.current(link)), [appLinkRef]);
+
   // Ctrl/Cmd-S outside the code editor (the editor handles its own).
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -572,14 +626,31 @@ export default function App() {
 
   const tutorialState: TutorialState = {
     code: doc.code, builtCode: builtCode ?? "",
+    shared: doc.shared ?? "", buffers: bufferCodes(doc), builtShared: builtExtras.shared, builtBuffers: builtExtras.buffers,
     built: buildState === "built" && compiled?.ok === true && compiled.code === builtCode,
     isPlaying, time, variables: doc.variables, textures: doc.textures, duration: doc.duration,
     aspectRatio: doc.aspectRatio,
   };
 
-  const putTutorialCode = (code: string) => {
-    updateDoc({code});
-    setCodeTab("image");  // The tutorial's code is the image's.
+  // Puts a step's code in each of its tabs, adding buffers up to the highest it fills, and opens the last.
+  const putTutorialCode = (code: TabCode[]) => {
+    const change: Partial<AnimationDocument> = {};
+    const buffers = [...doc.buffers ?? []];
+    for (const {tab, code: text} of code) {
+      if (tab === "image") {
+        change.code = text;
+      } else if (tab === "shared") {
+        change.shared = text;
+      } else {
+        while (buffers.length <= tab) {
+          buffers.push({code: newBufferCode(buffers.length)});
+        }
+        buffers[tab] = {code: text};
+        change.buffers = buffers;
+      }
+    }
+    updateDoc(change);
+    setCodeTab(code[code.length - 1]!.tab);
     if (phone) {
       chooseMobileTab("code");
     }
@@ -814,6 +885,7 @@ export default function App() {
           <Tabs.Panel value="textures">
             <Textures
               textures={doc.textures} onChange={(textures: TextureSlot[]) => updateDoc({textures})}
+              count={slotCount} onAdd={() => setMinSlots(slotCount + 1)}
               onMessage={setAlert}
             />
           </Tabs.Panel>

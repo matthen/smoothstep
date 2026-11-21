@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { parseHash } from '../app/routing';
 import { EXAMPLES } from '../lib/config';
 import { DEFAULT_CODE, newDocument, type Transition } from '../lib/document';
-import { floatsUsed, LESSONS, uses, type Step, type TutorialState } from './lessons';
+import { floatsUsed, LESSONS, stepCode, uses, type Step, type TutorialState } from './lessons';
 import * as shaders from './shaders';
 import { loadProgress, openingProgress, saveProgress } from './progress';
 
@@ -11,9 +11,27 @@ function state(change: Partial<TutorialState> = {}): TutorialState {
   const doc = newDocument();
   return {
     code: DEFAULT_CODE, builtCode: DEFAULT_CODE, built: true, isPlaying: false, time: 0,
+    shared: "", buffers: [], builtShared: "", builtBuffers: [],
     variables: doc.variables, textures: doc.textures, duration: doc.duration, aspectRatio: doc.aspectRatio,
     ...change,
   };
+}
+
+// The editor with a step's code put in every tab it fills, and built.
+function builtWithStep(s: Step, change: Partial<TutorialState> = {}): TutorialState {
+  const now = state(change);
+  for (const {tab, code} of stepCode(s)) {
+    if (tab === "image") {
+      now.code = now.builtCode = code;
+    } else if (tab === "shared") {
+      now.shared = now.builtShared = code;
+    } else {
+      now.buffers = [...now.buffers];
+      now.buffers[tab] = code;
+      now.builtBuffers = [...now.buffers];
+    }
+  }
+  return now;
 }
 
 // The editor with `code` typed and built.
@@ -51,7 +69,17 @@ describe("lessons", () => {
         expect(EXAMPLES.some(e => e.id === id), id).toBe(true);
       }
     }
-    expect(LESSONS).toHaveLength(8);
+    expect(LESSONS).toHaveLength(9);
+  });
+
+  it("end every lesson but the last with challenges that have hints and no code", () => {
+    for (const lesson of LESSONS.slice(0, -1)) {
+      const s = lesson.steps.find(step => step.id.startsWith("challenges-"));
+      expect(s, lesson.title).toBeDefined();
+      expect(s!.hint, s!.id).toBeDefined();
+      expect(stepCode(s!), s!.id).toEqual([]);
+      expect(s!.check, s!.id).toBeUndefined();
+    }
   });
 
   it("finds code use, ignoring comments", () => {
@@ -84,10 +112,10 @@ describe("shaders", () => {
     const variables = withTransition(0, {endValue: 1});
     variables[1] = withTransition(1, {endValue: 1})[1]!;
     for (const s of LESSONS.flatMap(l => l.steps)) {
-      if (!s.code || !s.check || s.id === "pick-colour") {
+      if (stepCode(s).length === 0 || !s.check || s.id === "pick-colour") {
         continue;
       }
-      expect(s.check(builtWith(s.code, {isPlaying: true, textures, variables}), state()), s.id).toBe(true);
+      expect(s.check(builtWithStep(s, {isPlaying: true, textures, variables}), state()), s.id).toBe(true);
     }
   });
 });
@@ -256,5 +284,42 @@ describe("tutorial route", () => {
     expect(parseHash("#tutorial/2")).toEqual({kind: "tutorial", lesson: 1});
     expect(parseHash("#tutorial/x")).toBeNull();
     expect(parseHash("#example/534226b1d5ed")).toEqual({kind: "example", id: "534226b1d5ed"});
+  });
+});
+
+describe("lesson 8: buffers", () => {
+  const withBuffer = (code: string, change: Partial<TutorialState> = {}) =>
+    state({buffers: [code], builtBuffers: [code], ...change});
+
+  it("add a buffer: done once there is one", () => {
+    expect(check("add-buffer", state())).toBe(false);
+    expect(check("add-buffer", state({buffers: ["void mainImage(out vec4 c, in vec2 p) {}"]}))).toBe(true);
+  });
+
+  it("heat: a buffer built to read itself, even when the image is unchanged", () => {
+    const empty = state({buffers: ["x"], builtBuffers: ["x"]});
+    expect(check("heat", withBuffer(shaders.HEAT_BUFFER), empty)).toBe(true);
+    // Typed in the buffer but not built.
+    expect(check("heat", state({buffers: [shaders.HEAT_BUFFER], builtBuffers: ["x"]}), empty)).toBe(false);
+  });
+
+  it("show the heat: the image reads the buffer, built and played", () => {
+    const atStart = withBuffer(shaders.HEAT_BUFFER);
+    const now = withBuffer(shaders.HEAT_BUFFER, {code: shaders.HEAT_IMAGE, builtCode: shaders.HEAT_IMAGE});
+    expect(check("heat-image", {...now, isPlaying: true}, atStart)).toBe(true);
+    expect(check("heat-image", now, atStart)).toBe(false);
+  });
+
+  it("let it spread: the buffer's code changed and built", () => {
+    const atStart = withBuffer(shaders.HEAT_BUFFER);
+    expect(check("spread", withBuffer(shaders.SPREADING_HEAT_BUFFER), atStart)).toBe(true);
+    // A change to the image alone isn't one to the buffer.
+    expect(check("spread", withBuffer(shaders.HEAT_BUFFER, {builtCode: "changed"}), atStart)).toBe(false);
+  });
+
+  it("share code: dotPosition in the Shared tab, used by the image", () => {
+    expect(check("shared", builtWithStep(step("shared")))).toBe(true);
+    expect(check("shared", builtWithStep(step("shared"), {built: false}))).toBe(false);
+    expect(check("shared", withBuffer(shaders.SHARED_HEAT_BUFFER, {builtShared: shaders.DOT_SHARED}))).toBe(false);
   });
 });

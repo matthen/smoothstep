@@ -89,8 +89,8 @@ function desktopSteps({showPane}: TourOptions): DriveStep[] {
       onHighlightStarted: () => showPane("textures"),
       popover: {
         title: "Textures",
-        description: "Eight image slots, <code>iTexture0</code> to <code>iTexture7</code>. Click one to " +
-          "choose a photo, noise, a tiling pattern, a font sheet or your own image.",
+        description: "Image slots, <code>iTexture0</code> to <code>iTexture7</code>. Click one to " +
+          "choose a photo, noise, a tiling pattern, a font sheet or your own image, and ⊕ to add a slot.",
         side: "top",
       },
     },

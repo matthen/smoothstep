@@ -51,7 +51,7 @@ export const PULSE = `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 export const WAVES = PULSE.replace(
   `  // sin(iTime) swings between -1 and 1, so t swings between 0 and 1.
   float t = 0.5 + 0.5 * sin(iTime);`,
-  `  // Each column swings a little later than the one to its left, which makes waves.
+  `  // t now depends on how far across the pixel is too, which makes stripes that move.
   float t = 0.5 + 0.5 * sin(2.0 * iTime - 12.0 * uv.x);`);
 
 export const SHIMMER = `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -176,7 +176,7 @@ export const ROTATED_TILES = TILES.replace(
 export const POLAR_TILES = ROTATED_TILES.replace(
   `  // Tiles: fract keeps what's after the decimal point, so each tile runs from -1 to 1.
   vec2 cell = fract(3.0 * uv) * 2.0 - 1.0;`,
-  `  // Polar coordinates: how far round the centre (0 to 1), and how far out.
+  `  // Polar coordinates: how far round the centre (-0.5 to 0.5), and how far out.
   vec2 polar = vec2(atan(uv.y, uv.x) / 6.28318, length(uv));
 
   // Tiles in polar coordinates: 12 segments round, and rings of width 1/3.
@@ -245,3 +245,76 @@ export const FIRST_FRAME = TRAIL.replace(
   }
 
   // A dot moving`);
+
+// Lesson 8: a heat map in a buffer, painted by a moving dot.
+export const HEAT_BUFFER = `// iBuffer0 holds heat: a number for each pixel, which can go well above 1.
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 uv = fragCoord / iResolution.xy;
+
+  // This buffer's own last frame, cooled a little.
+  float heat = 0.99 * texture(iBuffer0, uv).r;
+
+  // A dot moving in a loop heats up wherever it is.
+  vec2 p = (2.0 * fragCoord - iResolution.xy) / iResolution.y;
+  vec2 position = 0.6 * vec2(cos(1.3 * iTime), sin(2.1 * iTime));
+  heat += 0.2 * (1.0 - smoothstep(0.05, 0.1, length(p - position)));
+
+  // Start cold.
+  if (iFrame == 0) {
+    heat = 0.0;
+  }
+  fragColor = vec4(heat, 0.0, 0.0, 1.0);
+}
+`;
+
+export const HEAT_IMAGE = `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 uv = fragCoord / iResolution.xy;
+
+  // The heat that iBuffer0 holds here.
+  float heat = texture(iBuffer0, uv).r;
+
+  // Black when cold, then red, yellow, and white from a heat of 3.
+  vec3 colour = clamp(vec3(heat, heat - 1.0, heat - 2.0), 0.0, 1.0);
+
+  fragColor = vec4(colour, 1.0);
+}
+`;
+
+export const SPREADING_HEAT_BUFFER = HEAT_BUFFER.replace(
+  `
+  // This buffer's own last frame, cooled a little.
+  float heat = 0.99 * texture(iBuffer0, uv).r;`,
+  `
+  // The average of this pixel and its four neighbours last frame, so the heat spreads out,
+  // cooled a little.
+  vec2 offset = 2.0 / iResolution.xy;
+  float heat = 0.99 * (
+    texture(iBuffer0, uv).r +
+    texture(iBuffer0, uv + vec2(offset.x, 0.0)).r +
+    texture(iBuffer0, uv - vec2(offset.x, 0.0)).r +
+    texture(iBuffer0, uv + vec2(0.0, offset.y)).r +
+    texture(iBuffer0, uv - vec2(0.0, offset.y)).r
+  ) / 5.0;`);
+
+export const DOT_SHARED = `// Code here can be used in every tab: the image and each buffer.
+
+// Where the dot is at time t.
+vec2 dotPosition(float t) {
+  return 0.6 * vec2(cos(1.3 * t), sin(2.1 * t));
+}
+`;
+
+export const SHARED_HEAT_BUFFER = SPREADING_HEAT_BUFFER.replace(
+  "vec2 position = 0.6 * vec2(cos(1.3 * iTime), sin(2.1 * iTime));",
+  "vec2 position = dotPosition(iTime);");
+
+export const HEAT_IMAGE_WITH_DOT = HEAT_IMAGE.replace(
+  `
+  fragColor =`,
+  `
+  // The dot itself, as a ring, from the same function the buffer uses.
+  vec2 p = (2.0 * fragCoord - iResolution.xy) / iResolution.y;
+  float ring = 1.0 - smoothstep(0.0, 0.01, abs(length(p - dotPosition(iTime)) - 0.1));
+  colour = mix(colour, vec3(0.3, 0.8, 1.0), ring);
+
+  fragColor =`);

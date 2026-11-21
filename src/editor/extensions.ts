@@ -12,6 +12,7 @@ import { tagHighlighter, tags as t } from '@lezer/highlight';
 import { glslCompletionSource } from './completion';
 import { glslLanguage } from './glslLanguage';
 import { lineErrors } from './lineErrors';
+import { links } from './links';
 import { clickHelpers } from './popups';
 
 // Classes styled in editor.scss with the old Dracula colours.
@@ -84,6 +85,7 @@ export function editorExtensions(callbacks: EditorCallbacks): Extension {
     indentUnit.of('  '),
     tooltips({ parent: document.body }),
     clickHelpers(),
+    links(),
     lineErrors(),
   ];
 }

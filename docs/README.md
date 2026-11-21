@@ -18,7 +18,8 @@ frame rate and resolution. It all runs in your browser at [smoothstep.io](https:
   5. [Patterns](https://smoothstep.io/app/#tutorial/5)
   6. [Textures](https://smoothstep.io/app/#tutorial/6)
   7. [Memory with iPrevFrame](https://smoothstep.io/app/#tutorial/7)
-  8. [Share it](https://smoothstep.io/app/#tutorial/8)
+  8. [Buffers](https://smoothstep.io/app/#tutorial/8)
+  9. [Share it](https://smoothstep.io/app/#tutorial/9)
 - [Examples](examples.md)
 - [Sharing animations](sharing.md): links, gists, and playing animations on other websites
 - [Keyboard shortcuts](keyboard-shortcuts.md), also in the app under Help → Keyboard shortcuts

@@ -163,6 +163,12 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
   .tok-atom,
   .tok-number { color: $dt-purple; }
   .tok-comment { color: $dt-blue; }
+  .cm-link {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+  .cm-link-bracket { opacity: 0.5; }
   .tok-string { color: $dt-yellow; }
   .tok-meta { color: $dt-gray-light; }
   .tok-operator { color: $dt-pink; }

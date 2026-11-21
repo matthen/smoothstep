@@ -1,5 +1,5 @@
 import { Alert } from '@mantine/core';
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type PointerEvent } from 'react';
 import { TbChevronLeft } from 'react-icons/tb';
 
 import AspectRatioPicker from '../dialogs/AspectRatioPicker';
@@ -52,6 +52,17 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
   const [error, setError] = useState<string | null>(null);
   const [container, setContainer] = useState<[number, number]>([0, 0]);
   const [fps, setFps] = useState<number | null>(null);
+  // Touch screens can't hover, so a tap shows the overlays for a few seconds.
+  const [overlays, setOverlays] = useState(false);
+  const overlayTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(overlayTimer.current), []);
+  const showOverlays = (event: PointerEvent) => {
+    if (event.pointerType !== "mouse") {
+      setOverlays(true);
+      window.clearTimeout(overlayTimer.current);
+      overlayTimer.current = window.setTimeout(() => setOverlays(false), 3000);
+    }
+  };
   const [width, height] = fitCanvas(container[0], container[1], props.aspectRatio);
   const marginTop = Math.max(0, (container[1] - height) / 2);
   const marginSide = Math.max(0, (container[0] - width) / 2);
@@ -158,7 +169,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
   }, [renderFrame]);
 
   return (
-    <div id="canvasContainer" ref={containerRef}>
+    <div id="canvasContainer" ref={containerRef} data-overlays={overlays || undefined} onPointerDown={showOverlays}>
       {error ? <Alert color="yellow" className="webglError">{error}</Alert> : (
         <>
           <button
