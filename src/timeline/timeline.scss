@@ -21,14 +21,8 @@ div.playerButtons {
   gap: 10px;
 
   .durationInput {
-    width: 64px;
-    text-align: center;
+    width: 80px;
     font-variant-numeric: tabular-nums;
-  }
-
-  .durationUnit {
-    color: $dt-gray-medium;
-    font-size: 12px;
   }
 
   div.slider {
@@ -149,11 +143,6 @@ div#animationControls {
 
       @include phone {
         grid-template-columns: repeat(4, 1fr);
-      }
-
-      .inputUnit {
-        color: $dt-gray-medium;
-        font-size: 12px;
       }
     }
 

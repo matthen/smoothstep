@@ -91,7 +91,7 @@ test("the ruler seeks, and dragging the end changes the length", async ({page, c
   await page.mouse.down();
   await page.mouse.move(handle.x + 1 - 2 * fitted, handle.y + 5, {steps: 4});
   await page.mouse.up();
-  await expect(page.locator(".durationInput")).toHaveValue("10");
+  await expect(page.locator(".durationInput")).toHaveValue("10 s");
   await expect.poll(() => scale(page)).toBeGreaterThan(fitted);
   expect(errors).toEqual([]);
 });
@@ -167,8 +167,8 @@ test("a transition's start and end times can be typed, to a hundredth of a secon
   await page.locator(".timeArea .variableRow").nth(1).locator(".transition").first().click();
   const start = page.locator("#startTimeInput");
   const end = page.locator("#endTimeInput");
-  await expect(start).toHaveValue("2.5");
-  await expect(end).toHaveValue("4.5");
+  await expect(start).toHaveValue("2.5 s");
+  await expect(end).toHaveValue("4.5 s");
   await start.fill("2.35");
   await end.fill("4.62");
   await end.blur();
@@ -177,6 +177,24 @@ test("a transition's start and end times can be typed, to a hundredth of a secon
   await end.fill("7");
   await expect(end).toHaveAttribute("aria-invalid", "true");
   await end.blur();
-  await expect(end).toHaveValue("4.62");
+  await expect(end).toHaveValue("4.62 s");
+  expect(errors).toEqual([]);
+});
+
+test("the number boxes step with their arrows", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#example/f9ad362373e4");
+  await page.locator(".timeArea .variableRow").nth(1).locator(".transition").first().click();
+  const value = page.locator("#endValueInput");
+  await value.focus();
+  await page.keyboard.press("ArrowUp");
+  await expect(value).toHaveValue("1.4");
+  await page.locator("#startTimeInput").focus();
+  await page.keyboard.press("ArrowDown");
+  await expect.poll(() => transitionTimes(page)).toBe("2.4 — 4.5");
+  const duration = page.locator(".durationInput");
+  await duration.focus();
+  await page.keyboard.press("ArrowUp");
+  await expect(duration).toHaveValue("10 s");
   expect(errors).toEqual([]);
 });

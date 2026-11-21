@@ -88,5 +88,6 @@ export function near(color: number[], target: number[], tolerance = 40): boolean
 
 // The selected transition's start and end times, from their boxes, like "1 — 4.1".
 export async function transitionTimes(page: Page): Promise<string> {
-  return `${await page.locator("#startTimeInput").inputValue()} — ${await page.locator("#endTimeInput").inputValue()}`;
+  const time = async (id: string) => (await page.locator(id).inputValue()).replace(/ s$/, "");
+  return `${await time("#startTimeInput")} — ${await time("#endTimeInput")}`;
 }

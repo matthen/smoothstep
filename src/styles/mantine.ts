@@ -28,6 +28,7 @@ import '@mantine/core/styles/Badge.css';
 import '@mantine/core/styles/Menu.css';
 import '@mantine/core/styles/Modal.css';
 import '@mantine/core/styles/Notification.css';
+import '@mantine/core/styles/NumberInput.css';
 import '@mantine/core/styles/Progress.css';
 import '@mantine/core/styles/SegmentedControl.css';
 import '@mantine/core/styles/Slider.css';

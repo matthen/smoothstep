@@ -1,6 +1,6 @@
 import {useEffect, useEffectEvent, useLayoutEffect, useRef, useState} from "react";
 import type {PointerEvent as ReactPointerEvent} from "react";
-import {ActionIcon, NativeSelect, TextInput, Tooltip} from "@mantine/core";
+import {ActionIcon, NativeSelect, NumberInput, Tooltip} from "@mantine/core";
 import {useMediaQuery} from "@mantine/hooks";
 import {TbArrowAutofitWidth, TbPlus, TbTrash, TbZoomIn, TbZoomOut} from "react-icons/tb";
 import {variableValue} from "../lib/document";
@@ -60,6 +60,8 @@ interface Drafts {
 
 // A time in seconds, to a hundredth, without trailing zeros.
 const seconds = (dsecs: number) => String(Math.round(dsecs * 10) / 100);
+// A number box's value as text, without the float noise its arrows add (0.45 + 0.1 is 0.55000000000000004).
+const numberText = (value: number | string) => typeof value === "number" ? String(Number(value.toFixed(6))) : value;
 // The same for the heading, which always shows at least a tenth, like 2.0.
 const headingSeconds = (dsecs: number) => (dsecs / 10).toFixed(Number.isInteger(dsecs) ? 1 : 2);
 
@@ -608,12 +610,11 @@ export default function Timeline(props: TimelineProps) {
               const dsecs = field === "startTime" ? selected.startDSecs : selected.endDSecs;
               const text = drafts[field] ?? seconds(dsecs);
               return (
-                <TextInput
-                  key={field} id={field + "Input"} label={field === "startTime" ? "start time" : "end time"} size="xs"
-                  type="number" step="0.01" min="0" value={text}
-                  rightSection={<span className="inputUnit">s</span>} rightSectionWidth={20}
-                  rightSectionPointerEvents="none"
-                  onChange={e => changeTime(field, e.target.value)}
+                <NumberInput
+                  key={field} id={field + "Input"} label={field === "startTime" ? "start time" : "end time"}
+                  size="xs" step={0.1} min={0} allowNegative={false} clampBehavior="none" inputMode="decimal" suffix=" s"
+                  value={text}
+                  onChange={v => changeTime(field, numberText(v))}
                   onBlur={() => blurTime(field)}
                   error={drafts[field] !== undefined && typedTime(field, text) === null}
                 />
@@ -623,10 +624,10 @@ export default function Timeline(props: TimelineProps) {
               const value = field === "start" ? selected.startValue : selected.endValue;
               const text = drafts[field] ?? String(value);
               return (
-                <TextInput
+                <NumberInput
                   key={field} id={field + "ValueInput"} label={field + " value"} size="xs"
-                  type="number" step="0.1" value={text}
-                  onChange={e => changeValue(field, e.target.value)}
+                  step={0.1} clampBehavior="none" value={text}
+                  onChange={v => changeValue(field, numberText(v))}
                   onBlur={() => blurValue(field)}
                   error={parseValue(text) === null}
                 />

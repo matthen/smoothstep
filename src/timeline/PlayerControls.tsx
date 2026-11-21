@@ -1,6 +1,6 @@
 import {useEffect, useEffectEvent, useState} from "react";
 import type {MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode} from "react";
-import {ActionIcon, TextInput, Tooltip} from "@mantine/core";
+import {ActionIcon, NumberInput, Tooltip} from "@mantine/core";
 import {TbPlayerPauseFilled, TbPlayerPlayFilled, TbPlayerSkipBackFilled} from "react-icons/tb";
 import {formatTime} from "./geometry";
 import {keyAction, keySeekTime, shortcutsAllowed} from "./keys";
@@ -106,20 +106,20 @@ function DurationInput({duration, onDurationChange}: Pick<PlayerControlsProps, "
 
   return (
     <Tooltip label="Duration in seconds" position="bottom">
-      <TextInput
+      <NumberInput
         classNames={{input: "durationInput"}}
         size="xs"
         aria-label="Duration (seconds)"
-        type="number"
-        step="1"
-        min="1"
+        step={1}
+        min={0.1}
+        allowNegative={false}
+        clampBehavior="none"
+        inputMode="decimal"
+        suffix=" s"
         value={text}
         error={!valid}
-        rightSection={<span className="durationUnit">s</span>}
-        rightSectionWidth={20}
-        rightSectionPointerEvents="none"
-        onChange={event => {
-          const next = event.target.value;
+        onChange={v => {
+          const next = typeof v === "number" ? String(Number(v.toFixed(6))) : v;
           setText(next);
           const nextValue = Number(next);
           if (next.trim() !== "" && Number.isFinite(nextValue) && nextValue > 0) {
