@@ -53,6 +53,7 @@ export const SHORTCUTS: ShortcutGroup[] = [
       {keys: [[","], ["."]], description: "Back or forward one frame (1/60 second)"},
       {keys: [["0"], ["9"]], range: true, description: "Jump to 0%, 10%, … 90% of the way through"},
       {keys: [["Backspace"], ["Delete"]], description: "Delete the selected transition on the timeline"},
+      {keys: [["Mod", "scroll"]], description: "Zoom the timeline in or out, around the pointer"},
     ],
   },
 ];
