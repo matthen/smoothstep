@@ -4,7 +4,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { flushSync } from 'react-dom';
 import {
   TbBook, TbBrandGithub, TbChevronDown, TbCopy, TbDeviceFloppy, TbDownload, TbFile, TbFolderOpen, TbHammer,
-  TbCircleCheckFilled, TbCode, TbHeart, TbHelp, TbHome, TbKeyboard, TbLink, TbMovie, TbRoute, TbSchool, TbShare,
+  TbCircleCheckFilled, TbCode, TbHeart, TbHelp, TbHome, TbKeyboard, TbLink, TbRoute, TbSchool, TbShare, TbVideo,
 } from 'react-icons/tb';
 
 import Acknowledgements from '../dialogs/Acknowledgements';
@@ -31,6 +31,7 @@ import { isBrokenShareLink, routeHash, type Route } from '../lib/routes';
 import { loadRoute, ShareError } from '../lib/share';
 import type { LineError } from '../lib/types';
 import { useLatest } from '../lib/useLatest';
+import AspectRatioPicker from '../dialogs/AspectRatioPicker';
 import Canvas, { type CanvasHandle, type CanvasLayout, type Shaders } from '../render/Canvas';
 import type { CompileResult, ShaderId } from '../render/Renderer';
 import { floatNames } from '../timeline/names';
@@ -47,7 +48,7 @@ import { MOD_KEY } from './platform';
 import { chooseTip, markTipSeen, seenTips, tipContent, tipsFor, turnOffTips, type TipEvent } from './tips';
 import { hasConfirmedLeaving, openHash, parseHash, useHashLinks } from './routing';
 import { useKeyboardInset } from './useKeyboardInset';
-import { usePhone } from './usePhone';
+import { usePhone, useTouch } from './usePhone';
 
 const STORAGE_BLOCKED = "This browser isn't letting smoothstep.io store data, so animations can't be saved here. " +
   "Private browsing can cause this.";
@@ -119,6 +120,7 @@ export default function App() {
   const [showFooter, setShowFooter] = useState(true);
   const [wideCanvas, setWideCanvas] = useState(false);
   const phone = usePhone();
+  const touch = useTouch();
   useKeyboardInset();
   const [mobileTab, setMobileTab] = useState<MobileTab>(tutorialStart && phone ? "learn" : "code");
   const [panelTab, setPanelTab] = useState<PanelTab>("animation");
@@ -710,8 +712,11 @@ export default function App() {
         <Group gap={4} wrap="nowrap" className="headerActions">
           <Menu>
             <Menu.Target>
-              <Button variant="subtle" color="gray" aria-label="File" rightSection={<TbChevronDown />}>
-                <TbFile className="mobileOnly" aria-hidden /><span className="desktopOnly">File</span>
+              <Button
+                variant="subtle" color="gray" leftSection={phone ? <TbFile /> : undefined}
+                rightSection={phone ? undefined : <TbChevronDown />}
+              >
+                File
               </Button>
             </Menu.Target>
             <Menu.Dropdown>
@@ -720,7 +725,7 @@ export default function App() {
               <Menu.Item leftSection={<TbLink />} onClick={() => setDialog("openLink")}>Open from link</Menu.Item>
               <Menu.Item
                 leftSection={<TbDeviceFloppy />} onClick={() => void save(false)} fw={hasUnsavedChanges ? 600 : undefined}
-                rightSection={<Kbd size="xs">{MOD_KEY} S</Kbd>}
+                rightSection={touch ? undefined : <Kbd size="xs">{MOD_KEY} S</Kbd>}
               >Save</Menu.Item>
               {documentId &&
                 <Menu.Item leftSection={<TbCopy />} onClick={() => setDialog("saveCopy")}>Save copy</Menu.Item>}
@@ -730,22 +735,19 @@ export default function App() {
               </Menu.Item>
             </Menu.Dropdown>
           </Menu>
-          <Button
-            variant="subtle" color="gray" leftSection={<TbMovie />} aria-label="Export video"
-            onClick={() => {setExportError(null); setDialog("export");}}
-          >
-            <span className="desktopOnly">Export video</span>
-          </Button>
-          <Button
-            variant="subtle" color="gray" leftSection={<TbShare />} aria-label="Share" onClick={() => setDialog("share")}
-          >
-            <span className="desktopOnly">Share</span>
-          </Button>
+        </Group>
+        <Group gap={4} wrap="nowrap" className="headerActions headerEnd">
+          <Tooltip label={`Save (${MOD_KEY} S)`}>
+            <ActionIcon
+              variant={hasUnsavedChanges ? "light" : "subtle"} color={hasUnsavedChanges ? undefined : "gray"}
+              size="lg" aria-label="Save" className="saveButton" onClick={() => void save(false)}
+            >
+              <TbDeviceFloppy size={18} />
+            </ActionIcon>
+          </Tooltip>
           <Menu position="bottom-end">
             <Menu.Target>
-              <Button variant="subtle" color="gray" leftSection={<TbHelp />} aria-label="Help">
-                <span className="desktopOnly">Help</span>
-              </Button>
+              <Button variant="subtle" color="gray" leftSection={<TbHelp />}>Help</Button>
             </Menu.Target>
             <Menu.Dropdown>
               <Menu.Item leftSection={<TbHome />} onClick={() => setDialog("splash")}>Welcome</Menu.Item>
@@ -763,14 +765,15 @@ export default function App() {
               <Menu.Item leftSection={<TbHeart />} onClick={() => setDialog("acknowledgements")}>Acknowledgements</Menu.Item>
             </Menu.Dropdown>
           </Menu>
-          <Tooltip label={`Save (${MOD_KEY} S)`}>
-            <ActionIcon
-              variant={hasUnsavedChanges ? "light" : "subtle"} color={hasUnsavedChanges ? undefined : "gray"}
-              size="lg" aria-label="Save" className="saveButton" onClick={() => void save(false)}
-            >
-              <TbDeviceFloppy size={18} />
-            </ActionIcon>
-          </Tooltip>
+          <Button variant="subtle" color="gray" leftSection={<TbShare />} onClick={() => setDialog("share")}>
+            Share
+          </Button>
+          <Button
+            variant="light" leftSection={<TbVideo />} className="exportButton" aria-label="Export video"
+            onClick={() => {setExportError(null); setDialog("export");}}
+          >
+            {phone ? "Export" : "Export video"}
+          </Button>
         </Group>
       </header>
 
@@ -804,7 +807,6 @@ export default function App() {
             shaders={shaders} buildId={buildId} textureURLs={textureURLs}
             time={time} duration={doc.duration} frameIndex={frameIndex} variableValues={values}
             aspectRatio={doc.aspectRatio}
-            onAspectRatioChange={(aspectRatio: AspectRatio) => updateDoc({aspectRatio})}
             onBuilt={onBuilt}
             onRestart={restartFrames} onLayout={setLayout} onToggleWide={() => setWideCanvas(w => !w)}
           />
@@ -814,6 +816,11 @@ export default function App() {
             onDurationChange={onDurationChange}
             onScrubStart={() => setScrubbing(true)} onScrubEnd={() => setScrubbing(false)}
             width={layout.width || undefined} top={layout.top}
+            extra={
+              <AspectRatioPicker
+                value={doc.aspectRatio} onChange={(aspectRatio: AspectRatio) => updateDoc({aspectRatio})}
+              />
+            }
           />
         </section>
       </main>
@@ -919,7 +926,8 @@ export default function App() {
         onSave={title => {setDialog(null); void save(true, title);}}
       />
       <ExportSettings
-        show={dialog === "export"} options={exportOptions} onOptionsChange={setExportOptions}
+        show={dialog === "export"} duration={doc.duration} aspectRatio={doc.aspectRatio}
+        options={exportOptions} onOptionsChange={setExportOptions}
         onExport={() => void startExport()} onCancel={cancelExport}
         progress={exportProgress} error={exportError}
       />

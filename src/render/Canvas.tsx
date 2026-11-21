@@ -2,7 +2,6 @@ import { Alert } from '@mantine/core';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type PointerEvent } from 'react';
 import { TbChevronLeft } from 'react-icons/tb';
 
-import AspectRatioPicker from '../dialogs/AspectRatioPicker';
 import type { AspectRatio } from '../lib/document';
 import { useLatest } from '../lib/useLatest';
 import { fitCanvas } from './layout';
@@ -35,7 +34,6 @@ interface CanvasProps {
   frameIndex: number;
   variableValues: number[];
   aspectRatio: AspectRatio;
-  onAspectRatioChange(aspectRatio: AspectRatio): void;
   onBuilt(result: CompileResult): void;
   // The previous frame was cleared (new build, size or textures), so iFrame should restart at 0.
   onRestart(): void;
@@ -52,7 +50,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
   const [error, setError] = useState<string | null>(null);
   const [container, setContainer] = useState<[number, number]>([0, 0]);
   const [fps, setFps] = useState<number | null>(null);
-  // Touch screens can't hover, so a tap shows the overlays for a few seconds.
+  // Touch screens can't hover, so a tap shows the size and frame rate for a few seconds.
   const [overlays, setOverlays] = useState(false);
   const overlayTimer = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(overlayTimer.current), []);
@@ -180,10 +178,6 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
             <TbChevronLeft />
           </button>
           <canvas ref={canvasRef} id="canvas" style={{width, height}} />
-          <AspectRatioPicker
-            value={props.aspectRatio} onChange={props.onAspectRatioChange}
-            top={marginTop + 8} left={marginSide + 8}
-          />
           <div className="fps" style={{top: marginTop + 8, right: marginSide + 8}}>
             <p>{width}&times;{height}px</p>
             {fps ? <p>{fps} fps</p> : null}

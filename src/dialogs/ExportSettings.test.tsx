@@ -10,7 +10,7 @@ afterEach(cleanup);
 
 function renderExport(options: ExportOptions, progress: ExportProgress | null = null, error: string | null = null) {
   const props = {
-    show: true, options, onOptionsChange: vi.fn(), onExport: vi.fn(), onCancel: vi.fn(), progress, error,
+    show: true, duration: 9, aspectRatio: [1, 1] as const, options, onOptionsChange: vi.fn(), onExport: vi.fn(), onCancel: vi.fn(), progress, error,
   };
   const result = render(<ExportSettings {...props} />);
   return {props, rerender: (p: Partial<typeof props>) => result.rerender(<ExportSettings {...props} {...p} />)};
@@ -45,6 +45,17 @@ describe("ExportSettings", () => {
     fireEvent.change(fps, {target: {value: "24"}});
     expect(props.onOptionsChange).toHaveBeenCalledTimes(2);
     expect(props.onOptionsChange).toHaveBeenLastCalledWith({...GIF, fps: 24});
+  });
+
+  it("says what the settings make, and closes with Escape until an export starts", async () => {
+    const {props, rerender} = renderExport(GIF);
+    expect(screen.getByText("9 s · 640 × 640 px · 270 frames")).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
+    expect(props.onCancel).toHaveBeenCalledTimes(1);
+    rerender({progress: {stage: "rendering", fraction: 0.1}});
+    expect(screen.queryByRole("button", {name: "Close"})).toBeNull();
+    await userEvent.keyboard("{Escape}");
+    expect(props.onCancel).toHaveBeenCalledTimes(1);
   });
 
   it("changes the file type and warns when video can't be encoded", async () => {

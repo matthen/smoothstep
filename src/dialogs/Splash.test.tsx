@@ -57,7 +57,7 @@ describe("Welcome tip", () => {
 describe("AspectRatioPicker", () => {
   it("reports the picked ratio", async () => {
     const onChange = vi.fn();
-    render(<AspectRatioPicker value={[1, 1]} onChange={onChange} top={0} left={0} />);
+    render(<AspectRatioPicker value={[1, 1]} onChange={onChange} />);
     await userEvent.selectOptions(screen.getByLabelText("Aspect ratio"), "16:9");
     expect(onChange).toHaveBeenCalledWith([16, 9]);
   });

@@ -12,10 +12,15 @@ test("on a phone, the welcome screen has no ✕ and keeps its buttons on screen"
   await expect(welcome.getByRole("heading", {name: "Welcome"})).toBeVisible();
   await expect(welcome.locator(".mantine-Modal-close")).toHaveCount(0);
   const viewport = page.viewportSize()!;
-  for (const name of ["Tutorial", "Take the tour", "Continue"]) {
-    const box = (await welcome.locator(".splashActions").getByText(name, {exact: true}).boundingBox())!;
+  for (const name of ["Learn", "Continue"]) {
+    const box = (await welcome.locator(".splashActions").getByRole("button", {name}).boundingBox())!;
     expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
   }
+  // Learn offers the tutorial and the tour.
+  await welcome.getByRole("button", {name: "Learn"}).tap();
+  await expect(page.getByRole("menuitem", {name: "Tutorial"})).toBeVisible();
+  await expect(page.getByRole("menuitem", {name: "Take the tour"})).toBeVisible();
+  await page.keyboard.press("Escape");
   await welcome.getByRole("button", {name: "Continue"}).tap();
   await expect(welcome).toBeHidden();
   expect(errors).toEqual([]);
@@ -101,23 +106,20 @@ test("on a phone, the button under the timeline's rows adds the next one", async
   expect(errors).toEqual([]);
 });
 
-test("on a phone, the canvas's overlays show for a few seconds after a tap", async ({page, context}) => {
+test("on a phone, the canvas's size shows for a few seconds after a tap, and the aspect ratio is always there", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./#new");
-  const picker = page.locator("#canvasContainer .aspectRatioPicker");
   const info = page.locator("#canvasContainer .fps");
-  await expect(picker).toHaveCSS("opacity", "0");
   await expect(info).toHaveCSS("opacity", "0");
-  // Hidden, the picker lets the tap through to the canvas.
-  await picker.tap({force: true});
-  await expect(picker).toHaveCSS("opacity", "1");
+  await page.locator("#canvas").tap();
   await expect(info).toHaveCSS("opacity", "1");
-  await page.screenshot({path: "test-results/mobile-overlays.png"});
-  await expect(page.getByLabel("Aspect ratio")).not.toBeFocused();
-  // Once shown, it can be used.
-  await page.getByLabel("Aspect ratio").selectOption({label: "16:9"});
+  await expect(info).toHaveCSS("opacity", "0", {timeout: 5000});
+
+  const picker = page.locator(".playerButtons").getByLabel("Aspect ratio");
+  await expect(picker).toBeInViewport();
+  await picker.selectOption({label: "16:9"});
+  await page.locator("#canvas").tap();
   await expect(info).toContainText(/\d+×\d+px/);
-  await page.getByLabel("Aspect ratio").blur();
-  await expect(picker).toHaveCSS("opacity", "0", {timeout: 5000});
+  await page.screenshot({path: "test-results/mobile-overlays.png"});
   expect(errors).toEqual([]);
 });

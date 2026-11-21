@@ -549,8 +549,8 @@ vec3 inside = mix(vec3(0.3, 0.55, 1.0), vec3(1.0, 0.6, 0.2), warmth);`}</Lines>
             drag the end of the timeline.
           </p>
           <p>
-            You can change the canvas's shape too. Move the pointer over the canvas, or tap it on a phone, and
-            use the menu in its top-left corner. For example, 16:9 is the shape of a widescreen video.
+            You can change the canvas's shape too, with the menu at the very end of the play bar. For example,
+            16:9 is the shape of a widescreen video.
           </p>
         </>,
         task: "Change the animation's length.",

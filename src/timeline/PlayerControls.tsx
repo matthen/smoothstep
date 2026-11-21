@@ -1,5 +1,5 @@
 import {useEffect, useEffectEvent, useState} from "react";
-import type {MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent} from "react";
+import type {MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode} from "react";
 import {ActionIcon, TextInput, Tooltip} from "@mantine/core";
 import {TbPlayerPauseFilled, TbPlayerPlayFilled, TbPlayerSkipBackFilled} from "react-icons/tb";
 import {formatTime} from "./geometry";
@@ -18,6 +18,8 @@ export interface PlayerControlsProps {
   onScrubEnd(): void;
   width: number | undefined;
   top: number;
+  // Shown after the duration, such as the aspect ratio picker.
+  extra?: ReactNode;
 }
 
 const MIN_WIDTH = 200;
@@ -167,6 +169,7 @@ export default function PlayerControls(props: PlayerControlsProps) {
       </ActionIcon.Group>
       <ScrubSlider {...props} />
       <DurationInput duration={duration} onDurationChange={props.onDurationChange} />
+      {props.extra}
     </div>
   );
 }

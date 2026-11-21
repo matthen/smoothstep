@@ -7,24 +7,16 @@ import {
   WebMOutputFormat, type VideoCodec,
 } from 'mediabunny';
 
-import type { ExportOptions, ExportProgress } from '../dialogs/exportTypes';
+import { exportSize, frameCount, type ExportOptions, type ExportProgress } from '../dialogs/exportTypes';
 import { safeFilename, type DownloadableFile } from '../lib/archive';
 import { textureURL } from '../lib/config';
 import { bufferCodes, variableValues, type AnimationDocument } from '../lib/document';
 import { Renderer } from '../render/Renderer';
 import { noVideoReason } from './videoSupport';
 
+export { exportSize, frameCount };
+
 export class ExportCancelled extends Error {}
-
-export function exportSize(options: ExportOptions, aspectRatio: readonly [number, number]): [number, number] {
-  const even = (x: number) => Math.max(2, 2 * Math.round(x / 2));
-  const width = even(options.width);
-  return [width, even(width * aspectRatio[1] / aspectRatio[0])];
-}
-
-export function frameCount(duration: number, fps: number): number {
-  return Math.max(1, Math.round(duration * fps));
-}
 
 interface Encoder {
   addFrame(index: number): Promise<void>;

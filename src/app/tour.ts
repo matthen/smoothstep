@@ -18,6 +18,7 @@ function welcome(): DriveStep {
     title: "Welcome to smoothstep.io",
     description: "You write a shader, animate its inputs on a timeline, and export the result as a video. " +
       "This tour shows you around in under a minute.",
+    showButtons: ["next", "close"],
   }};
 }
 
@@ -49,8 +50,8 @@ function desktopSteps({showPane}: TourOptions): DriveStep[] {
       element: "#canvasContainer",
       popover: {
         title: "The canvas",
-        description: "Your shader runs here, live. Point at it to change the aspect ratio and see the frame " +
-          "rate. The arrow beside it makes it wider.",
+        description: "Your shader runs here, live. Point at it to see its size and frame rate. The arrow " +
+          "beside it makes it wider.",
         side: "left",
       },
     },
@@ -58,8 +59,8 @@ function desktopSteps({showPane}: TourOptions): DriveStep[] {
       element: ".playerButtons",
       popover: {
         title: "Play and scrub",
-        description: "<kbd>Space</kbd> plays and pauses, and the box on the right is the length in seconds. " +
-          "<code>iTime</code> in your code is the time in seconds.",
+        description: "<kbd>Space</kbd> plays and pauses. On the right are the length in seconds and the " +
+          "canvas's shape. <code>iTime</code> in your code is the time in seconds.",
         side: "bottom",
       },
     },
@@ -117,8 +118,8 @@ function phoneSteps({showPane}: TourOptions): DriveStep[] {
       element: ".previewPane",
       popover: {
         title: "The canvas",
-        description: "Your shader runs here, live. The player below plays it and scrubs through time. " +
-          "<code>iTime</code> in your code is the time in seconds.",
+        description: "Your shader runs here, live. The player below plays it, scrubs through time, and sets " +
+          "the length and shape. <code>iTime</code> in your code is the time in seconds.",
         side: "bottom",
       },
     },

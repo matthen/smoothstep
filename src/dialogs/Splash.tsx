@@ -1,6 +1,6 @@
-import { Button, Group, SimpleGrid, Text, Title } from '@mantine/core';
+import { Button, Group, Menu, SimpleGrid, Text, Title } from '@mantine/core';
 import { useEffect, useState, type ReactNode } from 'react';
-import { TbBulb } from 'react-icons/tb';
+import { TbBulb, TbRoute, TbSchool } from 'react-icons/tb';
 
 import AppModal from '../app/AppModal';
 import { usePhone } from '../app/usePhone';
@@ -107,7 +107,23 @@ export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
         {" · "}
         <a href={REPO_URL} target="_blank" rel="noreferrer">Source code</a>
       </Text>
-      <Group justify="flex-end" mt="xl" className="splashActions" wrap={phone ? "nowrap" : "wrap"}>
+      {phone ?
+        // On a phone, one Learn button for the two ways to learn, so Continue stands out as the way in.
+        <Group mt="xl" className="splashActions" wrap="nowrap">
+          <Menu position="top-start">
+            <Menu.Target>
+              <Button variant="default" leftSection={<TbSchool />}>Learn</Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item component="a" href={TUTORIAL_HREF} onClick={onHide} leftSection={<TbSchool />}>
+                Tutorial
+              </Menu.Item>
+              <Menu.Item onClick={onTour} leftSection={<TbRoute />}>Take the tour</Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+          <Button onClick={onHide}>Continue</Button>
+        </Group> :
+      <Group justify="flex-end" mt="xl" className="splashActions">
         <Button variant="default" component="a" href={TUTORIAL_HREF} onClick={onHide}>Tutorial</Button>
         <Button variant={tourTaken ? "default" : "filled"} onClick={onTour} data-autofocus={!tourTaken || undefined}>
           Take the tour
@@ -115,7 +131,7 @@ export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
         <Button variant={tourTaken ? "filled" : "default"} onClick={onHide} data-autofocus={tourTaken || undefined}>
           Continue
         </Button>
-      </Group>
+      </Group>}
     </AppModal>
   );
 }

@@ -2,11 +2,14 @@ import { Alert, Button, Group, Loader, NativeSelect, Progress, Stack, Text, Text
 import { useState } from 'react';
 
 import AppModal from '../app/AppModal';
+import { useTouch } from '../app/usePhone';
 import { noVideoReason } from '../export/videoSupport';
-import type { ExportOptions, ExportProgress, ExportType } from './exportTypes';
+import { exportSize, frameCount, type ExportOptions, type ExportProgress, type ExportType } from './exportTypes';
 
 interface ExportSettingsProps {
   show: boolean;
+  duration: number;
+  aspectRatio: readonly [number, number];
   options: ExportOptions;
   onOptionsChange(options: ExportOptions): void;
   onExport(): void;
@@ -33,9 +36,14 @@ export function parseFps(text: string): number | null {
   return text.trim() && Number.isFinite(fps) && fps > 0 ? fps : null;
 }
 
+function formatSeconds(seconds: number): string {
+  return `${Number(seconds.toFixed(2))} s`;
+}
+
 export default function ExportSettings(
-  {show, options, onOptionsChange, onExport, onCancel, progress, error}: ExportSettingsProps,
+  {show, duration, aspectRatio, options, onOptionsChange, onExport, onCancel, progress, error}: ExportSettingsProps,
 ) {
+  const touch = useTouch();
   const [widthText, setWidthText] = useState(String(options.width));
   const [fpsText, setFpsText] = useState(String(options.fps));
   const [wasShown, setWasShown] = useState(false);
@@ -70,9 +78,14 @@ export default function ExportSettings(
 
   const unit = (text: string) => <Text size="sm" c="dimmed" pr="xs">{text}</Text>;
 
+  const [width, height] = exportSize(options, aspectRatio);
+  const frames = frameCount(duration, options.fps);
+
   return (
+    // While exporting, only Cancel closes it, since closing stops the export.
     <AppModal
-      opened={show} onClose={onCancel} closeOnEscape={false} closeOnClickOutside={false} withCloseButton={false}
+      opened={show} onClose={onCancel} closeOnEscape={!disabled} closeOnClickOutside={!disabled}
+      withCloseButton={!disabled} trapFocus={!touch}
       title={<Group gap="xs">Export video{disabled && <Loader size="xs" role="status" />}</Group>}
       classNames={{content: "export"}}
     >
@@ -93,6 +106,10 @@ export default function ExportSettings(
             onChange={event => onOptionsChange({...options, type: event.target.value as ExportType})}
             data={FILE_TYPES.map(([value, label]) => ({value, label}))}
           />
+          {widthValid && fpsValid &&
+            <Text size="sm" c="dimmed" className="exportSummary">
+              {formatSeconds(duration)} · {width} × {height} px · {frames} {frames === 1 ? "frame" : "frames"}
+            </Text>}
           {noVideo && <Alert color="yellow">{noVideo}</Alert>}
         </Stack>
       </form>
