@@ -549,7 +549,6 @@ export default function App() {
       "Help → Documentation": () => window.open(DOCS_URL, "_blank", "noopener"),
       "Help → Source code": () => window.open(REPO_URL, "_blank", "noopener"),
       "Help → Acknowledgements": () => setDialog("acknowledgements"),
-      "Animation": () => showPanel("animation"),
       "Timeline": () => showPanel("animation"),
       "Sliders": () => showPanel("sliders"),
       "Textures": () => showPanel("textures"),
@@ -853,7 +852,7 @@ export default function App() {
           }}
         >
           <Tabs.List>
-            <Tabs.Tab value="animation">Animation</Tabs.Tab>
+            <Tabs.Tab value="animation">Timeline</Tabs.Tab>
             <Tabs.Tab value="sliders">Sliders</Tabs.Tab>
             <Tabs.Tab value="textures">Textures</Tabs.Tab>
             <ActionIcon

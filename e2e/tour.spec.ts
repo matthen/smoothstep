@@ -25,7 +25,7 @@ test("the welcome dialog offers the tour, which steps through the screen", async
     "Welcome to smoothstep", "Your shader", "The canvas", "Play and scrub", "The timeline", "Sliders", "Textures",
     "Save, share, export and help", "Over to you",
   ]);
-  await expect(page.getByRole("tab", {name: "Animation"})).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", {name: "Timeline"})).toHaveAttribute("aria-selected", "true");
 
   // Next time, Continue is the main button and the tour is still in the Help menu.
   await page.goto("about:blank");

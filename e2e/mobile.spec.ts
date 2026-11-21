@@ -26,7 +26,7 @@ test("on a phone, the panes switch and a transition can be added with two taps",
   await page.goto("./#new");
   await expect(page.locator("#canvas")).toBeVisible();
   await expect(page.locator(".cm-content")).toBeVisible();
-  await expect(page.getByRole("tab", {name: "Animation"})).toBeHidden();
+  await expect(page.getByRole("tab", {name: "Timeline"})).toBeHidden();
 
   const panes = page.locator(".mobileTabs");
   await panes.getByText("Timeline", {exact: true}).tap();

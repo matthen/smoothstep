@@ -491,9 +491,9 @@ float radius = 0.15 + 0.5 * grow;`}</Lines>
         title: "Make a transition",
         body: <>
           <p>
-            A transition changes a number from one value to another over a stretch of time. In the Animation
-            tab, drag along the <code>grow</code> row to make one. On a phone, open Timeline and tap where it
-            should start, then where it should end.
+            A transition changes a number from one value to another over a stretch of time. In the Timeline
+            tab, drag along the <code>grow</code> row to make one. On a phone, tap where it should start, then
+            where it should end.
           </p>
           <p>
             The new transition is selected, and starts from the value you set with the slider. Set its end value
