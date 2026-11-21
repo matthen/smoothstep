@@ -289,12 +289,13 @@ a {
   }
 
   @include phone {
-    height: min(max(52dvh, 240px), 100vw);
+    // Room for the canvas, plus the play bar's second row.
+    height: calc(min(max(52dvh, 240px), 100vw) + 44px);
     padding: 8px 12px 0;
 
     // Reading or writing code needs the room more than the canvas does.
     [data-mobile-tab="code"] &, [data-mobile-tab="learn"] & {
-      height: min(max(34dvh, 200px), 100vw);
+      height: calc(min(max(34dvh, 200px), 100vw) + 44px);
     }
   }
 
@@ -311,6 +312,9 @@ a {
     // Like a video: play, scrub and leave, without the editing controls.
     #toggleWideCanvas, .playerButtons .mantine-NumberInput-root, .playerButtons .aspectRatioPicker {
       display: none;
+    }
+    .playerButtons .fullViewButton {
+      margin-left: auto;
     }
   }
 }
@@ -439,6 +443,10 @@ div.playerButtons .fullViewButton {
 div#canvasContainer {
   height: calc(100% - 56px);
   min-height: 128px;
+  // Phones put the play bar on two rows.
+  @include phone {
+    height: calc(100% - 100px);
+  }
   position: relative;
   display: flex;
 

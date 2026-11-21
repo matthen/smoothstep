@@ -12,9 +12,24 @@ div.playerButtons {
   height: 56px;
   padding: 12px 0 0;
 
-  // Phone canvases can be narrow, so the controls use the full width instead.
+  // Phone canvases can be narrow, so the controls use the full width instead, with the scrub bar on
+  // a row of its own above the buttons, as in a phone's video player.
   @include phone {
     width: calc(100% - 24px) !important;
+    height: 100px;
+    padding-top: 4px;
+    flex-wrap: wrap;
+    row-gap: 2px;
+
+    // Doubled to outweigh the slider's own flex below.
+    div.slider.slider {
+      order: -1;
+      flex: 1 0 calc(100% - 12px);
+    }
+
+    .mantine-NumberInput-root {
+      margin-left: auto;
+    }
   }
   display: flex;
   align-items: center;
