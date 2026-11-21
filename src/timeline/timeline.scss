@@ -148,10 +148,12 @@ div#animationControls {
       }
 
       @include phone {
-        grid-template-columns: 1fr 1fr 1.4fr;
-        > :last-child {
-          grid-column: auto;
-        }
+        grid-template-columns: repeat(4, 1fr);
+      }
+
+      .inputUnit {
+        color: $dt-gray-medium;
+        font-size: 12px;
       }
     }
 

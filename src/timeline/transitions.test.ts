@@ -69,6 +69,11 @@ describe("insert, replace and remove", () => {
 });
 
 describe("dragTransition", () => {
+  it("moves in fractions of a tenth, rounded to a hundredth of a second, and stays at least minDSecs long", () => {
+    expect(dragTransition(row, 1, "move", 0.2 + 0.1, 120)).toMatchObject({startDSecs: 50.3, endDSecs: 60.3});
+    expect(dragTransition(row, 1, "resizeRight", -20, 120, 0.2)).toMatchObject({startDSecs: 50, endDSecs: 50.2});
+  });
+
   it("moves a transition, keeping its length", () => {
     expect(dragTransition(row, 1, "move", 5, 120)).toMatchObject({startDSecs: 55, endDSecs: 65});
     expect(dragTransition(row, 1, "move", -5, 120)).toMatchObject({startDSecs: 45, endDSecs: 55});

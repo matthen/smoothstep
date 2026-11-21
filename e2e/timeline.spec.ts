@@ -1,7 +1,7 @@
 // The timeline on a desktop: fitting the animation to the panel, zooming, and editing transitions.
 import { expect, test, type Page } from '@playwright/test';
 
-import { offline } from './helpers';
+import { offline, transitionTimes } from './helpers';
 
 const scale = async (page: Page) => Number(await page.locator(".timeArea").getAttribute("data-px-per-second"));
 
@@ -130,13 +130,13 @@ test("transitions are dragged out, drawn with their curve, moved, resized and de
   await page.mouse.down();
   await page.mouse.move(box.x + box.width / 2 + fitted, box.y + box.height / 2, {steps: 4});
   await page.mouse.up();
-  await expect(h4).toHaveText(/iFloat1\s*3\.0 — 6\.0s/);
+  await expect.poll(() => transitionTimes(page)).toBe("3 — 6");
   const moved = (await transition.boundingBox())!;
   await page.mouse.move(moved.x + moved.width - 1, moved.y + moved.height / 2);
   await page.mouse.down();
   await page.mouse.move(moved.x + moved.width - 1 + fitted, moved.y + moved.height / 2, {steps: 4});
   await page.mouse.up();
-  await expect(h4).toHaveText(/iFloat1\s*3\.0 — 7\.0s/);
+  await expect.poll(() => transitionTimes(page)).toBe("3 — 7");
 
   // A zoomed-in timeline edits at its own scale.
   await page.getByRole("button", {name: "Zoom in"}).click();
@@ -150,12 +150,33 @@ test("transitions are dragged out, drawn with their curve, moved, resized and de
   await page.mouse.down();
   await page.mouse.move(zoomedBox.x + 1 + 0.5 * zoomedScale, zoomedBox.y + zoomedBox.height / 2, {steps: 4});
   await page.mouse.up();
-  await expect(h4).toHaveText(/iFloat1\s*3\.5 — 7\.0s/);
+  await expect.poll(() => transitionTimes(page)).toBe("3.5 — 7");
 
   await page.locator(".appHeader").click({position: {x: 4, y: 4}});
   await expect(page.locator(".timeArea .transition")).toHaveCount(1);
   await page.locator(".timeArea .transition").click();
   await page.keyboard.press("Delete");
   await expect(page.locator(".timeArea .transition")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("a transition's start and end times can be typed, to a hundredth of a second", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#example/f9ad362373e4");
+  // sphereRadius's first transition runs from 2.5s to 4.5s, with another from 6.4s.
+  await page.locator(".timeArea .variableRow").nth(1).locator(".transition").first().click();
+  const start = page.locator("#startTimeInput");
+  const end = page.locator("#endTimeInput");
+  await expect(start).toHaveValue("2.5");
+  await expect(end).toHaveValue("4.5");
+  await start.fill("2.35");
+  await end.fill("4.62");
+  await end.blur();
+  await expect.poll(() => transitionTimes(page)).toBe("2.35 — 4.62");
+  // An end past the next transition's start isn't taken.
+  await end.fill("7");
+  await expect(end).toHaveAttribute("aria-invalid", "true");
+  await end.blur();
+  await expect(end).toHaveValue("4.62");
   expect(errors).toEqual([]);
 });

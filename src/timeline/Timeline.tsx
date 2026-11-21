@@ -8,8 +8,8 @@ import type {Transition, TransitionType, Variable} from "../lib/document";
 import {rowPaths} from "./curves";
 import {
   clampTime, clampZoom, DEFAULT_PX_PER_SECOND, dragDeltaDSecs, draggedDuration, durationDSecs, fitPxPerSecond,
-  grabMode, hoverEndDSecs, hoverStartDSecs, maxTimeFor, ROW_HEIGHT, roundDuration, rowAt, rulerTicks,
-  timeAreaWidth, timeToX, xToTime,
+  grabMode, hoverEndDSecs, hoverStartDSecs, maxTimeFor, ROW_HEIGHT, roundDSecs, roundDuration, rowAt, rulerTicks,
+  snapDSecs, timeAreaWidth, timeToX, xToTime,
 } from "./geometry";
 import type {GrabMode} from "./geometry";
 import {keyAction, shortcutsAllowed} from "./keys";
@@ -54,7 +54,14 @@ type Gesture =
 interface Drafts {
   start?: string;
   end?: string;
+  startTime?: string;
+  endTime?: string;
 }
+
+// A time in seconds, to a hundredth, without trailing zeros.
+const seconds = (dsecs: number) => String(Math.round(dsecs * 10) / 100);
+// The same for the heading, which always shows at least a tenth, like 2.0.
+const headingSeconds = (dsecs: number) => (dsecs / 10).toFixed(Number.isInteger(dsecs) ? 1 : 2);
 
 // The width of the rows' visible part, and of the row labels to its left.
 interface View {
@@ -196,6 +203,36 @@ export default function Timeline(props: TimelineProps) {
     }
   }
 
+  // A typed start or end time in seconds, as tenths, or null if it isn't one the transition can take:
+  // it has to stay after the one before, before the one after, within the timeline, and not empty.
+  function typedTime(field: "startTime" | "endTime", text: string): number | null {
+    const value = parseValue(text);
+    if (!selection || !selected || value === null) {
+      return null;
+    }
+    const dsecs = roundDSecs(value * 10);
+    const startDSecs = field === "startTime" ? dsecs : selected.startDSecs;
+    const endDSecs = field === "endTime" ? dsecs : selected.endDSecs;
+    const transitions = variables[selection.row]!.transitions;
+    return isInsertable(transitions, startDSecs, endDSecs, Math.max(maxDSecs, selected.endDSecs), selectedIndex) ?
+      dsecs : null;
+  }
+
+  function changeTime(field: "startTime" | "endTime", text: string) {
+    setDrafts(d => ({...d, [field]: text}));
+    const dsecs = typedTime(field, text);
+    if (dsecs !== null && selection) {
+      updateSelected(field === "startTime" ? {startDSecs: dsecs} : {endDSecs: dsecs});
+      if (field === "startTime") {
+        setSelection({row: selection.row, startDSecs: dsecs});
+      }
+    }
+  }
+
+  function blurTime(field: "startTime" | "endTime") {
+    setDrafts(d => ({...d, [field]: undefined}));
+  }
+
   function create(row: number, startDSecs: number, endDSecs: number) {
     const transitions = variables[row]!.transitions;
     setGesture({kind: "idle"});
@@ -249,7 +286,7 @@ export default function Timeline(props: TimelineProps) {
         return;
       }
       case "dragging": {
-        const moved = dragTransition(gesture.original, gesture.index, gesture.mode, dragDeltaDSecs(x - gesture.startX, pps), maxDSecs);
+        const moved = dragTransition(gesture.original, gesture.index, gesture.mode, dragDeltaDSecs(x - gesture.startX, pps), maxDSecs, snapDSecs(pps));
         if (moved.startDSecs !== gesture.moved.startDSecs || moved.endDSecs !== gesture.moved.endDSecs) {
           setGesture({...gesture, moved});
           setRow(gesture.row, replaceTransition(gesture.original, gesture.index, moved));
@@ -549,9 +586,11 @@ export default function Timeline(props: TimelineProps) {
           <h4>
             {name(heading.row) ?? "iFloat" + heading.row}
             {name(heading.row) && <span className="floatName"> iFloat{heading.row}</span>}
-            <span> {(heading.startDSecs * 0.1).toFixed(1)}
-              {heading.endDSecs !== null && <> &mdash; {(heading.endDSecs * 0.1).toFixed(1)}</>}s
-            </span>
+            {/* A selected transition's times are in their boxes below. */}
+            {!selected &&
+              <span> {headingSeconds(heading.startDSecs)}
+                {heading.endDSecs !== null && <> &mdash; {headingSeconds(heading.endDSecs)}</>}s
+              </span>}
           </h4>}
         {!heading &&
           <p className="hint">
@@ -565,6 +604,21 @@ export default function Timeline(props: TimelineProps) {
           </p>}
         {selected &&
           <form className="transitionForm" onSubmit={e => e.preventDefault()}>
+            {(["startTime", "endTime"] as const).map(field => {
+              const dsecs = field === "startTime" ? selected.startDSecs : selected.endDSecs;
+              const text = drafts[field] ?? seconds(dsecs);
+              return (
+                <TextInput
+                  key={field} id={field + "Input"} label={field === "startTime" ? "start time" : "end time"} size="xs"
+                  type="number" step="0.01" min="0" value={text}
+                  rightSection={<span className="inputUnit">s</span>} rightSectionWidth={20}
+                  rightSectionPointerEvents="none"
+                  onChange={e => changeTime(field, e.target.value)}
+                  onBlur={() => blurTime(field)}
+                  error={drafts[field] !== undefined && typedTime(field, text) === null}
+                />
+              );
+            })}
             {(["start", "end"] as const).map(field => {
               const value = field === "start" ? selected.startValue : selected.endValue;
               const text = drafts[field] ?? String(value);

@@ -1,7 +1,7 @@
 // The phone layout: the canvas on top, and a switch between the code, timeline and textures.
 import { devices, expect, test } from '@playwright/test';
 
-import { offline } from './helpers';
+import { offline, transitionTimes } from './helpers';
 
 test.use(devices['Pixel 7']);
 
@@ -46,14 +46,14 @@ test("on a phone, the panes switch and a transition can be added with two taps",
   // Touches can't hover, so the first tap marks the start and the second the end.
   await page.touchscreen.tap(row!.x + 1.07 * fitted, row!.y + 10);
   await page.touchscreen.tap(row!.x + 4.12 * fitted, row!.y + 10);
-  await expect(page.locator(".properties h4")).toHaveText(/iFloat1\s*1\.0 — 4\.1s/);
+  await expect.poll(() => transitionTimes(page)).toBe("1 — 4.1");
 
   // Tapping an existing transition abandons a half-made one and selects it.
   await timeArea.tap({position: {x: 10, y: 5}});
   await page.touchscreen.tap(row!.x + 1.07 * fitted, row!.y + 38);
   await page.locator(".timeArea .transition.selected, .timeArea .transition").first().tap();
   await expect(page.locator(".timeArea .transition:not(.hover)")).toHaveCount(1);
-  await expect(page.locator(".properties h4")).toHaveText(/iFloat1\s*1\.0 — 4\.1s/);
+  await expect.poll(() => transitionTimes(page)).toBe("1 — 4.1");
 
   // A longer animation still fits, until two fingers pinch to zoom in.
   await page.locator(".durationInput").fill("40");

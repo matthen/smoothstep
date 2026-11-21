@@ -68,9 +68,21 @@ export function grabMode(offsetX: number, width: number): GrabMode {
   return "move";
 }
 
-// Pixels of pointer movement as whole tenths of a second.
+// Times are kept to a hundredth of a second: tenths of a second with one decimal place.
+export function roundDSecs(dsecs: number): number {
+  return Math.round(dsecs * 10) / 10;
+}
+
+// The step a drag moves in, in tenths of a second: 0.1s, or as fine as 0.01s when zoomed in far
+// enough that each step is still a few pixels.
+export function snapDSecs(pxPerSecond: number): number {
+  return [0.1, 0.2, 0.5].find(step => step * pxPerSecond / 10 >= 6) ?? 1;
+}
+
+// Pixels of pointer movement in tenths of a second, in steps of snapDSecs.
 export function dragDeltaDSecs(deltaX: number, pxPerSecond: number): number {
-  return Math.round(deltaX * 10 / pxPerSecond);
+  const step = snapDSecs(pxPerSecond);
+  return roundDSecs(step * Math.round(deltaX * 10 / pxPerSecond / step));
 }
 
 // The timeline extends a little past the duration (a twentieth, at least 0.2s, rounded up to a

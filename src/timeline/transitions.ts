@@ -1,6 +1,6 @@
 // Edits to one variable's transitions, keeping them sorted and non-overlapping.
 import type {Transition, Variable} from "../lib/document";
-import type {GrabMode} from "./geometry";
+import {roundDSecs, type GrabMode} from "./geometry";
 
 // Whether [startDSecs, endDSecs] fits within the duration without overlapping another
 // transition (besides the one at `ignoreIndex`). Transitions may touch end to start.
@@ -33,11 +33,20 @@ export function removeTransition(transitions: readonly Transition[], index: numb
 }
 
 // Moves or resizes the transition at `index` by `deltaDSecs`, stopping at its neighbours, at
-// 0 and at `maxDSecs`. A transition already past `maxDSecs` (after the duration was shortened)
-// can still move left or shrink. Returns the moved transition.
+// 0 and at `maxDSecs`, and keeping it at least `minDSecs` long. A transition already past
+// `maxDSecs` (after the duration was shortened) can still move left or shrink. Returns the moved
+// transition, with times rounded to a hundredth of a second.
 export function dragTransition(
   transitions: readonly Transition[], index: number, mode: GrabMode, deltaDSecs: number,
-  maxDSecs: number,
+  maxDSecs: number, minDSecs = 1,
+): Transition {
+  const moved = dragUnrounded(transitions, index, mode, deltaDSecs, maxDSecs, minDSecs);
+  return {...moved, startDSecs: roundDSecs(moved.startDSecs), endDSecs: roundDSecs(moved.endDSecs)};
+}
+
+function dragUnrounded(
+  transitions: readonly Transition[], index: number, mode: GrabMode, deltaDSecs: number,
+  maxDSecs: number, minDSecs: number,
 ): Transition {
   const t = transitions[index];
   if (!t) {
@@ -53,9 +62,9 @@ export function dragTransition(
       return {...t, startDSecs, endDSecs: startDSecs + length};
     }
     case "resizeLeft":
-      return {...t, startDSecs: clamp(t.startDSecs + deltaDSecs, lo, t.endDSecs - 1)};
+      return {...t, startDSecs: clamp(t.startDSecs + deltaDSecs, lo, t.endDSecs - minDSecs)};
     case "resizeRight":
-      return {...t, endDSecs: clamp(t.endDSecs + deltaDSecs, t.startDSecs + 1, hi)};
+      return {...t, endDSecs: clamp(t.endDSecs + deltaDSecs, t.startDSecs + minDSecs, hi)};
   }
 }
 

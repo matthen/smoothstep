@@ -59,6 +59,14 @@ describe("parseDocument", () => {
     expect([t.startValue, t.endValue]).toEqual([0, 2.5]);
   });
 
+  it("keeps transition times to a hundredth of a second", () => {
+    const doc = newDocument();
+    (doc.variables[0]!.transitions as unknown[]).push(
+      {startDSecs: 12.5, endDSecs: 20.04, startValue: 0, endValue: 1, type: "linear"});
+    const t = parseDocument(doc).variables[0]!.transitions[0]!;
+    expect([t.startDSecs, t.endDSecs]).toEqual([12.5, 20]);
+  });
+
   it("keeps a custom aspect ratio", () => {
     const doc = newDocument() as unknown as Record<string, unknown>;
     doc.aspectRatio = [21, 9];

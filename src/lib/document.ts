@@ -191,13 +191,16 @@ export function parseDocument(value: unknown): AnimationDocument {
       const r = isRecord(t) ? t : {};
       const startValue = numericValue(r.startValue);
       const endValue = numericValue(r.endValue);
-      const ok = isRecord(t) && Number.isInteger(r.startDSecs) && (r.startDSecs as number) >= 0 &&
-        Number.isInteger(r.endDSecs) && (r.endDSecs as number) > (r.startDSecs as number) &&
+      // Times are kept to a hundredth of a second, one decimal place of a tenth.
+      const startDSecs = typeof r.startDSecs === "number" ? Math.round(r.startDSecs * 10) / 10 : NaN;
+      const endDSecs = typeof r.endDSecs === "number" ? Math.round(r.endDSecs * 10) / 10 : NaN;
+      const ok = isRecord(t) && Number.isFinite(startDSecs) && startDSecs >= 0 &&
+        Number.isFinite(endDSecs) && endDSecs > startDSecs &&
         startValue !== null && endValue !== null &&
         (TRANSITION_TYPES as readonly unknown[]).includes(r.type);
       if (!ok) {fail("transition in variable " + i);}
       return {
-        startDSecs: r.startDSecs as number, endDSecs: r.endDSecs as number,
+        startDSecs, endDSecs,
         startValue: startValue!, endValue: endValue!,
         type: r.type as TransitionType,
       };
