@@ -860,7 +860,7 @@ export default function App() {
               />
               <Tooltip label={fullView ? "Exit full screen (Esc)" : "Full screen"} position="bottom">
                 <ActionIcon
-                  variant="default" size="lg" className="fullViewButton"
+                  variant="default" size="input-sm" className="fullViewButton"
                   aria-label={fullView ? "Exit full screen" : "Full screen"}
                   onMouseDown={event => event.preventDefault()} onClick={() => setFull(!fullView)}
                 >

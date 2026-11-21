@@ -108,7 +108,7 @@ function DurationInput({duration, onDurationChange}: Pick<PlayerControlsProps, "
     <Tooltip label="Duration in seconds" position="bottom">
       <NumberInput
         classNames={{input: "durationInput"}}
-        size="xs"
+        size="sm"
         aria-label="Duration (seconds)"
         step={1}
         min={0.1}
@@ -160,10 +160,10 @@ export default function PlayerControls(props: PlayerControlsProps) {
   return (
     <div className="playerButtons" style={{top, width: Math.max(width ?? MIN_WIDTH, MIN_WIDTH)}}>
       <ActionIcon.Group>
-        <ActionIcon variant="default" size="lg" aria-label="Back to the start" onMouseDown={keepFocus} onClick={onReset}>
+        <ActionIcon variant="default" size="input-sm" aria-label="Back to the start" onMouseDown={keepFocus} onClick={onReset}>
           <TbPlayerSkipBackFilled />
         </ActionIcon>
-        <ActionIcon variant="default" size="lg" aria-label={isPlaying ? "Pause" : "Play"} onMouseDown={keepFocus} onClick={onPlayPause}>
+        <ActionIcon variant="default" size="input-sm" aria-label={isPlaying ? "Pause" : "Play"} onMouseDown={keepFocus} onClick={onPlayPause}>
           {isPlaying ? <TbPlayerPauseFilled /> : <TbPlayerPlayFilled />}
         </ActionIcon>
       </ActionIcon.Group>
