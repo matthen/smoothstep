@@ -536,19 +536,20 @@ export default function App() {
       }
     };
     const actions: Record<AppLink, () => void> = {
-      "File → New": () => {window.location.hash = "#new";},
+      "File → New": () => openHash("#new", hasUnsavedChanges),
       "File → Open": () => setDialog("open"),
       "File → Open from link": () => setDialog("openLink"),
       "File → Save": () => void save(false),
       "File → Download animation file": () => void download(),
       "Help → Welcome": () => setDialog("splash"),
       "Help → Take the tour": () => void takeTour(),
-      "Help → Tutorial": () => {window.location.hash = TUTORIAL_HREF;},
+      "Help → Tutorial": () => openHash(TUTORIAL_HREF, hasUnsavedChanges),
       "Help → Shader inputs": () => openHelp("inputs"),
       "Help → Keyboard shortcuts": () => openHelp("shortcuts"),
       "Help → Documentation": () => window.open(DOCS_URL, "_blank", "noopener"),
       "Help → Source code": () => window.open(REPO_URL, "_blank", "noopener"),
       "Help → Acknowledgements": () => setDialog("acknowledgements"),
+      "Animation": () => showPanel("animation"),
       "Timeline": () => showPanel("animation"),
       "Sliders": () => showPanel("sliders"),
       "Textures": () => showPanel("textures"),

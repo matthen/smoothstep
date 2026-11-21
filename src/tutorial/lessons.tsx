@@ -662,7 +662,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         </li>
         <li>
           <b>A flower:</b> a circle is everywhere closer to the centre than its radius. Make the radius change
-          with the angle from <code>atan</code>, like <code>0.5 + 0.2 * cos(5.0 * angle)</code>, and the circle
+          with the angle round the centre, like <code>0.5 + 0.2 * cos(5.0 * atan(uv.y, uv.x))</code>, and the circle
           gets petals.
         </li>
       </>),
@@ -900,7 +900,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         </>,
         tabs: [{tab: 0, code: shaders.HEAT_BUFFER}],
         task: "Build a buffer that reads iBuffer0.",
-        check: (now, atStart) => rebuilt(now, atStart) && uses(builtIn(now, 0), /\biBuffer0\b/),
+        check: (now, atStart) => rebuilt(now, atStart) && uses(builtIn(now, 0), /\bheat\b/),
       },
       {
         id: "heat-image",
@@ -913,7 +913,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
             bigger numbers, so the heat can keep building up past 1. Build it and play.
           </p>
         </>,
-        code: shaders.HEAT_IMAGE,
+        tabs: [{tab: 0, code: shaders.HEAT_BUFFER}, {tab: "image", code: shaders.HEAT_IMAGE}],
         task: "Build an image that reads iBuffer0, and play it.",
         check: (now, atStart) => rebuilt(now, atStart) && uses(now.builtCode, /\biBuffer0\b/) && played(now, atStart),
       },

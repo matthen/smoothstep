@@ -176,7 +176,7 @@ export const ROTATED_TILES = TILES.replace(
 export const POLAR_TILES = ROTATED_TILES.replace(
   `  // Tiles: fract keeps what's after the decimal point, so each tile runs from -1 to 1.
   vec2 cell = fract(3.0 * uv) * 2.0 - 1.0;`,
-  `  // Polar coordinates: how far round the centre (0 to 1), and how far out.
+  `  // Polar coordinates: how far round the centre (-0.5 to 0.5), and how far out.
   vec2 polar = vec2(atan(uv.y, uv.x) / 6.28318, length(uv));
 
   // Tiles in polar coordinates: 12 segments round, and rings of width 1/3.
