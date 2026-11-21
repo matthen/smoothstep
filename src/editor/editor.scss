@@ -163,11 +163,23 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
   .tok-atom,
   .tok-number { color: $dt-purple; }
   .tok-comment { color: $dt-blue; }
+  // Links in comments: a softer colour than code, with a faint underline that firms up on hover.
   .cm-link {
+    color: mix($dt-cyan, $dt-blue, 70%);
     text-decoration: underline;
-    text-underline-offset: 3px;
+    text-decoration-color: rgba($dt-cyan, 0.2);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
     cursor: pointer;
+    transition: color 120ms, text-decoration-color 120ms;
+
+    &:hover {
+      color: $dt-cyan;
+      text-decoration-color: rgba($dt-cyan, 0.7);
+    }
   }
+  .cm-link .tok-comment, .tok-comment .cm-link { color: inherit; }
+  .cm-link:hover .tok-comment { color: $dt-cyan; }
   .cm-link-bracket { opacity: 0.5; }
   .tok-string { color: $dt-yellow; }
   .tok-meta { color: $dt-gray-light; }
