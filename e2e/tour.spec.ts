@@ -6,6 +6,8 @@ import { offline } from './helpers';
 async function stepThrough(page: Page): Promise<string[]> {
   const titles: string[] = [];
   const popover = page.locator(".driver-popover");
+  // The tour's code loads on first use, so wait for its first step.
+  await expect(popover).toBeVisible();
   while (await popover.isVisible()) {
     titles.push(await popover.locator(".driver-popover-title").innerText());
     await popover.locator(".driver-popover-next-btn").click();

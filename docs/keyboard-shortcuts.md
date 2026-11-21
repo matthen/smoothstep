@@ -44,5 +44,7 @@ zoom in or out. A `vec2` value brings up a 2D picker. A `vec3` brings up a colou
 values are between 0 and 1, and a 3D direction picker otherwise. Click a built-in function, like `smoothstep`, or an input, like
 `iTime`, to see its definition. The editor also suggests completions as you type.
 
-Web addresses in the code are underlined, and clicking one opens it in a new tab. So is a menu item
-named in a comment, like `Help → Tutorial`, and clicking it does what that menu item does.
+Links in comments are underlined, and you can click them. A web address opens in a new tab. A menu
+item or tab named in square brackets, like `[Help → Tutorial]` or `the [Sliders] tab`, opens that
+menu item or tab. The names that work are the File and Help menu items, `[Timeline]`, `[Sliders]`,
+`[Textures]`, and the code tabs `[Image]`, `[Shared]` and `[iBuffer0]` to `[iBuffer3]`.

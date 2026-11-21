@@ -56,7 +56,7 @@ export interface AnimationDocument {
   variables: Variable[];
 }
 
-export const DEFAULT_CODE = `// Getting started? Try the tutorial in Help → Tutorial.
+export const DEFAULT_CODE = `// Getting started? Try the tutorial in [Help → Tutorial].
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // Compute coordinates that range from x = 0 to 1 and y = 0 to 1.
   vec2 uv = fragCoord / iResolution.xy;
@@ -74,7 +74,7 @@ export const EMPTY_TEXTURE = "special/black.png";
 // A new buffer's code, which draws what it drew last frame, so the image can read it.
 export function newBufferCode(index: number): string {
   return `// iBuffer${index} draws before the image each frame, and any shader can read what it drew:
-// try texture(iBuffer${index}, uv) in the Image tab. Reading itself gives what it drew last frame.
+// try texture(iBuffer${index}, uv) in the [Image] tab. Reading itself gives what it drew last frame.
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   vec2 uv = fragCoord / iResolution.xy;
   vec4 last = texture(iBuffer${index}, uv);

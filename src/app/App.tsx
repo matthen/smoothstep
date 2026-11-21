@@ -26,7 +26,7 @@ import {
   type AnimationDocument, type AspectRatio, type TextureSlot, type Variable,
 } from '../lib/document';
 import * as localStore from '../lib/localStore';
-import { onMenuItem, type MenuPath } from '../lib/menuLinks';
+import { onAppLink, type AppLink } from '../lib/appLinks';
 import { isBrokenShareLink, routeHash, type Route } from '../lib/routes';
 import { loadRoute, ShareError } from '../lib/share';
 import type { LineError } from '../lib/types';
@@ -520,9 +520,22 @@ export default function App() {
     }
   }, [doc, documentId]);
 
-  // A menu path clicked in the code, like "Help → Tutorial", does what that menu item does.
-  const menuItemRef = useLatest((path: MenuPath) => {
-    const actions: Record<MenuPath, () => void> = {
+  // A link clicked in a code comment, like "[Help → Tutorial]" or "[Sliders]", opens that menu item or tab.
+  const appLinkRef = useLatest((link: AppLink) => {
+    const showPanel = (tab: PanelTab) => {
+      if (phone) {
+        chooseMobileTab(tab);
+      } else {
+        setPanelTab(tab);
+        setShowFooter(true);
+      }
+    };
+    const showCode = (tab: ShaderId) => {
+      if (tab === "image" || tab === "shared" || tab < (doc.buffers?.length ?? 0)) {
+        setCodeTab(tab);
+      }
+    };
+    const actions: Record<AppLink, () => void> = {
       "File → New": () => {window.location.hash = "#new";},
       "File → Open": () => setDialog("open"),
       "File → Open from link": () => setDialog("openLink"),
@@ -536,10 +549,19 @@ export default function App() {
       "Help → Documentation": () => window.open(DOCS_URL, "_blank", "noopener"),
       "Help → Source code": () => window.open(REPO_URL, "_blank", "noopener"),
       "Help → Acknowledgements": () => setDialog("acknowledgements"),
+      "Timeline": () => showPanel("animation"),
+      "Sliders": () => showPanel("sliders"),
+      "Textures": () => showPanel("textures"),
+      "Image": () => showCode("image"),
+      "Shared": () => showCode("shared"),
+      "iBuffer0": () => showCode(0),
+      "iBuffer1": () => showCode(1),
+      "iBuffer2": () => showCode(2),
+      "iBuffer3": () => showCode(3),
     };
-    actions[path]();
+    actions[link]();
   });
-  useEffect(() => onMenuItem(path => menuItemRef.current(path)), [menuItemRef]);
+  useEffect(() => onAppLink(link => appLinkRef.current(link)), [appLinkRef]);
 
   // Ctrl/Cmd-S outside the code editor (the editor handles its own).
   useEffect(() => {
