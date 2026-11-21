@@ -30,6 +30,15 @@ test("a link in a comment opens a menu item, a tab or a web address", async ({pa
   await page.locator(".cm-link", {hasText: "Textures"}).click();
   await expect(page.getByRole("tab", {name: "Textures"})).toHaveAttribute("aria-selected", "true");
 
+  // In an example with buffers, a link to another code tab opens it.
+  await page.goto("./#example/5c81f0d3a7e2");
+  await page.locator(".cm-content:visible .cm-link", {hasText: "iBuffer1"}).first().click();
+  await expect(page.getByRole("tab", {name: "iBuffer1"})).toHaveAttribute("aria-selected", "true");
+  await page.locator(".cm-content:visible .cm-link", {hasText: "Image"}).click();
+  await expect(page.getByRole("tab", {name: "Image"})).toHaveAttribute("aria-selected", "true");
+
+  await page.goto("./#new");
+  await setCode(page, "// https://example.com/\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  fragColor = vec4(1.);\n}");
   await context.route("https://example.com/**", route => route.fulfill({body: "example"}));
   const popup = page.waitForEvent("popup");
   await page.locator(".cm-link", {hasText: "https://example.com/"}).click();
