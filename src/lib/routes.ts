@@ -68,8 +68,8 @@ export function routeHash(route: Route): string {
   }
 }
 
-// Turns something pasted into "Open from link" into a route: a smoothstep link, a GitHub gist's
-// page, a file on GitHub, or the address of any animation file.
+// Turns something pasted into "Open from link" into a route: a smoothstep.io link, a GitHub
+// gist's page, a file on GitHub, or the address of any animation file.
 export function routeFromLink(text: string): Route | null {
   const input = text.trim();
   const hashAt = input.indexOf("#");

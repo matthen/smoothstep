@@ -10,7 +10,7 @@ interface OpenLinkProps {
   onOpen(hash: string): void;
 }
 
-// Opens an animation from a smoothstep link, a GitHub gist, or the address of an animation file.
+// Opens an animation from a smoothstep.io link, a GitHub gist, or the address of an animation file.
 export default function OpenLink({show, onHide, onOpen}: OpenLinkProps) {
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +40,7 @@ export default function OpenLink({show, onHide, onOpen}: OpenLinkProps) {
       <form onSubmit={open}>
         <Stack gap="sm">
           <Text size="sm">
-            Paste a smoothstep link, a GitHub gist's address, or the address of an animation file
+            Paste a smoothstep.io link, a GitHub gist's address, or the address of an animation file
             (a <code>.smoothstep.json</code> file) on any website.
           </Text>
           <TextInput

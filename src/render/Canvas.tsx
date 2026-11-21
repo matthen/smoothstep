@@ -96,7 +96,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
       };
     } catch (e) {
       console.error(e);
-      setError("smoothstep needs WebGL 2, which this browser or device doesn't support.");
+      setError("smoothstep.io needs WebGL 2, which this browser or device doesn't support.");
       return undefined;
     }
   }, []);

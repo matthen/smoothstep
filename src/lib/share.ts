@@ -75,7 +75,7 @@ function parseShared(json: unknown): AnimationDocument {
     return {...doc, textures};
   } catch (error) {
     if (error instanceof InvalidDocumentError) {
-      throw new ShareError("That isn't a smoothstep animation file.");
+      throw new ShareError("That isn't a smoothstep.io animation file.");
     }
     throw error;
   }
@@ -84,13 +84,13 @@ function parseShared(json: unknown): AnimationDocument {
 // An animation file's contents: a downloaded `.smoothstep.json` with its images, or a bare document.
 export function readAnimationFile(text: string): LoadedAnimation {
   if (text.length > MAX_FILE_LENGTH) {
-    throw new ShareError("That file is too big to be a smoothstep animation.");
+    throw new ShareError("That file is too big to be a smoothstep.io animation.");
   }
   let json: unknown;
   try {
     json = JSON.parse(text);
   } catch {
-    throw new ShareError("That isn't a smoothstep animation file.");
+    throw new ShareError("That isn't a smoothstep.io animation file.");
   }
   const file = json as Record<string, unknown> | null;
   if (file?.format !== ANIMATION_FORMAT) {
@@ -128,7 +128,7 @@ async function fetchText(url: string, what: string, notFound?: string): Promise<
     throw new ShareError(`Couldn't download ${what}: the site answered with error ${response.status}.`);
   }
   if (Number(response.headers.get("Content-Length")) > MAX_FILE_LENGTH) {
-    throw new ShareError("That file is too big to be a smoothstep animation.");
+    throw new ShareError("That file is too big to be a smoothstep.io animation.");
   }
   return response.text();
 }

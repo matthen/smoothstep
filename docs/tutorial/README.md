@@ -22,7 +22,7 @@ The lessons are in [`src/tutorial/lessons.tsx`](../../src/tutorial/lessons.tsx),
 
 ## Shaders
 
-Animations in smoothstep are fragment shaders, written in the WebGL 2 shader language (GLSL). A
+Animations in smoothstep.io are fragment shaders, written in the WebGL 2 shader language (GLSL). A
 shader works out the colour of every pixel of each frame in parallel, from the pixel's position and
 inputs like `iTime`. Your computer can run it on its graphics card, so animations play fast, and
 you can always export them at any frame rate, even ones that don't play in real time.
@@ -32,8 +32,8 @@ what it does.
 
 ## Shadertoy
 
-smoothstep is partly modelled on [Shadertoy](https://www.shadertoy.com/), with extra features for
+smoothstep.io is partly modelled on [Shadertoy](https://www.shadertoy.com/), with extra features for
 making animations. Much of what's written about Shadertoy applies here, and a lot of Shadertoy code
-runs in smoothstep with little or no change. [TheArtofCode's Shadertoy
+runs in smoothstep.io with little or no change. [TheArtofCode's Shadertoy
 tutorials](https://www.youtube.com/watch?v=u5HAYVHsasc&list=PLGmrMu-IwbguU_nY2egTFmlg691DN7uE5) on
 YouTube are a good place to start.

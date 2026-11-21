@@ -49,7 +49,7 @@ import { hasConfirmedLeaving, openHash, parseHash, useHashLinks } from './routin
 import { useKeyboardInset } from './useKeyboardInset';
 import { usePhone } from './usePhone';
 
-const STORAGE_BLOCKED = "This browser isn't letting smoothstep store data, so animations can't be saved here. " +
+const STORAGE_BLOCKED = "This browser isn't letting smoothstep.io store data, so animations can't be saved here. " +
   "Private browsing can cause this.";
 
 function windowTitle(title: string) {
@@ -253,7 +253,7 @@ export default function App() {
       setTourState("offered");
       tourOfferShowing.current = true;
       notifications.show({
-        id: "tour", autoClose: 12000, title: "New to smoothstep?",
+        id: "tour", autoClose: 12000, title: "New to smoothstep.io?",
         onClose: () => {tourOfferShowing.current = false;},
         message: (
           <Group gap="xs" mt={4}>
@@ -685,7 +685,7 @@ export default function App() {
       data-mobile-tab={mobileTab} data-tutorial={tutorialOpen || undefined}
     >
       <header className="appHeader">
-        <a className="brand" href="./" aria-label="smoothstep home">
+        <a className="brand" href="./" aria-label="smoothstep.io home">
           <img src={asset("images/logo.svg")} width="24" height="24" alt="" />
           <span className="brandName">smoothstep<i>.io</i></span>
         </a>

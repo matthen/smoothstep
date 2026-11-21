@@ -150,9 +150,9 @@ export const LESSONS: Lesson[] = [
         title: "A gradient",
         body: <>
           <p>
-            A shader is a small program that works out the colour of every pixel on the canvas. In smoothstep
-            it's a function called <code>mainImage</code>. Your computer runs it for every pixel at once, many
-            times a second.
+            A shader is a small program that works out the colour of every pixel on the canvas. In
+            smoothstep.io it's a function called <code>mainImage</code>. Your computer runs it for every pixel at
+            once, many times a second.
           </p>
           <p>
             <code>fragCoord</code> is where the pixel is, counted in pixels from the bottom-left corner.
@@ -1041,7 +1041,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         title: "Keep learning",
         body: <>
           <p>
-            The examples are a good next step: open one, read its code and change it. smoothstep works much
+            The examples are a good next step: open one, read its code and change it. smoothstep.io works much
             like <Link href="https://www.shadertoy.com/">Shadertoy</Link>, so a lot of what's written for
             Shadertoy applies here too.
           </p>

@@ -15,7 +15,7 @@ export interface TourOptions {
 
 function welcome(): DriveStep {
   return {popover: {
-    title: "Welcome to smoothstep",
+    title: "Welcome to smoothstep.io",
     description: "You write a shader, animate its inputs on a timeline, and export the result as a video. " +
       "This tour shows you around in under a minute.",
   }};

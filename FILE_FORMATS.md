@@ -1,6 +1,6 @@
-# smoothstep file formats
+# smoothstep.io file formats
 
-smoothstep saves one animation as a JSON file, or all of them as a zip, and opens both
+smoothstep.io saves one animation as a JSON file, or all of them as a zip, and opens both
 (`src/archive.js`). The old hosted smoothstep.io's "Download my data" made the same zip, so
 those downloads open here too.
 

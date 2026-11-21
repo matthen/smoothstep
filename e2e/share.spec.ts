@@ -154,7 +154,7 @@ test("the embedded player plays a shared animation", async ({page, context}) => 
   await page.goto("./embed.html#url/" + FILE_URL);
   await expect(page).toHaveTitle("Magenta file - smoothstep.io");
   expect(near(await centerOf(page, "canvas"), MAGENTA)).toBe(true);
-  await expect(page.getByRole("link", {name: "Open in smoothstep"})).toHaveAttribute(
+  await expect(page.getByRole("link", {name: "Open in smoothstep.io"})).toHaveAttribute(
     "href", /\/sub\/#url\/https:\/\/example\.com\//);
   await page.locator("canvas").click();
   await expect(page.getByText("Paused")).toBeVisible();
@@ -162,7 +162,7 @@ test("the embedded player plays a shared animation", async ({page, context}) => 
   await page.goto("about:blank");
   await page.goto("./embed.html#example/0000");
   // vite preview answers a missing file with index.html, where a static host would say 404.
-  await expect(page.getByText(/There's no example with that link|That isn't a smoothstep animation file/)).toBeVisible();
+  await expect(page.getByText(/There's no example with that link|That isn't a smoothstep.io animation file/)).toBeVisible();
   expect(errors).toEqual([]);
 });
 

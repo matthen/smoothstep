@@ -23,7 +23,7 @@ async function main() {
     const textureURLs = doc.textures.map(t => t.isUserUploaded ? urls.get(t.url) ?? textureURL(t) : textureURL(t));
     startPlayer(container, {
       doc, textureURLs,
-      link: {href: appLink(window.location.hash), text: "Open in smoothstep"},
+      link: {href: appLink(window.location.hash), text: "Open in smoothstep.io"},
     });
   } catch (error) {
     if (error instanceof ShareError) {

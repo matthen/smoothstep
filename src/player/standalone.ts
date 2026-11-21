@@ -16,5 +16,5 @@ const data = JSON.parse(document.getElementById("animation")!.textContent!) as P
 startPlayer(document.getElementById("player")!, {
   doc: parseDocument(data.document),
   textureURLs: data.textures,
-  link: data.link ? {href: data.link, text: "Open in smoothstep"} : undefined,
+  link: data.link ? {href: data.link, text: "Open in smoothstep.io"} : undefined,
 });

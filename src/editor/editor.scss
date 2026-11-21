@@ -155,7 +155,7 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
     border-radius: 2px;
   }
 
-  // Syntax colours: CodeMirror 5's Dracula theme with smoothstep's overrides.
+  // Syntax colours: CodeMirror 5's Dracula theme with smoothstep.io's overrides.
   .tok-keyword { color: $dt-cyan; }
   .tok-type { color: $dt-pink; }
   .tok-builtin { color: $dt-green; }

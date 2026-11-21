@@ -7,7 +7,7 @@ import { Renderer } from '../render/Renderer';
 export interface PlayerOptions {
   doc: AnimationDocument;
   textureURLs: string[];
-  // Shown in the corner, such as "Open in smoothstep".
+  // Shown in the corner, such as "Open in smoothstep.io".
   link?: {href: string; text: string};
 }
 

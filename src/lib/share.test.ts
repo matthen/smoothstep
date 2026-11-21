@@ -103,7 +103,7 @@ describe("embedCode", () => {
 });
 
 describe("routeFromLink", () => {
-  it("understands smoothstep links, gists, GitHub files and other addresses", () => {
+  it("understands smoothstep.io links, gists, GitHub files and other addresses", () => {
     expect(routeFromLink(" https://smoothstep.io/app/#example/534226b1d5ed ")).toEqual(
       {kind: "example", id: "534226b1d5ed"});
     expect(routeFromLink("https://gist.github.com/someone/aa11bb22")).toEqual({kind: "gist", id: "aa11bb22"});
@@ -147,7 +147,7 @@ describe("readAnimationFile", () => {
   });
 
   it("says when a file isn't an animation", () => {
-    expect(() => readAnimationFile("<html>")).toThrow("That isn't a smoothstep animation file.");
+    expect(() => readAnimationFile("<html>")).toThrow("That isn't a smoothstep.io animation file.");
     expect(() => readAnimationFile('{"title": 1}')).toThrow(ShareError);
   });
 });

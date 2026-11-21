@@ -2,7 +2,7 @@
 
 This is also in the app, under Help → Shader inputs.
 
-Every smoothstep animation must define a `mainImage` function with the following signature:
+Every smoothstep.io animation must define a `mainImage` function with the following signature:
 
 ```glsl
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -16,7 +16,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 right. Set `fragColor` to its colour, with red, green and blue from 0 to 1. The image's alpha is
 always set to 1.
 
-You write GLSL ES 3.00, the WebGL2 shader language. smoothstep adds `#version 300 es`,
+You write GLSL ES 3.00, the WebGL2 shader language. smoothstep.io adds `#version 300 es`,
 `precision highp float;` and the input uniforms below before your code, so you don't write them
 yourself.
 

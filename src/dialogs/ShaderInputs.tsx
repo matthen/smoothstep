@@ -100,8 +100,8 @@ export default function ShaderInputs({show, onHide}: ShaderInputsProps) {
 
       <Title order={2} size="h5" mt="lg" mb={4}>Coming from Shadertoy</Title>
       <Text size="sm">
-        Shaders are GLSL ES 3.00 (WebGL 2). smoothstep adds the version, precision and these inputs before your
-        code. Shadertoy's <code>iChannel0</code>, <code>iMouse</code> and <code>iDate</code> don't exist here:
+        Shaders are GLSL ES 3.00 (WebGL 2). smoothstep.io adds the version, precision and these inputs before
+        your code. Shadertoy's <code>iChannel0</code>, <code>iMouse</code> and <code>iDate</code> don't exist here:
         use <code>iTexture0</code> for <code>iChannel0</code>, and <code>iBuffer0</code> to <code>iBuffer3</code> for
         buffers.
       </Text>

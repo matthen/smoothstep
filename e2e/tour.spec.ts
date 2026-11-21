@@ -22,7 +22,7 @@ test("the welcome dialog offers the tour, which steps through the screen", async
   await page.getByRole("button", {name: "Take the tour"}).click();
   const titles = await stepThrough(page);
   expect(titles).toEqual([
-    "Welcome to smoothstep", "Your shader", "The canvas", "Play and scrub", "The timeline", "Sliders", "Textures",
+    "Welcome to smoothstep.io", "Your shader", "The canvas", "Play and scrub", "The timeline", "Sliders", "Textures",
     "Save, share, export and help", "Over to you",
   ]);
   await expect(page.getByRole("tab", {name: "Timeline"})).toHaveAttribute("aria-selected", "true");
@@ -34,17 +34,17 @@ test("the welcome dialog offers the tour, which steps through the screen", async
   await page.getByRole("button", {name: "Continue"}).click();
   await page.getByRole("button", {name: "Help"}).click();
   await page.getByRole("menuitem", {name: "Take the tour"}).click();
-  await expect(page.locator(".driver-popover-title")).toHaveText("Welcome to smoothstep");
+  await expect(page.locator(".driver-popover-title")).toHaveText("Welcome to smoothstep.io");
   expect(errors).toEqual([]);
 });
 
 test("a first visit by a link offers the tour once", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./#example/534226b1d5ed");
-  const offer = page.getByText("New to smoothstep?");
+  const offer = page.getByText("New to smoothstep.io?");
   await expect(offer).toBeVisible();
   await page.getByRole("button", {name: "Take the tour"}).click();
-  await expect(page.locator(".driver-popover-title")).toHaveText("Welcome to smoothstep");
+  await expect(page.locator(".driver-popover-title")).toHaveText("Welcome to smoothstep.io");
   await page.keyboard.press("Escape");
 
   await page.goto("about:blank");
