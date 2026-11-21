@@ -43,7 +43,7 @@ interface Selection {
 type Gesture =
   | {kind: "idle"}
   // A new transition: dragged out with the button held, or clicked twice (`released` after the first).
-  | {kind: "creating"; row: number; startDSecs: number; endDSecs: number; released: boolean}
+  | {kind: "creating"; row: number; startDSecs: number; endDSecs: number; released: boolean; byTouch: boolean}
   | {kind: "dragging"; mode: GrabMode; row: number; index: number; original: Transition[]; startX: number;
      moved: Transition}
   | {kind: "scrubbing"}
@@ -266,7 +266,8 @@ export default function Timeline(props: TimelineProps) {
         return;
       }
       case "idle":
-        if (!selected) {
+        // A finger has no hover, and its moves are scrolls.
+        if (!selected && event.pointerType !== "touch") {
           updateHover(x, y);
         }
     }
@@ -308,8 +309,11 @@ export default function Timeline(props: TimelineProps) {
     }
     const startDSecs = hoverStartDSecs(x, pps);
     if (isInsertable(variables[row]!.transitions, startDSecs, startDSecs + 1, maxDSecs)) {
-      setHover({row, startDSecs});
-      setGesture({kind: "creating", row, startDSecs, endDSecs: startDSecs + 1, released: false});
+      const byTouch = event.pointerType === "touch";
+      if (!byTouch) {
+        setHover({row, startDSecs});
+      }
+      setGesture({kind: "creating", row, startDSecs, endDSecs: startDSecs + 1, released: false, byTouch});
       capture(event);
     }
   }
@@ -518,7 +522,8 @@ export default function Timeline(props: TimelineProps) {
     };
   }, []);
 
-  const creating = gesture.kind === "creating" ? gesture : null;
+  // A touch shows its transition only once it lifts as a tap, so a swipe to scroll doesn't flash one.
+  const creating = gesture.kind === "creating" && !(gesture.byTouch && !gesture.released) ? gesture : null;
   const pending = creating ? {row: creating.row, startDSecs: creating.startDSecs, endDSecs: creating.endDSecs as number | null} :
     hover ? {...hover, endDSecs: null} : null;
   const heading = selected && selection ? {row: selection.row, ...selected} : pending;

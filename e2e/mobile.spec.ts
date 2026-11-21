@@ -78,6 +78,9 @@ test("on a phone, the panes switch and a transition can be added with two taps",
   const label = (await page.locator(".rowLabel").first().boundingBox())!;
   const start = area.x + 200;
   await cdp.send("Input.dispatchTouchEvent", {type: "touchStart", touchPoints: [{x: start, y}]});
+  // Until the finger lifts, it might be a swipe, so no new transition shows yet.
+  await page.waitForTimeout(100);
+  await expect(page.locator(".timeArea .transition.hover")).toHaveCount(0);
   for (let i = 1; i <= 10; i++) {
     await cdp.send("Input.dispatchTouchEvent", {type: "touchMove", touchPoints: [{x: start - 16 * i, y}]});
   }
