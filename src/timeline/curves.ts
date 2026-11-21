@@ -16,7 +16,10 @@ export interface RowPaths {
 // The y in a row for each value, with the row's lowest value at the bottom of its band and the
 // highest at the top. A row whose values are all the same is drawn across the middle.
 export function valueToY(transitions: readonly Transition[]): (value: number) => number {
-  const values = transitions.flatMap(t => [t.startValue, t.endValue]).filter(Number.isFinite);
+  // An overshoot goes past its end value, so its peak counts too.
+  const values = transitions.flatMap(t => t.type === "overshoot" ?
+    [t.startValue, t.endValue, transitionValue(t, (t.startDSecs + 0.58 * (t.endDSecs - t.startDSecs)) / 10)] :
+    [t.startValue, t.endValue]).filter(Number.isFinite);
   const lo = Math.min(...values);
   const hi = Math.max(...values);
   const top = ROW_BAND_TOP + INSET;

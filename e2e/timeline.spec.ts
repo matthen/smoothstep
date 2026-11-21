@@ -121,6 +121,14 @@ test("transitions are dragged out, drawn with their curve, moved, resized and de
   await expect(page.locator(".labels .rowHead").nth(1)).toHaveClass(/animated/);
   await page.locator("#typeInput").selectOption("step");
   await expect(curve).toHaveAttribute("d", /H.*V.*H/);
+  // The eased types draw curves of their own.
+  const shapes = new Set<string>();
+  for (const label of ["ease in", "ease out", "overshoot"]) {
+    await page.locator("#typeInput").selectOption({label});
+    await expect(curve).not.toHaveAttribute("d", /H.*V.*H/);
+    shapes.add((await curve.getAttribute("d"))!);
+  }
+  expect(shapes.size).toBe(3);
   await page.locator("#typeInput").selectOption("smoothstep");
 
   // Drag its middle to move it, and its right edge to resize it.

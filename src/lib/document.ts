@@ -20,7 +20,7 @@ export function isAspectRatio(value: unknown): value is AspectRatio {
     (w as number) >= 1 && (h as number) >= 1 && (w as number) <= MAX_ASPECT_TERM && (h as number) <= MAX_ASPECT_TERM &&
     (w as number) / (h as number) <= 10 && (h as number) / (w as number) <= 10;
 }
-export const TRANSITION_TYPES = ["step", "linear", "smoothstep"] as const;
+export const TRANSITION_TYPES = ["step", "linear", "smoothstep", "easeIn", "easeOut", "overshoot"] as const;
 
 export type AspectRatio = [number, number];
 export type TransitionType = (typeof TRANSITION_TYPES)[number];
@@ -257,15 +257,30 @@ export function transitionValue(transition: Transition, time: number): number {
   const t = clamp01((timeDSecs - transition.startDSecs) / (transition.endDSecs - transition.startDSecs));
   const a = transition.startValue;
   const b = transition.endValue;
-  switch (transition.type) {
-    case "smoothstep": {
-      const s = t * t * (3 - 2 * t);
-      return a * (1 - s) + b * s;
+  if (transition.type === "step") {
+    return t > 0.5 ? b : a;
+  }
+  const s = easing(transition.type, t);
+  return a * (1 - s) + b * s;
+}
+
+// How far through a transition the value is, 0 to 1 (overshoot goes a little past 1), at fraction t
+// of its time.
+function easing(type: TransitionType, t: number): number {
+  switch (type) {
+    case "smoothstep":
+      return t * t * (3 - 2 * t);
+    case "easeIn":
+      return t * t * t;
+    case "easeOut":
+      return 1 - (1 - t) ** 3;
+    case "overshoot": {
+      // The usual "back" ease out, which overshoots by about 10%.
+      const c = 1.70158;
+      return 1 + (c + 1) * (t - 1) ** 3 + c * (t - 1) ** 2;
     }
-    case "step":
-      return t > 0.5 ? b : a;
     default:
-      return (1 - t) * a + t * b;
+      return t;
   }
 }
 

@@ -13,6 +13,12 @@ describe("valueToY", () => {
     expect(y(0.5)).toBe(15);
   });
 
+  it("makes room for an overshoot past its end value", () => {
+    const y = valueToY([{...rise, type: "overshoot"}]);
+    expect(y(1)).toBeGreaterThan(7);
+    expect(y(1.1)).toBeCloseTo(7, 1);
+  });
+
   it("draws a row whose values are all the same across the middle", () => {
     const y = valueToY([{...rise, endValue: 0}]);
     expect(y(0)).toBe(15);

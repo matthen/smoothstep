@@ -126,6 +126,18 @@ describe("variableValue", () => {
   ])("at %s seconds is %s", (time, expected) => {
     expect(variableValue(transitions, time)).toBeCloseTo(expected, 10);
   });
+
+  it("eases in, eases out, and overshoots then settles", () => {
+    const at = (type: Transition["type"], time: number) =>
+      variableValue([{startDSecs: 0, endDSecs: 10, startValue: 0, endValue: 1, type}], time);
+    expect(at("easeIn", 0.5)).toBeCloseTo(0.125, 10);
+    expect(at("easeOut", 0.5)).toBeCloseTo(0.875, 10);
+    expect(at("overshoot", 0.58)).toBeCloseTo(1.1, 3);
+    for (const type of ["easeIn", "easeOut", "overshoot"] as const) {
+      expect(at(type, 0)).toBeCloseTo(0, 10);
+      expect(at(type, 1)).toBeCloseTo(1, 10);
+    }
+  });
 });
 
 describe("canonicalJSON", () => {

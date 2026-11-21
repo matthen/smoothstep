@@ -512,7 +512,11 @@ float radius = 0.15 + 0.5 * grow;`}</Lines>
             <li><b>smoothstep</b> starts slowly, speeds up, then slows down at the end, like the function.</li>
             <li><b>linear</b> moves at the same speed the whole way.</li>
             <li><b>step</b> stays at the start value, then jumps to the end value halfway through.</li>
+            <li><b>ease in</b> starts slowly and speeds up, like something falling.</li>
+            <li><b>ease out</b> starts fast and slows to a stop, like something thrown that comes to rest.</li>
+            <li><b>overshoot</b> goes a little past the end value, then settles back, like a spring.</li>
           </ul>
+          <p>Each transition's block on the timeline draws its curve, so you can see the shape.</p>
           <p>
             Try another type. Or add a second transition after the first, for example back to 0. Between
             transitions, the value stays where the last one ended.
