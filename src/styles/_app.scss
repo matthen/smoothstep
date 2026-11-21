@@ -203,6 +203,11 @@ a {
           font-size: 10px;
           line-height: 1.2;
         }
+        // A menu's label ends with a small ▾, as on bigger screens.
+        .menuChevron {
+          margin-left: 1px;
+          vertical-align: -1px;
+        }
       }
     }
   }

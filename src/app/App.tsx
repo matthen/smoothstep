@@ -716,7 +716,7 @@ export default function App() {
                 variant="subtle" color="gray" leftSection={phone ? <TbFile /> : undefined}
                 rightSection={phone ? undefined : <TbChevronDown />}
               >
-                File
+                File{phone && <TbChevronDown className="menuChevron" aria-hidden />}
               </Button>
             </Menu.Target>
             <Menu.Dropdown>
@@ -741,7 +741,7 @@ export default function App() {
                 variant="subtle" color="gray" leftSection={phone ? <TbHelp /> : undefined}
                 rightSection={phone ? undefined : <TbChevronDown />}
               >
-                Help
+                Help{phone && <TbChevronDown className="menuChevron" aria-hidden />}
               </Button>
             </Menu.Target>
             <Menu.Dropdown>
