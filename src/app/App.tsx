@@ -26,6 +26,7 @@ import {
   type AnimationDocument, type AspectRatio, type TextureSlot, type Variable,
 } from '../lib/document';
 import * as localStore from '../lib/localStore';
+import { onMenuItem, type MenuPath } from '../lib/menuLinks';
 import { isBrokenShareLink, routeHash, type Route } from '../lib/routes';
 import { loadRoute, ShareError } from '../lib/share';
 import type { LineError } from '../lib/types';
@@ -518,6 +519,27 @@ export default function App() {
       setAlert("Error downloading animation.");
     }
   }, [doc, documentId]);
+
+  // A menu path clicked in the code, like "Help → Tutorial", does what that menu item does.
+  const menuItemRef = useLatest((path: MenuPath) => {
+    const actions: Record<MenuPath, () => void> = {
+      "File → New": () => {window.location.hash = "#new";},
+      "File → Open": () => setDialog("open"),
+      "File → Open from link": () => setDialog("openLink"),
+      "File → Save": () => void save(false),
+      "File → Download animation file": () => void download(),
+      "Help → Welcome": () => setDialog("splash"),
+      "Help → Take the tour": () => void takeTour(),
+      "Help → Tutorial": () => {window.location.hash = TUTORIAL_HREF;},
+      "Help → Shader inputs": () => openHelp("inputs"),
+      "Help → Keyboard shortcuts": () => openHelp("shortcuts"),
+      "Help → Documentation": () => window.open(DOCS_URL, "_blank", "noopener"),
+      "Help → Source code": () => window.open(REPO_URL, "_blank", "noopener"),
+      "Help → Acknowledgements": () => setDialog("acknowledgements"),
+    };
+    actions[path]();
+  });
+  useEffect(() => onMenuItem(path => menuItemRef.current(path)), [menuItemRef]);
 
   // Ctrl/Cmd-S outside the code editor (the editor handles its own).
   useEffect(() => {

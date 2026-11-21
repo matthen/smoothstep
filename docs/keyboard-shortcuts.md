@@ -43,3 +43,6 @@ Click a number in the code for a slider that you can drag sideways to change it,
 zoom in or out. A `vec2` value brings up a 2D picker. A `vec3` brings up a colour picker when its
 values are between 0 and 1, and a 3D direction picker otherwise. Click a built-in function, like `smoothstep`, or an input, like
 `iTime`, to see its definition. The editor also suggests completions as you type.
+
+Web addresses in the code are underlined, and clicking one opens it in a new tab. So is a menu item
+named in a comment, like `Help → Tutorial`, and clicking it does what that menu item does.
