@@ -27,8 +27,8 @@ If you change an example, save it to keep it as one of your own animations.
 * [Drawing a circle](https://smoothstep.io/app/#example/6c214a0d19e4)
 * [Fractals](https://smoothstep.io/app/#example/70bef4ffb215)
 * [Using textures](https://smoothstep.io/app/#example/b2482911f435)
-* [Text from a font](https://smoothstep.io/app/#example/4605c2f31ecc): bouncing letters, each cut out
-  of a font texture by its character code
+* [Text from a font](https://smoothstep.io/app/#example/4605c2f31ecc): bouncing letters and a timer that
+  counts the seconds, each character cut out of a font texture by its code
 * [Using the animation timeline](https://smoothstep.io/app/#example/adb1df38284c)
 * [3D ray marching](https://smoothstep.io/app/#example/f9ad362373e4)
 * [Stateful animations - iPrevFrame](https://smoothstep.io/app/#example/26d46785c1f6)
