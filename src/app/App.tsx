@@ -4,7 +4,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { flushSync } from 'react-dom';
 import {
   TbBook, TbBrandGithub, TbChevronDown, TbCopy, TbDeviceFloppy, TbDownload, TbFile, TbFolderOpen, TbHammer,
-  TbCircleCheckFilled, TbCode, TbHeart, TbHelp, TbHome, TbKeyboard, TbLink, TbRoute, TbSchool, TbShare, TbVideo,
+  TbCircleCheckFilled, TbCode, TbHeart, TbHelp, TbHome, TbKeyboard, TbLink, TbMaximize, TbMinimize, TbRoute, TbSchool, TbShare, TbVideo,
 } from 'react-icons/tb';
 
 import Acknowledgements from '../dialogs/Acknowledgements';
@@ -119,6 +119,39 @@ export default function App() {
   const [layout, setLayout] = useState<CanvasLayout>({width: 0, height: 0, top: 0});
   const [showFooter, setShowFooter] = useState(true);
   const [wideCanvas, setWideCanvas] = useState(false);
+  // The canvas and its play bar filling the screen. The browser's own full screen hides its bars
+  // too where it's allowed; iPhones only allow it for videos, so there the page alone fills it.
+  const [fullView, setFullView] = useState(false);
+  const setFull = (on: boolean) => {
+    setFullView(on);
+    if (on) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    } else if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => {});
+    }
+  };
+  useEffect(() => {
+    if (!fullView) {
+      return;
+    }
+    // Esc leaves the browser's full screen by itself; this covers the page-only one.
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setFull(false);
+      }
+    };
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        setFullView(false);
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+    };
+  }, [fullView]);
   const phone = usePhone();
   const touch = useTouch();
   useKeyboardInset();
@@ -685,6 +718,7 @@ export default function App() {
   return (
     <div
       className="app" data-footer={showFooter ? "open" : "closed"} data-wide={wideCanvas || undefined}
+      data-full-view={fullView || undefined}
       data-mobile-tab={mobileTab} data-tutorial={tutorialOpen || undefined}
     >
       <header className="appHeader">
@@ -820,11 +854,20 @@ export default function App() {
             onDurationChange={onDurationChange}
             onScrubStart={() => setScrubbing(true)} onScrubEnd={() => setScrubbing(false)}
             width={layout.width || undefined} top={layout.top}
-            extra={
+            extra={<>
               <AspectRatioPicker
                 value={doc.aspectRatio} onChange={(aspectRatio: AspectRatio) => updateDoc({aspectRatio})}
               />
-            }
+              <Tooltip label={fullView ? "Exit full screen (Esc)" : "Full screen"} position="bottom">
+                <ActionIcon
+                  variant="default" size="lg" className="fullViewButton"
+                  aria-label={fullView ? "Exit full screen" : "Full screen"}
+                  onMouseDown={event => event.preventDefault()} onClick={() => setFull(!fullView)}
+                >
+                  {fullView ? <TbMinimize /> : <TbMaximize />}
+                </ActionIcon>
+              </Tooltip>
+            </>}
           />
         </section>
       </main>

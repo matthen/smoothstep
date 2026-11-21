@@ -297,6 +297,26 @@ a {
       height: min(max(34dvh, 200px), 100vw);
     }
   }
+
+  // Full screen: the canvas and its play bar over everything else, which dialogs still open above.
+  .app[data-full-view] & {
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    height: 100dvh !important;
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    background: $dt-gray-darker;
+
+    // Like a video: play, scrub and leave, without the editing controls.
+    #toggleWideCanvas, .playerButtons .mantine-NumberInput-root, .playerButtons .aspectRatioPicker {
+      display: none;
+    }
+  }
+}
+
+div.playerButtons .fullViewButton {
+  flex: none;
 }
 
 .mobileTabs {

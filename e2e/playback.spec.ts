@@ -19,3 +19,22 @@ test("rebuilding restarts iFrame, so animations that set up on the first frames 
   await expect.poll(() => frameIndex(page)).toBeLessThan(30);
   expect(errors).toEqual([]);
 });
+
+test("full screen fills the window with the canvas and the play bar, until Esc", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.addInitScript(() => localStorage.setItem("smoothstep.tour", "taken"));
+  await page.goto("./#new");
+  const canvas = page.locator("#canvas");
+  await expect(canvas).toBeVisible();
+  const small = (await canvas.boundingBox())!;
+  await page.getByRole("button", {name: "Full screen"}).click();
+  await expect.poll(async () => (await canvas.boundingBox())!.width).toBeGreaterThan(small.width * 1.3);
+  const pane = (await page.locator(".previewPane").boundingBox())!;
+  expect([pane.x, pane.y, pane.width, pane.height]).toEqual([0, 0, page.viewportSize()!.width, page.viewportSize()!.height]);
+  await expect(page.getByRole("button", {name: "Play"})).toBeInViewport();
+  await expect(page.getByLabel("Aspect ratio")).toBeHidden();
+  await page.keyboard.press("Escape");
+  await expect.poll(async () => (await canvas.boundingBox())!.width).toBeCloseTo(small.width, 0);
+  await expect(page.getByRole("button", {name: "Full screen"})).toBeVisible();
+  expect(errors).toEqual([]);
+});

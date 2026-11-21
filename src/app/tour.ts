@@ -59,8 +59,8 @@ function desktopSteps({showPane}: TourOptions): DriveStep[] {
       element: ".playerButtons",
       popover: {
         title: "Play and scrub",
-        description: "<kbd>Space</kbd> plays and pauses. On the right are the length in seconds and the " +
-          "canvas's shape. <code>iTime</code> in your code is the time in seconds.",
+        description: "<kbd>Space</kbd> plays and pauses. On the right are the length in seconds, the " +
+          "canvas's shape, and full screen. <code>iTime</code> in your code is the time in seconds.",
         side: "bottom",
       },
     },
@@ -119,8 +119,8 @@ function phoneSteps({showPane}: TourOptions): DriveStep[] {
       element: ".previewPane",
       popover: {
         title: "The canvas",
-        description: "Your shader runs here, live. The player below plays it, scrubs through time, and sets " +
-          "the length and shape. <code>iTime</code> in your code is the time in seconds.",
+        description: "Your shader runs here, live. The player below plays it, scrubs through time, sets " +
+          "the length and shape, and shows it full screen. <code>iTime</code> in your code is the time in seconds.",
         side: "bottom",
       },
     },
