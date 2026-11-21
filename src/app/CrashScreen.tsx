@@ -3,7 +3,7 @@ import { Button, Group } from '@mantine/core';
 
 import * as archive from '../lib/archive';
 import * as localStore from '../lib/localStore';
-import { crashDocument } from './crashState';
+import { crashDocument, hasMissedUpdate } from './crashState';
 
 function CrashScreen({error}: {error: Error}) {
   const [status, setStatus] = useState<string | null>(null);
@@ -31,7 +31,11 @@ function CrashScreen({error}: {error: Error}) {
     <div className="crashScreen">
       <h1>Something went wrong</h1>
       <p>
-        smoothstep hit an error it couldn't recover from. Your saved animations are still in this browser.
+        {hasMissedUpdate()
+          ? "Part of smoothstep couldn't load. This usually means a new version came out while this page " +
+            "was open, or you're offline. Reload to get the new version. "
+          : "smoothstep hit an error it couldn't recover from. "}
+        Your saved animations are still in this browser.
         Before you reload, you can download the animation you were editing, including any unsaved changes.
       </p>
       <Group gap="xs" my="md">
