@@ -75,6 +75,6 @@ test("the timeline shows three rows, or as many as the code uses, and ⊕ adds t
 
   await setCode(page, GREY);
   await expect(rows).toHaveCount(6);
-  await expect(rows.nth(5)).toContainText("unused");
+  await expect(page.locator(".rowLabel").nth(5)).toHaveText("unused");
   expect(errors).toEqual([]);
 });

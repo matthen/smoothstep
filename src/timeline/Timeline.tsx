@@ -1,14 +1,15 @@
 import {useEffect, useEffectEvent, useLayoutEffect, useRef, useState} from "react";
-import type {MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent} from "react";
+import type {PointerEvent as ReactPointerEvent} from "react";
 import {ActionIcon, NativeSelect, TextInput, Tooltip} from "@mantine/core";
 import {useMediaQuery} from "@mantine/hooks";
-import {TbPlus, TbTrash} from "react-icons/tb";
+import {TbArrowAutofitWidth, TbPlus, TbTrash, TbZoomIn, TbZoomOut} from "react-icons/tb";
 import {variableValue} from "../lib/document";
 import type {Transition, TransitionType, Variable} from "../lib/document";
+import {rowPaths} from "./curves";
 import {
-  clampTime, dragDeltaDSecs, draggedDuration, durationDSecs, grabMode, headerTicks, hoverEndDSecs,
-  hoverStartDSecs, maxTimeFor, PX_PER_DSEC, ROW_HEIGHT, roundDuration, rowAt, timeAreaWidth, timeToX,
-  xToTime,
+  clampTime, clampZoom, DEFAULT_PX_PER_SECOND, dragDeltaDSecs, draggedDuration, durationDSecs, fitPxPerSecond,
+  grabMode, hoverEndDSecs, hoverStartDSecs, maxTimeFor, ROW_HEIGHT, roundDuration, rowAt, rulerTicks,
+  timeAreaWidth, timeToX, xToTime,
 } from "./geometry";
 import type {GrabMode} from "./geometry";
 import {keyAction, shortcutsAllowed} from "./keys";
@@ -46,7 +47,8 @@ type Gesture =
   | {kind: "dragging"; mode: GrabMode; row: number; index: number; original: Transition[]; startX: number;
      moved: Transition}
   | {kind: "scrubbing"}
-  | {kind: "duration"; startX: number; startDuration: number; latest: number};
+  // The scale stays put while the end is dragged, though the timeline's length changes.
+  | {kind: "duration"; startX: number; startDuration: number; latest: number; pxPerSecond: number};
 
 // Text typed into the value inputs, kept until it's valid and the input loses focus.
 interface Drafts {
@@ -54,36 +56,41 @@ interface Drafts {
   end?: string;
 }
 
+// The width of the rows' visible part, and of the row labels to its left.
+interface View {
+  width: number;
+  labels: number;
+}
+
+// A time to keep at the same place on screen, `viewX` pixels from the rows' left edge, after a zoom.
+interface Anchor {
+  time: number;
+  viewX: number;
+}
+
+interface Pinch {
+  distance: number;
+  zoom: number;
+  time: number;
+}
+
 const TYPE_OPTIONS: readonly TransitionType[] = ["smoothstep", "step", "linear"];
+const ZOOM_STEP = 2;
 
 export default function Timeline(props: TimelineProps) {
   const {variables, variableValues, onVariablesChange, duration, currentTime, onSeek, onDurationChange} = props;
   const rowCount = Math.min(props.rowCount, variables.length);
   const name = (row: number) => props.names?.[row] ?? null;
   const rootRef = useRef<HTMLDivElement>(null);
-  const timeAreaRef = useRef<HTMLDivElement>(null);
-  const rowsRef = useRef<HTMLDivElement>(null);
-  // How far the grid is scrolled sideways, so the row labels can stay at its left edge.
-  const [scrollLeft, setScrollLeft] = useState(0);
-  // Each row label's width, so the variable's value can sit clear of it near the start.
-  const [labelWidths, setLabelWidths] = useState<number[]>([]);
-  const namesKey = props.names?.join(",") ?? "";
-  useLayoutEffect(() => {
-    const rows = rowsRef.current;
-    if (!rows) {
-      return;
-    }
-    // Measured again when the panel is shown, as a hidden one measures zero.
-    const measure = () => {
-      const widths = Array.from(rows.querySelectorAll<HTMLElement>(".rowLabel"), label => label.offsetWidth);
-      setLabelWidths(old => old.join() === widths.join() ? old : widths);
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(rows);
-    return () => observer.disconnect();
-  }, [namesKey]);
   const gridRef = useRef<HTMLDivElement>(null);
+  const labelsRef = useRef<HTMLDivElement>(null);
+  const timeAreaRef = useRef<HTMLDivElement>(null);
+  // How far the grid is scrolled sideways, so the ruler only draws the ticks in sight.
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const [view, setView] = useState<View | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const anchorRef = useRef<Anchor | null>(null);
+  const pinchRef = useRef<Pinch | null>(null);
   const lastTimeRef = useRef(currentTime);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [hover, setHover] = useState<Selection | null>(null);
@@ -95,9 +102,49 @@ export default function Timeline(props: TimelineProps) {
 
   const maxDSecs = durationDSecs(duration);
   const maxTime = maxTimeFor(variables, duration);
-  const width = timeAreaWidth(maxTime);
-  const ticks = headerTicks(maxTime);
+  const fitScale = view ? fitPxPerSecond(view.width, maxTime) : DEFAULT_PX_PER_SECOND;
+  const zoomLevel = clampZoom(zoom, fitScale);
+  const pps = gesture.kind === "duration" ? gesture.pxPerSecond : fitScale * zoomLevel;
+  const pxPerDSec = pps / 10;
+  const x = (seconds: number) => timeToX(seconds, pps);
+  const width = timeAreaWidth(maxTime, pps);
+  const viewWidth = view?.width ?? width;
+  const ruler = rulerTicks(pps, Math.max(0, xToTime(scrollLeft, pps) - 1),
+    Math.min(maxTime, xToTime(scrollLeft + viewWidth, pps) + 1), maxTime);
   const currentDSecs = currentTime * 10;
+
+  // Measured again when the panel is shown, as a hidden one measures zero.
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+    const labels = labelsRef.current;
+    if (!grid || !labels) {
+      return;
+    }
+    const measure = () => {
+      const labelWidth = labels.getBoundingClientRect().width;
+      // A pixel spare, so rounding never adds a scrollbar.
+      const width = Math.floor(grid.clientWidth - labelWidth) - 1;
+      if (width > 0) {
+        setView(old => old?.width === width && old.labels === labelWidth ? old : {width, labels: labelWidth});
+      }
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(grid);
+    observer.observe(labels);
+    return () => observer.disconnect();
+  }, []);
+
+  // After a zoom, scroll so the anchored time stays where it was.
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+    const anchor = anchorRef.current;
+    if (grid && anchor) {
+      anchorRef.current = null;
+      grid.scrollLeft = Math.max(0, timeToX(anchor.time, pps) - anchor.viewX);
+      setScrollLeft(grid.scrollLeft);
+    }
+  }, [pps]);
 
   const selectedIndex = selection === null ? -1 :
     variables[selection.row]?.transitions.findIndex(t => t.startDSecs === selection.startDSecs) ?? -1;
@@ -165,7 +212,7 @@ export default function Timeline(props: TimelineProps) {
 
   // Pointer position relative to the rows, which scroll with the timeline.
   function position(event: {clientX: number; clientY: number}) {
-    const rect = rowsRef.current!.getBoundingClientRect();
+    const rect = timeAreaRef.current!.getBoundingClientRect();
     return {x: event.clientX - rect.left, y: event.clientY - rect.top};
   }
 
@@ -174,7 +221,7 @@ export default function Timeline(props: TimelineProps) {
     if (row === null) {
       return;
     }
-    const startDSecs = hoverStartDSecs(x);
+    const startDSecs = hoverStartDSecs(x, pps);
     const next = isInsertable(variables[row]!.transitions, startDSecs, startDSecs + 1, maxDSecs) ?
       {row, startDSecs} : null;
     if (next?.row !== hover?.row || next?.startDSecs !== hover?.startDSecs) {
@@ -191,10 +238,10 @@ export default function Timeline(props: TimelineProps) {
     const {x, y} = position(event);
     switch (gesture.kind) {
       case "scrubbing":
-        onSeek(clampTime(xToTime(x), duration));
+        onSeek(clampTime(xToTime(x, pps), duration));
         return;
       case "duration": {
-        const latest = draggedDuration(gesture.startDuration, x - gesture.startX);
+        const latest = draggedDuration(gesture.startDuration, x - gesture.startX, gesture.pxPerSecond);
         if (latest !== gesture.latest) {
           setGesture({...gesture, latest});
           onDurationChange(latest);
@@ -202,7 +249,7 @@ export default function Timeline(props: TimelineProps) {
         return;
       }
       case "dragging": {
-        const moved = dragTransition(gesture.original, gesture.index, gesture.mode, dragDeltaDSecs(x - gesture.startX), maxDSecs);
+        const moved = dragTransition(gesture.original, gesture.index, gesture.mode, dragDeltaDSecs(x - gesture.startX, pps), maxDSecs);
         if (moved.startDSecs !== gesture.moved.startDSecs || moved.endDSecs !== gesture.moved.endDSecs) {
           setGesture({...gesture, moved});
           setRow(gesture.row, replaceTransition(gesture.original, gesture.index, moved));
@@ -211,7 +258,7 @@ export default function Timeline(props: TimelineProps) {
         return;
       }
       case "creating": {
-        const endDSecs = hoverEndDSecs(x, gesture.startDSecs);
+        const endDSecs = hoverEndDSecs(x, gesture.startDSecs, pps);
         if (endDSecs !== gesture.endDSecs &&
             isInsertable(variables[gesture.row]!.transitions, gesture.startDSecs, endDSecs, maxDSecs)) {
           setGesture({...gesture, endDSecs});
@@ -236,7 +283,7 @@ export default function Timeline(props: TimelineProps) {
     // A second tap in another row, or where the transition can't end, cancels it instead.
     if (current.kind === "creating" && current.released) {
       const {x, y} = position(event);
-      const endDSecs = hoverEndDSecs(x, current.startDSecs);
+      const endDSecs = hoverEndDSecs(x, current.startDSecs, pps);
       const fits = isInsertable(variables[current.row]!.transitions, current.startDSecs, endDSecs, maxDSecs);
       if (event.pointerType === "touch" && (!fits || Math.floor(y / ROW_HEIGHT) !== current.row)) {
         cancelCreating();
@@ -259,7 +306,7 @@ export default function Timeline(props: TimelineProps) {
     if (row === null) {
       return;
     }
-    const startDSecs = hoverStartDSecs(x);
+    const startDSecs = hoverStartDSecs(x, pps);
     if (isInsertable(variables[row]!.transitions, startDSecs, startDSecs + 1, maxDSecs)) {
       setHover({row, startDSecs});
       setGesture({kind: "creating", row, startDSecs, endDSecs: startDSecs + 1, released: false});
@@ -317,12 +364,17 @@ export default function Timeline(props: TimelineProps) {
     capture(event);
   }
 
+  // The playhead, or anywhere on the ruler, seeks and then scrubs as the pointer moves.
   function handleScrubberPointerDown(event: ReactPointerEvent) {
     if (event.button !== 0) {
       return;
     }
     event.stopPropagation();
+    if (gestureRef.current.kind === "creating") {
+      cancelCreating();
+    }
     setHover(null);
+    onSeek(clampTime(xToTime(position(event).x, pps), duration));
     setGesture({kind: "scrubbing"});
     capture(event);
   }
@@ -333,30 +385,111 @@ export default function Timeline(props: TimelineProps) {
     }
     event.stopPropagation();
     select(null);
-    setGesture({kind: "duration", startX: position(event).x, startDuration: duration, latest: duration});
+    setGesture({kind: "duration", startX: position(event).x, startDuration: duration, latest: duration, pxPerSecond: pps});
     capture(event);
   }
 
-  function handleHeaderClick(event: ReactMouseEvent<HTMLDivElement>) {
-    const rect = event.currentTarget.getBoundingClientRect();
-    onSeek(clampTime(xToTime(event.clientX - rect.left), duration));
+  function zoomTo(next: number, anchor: Anchor) {
+    const clamped = clampZoom(next, fitScale);
+    if (clamped !== zoomLevel) {
+      anchorRef.current = anchor;
+      setZoom(clamped);
+    }
   }
 
-  // Keep the playhead in view on a timeline wider than the screen: when it runs off the right
-  // edge, or jumps back off the left (looping or seeking), scroll it to near the left edge.
+  // The zoom buttons keep the playhead in place when it's in sight, or else the middle.
+  function zoomBy(factor: number) {
+    const playheadX = x(currentTime) - scrollLeft;
+    const viewX = playheadX >= 0 && playheadX <= viewWidth ? playheadX : viewWidth / 2;
+    zoomTo(zoomLevel * factor, {time: xToTime(scrollLeft + viewX, pps), viewX});
+  }
+
+  // The time under a point on screen, and how far it is from the rows' visible left edge.
+  function anchorAt(clientX: number): Anchor {
+    const grid = gridRef.current!;
+    const viewX = clientX - grid.getBoundingClientRect().left - (view?.labels ?? 0);
+    return {time: xToTime(grid.scrollLeft + viewX, pps), viewX};
+  }
+
+  // Ctrl or cmd and the wheel zooms around the pointer, as does a trackpad pinch.
+  const onWheel = useEffectEvent((event: WheelEvent) => {
+    if (!(event.ctrlKey || event.metaKey)) {
+      return;
+    }
+    event.preventDefault();
+    const delta = event.deltaY * (event.deltaMode === 1 ? 20 : 1);
+    zoomTo(zoomLevel * Math.exp(-Math.max(-60, Math.min(60, delta)) * 0.01), anchorAt(event.clientX));
+  });
+  // Two fingers pinch to zoom on touch screens.
+  const onTouchStart = useEffectEvent((event: TouchEvent) => {
+    if (event.touches.length !== 2) {
+      return;
+    }
+    const [a, b] = [event.touches[0]!, event.touches[1]!];
+    const current = gestureRef.current;
+    if (current.kind === "creating" && !current.released) {
+      cancelCreating();
+    }
+    pinchRef.current = {
+      distance: Math.max(1, Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)),
+      zoom: zoomLevel,
+      time: anchorAt((a.clientX + b.clientX) / 2).time,
+    };
+  });
+  const onTouchMove = useEffectEvent((event: TouchEvent) => {
+    const pinch = pinchRef.current;
+    if (!pinch || event.touches.length !== 2) {
+      return;
+    }
+    event.preventDefault();
+    const [a, b] = [event.touches[0]!, event.touches[1]!];
+    const distance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    const {viewX} = anchorAt((a.clientX + b.clientX) / 2);
+    zoomTo(pinch.zoom * distance / pinch.distance, {time: pinch.time, viewX});
+  });
+  const onTouchEnd = useEffectEvent((event: TouchEvent) => {
+    if (event.touches.length < 2) {
+      pinchRef.current = null;
+    }
+  });
   useEffect(() => {
+    const grid = gridRef.current!;
+    const wheel = (event: WheelEvent) => onWheel(event);
+    const start = (event: TouchEvent) => onTouchStart(event);
+    const move = (event: TouchEvent) => onTouchMove(event);
+    const end = (event: TouchEvent) => onTouchEnd(event);
+    grid.addEventListener("wheel", wheel, {passive: false});
+    grid.addEventListener("touchstart", start, {passive: true});
+    grid.addEventListener("touchmove", move, {passive: false});
+    grid.addEventListener("touchend", end);
+    grid.addEventListener("touchcancel", end);
+    return () => {
+      grid.removeEventListener("wheel", wheel);
+      grid.removeEventListener("touchstart", start);
+      grid.removeEventListener("touchmove", move);
+      grid.removeEventListener("touchend", end);
+      grid.removeEventListener("touchcancel", end);
+    };
+  }, []);
+
+  // Keep the playhead in view when zoomed in: when it runs off the right edge, or jumps back off
+  // the left (looping or seeking), scroll it to near the left edge.
+  const followPlayhead = useEffectEvent((previous: number) => {
     const grid = gridRef.current;
-    const previous = lastTimeRef.current;
-    lastTimeRef.current = currentTime;
     if (!grid || grid.scrollWidth <= grid.clientWidth) {
       return;
     }
-    const x = timeToX(currentTime);
-    const pastRight = currentTime > previous && x > grid.scrollLeft + grid.clientWidth - 8;
-    const pastLeft = currentTime < previous && x < grid.scrollLeft;
+    const playheadX = x(currentTime);
+    const pastRight = currentTime > previous && playheadX > grid.scrollLeft + viewWidth - 8;
+    const pastLeft = currentTime < previous && playheadX < grid.scrollLeft;
     if (pastRight || pastLeft) {
-      grid.scrollLeft = Math.max(0, x - 24);
+      grid.scrollLeft = Math.max(0, playheadX - 24);
     }
+  });
+  useEffect(() => {
+    const previous = lastTimeRef.current;
+    lastTimeRef.current = currentTime;
+    followPlayhead(previous);
   }, [currentTime]);
 
   const onKeyDown = useEffectEvent((event: KeyboardEvent) => {
@@ -393,6 +526,12 @@ export default function Timeline(props: TimelineProps) {
     (gesture.kind === "dragging" && gesture.mode !== "move");
   const markerZ = creating ? 0 : 1000;
   const rowsHeight = rowCount * ROW_HEIGHT;
+  const canAddRow = rowCount < variables.length;
+  const postDuration = {left: x(duration), width: Math.max(0, width - x(duration))};
+  const blockStyle =(startDSecs: number, endDSecs: number) => ({
+    left: startDSecs * pxPerDSec,
+    width: Math.max(3, (endDSecs - startDSecs) * pxPerDSec),
+  });
 
   return (
     <div id="animationControls" ref={rootRef}>
@@ -442,76 +581,113 @@ export default function Timeline(props: TimelineProps) {
           </form>}
       </div>
       <div className="gridContainer" ref={gridRef} onScroll={event => setScrollLeft(event.currentTarget.scrollLeft)}>
-        <div className={"header" + (ticks.tens ? " tensTicks" : "")} style={{width}} onClick={handleHeaderClick}>
-          {ticks.labels.map(label => <p key={label}>{label}</p>)}
-        </div>
-        <div
-          className="timeArea"
-          ref={timeAreaRef}
-          style={{width, cursor: resizing ? "ew-resize" : "pointer"}}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={cancelCreating}
-          onPointerLeave={handlePointerLeave}
-        >
-          <div className="postDuration" style={{left: timeToX(duration), width: timeToX(maxTime - duration) + 20, height: rowsHeight}} />
-          <div
-            className="scrubber"
-            style={{left: timeToX(currentTime) - 1, height: rowsHeight, zIndex: markerZ}}
-            onPointerDown={handleScrubberPointerDown}
-          />
-          <div
-            className="durationSlider"
-            style={{left: timeToX(duration) - 1, height: rowsHeight, zIndex: markerZ}}
-            onPointerDown={handleDurationPointerDown}
-          />
-          <div className="filler" ref={rowsRef}>
+        <div className="gridContent">
+          <div className="corner">
+            <Tooltip label={touch ? "Zoom out (or pinch)" : "Zoom out (or ctrl + scroll)"}>
+              <ActionIcon
+                variant="subtle" color="gray" size="sm" aria-label="Zoom out" disabled={zoomLevel <= 1}
+                onClick={() => zoomBy(1 / ZOOM_STEP)}
+              >
+                <TbZoomOut />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label={touch ? "Zoom in (or pinch)" : "Zoom in (or ctrl + scroll)"}>
+              <ActionIcon
+                variant="subtle" color="gray" size="sm" aria-label="Zoom in"
+                disabled={zoomLevel >= clampZoom(Infinity, fitScale)} onClick={() => zoomBy(ZOOM_STEP)}
+              >
+                <TbZoomIn />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Fit the whole animation">
+              <ActionIcon
+                variant="subtle" color="gray" size="sm" aria-label="Fit to width" disabled={zoomLevel <= 1}
+                onClick={() => zoomTo(1, {time: 0, viewX: 0})}
+              >
+                <TbArrowAutofitWidth />
+              </ActionIcon>
+            </Tooltip>
+          </div>
+          <div className="header" style={{width}} onPointerDown={handleScrubberPointerDown}>
+            {ruler.minor.map(time => <div key={time} className="tick" style={{left: x(time)}} />)}
+            {ruler.major.map(({time, label}) =>
+              <div key={time} className="tick major" style={{left: x(time)}}>
+                {/* Not where the end's tab would cover it. */}
+                {x(duration - time) > 24 && <span>{label}</span>}
+              </div>)}
+            <div className="postDuration" style={postDuration} />
+            <div className="durationHandle" style={{left: x(duration)}} onPointerDown={handleDurationPointerDown}>
+              {Math.round(duration * 100) / 100}s
+            </div>
+            <div className="playhead" style={{left: x(currentTime)}} />
+          </div>
+          <div className="labels" ref={labelsRef}>
             {variables.slice(0, rowCount).map((variable, row) => (
-              <div key={row} className="variableRow">
-                <div className="rowLabel" style={{left: scrollLeft}}>{name(row) ?? "iFloat" + row}</div>
-                {variable.transitions.length > 0 &&
-                  <div
-                    className="variableValue"
-                    style={{left: Math.max(timeToX(currentTime), scrollLeft + (labelWidths[row] ?? 0)), zIndex: markerZ}}
-                  >
-                    {(variableValues[row] ?? 0).toFixed(2)}
-                  </div>}
-                {variable.transitions.map((transition, index) => {
-                  const isSelected = selection?.row === row && selectedIndex === index;
-                  const isActive = transition.startDSecs <= currentDSecs && currentDSecs <= transition.endDSecs;
-                  return (
-                    <div
-                      key={index}
-                      className={"transition" + (isSelected ? " selected" : "") + (isActive ? " active" : "")}
-                      style={{
-                        left: transition.startDSecs * PX_PER_DSEC,
-                        width: (transition.endDSecs - transition.startDSecs) * PX_PER_DSEC,
-                      }}
-                      onPointerDown={e => handleTransitionPointerDown(e, row, index)}
-                    />
-                  );
-                })}
-                {pending?.row === row &&
-                  <div className="transition hover" style={{
-                    left: pending.startDSecs * PX_PER_DSEC,
-                    width: ((pending.endDSecs ?? pending.startDSecs + 1) - pending.startDSecs) * PX_PER_DSEC,
-                  }} />}
+              <div key={row} className={"rowHead" + (variable.transitions.length > 0 ? " animated" : "")}>
+                <div className="rowLabel" title={name(row) ? `iFloat${row}` : undefined}>{name(row) ?? "iFloat" + row}</div>
+                <div className="variableValue">{(variableValues[row] ?? 0).toFixed(2)}</div>
               </div>
             ))}
+            {/* Under the last row, like the labels; it mustn't start a transition. */}
+            {canAddRow &&
+              <div className="addRow">
+                <Tooltip label={`Add a row for iFloat${rowCount}`}>
+                  <ActionIcon variant="light" radius="xl" size="sm" onClick={props.onAddRow} aria-label="Add a row">
+                    <TbPlus />
+                  </ActionIcon>
+                </Tooltip>
+              </div>}
           </div>
-          {/* Under the last row, at the left like the labels; it mustn't start a transition. */}
-          {rowCount < variables.length &&
+          <div
+            className={"timeArea" + (canAddRow ? " withAddRow" : "")}
+            ref={timeAreaRef}
+            data-px-per-second={pps}
+            style={{width, cursor: resizing ? "ew-resize" : "pointer", backgroundSize: `${ruler.step * pps}px 100%`}}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={cancelCreating}
+            onPointerLeave={handlePointerLeave}
+          >
+            <div className="postDuration" style={postDuration} />
             <div
-              className="addRow" style={{left: scrollLeft + 4, top: rowsHeight + 4}}
-              onPointerDown={event => event.stopPropagation()}
-            >
-              <Tooltip label={`Add a row for iFloat${rowCount}`}>
-                <ActionIcon variant="light" radius="xl" size="sm" onClick={props.onAddRow} aria-label="Add a row">
-                  <TbPlus />
-                </ActionIcon>
-              </Tooltip>
-            </div>}
+              className="scrubber"
+              style={{left: x(currentTime) - 1, height: rowsHeight, zIndex: markerZ}}
+              onPointerDown={handleScrubberPointerDown}
+            />
+            <div
+              className="durationSlider"
+              style={{left: x(duration) - 1, height: rowsHeight, zIndex: markerZ}}
+              onPointerDown={handleDurationPointerDown}
+            />
+            {variables.slice(0, rowCount).map((variable, row) => {
+              const paths = rowPaths(variable.transitions, pps, width);
+              return (
+                <div key={row} className="variableRow">
+                  {variable.transitions.map((transition, index) => {
+                    const isSelected = selection?.row === row && selectedIndex === index;
+                    const isActive = transition.startDSecs <= currentDSecs && currentDSecs <= transition.endDSecs;
+                    return (
+                      <div
+                        key={index}
+                        className={"transition" + (isSelected ? " selected" : "") + (isActive ? " active" : "")}
+                        style={blockStyle(transition.startDSecs, transition.endDSecs)}
+                        onPointerDown={e => handleTransitionPointerDown(e, row, index)}
+                      />
+                    );
+                  })}
+                  {pending?.row === row &&
+                    <div className="transition hover" style={blockStyle(pending.startDSecs, pending.endDSecs ?? pending.startDSecs + 1)} />}
+                  {paths.curves.length > 0 &&
+                    <svg className="curves" width={width} height={ROW_HEIGHT} aria-hidden>
+                      <path className="held" d={paths.held} />
+                      {paths.curves.map((d, index) =>
+                        <path key={index} d={d} className={selection?.row === row && selectedIndex === index ? "selected" : undefined} />)}
+                    </svg>}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
