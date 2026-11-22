@@ -841,7 +841,16 @@ export default function App() {
               lineErrors={errorShader === tab ? lineErrors : []}
             />)}
         </section>
-        <section className="previewPane">
+        <section
+          className="previewPane"
+          // In full screen, a click on the background around the canvas and play bar leaves it.
+          onClick={event => {
+            const target = event.target as HTMLElement;
+            if (fullView && (target === event.currentTarget || target.id === "canvasContainer")) {
+              setFull(false);
+            }
+          }}
+        >
           <Canvas
             ref={canvasRef}
             shaders={shaders} buildId={buildId} textureURLs={textureURLs}

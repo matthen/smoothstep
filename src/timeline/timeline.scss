@@ -7,11 +7,12 @@ div.playerButtons {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
+  margin-top: var(--pad-top, 0);
   width: var(--canvas-width);
   max-width: calc(100% - 24px);
   // Matches the space canvasContainer leaves below the canvas.
   height: 56px;
-  padding: 12px 0 0;
+  padding: 4px 0 0;
 
   // Phone canvases can be narrow, so the controls use the full width instead, with the scrub bar on
   // a row of its own above the buttons, as in a phone's video player.

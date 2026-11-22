@@ -33,8 +33,22 @@ test("full screen fills the window with the canvas and the play bar, until Esc",
   expect([pane.x, pane.y, pane.width, pane.height]).toEqual([0, 0, page.viewportSize()!.width, page.viewportSize()!.height]);
   await expect(page.getByRole("button", {name: "Play"})).toBeInViewport();
   await expect(page.getByLabel("Aspect ratio")).toBeHidden();
+  // The scrubber's handle sits below the canvas, not over its edge.
+  const big = (await canvas.boundingBox())!;
+  expect((await page.locator(".sliderHandle").boundingBox())!.y).toBeGreaterThan(big.y + big.height);
   await page.keyboard.press("Escape");
   await expect.poll(async () => (await canvas.boundingBox())!.width).toBeCloseTo(small.width, 0);
   await expect(page.getByRole("button", {name: "Full screen"})).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test("a click on the background around the canvas leaves full screen, and a click on the canvas doesn't", async ({page}) => {
+  await page.addInitScript(() => localStorage.setItem("smoothstep.tour", "taken"));
+  await page.goto("./#new");
+  await page.getByRole("button", {name: "Full screen"}).click();
+  const canvas = (await page.locator("#canvas").boundingBox())!;
+  await page.mouse.click(canvas.x + canvas.width / 2, canvas.y + canvas.height / 2);
+  await expect(page.getByRole("button", {name: "Exit full screen"})).toBeVisible();
+  await page.mouse.click(4, 4);
+  await expect(page.getByRole("button", {name: "Full screen"})).toBeVisible();
 });

@@ -12,7 +12,7 @@ export const WELCOME_TIPS: ReactNode[] = [
   <>The Sliders tab has a slider for each <code>iFloat</code> your code uses. Drag one to try out values, even ones the timeline animates.</>,
   <>Drag the line at the end of the timeline to make the animation longer or shorter.</>,
   <>The aspect ratio menu at the end of the play bar makes square, wide or tall videos, or any shape you choose with Custom….</>,
-  <>The button at the very end of the play bar shows your animation full screen, like a video. Esc or the same button brings the editor back.</>,
+  <>The button at the very end of the play bar shows your animation full screen, like a video. Esc, the same button or a click on the background around it brings the editor back.</>,
   <>File → Download animation file saves your code, timeline and textures, to back up or move to another computer.</>,
   <>Share gives you a link with the whole animation in it. Anyone who opens it can play it and change their own copy.</>,
   <>Export video makes a WebM, MP4, animated GIF or PNG frames, at the size and frame rate you choose.</>,

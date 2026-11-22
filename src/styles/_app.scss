@@ -282,7 +282,9 @@ a {
   grid-area: preview;
   position: relative;
   min-height: 0;
-  padding: 8px 16px 0;
+  // The play bar's top is measured from the canvas container, which starts below this.
+  --pad-top: 8px;
+  padding: var(--pad-top) 16px 0;
 
   @include desktop {
     grid-area: auto;
@@ -291,7 +293,7 @@ a {
   @include phone {
     // Room for the canvas, plus the play bar's second row.
     height: calc(min(max(52dvh, 240px), 100vw) + 44px);
-    padding: 8px 12px 0;
+    padding: var(--pad-top) 12px 0;
 
     // Reading or writing code needs the room more than the canvas does.
     [data-mobile-tab="code"] &, [data-mobile-tab="learn"] & {
@@ -305,7 +307,8 @@ a {
     inset: 0;
     z-index: 150;
     height: 100dvh;
-    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    --pad-top: max(16px, env(safe-area-inset-top));
+    padding: var(--pad-top) max(16px, env(safe-area-inset-right))
       max(8px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
     background: $dt-gray-darker;
 
