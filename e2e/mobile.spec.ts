@@ -151,3 +151,23 @@ test("on a phone, the canvas's size shows for a few seconds after a tap, and the
   await page.screenshot({path: "test-results/mobile-overlays.png"});
   expect(errors).toEqual([]);
 });
+
+test.describe("on the narrowest phone", () => {
+  test.use({viewport: {width: 320, height: 568}});
+
+  test("the play bar's buttons fit on one row, and full screen puts them beside the scrub bar", async ({page}) => {
+    await page.addInitScript(() => localStorage.setItem("smoothstep.tour", "taken"));
+    await page.goto("./#new");
+    const play = page.getByRole("button", {name: "Play"});
+    const full = page.getByRole("button", {name: "Full screen"});
+    await expect(full).toBeVisible();
+    expect((await full.boundingBox())!.y).toBeCloseTo((await play.boundingBox())!.y, 0);
+    await full.tap();
+    const exit = page.getByRole("button", {name: "Exit full screen"});
+    await expect(exit).toBeVisible();
+    const slider = (await page.locator("div.slider").boundingBox())!;
+    const playBox = (await play.boundingBox())!;
+    expect(slider.y).toBeLessThan(playBox.y + playBox.height);
+    expect(slider.y + slider.height).toBeGreaterThan(playBox.y);
+  });
+});

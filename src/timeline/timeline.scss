@@ -36,6 +36,15 @@ div.playerButtons {
     font-variant-numeric: tabular-nums;
   }
 
+  // The narrowest phones, so the second row's buttons still fit on one line.
+  @media (max-width: 359px) {
+    column-gap: 6px;
+
+    .durationInput {
+      width: 78px;
+    }
+  }
+
   div.slider {
     position: relative;
     flex: 1;

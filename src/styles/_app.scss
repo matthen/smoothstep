@@ -319,6 +319,23 @@ a {
     .playerButtons .fullViewButton {
       margin-left: auto;
     }
+
+    // With the editing controls gone, the scrub bar fits beside the buttons on phones too.
+    @include phone {
+      div#canvasContainer {
+        height: calc(100% - 56px);
+      }
+
+      div.playerButtons {
+        height: 56px;
+        flex-wrap: nowrap;
+
+        div.slider {
+          order: 0;
+          flex: 1;
+        }
+      }
+    }
   }
 }
 
@@ -509,6 +526,18 @@ div.playerButtons .aspectRatioPicker {
   select {
     width: 96px;
     font-variant-numeric: tabular-nums;
+
+    // The narrowest phones drop the icon, so the ratio still fits.
+    @media (max-width: 359px) {
+      width: 84px;
+      padding-inline-start: 12px;
+    }
+  }
+
+  @media (max-width: 359px) {
+    .mantine-NativeSelect-section[data-position="left"] {
+      display: none;
+    }
   }
 }
 
