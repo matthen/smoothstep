@@ -10,7 +10,7 @@ import { Renderer, type CompileResult } from './Renderer';
 export interface CanvasLayout {
   width: number;   // displayed size in CSS pixels
   height: number;
-  top: number;     // bottom edge of the canvas within its container, for the player controls
+  top: number;     // bottom edge of the canvas within the container's offset parent, for the player controls
 }
 
 export interface CanvasHandle {
@@ -48,7 +48,8 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
   const propsRef = useLatest(props);
   const needsRender = useRef(true);
   const [error, setError] = useState<string | null>(null);
-  const [container, setContainer] = useState<[number, number]>([0, 0]);
+  // The container's width, height and offset within the pane, where the play bar is placed.
+  const [container, setContainer] = useState<[number, number, number]>([0, 0, 0]);
   const [fps, setFps] = useState<number | null>(null);
   // Touch screens can't hover, so a tap shows the size and frame rate for a few seconds.
   const [overlays, setOverlays] = useState(false);
@@ -101,7 +102,8 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
 
   useEffect(() => {
     const element = containerRef.current!;
-    const observer = new ResizeObserver(() => setContainer([element.clientWidth, element.clientHeight]));
+    const observer = new ResizeObserver(() =>
+      setContainer([element.clientWidth, element.clientHeight, element.offsetTop]));
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
@@ -111,8 +113,8 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
       props.onRestart();
     }
     needsRender.current = true;
-    props.onLayout({width, height, top: marginTop + height});
-  }, [width, height, marginTop]); // eslint-disable-line react-hooks/exhaustive-deps
+    props.onLayout({width, height, top: container[2] + marginTop + height});
+  }, [width, height, marginTop, container[2]]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const renderer = rendererRef.current;

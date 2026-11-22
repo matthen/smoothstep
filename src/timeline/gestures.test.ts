@@ -99,21 +99,20 @@ describe("where a transition can start and end", () => {
 });
 
 describe("dragging a transition", () => {
-  it("moves it at the scale the drag started at, even if the timeline rescales", () => {
+  // Moving the transition in row 1, grabbed at x = 0.
+  function dragging(): Gesture {
     const original = rows.transitions[1]!.slice();
-    const dragging: Gesture = {
-      kind: "dragging", mode: "move", row: 1, index: 0, original, startX: 0, moved: original[0]!, pxPerSecond: PPS,
-    };
-    const moved = moveGesture(dragging, {...rows, pxPerSecond: PPS / 2}, timeToX(1, PPS));
+    return {kind: "dragging", mode: "move", row: 1, index: 0, original, startX: 0, moved: original[0]!, pxPerSecond: PPS};
+  }
+
+  it("moves it at the scale the drag started at, even if the timeline rescales", () => {
+    const moved = moveGesture(dragging(), {...rows, pxPerSecond: PPS / 2}, timeToX(1, PPS));
     expect(moved).toMatchObject({moved: {startDSecs: 50, endDSecs: 70}});
   });
 
   it("leaves the gesture as it was when the pointer hasn't moved a step", () => {
-    const original = rows.transitions[1]!.slice();
-    const dragging: Gesture = {
-      kind: "dragging", mode: "move", row: 1, index: 0, original, startX: 0, moved: original[0]!, pxPerSecond: PPS,
-    };
-    expect(moveGesture(dragging, rows, 1)).toBe(dragging);
+    const gesture = dragging();
+    expect(moveGesture(gesture, rows, 1)).toBe(gesture);
   });
 });
 

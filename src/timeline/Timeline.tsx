@@ -119,7 +119,7 @@ export default function Timeline(props: TimelineProps) {
     Math.min(maxTime, xToTime(scrollLeft + viewWidth, pps) + 1), maxTime);
   const currentDSecs = currentTime * 10;
   const rows: Rows = {transitions: variables.slice(0, rowCount).map(v => v.transitions), maxDSecs, pxPerSecond: pps};
-  const ranges = useEasedRanges(variables.slice(0, rowCount).map(v => valueRange(v.transitions)));
+  const ranges = useEasedRanges(rows.transitions.map(valueRange));
 
   // Measured again when the panel is shown, as a hidden one measures zero.
   useLayoutEffect(() => {

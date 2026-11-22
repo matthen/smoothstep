@@ -1,15 +1,10 @@
 // Help → Keyboard shortcuts and Help → Shader inputs, and the one-time tips shown while you work.
 import { expect, test, type Page } from '@playwright/test';
 
-import { offline, setCode } from './helpers';
+import { offline, setCode, skipTour } from './helpers';
 
 test.beforeEach(async ({context}) => {
-  // about:blank has no storage, so skip it there.
-  await context.addInitScript(() => {
-    if (window.location.protocol.startsWith("http")) {
-      window.localStorage.setItem("smoothstep.tour", "taken");
-    }
-  });
+  await skipTour(context);
 });
 
 async function helpMenu(page: Page, item: string) {

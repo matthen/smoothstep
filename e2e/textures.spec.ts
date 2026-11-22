@@ -1,14 +1,10 @@
 // The Textures tab shows three slots to start, or as many as the code uses, and ⊕ adds the next.
 import { expect, test } from '@playwright/test';
 
-import { offline, setCode } from './helpers';
+import { offline, setCode, skipTour } from './helpers';
 
 test.beforeEach(async ({context}) => {
-  await context.addInitScript(() => {
-    if (window.location.protocol.startsWith("http")) {
-      window.localStorage.setItem("smoothstep.tour", "taken");
-    }
-  });
+  await skipTour(context);
 });
 
 test("the textures tab shows three slots, or as many as the code uses, and ⊕ adds the next", async ({page, context}) => {

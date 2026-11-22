@@ -1,14 +1,10 @@
 // The aspect ratio menu in the play bar, including a custom ratio that's saved with the animation.
 import { expect, test } from '@playwright/test';
 
-import { offline } from './helpers';
+import { offline, skipTour } from './helpers';
 
 test.beforeEach(async ({context}) => {
-  await context.addInitScript(() => {
-    if (window.location.protocol.startsWith("http")) {
-      window.localStorage.setItem("smoothstep.tour", "taken");
-    }
-  });
+  await skipTour(context);
 });
 
 test("a custom aspect ratio shapes the canvas and is saved", async ({page, context}) => {

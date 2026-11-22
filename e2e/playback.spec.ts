@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { offline } from './helpers';
+import { offline, skipTour } from './helpers';
 
 // The frame counter (iFrame) shown in the canvas overlay.
 async function frameIndex(page: Page): Promise<number> {
@@ -22,7 +22,7 @@ test("rebuilding restarts iFrame, so animations that set up on the first frames 
 
 test("full screen fills the window with the canvas and the play bar, until Esc", async ({page, context}) => {
   const errors = await offline(context);
-  await page.addInitScript(() => localStorage.setItem("smoothstep.tour", "taken"));
+  await skipTour(context);
   await page.goto("./#new");
   const canvas = page.locator("#canvas");
   await expect(canvas).toBeVisible();
@@ -42,8 +42,9 @@ test("full screen fills the window with the canvas and the play bar, until Esc",
   expect(errors).toEqual([]);
 });
 
-test("a click on the background around the canvas leaves full screen, and a click on the canvas doesn't", async ({page}) => {
-  await page.addInitScript(() => localStorage.setItem("smoothstep.tour", "taken"));
+test("a click on the background around the canvas leaves full screen, and a click on the canvas doesn't", async ({page, context}) => {
+  const errors = await offline(context);
+  await skipTour(context);
   await page.goto("./#new");
   await page.getByRole("button", {name: "Full screen"}).click();
   const canvas = (await page.locator("#canvas").boundingBox())!;
@@ -51,4 +52,5 @@ test("a click on the background around the canvas leaves full screen, and a clic
   await expect(page.getByRole("button", {name: "Exit full screen"})).toBeVisible();
   await page.mouse.click(4, 4);
   await expect(page.getByRole("button", {name: "Full screen"})).toBeVisible();
+  expect(errors).toEqual([]);
 });

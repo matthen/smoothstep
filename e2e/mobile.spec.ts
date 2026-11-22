@@ -1,7 +1,7 @@
 // The phone layout: the canvas on top, and a switch between the code, timeline and textures.
 import { devices, expect, test } from '@playwright/test';
 
-import { offline, transitionTimes } from './helpers';
+import { offline, skipTour, transitionTimes } from './helpers';
 
 test.use(devices['Pixel 7']);
 
@@ -155,8 +155,8 @@ test("on a phone, the canvas's size shows for a few seconds after a tap, and the
 test.describe("on the narrowest phone", () => {
   test.use({viewport: {width: 320, height: 568}});
 
-  test("the play bar's buttons fit on one row, and full screen puts them beside the scrub bar", async ({page}) => {
-    await page.addInitScript(() => localStorage.setItem("smoothstep.tour", "taken"));
+  test("the play bar's buttons fit on one row, and full screen puts them beside the scrub bar", async ({page, context}) => {
+    await skipTour(context);
     await page.goto("./#new");
     const play = page.getByRole("button", {name: "Play"});
     const full = page.getByRole("button", {name: "Full screen"});

@@ -282,22 +282,22 @@ a {
   grid-area: preview;
   position: relative;
   min-height: 0;
-  // The play bar's top is measured from the canvas container, which starts below this.
-  --pad-top: 8px;
-  padding: var(--pad-top) 16px 0;
+  padding: 8px 16px 0;
+  --bar-height: #{$player-bar-height};
 
   @include desktop {
     grid-area: auto;
   }
 
   @include phone {
+    --bar-height: #{$player-bar-height-phone};
     // Room for the canvas, plus the play bar's second row.
-    height: calc(min(max(52dvh, 240px), 100vw) + 44px);
-    padding: var(--pad-top) 12px 0;
+    height: calc(min(max(52dvh, 240px), 100vw) + #{$player-bar-height-phone - $player-bar-height});
+    padding: 8px 12px 0;
 
     // Reading or writing code needs the room more than the canvas does.
     [data-mobile-tab="code"] &, [data-mobile-tab="learn"] & {
-      height: calc(min(max(34dvh, 200px), 100vw) + 44px);
+      height: calc(min(max(34dvh, 200px), 100vw) + #{$player-bar-height-phone - $player-bar-height});
     }
   }
 
@@ -307,27 +307,18 @@ a {
     inset: 0;
     z-index: 150;
     height: 100dvh;
-    --pad-top: max(16px, env(safe-area-inset-top));
-    padding: var(--pad-top) max(16px, env(safe-area-inset-right))
+    // The editing controls are left out, so the play bar is one row on phones too.
+    --bar-height: #{$player-bar-height};
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
       max(8px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
     background: $dt-gray-darker;
 
-    // Like a video: play, scrub and leave, without the editing controls.
-    #toggleWideCanvas, .playerButtons .mantine-NumberInput-root, .playerButtons .aspectRatioPicker {
+    #toggleWideCanvas {
       display: none;
     }
-    .playerButtons .fullViewButton {
-      margin-left: auto;
-    }
 
-    // With the editing controls gone, the scrub bar fits beside the buttons on phones too.
     @include phone {
-      div#canvasContainer {
-        height: calc(100% - 56px);
-      }
-
       div.playerButtons {
-        height: 56px;
         flex-wrap: nowrap;
 
         div.slider {
@@ -339,9 +330,6 @@ a {
   }
 }
 
-div.playerButtons .fullViewButton {
-  flex: none;
-}
 
 .mobileTabs {
   grid-area: tabs;
@@ -461,12 +449,8 @@ div.playerButtons .fullViewButton {
 
 // The canvas and its overlays.
 div#canvasContainer {
-  height: calc(100% - 56px);
+  height: calc(100% - var(--bar-height));
   min-height: 128px;
-  // Phones put the play bar on two rows.
-  @include phone {
-    height: calc(100% - 100px);
-  }
   position: relative;
   display: flex;
 
@@ -521,20 +505,23 @@ div#canvasContainer {
   }
 }
 
-div.playerButtons .aspectRatioPicker {
+div.playerButtons .aspectRatioPicker, div.playerButtons .fullViewButton {
   flex: none;
+}
+
+div.playerButtons .aspectRatioPicker {
   select {
     width: 96px;
     font-variant-numeric: tabular-nums;
+  }
 
-    // The narrowest phones drop the icon, so the ratio still fits.
-    @media (max-width: 359px) {
+  // The narrowest phones drop the icon, so the ratio still fits.
+  @include narrow-phone {
+    select {
       width: 84px;
       padding-inline-start: 12px;
     }
-  }
 
-  @media (max-width: 359px) {
     .mantine-NativeSelect-section[data-position="left"] {
       display: none;
     }

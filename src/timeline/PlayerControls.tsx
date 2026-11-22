@@ -18,6 +18,8 @@ export interface PlayerControlsProps {
   onScrubEnd(): void;
   width: number | undefined;
   top: number;
+  // Leaves out the duration box, to play the animation like a video.
+  playOnly?: boolean;
   // Shown after the duration, such as the aspect ratio picker.
   extra?: ReactNode;
 }
@@ -168,7 +170,7 @@ export default function PlayerControls(props: PlayerControlsProps) {
         </ActionIcon>
       </ActionIcon.Group>
       <ScrubSlider {...props} />
-      <DurationInput duration={duration} onDurationChange={props.onDurationChange} />
+      {!props.playOnly && <DurationInput duration={duration} onDurationChange={props.onDurationChange} />}
       {props.extra}
     </div>
   );

@@ -1,15 +1,10 @@
 // The in-app tutorial: opens in a new animation, notices when a step is done, and has a Learn pane on phones.
 import { devices, expect, test } from '@playwright/test';
 
-import { canvasCenter, editorCode, near, offline } from './helpers';
+import { canvasCenter, editorCode, near, offline, skipTour } from './helpers';
 
 test.beforeEach(async ({context}) => {
-  // about:blank has no storage, so skip it there.
-  await context.addInitScript(() => {
-    if (window.location.protocol.startsWith("http")) {
-      window.localStorage.setItem("smoothstep.tour", "taken");
-    }
-  });
+  await skipTour(context);
 });
 
 test("the tutorial puts code in the editor, notices the build, and moves on", async ({page, context}) => {

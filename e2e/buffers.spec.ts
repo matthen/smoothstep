@@ -2,7 +2,7 @@
 // any tab, and keeping them when saved.
 import { expect, test, type Page } from '@playwright/test';
 
-import { canvasCenter, MAGENTA, near, offline, OPEN_EDITOR, setCode } from './helpers';
+import { canvasCenter, MAGENTA, near, offline, OPEN_EDITOR, setCode, skipTour } from './helpers';
 
 const MAGENTA_BUFFER = "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  fragColor = magenta();\n}";
 const SHARED = "vec4 magenta() {\n  return vec4(0.86, 0.08, 0.78, 1.);\n}";
@@ -20,11 +20,7 @@ async function openTab(page: Page, name: string) {
 
 test.beforeEach(async ({context}) => {
   // No tour offer over the code.
-  await context.addInitScript(() => {
-    if (window.location.protocol.startsWith("http")) {
-      window.localStorage.setItem("smoothstep.tour", "taken");
-    }
-  });
+  await skipTour(context);
 });
 
 test("a buffer draws before the image, using shared code, and is kept when saved", async ({page, context}) => {

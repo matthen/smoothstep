@@ -864,11 +864,12 @@ export default function App() {
             onSeek={seek} onPlayPause={() => setIsPlaying(p => !p)} onReset={() => seek(0)}
             onDurationChange={onDurationChange}
             onScrubStart={() => setScrubbing(true)} onScrubEnd={() => setScrubbing(false)}
-            width={layout.width || undefined} top={layout.top}
+            width={layout.width || undefined} top={layout.top} playOnly={fullView}
             extra={<>
-              <AspectRatioPicker
-                value={doc.aspectRatio} onChange={(aspectRatio: AspectRatio) => updateDoc({aspectRatio})}
-              />
+              {!fullView &&
+                <AspectRatioPicker
+                  value={doc.aspectRatio} onChange={(aspectRatio: AspectRatio) => updateDoc({aspectRatio})}
+                />}
               <Tooltip label={fullView ? "Exit full screen (Esc)" : "Full screen"} position="bottom">
                 <ActionIcon
                   variant="default" size="input-sm" className="fullViewButton"

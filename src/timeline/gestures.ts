@@ -14,11 +14,14 @@ export type Gesture =
   | {kind: "scrubbing"}
   | {kind: "duration"; startX: number; startDuration: number; latest: number; pxPerSecond: number};
 
-export interface Creating {
-  kind: "creating";
+export interface Span {
   row: number;
   startDSecs: number;
   endDSecs: number;
+}
+
+export interface Creating extends Span {
+  kind: "creating";
   released: boolean;
   byTouch: boolean;
 }
@@ -28,12 +31,6 @@ export interface Rows {
   transitions: readonly (readonly Transition[])[];
   maxDSecs: number;
   pxPerSecond: number;
-}
-
-export interface Span {
-  row: number;
-  startDSecs: number;
-  endDSecs: number;
 }
 
 function fits(rows: Rows, {row, startDSecs, endDSecs}: Span): boolean {
