@@ -56,3 +56,37 @@ test("a click on the background around the canvas leaves full screen, and a clic
   await expect(page.getByRole("button", {name: "Full screen"})).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test("dragging the divider sets how wide the canvas's side is, which stays after a reload", async ({page, context}) => {
+  const errors = await offline(context);
+  await skipTour(context);
+  await page.goto("./#new");
+  const pane = page.locator(".previewPane");
+  const divider = page.getByRole("separator", {name: "Resize the canvas"});
+  const width = async () => (await pane.boundingBox())!.width;
+  const start = await width();
+  const box = (await divider.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + 200);
+  await page.mouse.down();
+  await page.mouse.move(box.x - 200, box.y + 200, {steps: 5});
+  await page.mouse.up();
+  await expect.poll(width).toBeGreaterThan(start + 150);
+  const dragged = await width();
+  // Dragged far the other way, the canvas's side stops short of nothing.
+  const moved = (await divider.boundingBox())!;
+  await page.mouse.move(moved.x + moved.width / 2, moved.y + 200);
+  await page.mouse.down();
+  await page.mouse.move(page.viewportSize()!.width - 2, moved.y + 200, {steps: 5});
+  await page.mouse.up();
+  await expect.poll(width).toBeLessThan(start);
+  expect(await width()).toBeGreaterThan(150);
+  await divider.focus();
+  await page.keyboard.press("ArrowLeft");
+  const widened = await width();
+  await page.reload();
+  await expect.poll(width).toBeCloseTo(widened, 0);
+  await divider.dblclick();
+  await expect.poll(width).toBeCloseTo(start, 0);
+  expect(dragged).toBeGreaterThan(start);
+  expect(errors).toEqual([]);
+});

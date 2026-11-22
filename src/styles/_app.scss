@@ -230,6 +230,52 @@ a {
   grid-template-columns: minmax(0, 1fr) var(--preview-width);
   min-height: 0;
   transition: grid-template-columns $transition-duration;
+
+  // The canvas follows the pointer while the divider is dragged.
+  &[data-resizing] {
+    transition: none;
+    cursor: col-resize;
+  }
+}
+
+// Between the code and the canvas, over the gap at the canvas side's left edge.
+.paneDivider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -8px;
+  z-index: 5;
+  width: 12px;
+  cursor: col-resize;
+  touch-action: none;
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    left: 5px;
+    width: 2px;
+    border-radius: 1px;
+    background: transparent;
+    transition: background 120ms;
+  }
+
+  &:hover::after, &:focus-visible::after, .workspace[data-resizing] &::after {
+    background: $dt-purple;
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  @include phone {
+    display: none;
+  }
+
+  .app[data-full-view] & {
+    display: none;
+  }
 }
 
 .editorPane {

@@ -1,7 +1,7 @@
 import { ActionIcon, Button, Group, Kbd, Loader, Menu, SegmentedControl, Tabs, Text, TextInput, Tooltip } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { MouseEvent as ReactMouseEvent } from 'react';
+import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react';
 import { flushSync } from 'react-dom';
 import {
   TbBook, TbBrandGithub, TbChevronDown, TbCopy, TbDeviceFloppy, TbDownload, TbFile, TbFolderOpen, TbHammer,
@@ -36,6 +36,7 @@ import AspectRatioPicker from '../dialogs/AspectRatioPicker';
 import Canvas, { type CanvasHandle, type CanvasLayout, type Shaders } from '../render/Canvas';
 import type { CompileResult, ShaderId } from '../render/Renderer';
 import { floatNames } from '../timeline/names';
+import PaneDivider, { previewWidthCSS, storedPreviewWidth, storePreviewWidth } from './PaneDivider';
 import PlayerControls, { PLAYER_ONE_ROW_WIDTH, PLAYER_SECOND_ROW_WIDTH } from '../timeline/PlayerControls';
 import Sliders, { floatsInCode, inputsInCode } from '../timeline/Sliders';
 import Timeline from '../timeline/Timeline';
@@ -122,6 +123,12 @@ export default function App() {
   const [layout, setLayout] = useState<CanvasLayout>({width: 0, height: 0, top: 0, containerWidth: 0});
   const [showFooter, setShowFooter] = useState(true);
   const [wideCanvas, setWideCanvas] = useState(false);
+  // The canvas side's width set with the divider, or null for the preset.
+  const [previewWidth, setPreviewWidth] = useState<number | null>(storedPreviewWidth);
+  const [resizing, setResizing] = useState(false);
+  const workspaceRef = useRef<HTMLElement>(null);
+  const previewRef = useRef<HTMLElement>(null);
+  useEffect(() => storePreviewWidth(previewWidth), [previewWidth]);
   // The canvas and its play bar filling the screen. The browser's own full screen hides its bars
   // too where it's allowed; iPhones only allow it for videos, so there the page alone fills it.
   const [fullView, setFullView] = useState(false);
@@ -823,7 +830,10 @@ export default function App() {
         </Group>
       </header>
 
-      <main className="workspace">
+      <main
+        className="workspace" ref={workspaceRef} data-resizing={resizing || undefined}
+        style={previewWidth === null ? undefined : {"--preview-width": previewWidthCSS(previewWidth)} as CSSProperties}
+      >
         <section className="editorPane">
           {/* Before the code, so on phones it can't stick higher than the code's first line. */}
           {buildState !== "built" &&
@@ -848,7 +858,7 @@ export default function App() {
             />)}
         </section>
         <section
-          className="previewPane"
+          className="previewPane" ref={previewRef}
           // The play bar's second row, when one row of controls is wider than the pane, with smaller
           // controls when even that row is.
           data-two-rows={fullView || layout.containerWidth >= PLAYER_ONE_ROW_WIDTH ? undefined :
@@ -862,13 +872,20 @@ export default function App() {
             }
           }}
         >
+          <PaneDivider
+            workspace={workspaceRef} current={() => previewRef.current?.getBoundingClientRect().width ?? 0}
+            onChange={setPreviewWidth} onReset={() => setPreviewWidth(null)} onDragging={setResizing}
+          />
           <Canvas
             ref={canvasRef}
             shaders={shaders} buildId={buildId} textureURLs={textureURLs}
             time={time} duration={doc.duration} stepClock={stepClock} variableValues={values}
             aspectRatio={doc.aspectRatio}
             onBuilt={onBuilt}
-            onRestart={restartFrames} onLayout={setLayout} onToggleWide={() => setWideCanvas(w => !w)}
+            onRestart={restartFrames} onLayout={setLayout} onToggleWide={() => {
+              setPreviewWidth(null);
+              setWideCanvas(w => !w);
+            }}
           />
           <PlayerControls
             duration={doc.duration} currentTime={time} isPlaying={isPlaying}
