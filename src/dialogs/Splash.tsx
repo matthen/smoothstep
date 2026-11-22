@@ -74,7 +74,7 @@ export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
       {phone && <FocusTrap.InitialFocus />}
       <SimpleGrid cols={{base: 1, sm: 2}} spacing="xl" verticalSpacing="md">
         <div>
-          <Title order={1} size="h3" mb="xs">A GLSL animation builder</Title>
+          <Title order={1} size="h3" mb="xs">Build animations with GLSL</Title>
           <Text mb="xs">
             Write a fragment shader and animate its inputs on a timeline. There are pickers for numbers and
             colours, buffers for simulations, your own images as textures, and video export.
