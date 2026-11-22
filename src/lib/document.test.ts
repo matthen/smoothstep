@@ -138,6 +138,17 @@ describe("variableValue", () => {
       expect(at(type, 1)).toBeCloseTo(1, 10);
     }
   });
+
+  it("grows exponentially by the same factor in equal times, and moves linearly through 0", () => {
+    const at = (startValue: number, endValue: number, time: number) =>
+      variableValue([{startDSecs: 0, endDSecs: 10, startValue, endValue, type: "exponential"}], time);
+    expect(at(1, 100, 0.5)).toBeCloseTo(10, 10);
+    expect(at(1, 100, 0.25) / at(1, 100, 0)).toBeCloseTo(at(1, 100, 1) / at(1, 100, 0.75), 10);
+    expect(at(-2, -8, 0.5)).toBeCloseTo(-4, 10);
+    expect(at(0, 1, 0.5)).toBeCloseTo(0.5, 10);
+    expect(at(-1, 1, 0.25)).toBeCloseTo(-0.5, 10);
+    expect(at(3, 0.75, 1)).toBeCloseTo(0.75, 10);
+  });
 });
 
 describe("canonicalJSON", () => {

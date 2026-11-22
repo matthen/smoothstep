@@ -25,7 +25,7 @@ An animation is a JSON object, as produced by `App.toJSON()`:
   the image's id.
 - `variables` has 16 entries. Each transition runs from `startDSecs` to `endDSecs`, in
   tenths of a second, with up to one decimal place for times to a hundredth of a second (`12.5` is
-  1.25s), and `type` one of `step`, `linear`, `smoothstep`, `easeIn`, `easeOut` or `overshoot`. A
+  1.25s), and `type` one of `step`, `linear`, `smoothstep`, `easeIn`, `easeOut`, `overshoot` or `exponential`. A
   variable can also have `value`, the number its slider set, which it holds while it has no
   transitions (0 when left out), and `min` and `max`, the ends of its slider. All three are optional.
 - `aspectRatio` is the canvas's width and height as two whole numbers from 1 to 100, such as `[16,9]`
