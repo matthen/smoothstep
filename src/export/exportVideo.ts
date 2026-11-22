@@ -12,7 +12,7 @@ import { safeFilename, type DownloadableFile } from '../lib/archive';
 import { textureURL } from '../lib/config';
 import { bufferCodes, variableValues, type AnimationDocument } from '../lib/document';
 import { Renderer } from '../render/Renderer';
-import { renderSteps } from '../render/steps';
+import { renderSteps, RESTART } from '../render/steps';
 import { noVideoReason } from './videoSupport';
 
 export { exportSize, frameCount };
@@ -118,16 +118,20 @@ export async function exportVideo(
     encoder = options.type === "gif" ? gifEncoder(frameCanvas, fps) :
       options.type === "png" ? pngEncoder(frameCanvas) :
       await videoEncoder(frameCanvas, options.type, fps, width, height);
-    let rendered = -1;
+    let steps = RESTART;
     for (let i = 0; i < frames; i++) {
       if (signal.aborted) {
         throw new ExportCancelled();
       }
       const time = i / fps;
-      rendered = renderSteps(renderer, rendered, time, time, (t, frameIndex) => ({
+      const before = steps;
+      steps = renderSteps(renderer, steps, time, time, (t, frameIndex) => ({
         time: t, duration: doc.duration, frameIndex, variableValues: variableValues(doc.variables, t),
       }));
-      frameContext.drawImage(glCanvas, 0, 0);
+      // Above 60fps, frames between a simulation's steps repeat the one before.
+      if (!renderer.hasState || steps.rendered !== before.rendered) {
+        frameContext.drawImage(glCanvas, 0, 0);
+      }
       await encoder.addFrame(i);
       onProgress({stage: "rendering", fraction: (i + 1) / frames});
       if (i % 4 === 3) {

@@ -3,7 +3,7 @@
 import { bufferCodes, variableValues, type AnimationDocument } from '../lib/document';
 import { fitCanvas } from '../render/layout';
 import { Renderer } from '../render/Renderer';
-import { renderSteps } from '../render/steps';
+import { renderSteps, RESTART } from '../render/steps';
 
 export interface PlayerOptions {
   doc: AnimationDocument;
@@ -69,9 +69,9 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link}: Pl
   }
 
   let time = 0;
-  // Seconds played since the simulation restarted, and the last of its steps drawn.
+  // Seconds played since the simulation restarted, and the steps drawn.
   let stepClock = 0;
-  let rendered = -1;
+  let steps = RESTART;
   let playing = true;
   let visible = true;
   let last: number | null = null;
@@ -79,7 +79,7 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link}: Pl
   const restart = () => {
     time = 0;
     stepClock = 0;
-    rendered = -1;
+    steps = RESTART;
     renderer.clearTargets();
   };
 
@@ -89,7 +89,7 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link}: Pl
     canvas.style.height = height + "px";
     if (renderer.setSize(width, height)) {
       stepClock = 0;
-      rendered = -1;
+      steps = RESTART;
     }
   };
   new ResizeObserver(resize).observe(container);
@@ -114,10 +114,10 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link}: Pl
         if (time > doc.duration) {
           time = 0;
           stepClock = 0;
-          rendered = -1;
+          steps = RESTART;
         }
       }
-      rendered = renderSteps(renderer, rendered, stepClock, time, (t, frameIndex) => ({
+      steps = renderSteps(renderer, steps, stepClock, time, (t, frameIndex) => ({
         time: t, duration: doc.duration, frameIndex, variableValues: variableValues(doc.variables, t),
       }), 4);
       last = now;

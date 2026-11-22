@@ -6,7 +6,7 @@ import type { AspectRatio } from '../lib/document';
 import { useLatest } from '../lib/useLatest';
 import { fitCanvas } from './layout';
 import { Renderer, type CompileResult } from './Renderer';
-import { renderSteps, stepAt } from './steps';
+import { renderSteps, RESTART, stepAt } from './steps';
 
 export interface CanvasLayout {
   width: number;   // displayed size in CSS pixels
@@ -68,10 +68,9 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
   const marginTop = Math.max(0, (container[1] - height) / 2);
   const marginSide = Math.max(0, (container[0] - width) / 2);
 
-  // The last simulation step drawn, or -1 before the first after a restart.
-  const renderedStep = useRef(-1);
+  const steps = useRef(RESTART);
   const restart = useCallback(() => {
-    renderedStep.current = -1;
+    steps.current = RESTART;
     propsRef.current.onRestart();
   }, [propsRef]);
 
@@ -79,7 +78,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     const p = propsRef.current;
     const renderer = rendererRef.current;
     if (renderer) {
-      renderedStep.current = renderSteps(renderer, renderedStep.current, p.stepClock, p.time,
+      steps.current = renderSteps(renderer, steps.current, p.stepClock, p.time,
         (time, frameIndex) => ({time, duration: p.duration, frameIndex, variableValues: p.variableValues}), 4);
     }
   }, [propsRef]);

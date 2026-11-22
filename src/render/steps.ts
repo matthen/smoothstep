@@ -1,35 +1,52 @@
-// Buffers and iPrevFrame move on at a fixed rate, so a simulation runs at the same speed on any screen
-// and in an export at any frame rate. iFrame counts these steps.
+// While an animation plays, a shader with state (buffers or iPrevFrame) moves on 60 times a second,
+// so a simulation runs at the same speed on any screen and in an export at any frame rate. iFrame
+// counts these steps.
 import type { FrameInputs } from './Renderer';
 
 export const STEPS_PER_SECOND = 60;
 
-// The step reached after `seconds` of playing since the simulation restarted.
+// The step reached `seconds` after the simulation restarted. Steps fall half a step early, so a 60Hz
+// screen's slightly uneven frames each still take one step.
 export function stepAt(seconds: number): number {
-  return Math.floor(seconds * STEPS_PER_SECOND + 1e-6);
+  return Math.floor(seconds * STEPS_PER_SECOND + 0.5);
 }
 
 export interface StepRenderer {
-  render(inputs: FrameInputs, step?: boolean): void;
+  readonly hasState: boolean;
+  render(inputs: FrameInputs): void;
 }
 
-// Draws the frame at iTime `time`, `clock` seconds after the simulation restarted. First it takes the
-// steps after `rendered`, the last step drawn, each at the iTime it fell at, so the simulation doesn't
-// depend on the frame rate. Then it redraws the image at `time` if that's later than the last step.
-// Taking at most `maxSteps` keeps a slow or hidden page from catching up all at once. Returns the last
-// step drawn.
+// The last step drawn (-1 for none since a restart) and the clock when it was drawn.
+export interface Steps {
+  rendered: number;
+  clock: number;
+}
+
+export const RESTART: Steps = {rendered: -1, clock: 0};
+
+// Draws the frame at iTime `time`, `clock` seconds after the simulation restarted, and returns the
+// steps drawn. A shader with no state is drawn once. One with state takes each step it hasn't drawn,
+// at the iTime that step fell at, and draws nothing between steps. At most `maxSteps` are taken in one
+// call, so a page that falls behind runs the simulation slower rather than skipping steps. With the
+// clock where it was, as when paused and a value changes, it draws once more without counting a step.
 export function renderSteps(
-  renderer: StepRenderer, rendered: number, clock: number, time: number,
+  renderer: StepRenderer, steps: Steps, clock: number, time: number,
   inputs: (time: number, frameIndex: number) => FrameInputs, maxSteps = Infinity,
-): number {
+): Steps {
   const target = stepAt(clock);
-  const from = target < rendered ? 0 : Math.max(rendered + 1, target - maxSteps + 1);
-  const timeOf = (step: number) => Math.max(0, time - clock + step / STEPS_PER_SECOND);
-  for (let step = from; step <= target; step++) {
-    renderer.render(inputs(timeOf(step), step), true);
+  const restarted = steps.rendered < 0 || target < steps.rendered;
+  if (!renderer.hasState) {
+    renderer.render(inputs(time, target));
+    return {rendered: target, clock};
   }
-  if (from > target || time > timeOf(target) + 1e-9) {
-    renderer.render(inputs(time, target), false);
+  if (!restarted && clock === steps.clock) {
+    renderer.render(inputs(time, steps.rendered));
+    return steps;
   }
-  return target < rendered ? target : Math.max(rendered, target);
+  const from = restarted ? 0 : steps.rendered + 1;
+  const to = Math.min(target, from + maxSteps - 1);
+  for (let step = from; step <= to; step++) {
+    renderer.render(inputs(Math.max(0, time - clock + step / STEPS_PER_SECOND), step));
+  }
+  return to < from ? {rendered: steps.rendered, clock} : {rendered: to, clock};
 }

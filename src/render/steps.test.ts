@@ -1,66 +1,92 @@
 import { describe, expect, it } from 'vitest';
 
 import type { FrameInputs } from './Renderer';
-import { renderSteps, stepAt, STEPS_PER_SECOND } from './steps';
+import { renderSteps, RESTART, stepAt, STEPS_PER_SECOND, type Steps } from './steps';
 
-// Plays `seconds` at `fps` frames a second, and records each draw.
-function play(fps: number, seconds: number, maxSteps = Infinity) {
-  const draws: {time: number; frameIndex: number; step: boolean}[] = [];
-  const renderer = {render: (inputs: FrameInputs, step = true) => draws.push({...inputs, step})};
-  let rendered = -1;
-  for (let i = 0; i <= seconds * fps; i++) {
-    const time = i / fps;
-    rendered = renderSteps(renderer, rendered, time, time,
-      (t, frameIndex) => ({time: t, duration: seconds, frameIndex, variableValues: []}), maxSteps);
-  }
-  return {draws, steps: draws.filter(d => d.step)};
+interface Draw {
+  frame: number;
+  time: number;
+  frameIndex: number;
 }
 
-describe("simulation steps", () => {
-  it("run at the same rate whatever the frame rate, so a preview and an export match", () => {
+// Plays frames at the given times, from a restart, and records each draw and the frame it was in.
+function play(frameTimes: readonly number[], hasState = true, maxSteps = Infinity) {
+  const draws: Draw[] = [];
+  let frame = 0;
+  const renderer = {hasState, render: (inputs: FrameInputs) => draws.push({frame, ...inputs})};
+  let steps: Steps = RESTART;
+  for (; frame < frameTimes.length; frame++) {
+    const time = frameTimes[frame]!;
+    steps = renderSteps(renderer, steps, time, time,
+      (t, frameIndex) => ({time: t, duration: 10, frameIndex, variableValues: []}), maxSteps);
+  }
+  return draws;
+}
+
+const frames = (fps: number, seconds: number) => Array.from({length: seconds * fps + 1}, (_, i) => i / fps);
+
+describe("a shader with state", () => {
+  it("steps at the same rate whatever the frame rate, so a preview and an export match", () => {
     for (const fps of [15, 24, 30, 60, 120, 144]) {
-      const {steps} = play(fps, 2);
-      expect(steps.map(s => s.frameIndex), String(fps)).toEqual(
-        Array.from({length: 2 * STEPS_PER_SECOND + 1}, (_, i) => i));
+      expect(play(frames(fps, 2)).map(d => d.frameIndex), String(fps)).toEqual(
+        Array.from({length: stepAt(2) + 1}, (_, i) => i));
     }
   });
 
-  it("give each step the time it fell at", () => {
-    for (const step of play(24, 1).steps) {
-      expect(step.time).toBeCloseTo(step.frameIndex / STEPS_PER_SECOND, 6);
+  it("gives each step the time it fell at", () => {
+    for (const draw of play(frames(24, 1))) {
+      expect(draw.time).toBeCloseTo(draw.frameIndex / STEPS_PER_SECOND, 6);
     }
   });
 
-  it("step at the times they fell at when the simulation restarted partway through", () => {
+  it("takes one step a frame on a 60Hz screen, even when frames come unevenly", () => {
+    const uneven = frames(60, 3).map((t, i) => t + (i % 3 - 1) * 0.002);
+    const draws = play(uneven);
+    expect(new Set(draws.map(d => d.frame)).size).toBe(uneven.length);
+    expect(draws).toHaveLength(uneven.length);
+  });
+
+  it("draws nothing between steps when frames come faster", () => {
+    const draws = play(frames(120, 1));
+    expect(draws.map(d => d.frameIndex)).toEqual(Array.from({length: stepAt(1) + 1}, (_, i) => i));
+  });
+
+  it("falls behind rather than skip steps, starting from the first after a late restart", () => {
+    const draws = play([0.5, 1, 1.5], true, 4);
+    expect(draws.map(d => d.frameIndex)).toEqual(Array.from({length: 12}, (_, i) => i));
+  });
+
+  it("steps at the times they fell at when it restarted partway through the animation", () => {
     const times: number[] = [];
-    const renderer = {render: (inputs: FrameInputs, step = true) => step && times.push(inputs.time)};
+    const renderer = {hasState: true, render: (inputs: FrameInputs) => times.push(inputs.time)};
     const inputs = (time: number, frameIndex: number) => ({time, duration: 10, frameIndex, variableValues: []});
-    // Restarted at 4 s: 3 steps later it's 4.05 s.
-    renderSteps(renderer, -1, 3 / STEPS_PER_SECOND, 4 + 3 / STEPS_PER_SECOND, inputs);
+    // Restarted at 4 s, and now three steps on.
+    renderSteps(renderer, RESTART, 3 / STEPS_PER_SECOND, 4 + 3 / STEPS_PER_SECOND, inputs);
     expect(times).toHaveLength(4);
     times.forEach((time, step) => expect(time - 4).toBeCloseTo(step / STEPS_PER_SECOND, 6));
   });
 
-  it("redraw the image without stepping when frames come faster than steps", () => {
-    const {draws, steps} = play(120, 1);
-    expect(draws.length).toBeGreaterThan(steps.length);
-    for (const draw of draws.filter(d => !d.step)) {
-      expect(draw.frameIndex).toBe(stepAt(draw.time));
-    }
+  it("draws again at the same step when the clock hasn't moved, as when paused", () => {
+    const draws: number[] = [];
+    const renderer = {hasState: true, render: (inputs: FrameInputs) => draws.push(inputs.frameIndex)};
+    const inputs = (time: number, frameIndex: number) => ({time, duration: 10, frameIndex, variableValues: []});
+    const steps = renderSteps(renderer, RESTART, 0.1, 0.1, inputs);
+    renderSteps(renderer, steps, 0.1, 0.1, inputs);
+    expect(draws.slice(-2)).toEqual([stepAt(0.1), stepAt(0.1)]);
   });
 
-  it("start again from the first step when the step count goes back", () => {
-    const steps: number[] = [];
-    const renderer = {render: (inputs: FrameInputs, step = true) => step && steps.push(inputs.frameIndex)};
-    const inputs = (time: number, frameIndex: number) => ({time, duration: 1, frameIndex, variableValues: []});
-    const rendered = renderSteps(renderer, -1, 5 / STEPS_PER_SECOND, 5 / STEPS_PER_SECOND, inputs);
-    renderSteps(renderer, rendered, 1 / STEPS_PER_SECOND, 1 / STEPS_PER_SECOND, inputs);
-    expect(steps).toEqual([0, 1, 2, 3, 4, 5, 0, 1]);
+  it("starts again from the first step when the clock goes back", () => {
+    const draws = play([0, 0.05, 0.1, 0, 0.02]);
+    const restartAt = draws.findIndex((d, i) => i > 0 && d.frameIndex === 0);
+    expect(restartAt).toBeGreaterThan(0);
+    expect(draws.slice(restartAt).map(d => d.frameIndex)).toEqual([0, 1]);
   });
+});
 
-  it("catch up at most so many steps in one frame", () => {
-    const {draws} = play(2, 1, 4);
-    expect(draws.filter(d => d.step).length).toBeLessThan(STEPS_PER_SECOND);
-    expect(draws.at(-1)!.frameIndex).toBe(STEPS_PER_SECOND);
+describe("a shader without state", () => {
+  it("draws once every frame, at the frame's time", () => {
+    const times = frames(120, 1);
+    const draws = play(times, false);
+    expect(draws.map(d => d.time)).toEqual(times);
   });
 });

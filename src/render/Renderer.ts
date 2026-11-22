@@ -129,6 +129,8 @@ export class Renderer {
   private bufferPrograms: Program[] = [];
   // The buffers the image needs, in the order they render.
   private used: number[] = [];
+  // Whether a frame depends on the ones before, through buffers or iPrevFrame.
+  hasState = false;
   private copyProgram: Program;
   private uniforms = new WeakMap<WebGLProgram, Map<string, WebGLUniformLocation | null>>();
   // [last frame, the one before], for the image and for each buffer in use.
@@ -249,6 +251,7 @@ export class Renderer {
     this.program = programs[0]!;
     this.bufferPrograms = programs.slice(1);
     this.used = buffersUsed(userCode(code, shared), buffers.map(b => userCode(b, shared)));
+    this.hasState = this.used.length > 0 || /\biPrevFrame\b/.test(userCode(code, shared));
     this.clearTargets();
     return {ok: true};
   }
@@ -421,25 +424,19 @@ export class Renderer {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
 
-  // Draws a frame. With `step`, the buffers and iPrevFrame move on a frame; without it, the image is
-  // redrawn from the same buffers and previous frame, as between the simulation's steps.
-  render(inputs: FrameInputs, step = true) {
+  render(inputs: FrameInputs) {
     const gl = this.gl;
     if (!this.program || !this.targets) {
       return;
     }
     const [input, output] = this.targets;
-    if (step) {
-      for (const i of this.used) {
-        const [latest, older] = this.bufferTargets.get(i)!;
-        this.draw(this.bufferPrograms[i]!, older, inputs, input);
-        this.bufferTargets.set(i, [older, latest]);
-      }
+    for (const i of this.used) {
+      const [latest, older] = this.bufferTargets.get(i)!;
+      this.draw(this.bufferPrograms[i]!, older, inputs, input);
+      this.bufferTargets.set(i, [older, latest]);
     }
     this.draw(this.program, output, inputs, input);
-    if (step) {
-      this.targets = [output, input];
-    }
+    this.targets = [output, input];
 
     gl.useProgram(this.copyProgram);
     gl.bindVertexArray(this.copyProgram.vao);

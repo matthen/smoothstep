@@ -84,7 +84,7 @@ export default function ShaderInputs({show, onHide}: ShaderInputsProps) {
         for trails or simulations. It starts black, and is cleared each time you build, the canvas changes size or
         a texture changes. <code>iFrame</code> goes back to 0 then too, and when the animation loops or goes
         back to the start, so <code>if (iFrame == 0)</code> is the place to set things up.
-        <code>iPrevFrame</code>, <code>iFrame</code> and the buffers move on 60 times a second, whatever the
+        While it plays, <code>iPrevFrame</code>, <code>iFrame</code> and the buffers move on 60 times a second, whatever the
         screen's refresh rate or the export's frame rate, so a simulation runs at the same speed everywhere.
       </Text>
 

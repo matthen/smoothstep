@@ -46,8 +46,8 @@ repeat outside 0 to 1.
 `iPrevFrame` is a texture like the others, so you can read the last frame and build on it, for
 trails or simulations. It starts black, and is cleared each time you build, the canvas changes size
 or a texture changes. `iFrame` goes back to 0 then too, and when the animation loops or goes back to
-the start, so `if (iFrame == 0)` is the place to set things up. `iPrevFrame`, `iFrame` and the
-buffers move on 60 times a second, whatever the screen's refresh rate or the export's frame rate, so
+the start, so `if (iFrame == 0)` is the place to set things up. While it plays, `iPrevFrame`,
+`iFrame` and the buffers move on 60 times a second, whatever the screen's refresh rate or the export's frame rate, so
 a simulation runs at the same speed everywhere.
 
 ## Buffers and shared code

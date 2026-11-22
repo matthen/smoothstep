@@ -15,8 +15,10 @@ test("rebuilding restarts iFrame, so animations that set up on the first frames 
   await page.keyboard.press("Space");
   await expect.poll(() => frameIndex(page)).toBeGreaterThan(60);
   await page.locator(".cm-content").click();
+  const before = await frameIndex(page);
   await page.keyboard.press("Shift+Enter");
-  await expect.poll(() => frameIndex(page)).toBeLessThan(30);
+  // It counts on at 60 a second, so the count only drops if it went back to 0.
+  await expect.poll(() => frameIndex(page)).toBeLessThan(before);
   expect(errors).toEqual([]);
 });
 
