@@ -38,8 +38,8 @@ notices when you've done it. The Help menu lists the shader inputs and the keybo
 
 The editor highlights GLSL, shows compile errors on the line they occur, and gives you
 inline pickers for colours, numbers and vectors. The timeline drives 16 animated variables,
-`iFloat0` to `iFloat15`, each a sequence of transitions that step, move steadily, ease in or out, or
-overshoot and settle. The Sliders tab has a slider for each one your code uses, to set it or try out
+`iFloat0` to `iFloat15`, each a sequence of transitions that step, move steadily, ease in or out,
+overshoot and settle, or grow exponentially for zooms. The Sliders tab has a slider for each one your code uses, to set it or try out
 values while you watch. You get 8
 texture slots, `iTexture0` to `iTexture7`, which take built-in photos, noise, tiling textures
 and font sheets, or your own images up to 4096px. Up to 4 buffers, `iBuffer0` to `iBuffer3`,

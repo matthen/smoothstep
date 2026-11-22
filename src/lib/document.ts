@@ -20,7 +20,7 @@ export function isAspectRatio(value: unknown): value is AspectRatio {
     (w as number) >= 1 && (h as number) >= 1 && (w as number) <= MAX_ASPECT_TERM && (h as number) <= MAX_ASPECT_TERM &&
     (w as number) / (h as number) <= 10 && (h as number) / (w as number) <= 10;
 }
-const TRANSITION_TYPES = ["step", "linear", "smoothstep", "easeIn", "easeOut", "overshoot"] as const;
+const TRANSITION_TYPES = ["step", "linear", "smoothstep", "easeIn", "easeOut", "overshoot", "exponential"] as const;
 
 export type AspectRatio = [number, number];
 export type TransitionType = (typeof TRANSITION_TYPES)[number];
@@ -259,6 +259,10 @@ export function transitionValue(transition: Transition, time: number): number {
   const b = transition.endValue;
   if (transition.type === "step") {
     return t > 0.5 ? b : a;
+  }
+  // The same factor each moment, for zooms and frequencies; that needs both ends on one side of 0.
+  if (transition.type === "exponential" && a * b > 0) {
+    return a * (b / a) ** t;
   }
   const s = easing(transition.type, t);
   return a * (1 - s) + b * s;

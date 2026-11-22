@@ -79,6 +79,7 @@ interface Pinch {
 const TYPE_OPTIONS: readonly {value: TransitionType; label: string}[] = [
   {value: "smoothstep", label: "smoothstep"}, {value: "linear", label: "linear"}, {value: "step", label: "step"},
   {value: "easeIn", label: "ease in"}, {value: "easeOut", label: "ease out"}, {value: "overshoot", label: "overshoot"},
+  {value: "exponential", label: "exponential"},
 ];
 const ZOOM_STEP = 2;
 

@@ -515,6 +515,8 @@ float radius = 0.15 + 0.5 * grow;`}</Lines>
             <li><b>ease in</b> starts slowly and speeds up, like something falling.</li>
             <li><b>ease out</b> starts fast and slows to a stop, like something thrown that comes to rest.</li>
             <li><b>overshoot</b> goes a little past the end value, then settles back, like a spring.</li>
+            <li><b>exponential</b> multiplies the value by the same amount each moment, so a zoom from 1 to 100
+              looks steady, reaching 10 halfway. With a 0, or values either side of 0, it moves like linear.</li>
           </ul>
           <p>Each transition's block on the timeline draws its curve, so you can see the shape.</p>
           <p>
