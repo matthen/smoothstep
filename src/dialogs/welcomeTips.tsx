@@ -11,6 +11,7 @@ export const WELCOME_TIPS: ReactNode[] = [
   <>You can give a timeline row a name. A line like <code>#define size iFloat0</code> in your code names the <code>iFloat0</code> row <code>size</code>, and you can then write <code>size</code> in your code instead of <code>iFloat0</code>.</>,
   <>The Sliders tab has a slider for each <code>iFloat</code> your code uses. Drag one to try out values, even ones the timeline animates.</>,
   <>Drag the line at the end of the timeline to make the animation longer or shorter.</>,
+  <>Drag the handle between the code and the canvas to give either more room. Double-click it to go back.</>,
   <>The aspect ratio menu in the play bar sets the canvas's shape: square, wide, tall, or any ratio you choose with Custom….</>,
   <>The button at the very end of the play bar shows your animation full screen, like a video. To go back to the editor, press Esc, click the button again, or click the background.</>,
   <>File → Download animation file saves your code, timeline and textures, to back up or move to another computer.</>,

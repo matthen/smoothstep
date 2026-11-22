@@ -56,3 +56,52 @@ test("a click on the background around the canvas leaves full screen, and a clic
   await expect(page.getByRole("button", {name: "Full screen"})).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test("dragging the divider sets how wide the canvas's side is, which stays after a reload", async ({page, context}) => {
+  const errors = await offline(context);
+  await skipTour(context);
+  await page.goto("./#new");
+  const pane = page.locator(".previewPane");
+  const divider = page.getByRole("separator", {name: "Resize the canvas"});
+  const width = async () => (await pane.boundingBox())!.width;
+  const drag = async (toX: number) => {
+    const box = (await divider.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + 200);
+    await page.mouse.down();
+    await page.mouse.move(toX, box.y + 200, {steps: 5});
+    await page.mouse.up();
+  };
+  const start = await width();
+  // A click without moving doesn't change it.
+  await divider.click();
+  expect(await width()).toBe(start);
+  await drag((await divider.boundingBox())!.x - 200);
+  await expect.poll(width).toBeGreaterThan(start + 150);
+  // Dragged as far as it goes the other way, the canvas's side keeps some width.
+  await drag(page.viewportSize()!.width - 2);
+  await expect.poll(width).toBeLessThan(start);
+  expect(await width()).toBeGreaterThan(start / 3);
+  await divider.focus();
+  await page.keyboard.press("ArrowLeft");
+  const widened = await width();
+  await page.reload();
+  await expect.poll(width).toBeCloseTo(widened, 0);
+  await divider.dblclick();
+  await expect.poll(width).toBeCloseTo(start, 0);
+  expect(errors).toEqual([]);
+});
+
+test("the tutorial keeps its own split, whatever width the divider was dragged to", async ({page, context}) => {
+  await offline(context);
+  await skipTour(context);
+  await context.addInitScript(() => {
+    if (window.location.protocol.startsWith("http")) {
+      window.localStorage.setItem("smoothstep.previewWidth", "5000");
+    }
+  });
+  await page.goto("./#tutorial");
+  const editor = (await page.locator(".editorPane").boundingBox())!;
+  const preview = (await page.locator(".previewPane").boundingBox())!;
+  expect(editor.width).toBeGreaterThan(preview.width);
+  await expect(page.getByRole("separator", {name: "Resize the canvas"})).toBeHidden();
+});

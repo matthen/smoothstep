@@ -1,6 +1,5 @@
 import { Alert } from '@mantine/core';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type PointerEvent } from 'react';
-import { TbChevronLeft } from 'react-icons/tb';
 
 import type { AspectRatio } from '../lib/document';
 import { useLatest } from '../lib/useLatest';
@@ -40,7 +39,6 @@ interface CanvasProps {
   // The previous frame was cleared (new build, size or textures), so iFrame should restart at 0.
   onRestart(): void;
   onLayout(layout: CanvasLayout): void;
-  onToggleWide(): void;
 }
 
 const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref) {
@@ -182,13 +180,6 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     <div id="canvasContainer" ref={containerRef} data-overlays={overlays || undefined} onPointerDown={showOverlays}>
       {error ? <Alert color="yellow" className="webglError">{error}</Alert> : (
         <>
-          <button
-            type="button" id="toggleWideCanvas" aria-label="Toggle wide canvas"
-            onClick={props.onToggleWide}
-            style={{left: marginSide - 32, top: marginTop + height / 2}}
-          >
-            <TbChevronLeft />
-          </button>
           <canvas ref={canvasRef} id="canvas" style={{width, height}} />
           <div className="fps" style={{top: marginTop + 8, right: marginSide + 8}}>
             <p>{width}&times;{height}px</p>

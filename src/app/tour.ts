@@ -50,8 +50,8 @@ function desktopSteps({showPane}: TourOptions): DriveStep[] {
       element: "#canvasContainer",
       popover: {
         title: "The canvas",
-        description: "Your shader runs here, live. Point at it to see its size and frame rate. The arrow " +
-          "beside it makes it wider.",
+        description: "Your shader runs here, live. Point at it to see its size and frame rate. Drag the " +
+          "handle between the code and the canvas to give either more room.",
         side: "left",
       },
     },
