@@ -4,6 +4,7 @@
 // iBuffer<k>. Then the image is copied to the canvas.
 import { NUM_TEXTURES, NUM_VARIABLES } from '../lib/document';
 import type { LineError } from '../lib/types';
+import { uses } from '../lib/glslCode';
 
 const VERTEX_SHADER = `#version 300 es
 in vec4 a_position;
@@ -129,6 +130,8 @@ export class Renderer {
   private bufferPrograms: Program[] = [];
   // The buffers the image needs, in the order they render.
   private used: number[] = [];
+  // Whether a frame depends on the ones before, through buffers or iPrevFrame.
+  hasState = false;
   private copyProgram: Program;
   private uniforms = new WeakMap<WebGLProgram, Map<string, WebGLUniformLocation | null>>();
   // [last frame, the one before], for the image and for each buffer in use.
@@ -249,6 +252,7 @@ export class Renderer {
     this.program = programs[0]!;
     this.bufferPrograms = programs.slice(1);
     this.used = buffersUsed(userCode(code, shared), buffers.map(b => userCode(b, shared)));
+    this.hasState = this.used.length > 0 || uses(userCode(code, shared), /\biPrevFrame\b/);
     this.clearTargets();
     return {ok: true};
   }

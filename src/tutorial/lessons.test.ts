@@ -3,7 +3,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { parseHash } from '../app/routing';
 import { EXAMPLES } from '../lib/config';
 import { DEFAULT_CODE, newDocument, type Transition } from '../lib/document';
-import { floatsUsed, LESSONS, stepCode, uses, type Step, type TutorialState } from './lessons';
+import { uses } from '../lib/glslCode';
+import { floatsUsed, LESSONS, stepCode, type Step, type TutorialState } from './lessons';
 import * as shaders from './shaders';
 import { loadProgress, openingProgress, saveProgress } from './progress';
 

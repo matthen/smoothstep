@@ -113,7 +113,9 @@ export default function App() {
   // The code the canvas last compiled, and whether it compiled.
   const [compiled, setCompiled] = useState<{code: string; ok: boolean} | null>(null);
   const [time, setTime] = useState(0);
-  const [frameIndex, setFrameIndex] = useState(0);
+  // Seconds played since the simulation last restarted, which set how many steps it has taken.
+  const [stepClock, setStepClock] = useState(0);
+  const restartFrames = useCallback(() => setStepClock(0), []);
   const [isPlaying, setIsPlaying] = useState(false);
   const [scrubbing, setScrubbing] = useState(false);
   const [imagesVersion, setImagesVersion] = useState(0);
@@ -409,13 +411,14 @@ export default function App() {
     let last: number | null = null;
     const step = (now: number) => {
       if (last !== null) {
-        const next = timeRef.current + Math.max(0, (now - last) / 1000);
+        const elapsed = Math.max(0, (now - last) / 1000);
+        const next = timeRef.current + elapsed;
         if (next > doc.duration) {
           setTime(0);
-          setFrameIndex(0);
+          restartFrames();
         } else {
           setTime(next);
-          setFrameIndex(f => f + 1);
+          setStepClock(clock => clock + elapsed);
         }
       }
       last = now;
@@ -423,17 +426,15 @@ export default function App() {
     };
     id = requestAnimationFrame(step);
     return () => cancelAnimationFrame(id);
-  }, [isPlaying, scrubbing, doc.duration, timeRef]);
-
-  const restartFrames = useCallback(() => setFrameIndex(0), []);
+  }, [isPlaying, scrubbing, doc.duration, timeRef, restartFrames]);
 
   const seek = useCallback((t: number) => {
     setTime(t);
     setHeld(new Map());  // Moving the playhead shows the timeline's values again.
     if (t === 0) {
-      setFrameIndex(0);
+      restartFrames();
     }
-  }, []);
+  }, [restartFrames]);
 
   const build = () => {
     setBuiltCode(doc.code);
@@ -864,7 +865,7 @@ export default function App() {
           <Canvas
             ref={canvasRef}
             shaders={shaders} buildId={buildId} textureURLs={textureURLs}
-            time={time} duration={doc.duration} frameIndex={frameIndex} variableValues={values}
+            time={time} duration={doc.duration} stepClock={stepClock} variableValues={values}
             aspectRatio={doc.aspectRatio}
             onBuilt={onBuilt}
             onRestart={restartFrames} onLayout={setLayout} onToggleWide={() => setWideCanvas(w => !w)}

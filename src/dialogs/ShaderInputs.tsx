@@ -15,7 +15,7 @@ const INPUTS: {name: string; last?: string; type: string; description: string}[]
   {name: "iTime", type: "float", description: "The time into the animation, in seconds."},
   {name: "iDuration", type: "float", description: "The length of the animation, in seconds."},
   {name: "iResolution", type: "vec2", description: "The size of the frame in pixels. (Shadertoy's is a vec3.)"},
-  {name: "iFrame", type: "int", description: "The frame number, counting from 0. See below for when it restarts."},
+  {name: "iFrame", type: "int", description: "The frame number, counting from 0 at 60 a second. See below for when it restarts."},
   {name: "iPrevFrame", type: "sampler2D", description: "The frame drawn just before this one."},
   {name: "iTexture0", last: "iTexture7", type: "sampler2D", description: "The 8 images set in the Textures tab."},
   {name: "iFloat0", last: "iFloat15", type: "float", description: "The 16 numbers set on the timeline or with sliders."},
@@ -84,6 +84,8 @@ export default function ShaderInputs({show, onHide}: ShaderInputsProps) {
         for trails or simulations. It starts black, and is cleared each time you build, the canvas changes size or
         a texture changes. <code>iFrame</code> goes back to 0 then too, and when the animation loops or goes
         back to the start, so <code>if (iFrame == 0)</code> is the place to set things up.
+        While it plays, <code>iPrevFrame</code>, <code>iFrame</code> and the buffers move on 60 times a second, whatever the
+        screen's refresh rate or the export's frame rate, so a simulation runs at the same speed everywhere.
       </Text>
 
       <Title order={2} size="h5" mt="lg" mb={4}>Buffers and shared code</Title>

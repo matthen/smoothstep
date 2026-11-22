@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { openHelpDialog, type HelpDialog } from '../app/helpDialogs';
 import { EMPTY_TEXTURE, type AspectRatio, type TextureSlot, type Variable } from '../lib/document';
 import { DOCS_URL, EXAMPLES } from '../lib/config';
+import { stripComments, uses } from '../lib/glslCode';
 import type { ShaderId } from '../render/Renderer';
 import * as shaders from './shaders';
 
@@ -68,14 +69,6 @@ export function codeIn(state: TutorialState, tab: ShaderId): string | undefined 
 // A tab's code as last built.
 function builtIn(state: TutorialState, tab: ShaderId): string {
   return (tab === "image" ? state.builtCode : tab === "shared" ? state.builtShared : state.builtBuffers[tab]) ?? "";
-}
-
-function stripComments(code: string): string {
-  return code.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
-}
-
-export function uses(code: string, pattern: RegExp): boolean {
-  return pattern.test(stripComments(code));
 }
 
 // Built again with a change in any tab.

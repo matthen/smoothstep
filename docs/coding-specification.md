@@ -29,7 +29,7 @@ Animations may also use any of the following input variables (*uniforms*):
 | `float iTime`  |  The time into the animation, in seconds. |
 | `float iDuration`  |  The length of the animation, in seconds. |
 | `vec2 iResolution`  |  The size of the frame in pixels. (Shadertoy's `iResolution` is a `vec3`.) |
-| `int iFrame`  |  The frame number, counting from 0. See below for when it restarts. |
+| `int iFrame`  |  The frame number, counting from 0 at 60 a second. See below for when it restarts. |
 | `sampler2D iPrevFrame`  |  The frame drawn just before this one. |
 | `sampler2D iTexture0` ... `iTexture7`  | The 8 images set in the *Textures* tab. |
 | `float iFloat0` ... `iFloat15`  | The 16 numbers set on the timeline or with sliders. |
@@ -46,7 +46,9 @@ repeat outside 0 to 1.
 `iPrevFrame` is a texture like the others, so you can read the last frame and build on it, for
 trails or simulations. It starts black, and is cleared each time you build, the canvas changes size
 or a texture changes. `iFrame` goes back to 0 then too, and when the animation loops or goes back to
-the start, so `if (iFrame == 0)` is the place to set things up.
+the start, so `if (iFrame == 0)` is the place to set things up. While it plays, `iPrevFrame`,
+`iFrame` and the buffers move on 60 times a second, whatever the screen's refresh rate or the export's frame rate, so
+a simulation runs at the same speed everywhere.
 
 ## Buffers and shared code
 
