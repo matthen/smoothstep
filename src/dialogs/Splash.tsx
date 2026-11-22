@@ -76,8 +76,8 @@ export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
         <div>
           <Title order={1} size="h3" mb="xs">A GLSL animation builder</Title>
           <Text mb="xs">
-            Write a fragment shader and animate its inputs on a timeline. Add your own images as textures,
-            and export the result as a video or GIF.
+            Write a fragment shader and animate its inputs on a timeline. There are pickers for numbers and
+            colours, buffers for simulations, your own images as textures, and video export.
           </Text>
           <Text c="dimmed" size="sm">
             Free and <a href={REPO_URL} target="_blank" rel="noreferrer">open source</a>, with no account
