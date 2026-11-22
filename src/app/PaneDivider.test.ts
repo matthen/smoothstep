@@ -1,20 +1,23 @@
 import { describe, expect, it } from 'vitest';
 
-import { clampPreviewWidth } from './PaneDivider';
+import { clampPreviewWidth, MIN_EDITOR, MIN_PREVIEW, nearerWidePreset } from './PaneDivider';
 
 describe("clampPreviewWidth", () => {
   it("keeps a width that leaves room for both sides", () => {
     expect(clampPreviewWidth(600, 1400)).toBe(600);
   });
 
-  it("leaves the code side room, and doesn't shrink the canvas side to nothing", () => {
-    const workspace = 1400;
-    const widest = clampPreviewWidth(5000, workspace);
-    const narrowest = clampPreviewWidth(0, workspace);
-    expect(widest).toBeLessThan(workspace);
-    expect(workspace - widest).toBeGreaterThan(200);
-    expect(narrowest).toBeGreaterThan(200);
-    expect(clampPreviewWidth(widest - 1, workspace)).toBe(widest - 1);
-    expect(clampPreviewWidth(narrowest + 1, workspace)).toBe(narrowest + 1);
+  it("keeps each side at least its minimum width", () => {
+    expect(1400 - clampPreviewWidth(5000, 1400)).toBe(MIN_EDITOR);
+    expect(clampPreviewWidth(0, 1400)).toBe(MIN_PREVIEW);
+  });
+});
+
+describe("nearerWidePreset", () => {
+  it("tells a wide width from a narrow one, on any screen", () => {
+    for (const viewport of [1024, 1440, 2560]) {
+      expect(nearerWidePreset(MIN_PREVIEW, viewport)).toBe(false);
+      expect(nearerWidePreset(viewport, viewport)).toBe(true);
+    }
   });
 });

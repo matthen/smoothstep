@@ -273,7 +273,8 @@ a {
     display: none;
   }
 
-  .app[data-full-view] & {
+  // Full screen has no code beside it, and the tutorial keeps its own split.
+  .app[data-full-view] &, .app[data-tutorial] & {
     display: none;
   }
 }
@@ -566,6 +567,8 @@ div.playerButtons .aspectRatioPicker {
 
 #toggleWideCanvas {
   position: absolute;
+  // Over the divider, which it sits on when the canvas fills its side's width.
+  z-index: 6;
   padding: 4px;
   cursor: pointer;
   background: none;

@@ -64,22 +64,23 @@ test("dragging the divider sets how wide the canvas's side is, which stays after
   const pane = page.locator(".previewPane");
   const divider = page.getByRole("separator", {name: "Resize the canvas"});
   const width = async () => (await pane.boundingBox())!.width;
+  const drag = async (toX: number) => {
+    const box = (await divider.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + 200);
+    await page.mouse.down();
+    await page.mouse.move(toX, box.y + 200, {steps: 5});
+    await page.mouse.up();
+  };
   const start = await width();
-  const box = (await divider.boundingBox())!;
-  await page.mouse.move(box.x + box.width / 2, box.y + 200);
-  await page.mouse.down();
-  await page.mouse.move(box.x - 200, box.y + 200, {steps: 5});
-  await page.mouse.up();
+  // A click without moving doesn't change it.
+  await divider.click();
+  expect(await width()).toBe(start);
+  await drag((await divider.boundingBox())!.x - 200);
   await expect.poll(width).toBeGreaterThan(start + 150);
-  const dragged = await width();
-  // Dragged far the other way, the canvas's side stops short of nothing.
-  const moved = (await divider.boundingBox())!;
-  await page.mouse.move(moved.x + moved.width / 2, moved.y + 200);
-  await page.mouse.down();
-  await page.mouse.move(page.viewportSize()!.width - 2, moved.y + 200, {steps: 5});
-  await page.mouse.up();
+  // Dragged as far as it goes the other way, the canvas's side keeps some width.
+  await drag(page.viewportSize()!.width - 2);
   await expect.poll(width).toBeLessThan(start);
-  expect(await width()).toBeGreaterThan(150);
+  expect(await width()).toBeGreaterThan(start / 3);
   await divider.focus();
   await page.keyboard.press("ArrowLeft");
   const widened = await width();
@@ -87,6 +88,45 @@ test("dragging the divider sets how wide the canvas's side is, which stays after
   await expect.poll(width).toBeCloseTo(widened, 0);
   await divider.dblclick();
   await expect.poll(width).toBeCloseTo(start, 0);
-  expect(dragged).toBeGreaterThan(start);
   expect(errors).toEqual([]);
+});
+
+test("after a drag, the chevron beside the canvas still switches between the preset widths", async ({page, context}) => {
+  const errors = await offline(context);
+  await skipTour(context);
+  await page.goto("./#new");
+  const pane = page.locator(".previewPane");
+  const width = async () => (await pane.boundingBox())!.width;
+  const chevron = page.getByRole("button", {name: "Toggle wide canvas"});
+  const narrow = await width();
+  await chevron.click();
+  await expect.poll(width).toBeGreaterThan(narrow);
+  const wide = await width();
+  await chevron.click();
+  await expect.poll(width).toBeCloseTo(narrow, 0);
+  // Dragged wider than the wide preset, the chevron goes back to narrow.
+  const box = (await page.getByRole("separator", {name: "Resize the canvas"}).boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + 200);
+  await page.mouse.down();
+  await page.mouse.move(box.x - (wide - narrow) - 100, box.y + 200, {steps: 5});
+  await page.mouse.up();
+  await expect.poll(width).toBeGreaterThan(wide);
+  await chevron.click();
+  await expect.poll(width).toBeCloseTo(narrow, 0);
+  expect(errors).toEqual([]);
+});
+
+test("the tutorial keeps its own split, whatever width the divider was dragged to", async ({page, context}) => {
+  await offline(context);
+  await skipTour(context);
+  await context.addInitScript(() => {
+    if (window.location.protocol.startsWith("http")) {
+      window.localStorage.setItem("smoothstep.previewWidth", "5000");
+    }
+  });
+  await page.goto("./#tutorial");
+  const editor = (await page.locator(".editorPane").boundingBox())!;
+  const preview = (await page.locator(".previewPane").boundingBox())!;
+  expect(editor.width).toBeGreaterThan(preview.width);
+  await expect(page.getByRole("separator", {name: "Resize the canvas"})).toBeHidden();
 });

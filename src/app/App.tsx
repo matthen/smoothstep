@@ -36,7 +36,7 @@ import AspectRatioPicker from '../dialogs/AspectRatioPicker';
 import Canvas, { type CanvasHandle, type CanvasLayout, type Shaders } from '../render/Canvas';
 import type { CompileResult, ShaderId } from '../render/Renderer';
 import { floatNames } from '../timeline/names';
-import PaneDivider, { previewWidthCSS, storedPreviewWidth, storePreviewWidth } from './PaneDivider';
+import PaneDivider, { nearerWidePreset, previewWidthCSS, storedPreviewWidth, storePreviewWidth } from './PaneDivider';
 import PlayerControls, { PLAYER_ONE_ROW_WIDTH, PLAYER_SECOND_ROW_WIDTH } from '../timeline/PlayerControls';
 import Sliders, { floatsInCode, inputsInCode } from '../timeline/Sliders';
 import Timeline from '../timeline/Timeline';
@@ -122,12 +122,14 @@ export default function App() {
   const [imagesVersion, setImagesVersion] = useState(0);
   const [layout, setLayout] = useState<CanvasLayout>({width: 0, height: 0, top: 0, containerWidth: 0});
   const [showFooter, setShowFooter] = useState(true);
-  const [wideCanvas, setWideCanvas] = useState(false);
-  // The canvas side's width set with the divider, or null for the preset.
+  // The canvas side's width set with the divider, or null for a preset.
   const [previewWidth, setPreviewWidth] = useState<number | null>(storedPreviewWidth);
+  const [wideCanvas, setWideCanvas] = useState(false);
+  const customWidth = tutorialOpen ? null : previewWidth;
+  // Which way the chevron points: from the dragged width when there is one.
+  const wideShown = customWidth === null ? wideCanvas : nearerWidePreset(customWidth, window.innerWidth);
   const [resizing, setResizing] = useState(false);
   const workspaceRef = useRef<HTMLElement>(null);
-  const previewRef = useRef<HTMLElement>(null);
   useEffect(() => storePreviewWidth(previewWidth), [previewWidth]);
   // The canvas and its play bar filling the screen. The browser's own full screen hides its bars
   // too where it's allowed; iPhones only allow it for videos, so there the page alone fills it.
@@ -732,7 +734,7 @@ export default function App() {
 
   return (
     <div
-      className="app" data-footer={showFooter ? "open" : "closed"} data-wide={wideCanvas || undefined}
+      className="app" data-footer={showFooter ? "open" : "closed"} data-wide={wideShown || undefined}
       data-full-view={fullView || undefined}
       data-mobile-tab={mobileTab} data-tutorial={tutorialOpen || undefined}
     >
@@ -832,7 +834,8 @@ export default function App() {
 
       <main
         className="workspace" ref={workspaceRef} data-resizing={resizing || undefined}
-        style={previewWidth === null ? undefined : {"--preview-width": previewWidthCSS(previewWidth)} as CSSProperties}
+        // The tutorial's Learn panel keeps its own narrower preset.
+        style={customWidth === null ? undefined : {"--preview-width": previewWidthCSS(customWidth)} as CSSProperties}
       >
         <section className="editorPane">
           {/* Before the code, so on phones it can't stick higher than the code's first line. */}
@@ -858,7 +861,7 @@ export default function App() {
             />)}
         </section>
         <section
-          className="previewPane" ref={previewRef}
+          className="previewPane"
           // The play bar's second row, when one row of controls is wider than the pane, with smaller
           // controls when even that row is.
           data-two-rows={fullView || layout.containerWidth >= PLAYER_ONE_ROW_WIDTH ? undefined :
@@ -873,8 +876,8 @@ export default function App() {
           }}
         >
           <PaneDivider
-            workspace={workspaceRef} current={() => previewRef.current?.getBoundingClientRect().width ?? 0}
-            onChange={setPreviewWidth} onReset={() => setPreviewWidth(null)} onDragging={setResizing}
+            workspace={workspaceRef} onReset={() => setPreviewWidth(null)} onDragging={setResizing}
+            onChange={setPreviewWidth}
           />
           <Canvas
             ref={canvasRef}
@@ -884,7 +887,7 @@ export default function App() {
             onBuilt={onBuilt}
             onRestart={restartFrames} onLayout={setLayout} onToggleWide={() => {
               setPreviewWidth(null);
-              setWideCanvas(w => !w);
+              setWideCanvas(!wideShown);
             }}
           />
           <PlayerControls
