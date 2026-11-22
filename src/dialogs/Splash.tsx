@@ -78,7 +78,8 @@ export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
             and export the result as a video or GIF.
           </Text>
           <Text mb="md" c="dimmed" size="sm">
-            Free and open source, with no account needed. Your work is saved in this browser.
+            Free and <a href={REPO_URL} target="_blank" rel="noreferrer">open source</a>, with no account
+            needed. Your work is saved in this browser.
           </Text>
           <WelcomeTip />
         </div>
