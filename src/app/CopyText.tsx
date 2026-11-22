@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 
 // Browsers only offer navigator.clipboard on https and localhost, so copy through a selected
 // text box when it's missing or refuses.
-export async function copyText(text: string): Promise<boolean> {
+async function copyText(text: string): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
     return true;
@@ -17,6 +17,7 @@ export async function copyText(text: string): Promise<boolean> {
     const focused = document.activeElement as HTMLElement | null;
     box.select();
     try {
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- the only way to copy where navigator.clipboard is missing
       return document.execCommand("copy");
     } catch {
       return false;

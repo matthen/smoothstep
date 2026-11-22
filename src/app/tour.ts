@@ -59,8 +59,8 @@ function desktopSteps({showPane}: TourOptions): DriveStep[] {
       element: ".playerButtons",
       popover: {
         title: "Play and scrub",
-        description: "<kbd>Space</kbd> plays and pauses. On the right are the length in seconds and the " +
-          "canvas's shape. <code>iTime</code> in your code is the time in seconds.",
+        description: "<kbd>Space</kbd> plays and pauses. On the right are the length in seconds, the " +
+          "canvas's shape, and full screen. <code>iTime</code> in your code is the time in seconds.",
         side: "bottom",
       },
     },
@@ -71,7 +71,7 @@ function desktopSteps({showPane}: TourOptions): DriveStep[] {
         title: "The timeline",
         description: "Each row is a number you can animate, <code>iFloat0</code> to <code>iFloat15</code>. " +
           "Click or drag in a row to add a transition, then set the values it moves between. Use them in " +
-          "your code like any other number, and <code>#define size iFloat0</code> names a row. " +
+          "your code like any other number. A line like <code>#define size iFloat0</code> names the <code>iFloat0</code> row <code>size</code>. " +
           "<kbd>Ctrl</kbd> and scroll, or pinch, to zoom in.",
         side: "top",
       },
@@ -119,8 +119,8 @@ function phoneSteps({showPane}: TourOptions): DriveStep[] {
       element: ".previewPane",
       popover: {
         title: "The canvas",
-        description: "Your shader runs here, live. The player below plays it, scrubs through time, and sets " +
-          "the length and shape. <code>iTime</code> in your code is the time in seconds.",
+        description: "Your shader runs here, live. The player below plays it, scrubs through time, sets " +
+          "the length and shape, and shows it full screen. <code>iTime</code> in your code is the time in seconds.",
         side: "bottom",
       },
     },
@@ -152,7 +152,7 @@ function phoneSteps({showPane}: TourOptions): DriveStep[] {
         title: "The timeline",
         description: "Each row is a number you can animate, <code>iFloat0</code> to <code>iFloat15</code>. " +
           "Tap where a transition starts, then where it ends, then set the values it moves between. " +
-          "<code>#define size iFloat0</code> in your code names a row. Pinch to zoom in.",
+          "A line like <code>#define size iFloat0</code> in your code names the <code>iFloat0</code> row <code>size</code>. Pinch to zoom in.",
         side: "top",
       },
     },

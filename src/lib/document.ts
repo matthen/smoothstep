@@ -5,7 +5,7 @@ export const NUM_VARIABLES = 16;
 export const MAX_BUFFERS = 4;
 export const DEFAULT_TITLE = "Untitled animation";
 export const MAX_TITLE_LENGTH = 32;
-export const DEFAULT_DURATION = 12;
+const DEFAULT_DURATION = 12;
 
 export const ASPECT_RATIOS: readonly AspectRatio[] = [[1, 1], [4, 3], [16, 9], [3, 4], [9, 16]];
 // A custom ratio is two whole numbers up to this, no wider or taller than 10:1.
@@ -20,7 +20,7 @@ export function isAspectRatio(value: unknown): value is AspectRatio {
     (w as number) >= 1 && (h as number) >= 1 && (w as number) <= MAX_ASPECT_TERM && (h as number) <= MAX_ASPECT_TERM &&
     (w as number) / (h as number) <= 10 && (h as number) / (w as number) <= 10;
 }
-export const TRANSITION_TYPES = ["step", "linear", "smoothstep", "easeIn", "easeOut", "overshoot"] as const;
+const TRANSITION_TYPES = ["step", "linear", "smoothstep", "easeIn", "easeOut", "overshoot"] as const;
 
 export type AspectRatio = [number, number];
 export type TransitionType = (typeof TRANSITION_TYPES)[number];
@@ -51,7 +51,7 @@ export interface TextureSlot {
 }
 
 // A shader that renders before the image each frame, which every shader can read as iBuffer<index>.
-export interface Buffer {
+interface Buffer {
   code: string;
 }
 

@@ -91,7 +91,11 @@ export default function Sliders({variables, values, names, code, held, onVariabl
         return v;
       }
       const rest = {...v};
-      delete rest[end];
+      if (end === "min") {
+        delete rest.min;
+      } else {
+        delete rest.max;
+      }
       return rest;
     }));
 

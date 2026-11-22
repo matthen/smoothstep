@@ -41,7 +41,7 @@ export default function AspectRatioPicker({value, onChange}: AspectRatioPickerPr
         <div className="aspectRatioPicker">
           <Tooltip label="Aspect ratio" position="bottom" disabled={editing}>
             <NativeSelect
-              size="xs" aria-label="Aspect ratio" value={key(value)} leftSection={<TbAspectRatio />}
+              size="sm" aria-label="Aspect ratio" value={key(value)} leftSection={<TbAspectRatio />}
               onChange={event => {
                 if (event.target.value === CUSTOM) {
                   startEditing();

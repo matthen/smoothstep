@@ -30,7 +30,7 @@ export async function playerFile(doc: AnimationDocument, link: string | null): P
   // Only the textures some tab's code uses, as photos and panoramas can be several megabytes.
   const allCode = [doc.code, doc.shared ?? "", ...bufferCodes(doc)].join("\n");
   const textures = await Promise.all(doc.textures.map((slot, i) =>
-    new RegExp("\\biTexture" + i + "\\b").test(allCode) ? dataURL(textureURL(slot)) : ""));
+    new RegExp("\\biTexture" + i + "\\b").test(allCode) ? dataURL(textureURL(slot)) : Promise.resolve("")));
   const data = {document: doc, textures, link};
   const html = `<!DOCTYPE html>
 <html lang="en">

@@ -24,7 +24,7 @@ describe("SaveCopy", () => {
 
   it("saves the suggested title", async () => {
     const props = renderSaveCopy("Fractals");
-    expect((screen.getByLabelText("Title of copy") as HTMLInputElement).value).toBe("Fractals (copy)");
+    expect(screen.getByLabelText<HTMLInputElement>("Title of copy").value).toBe("Fractals (copy)");
     await userEvent.click(screen.getByRole("button", {name: "Save copy"}));
     expect(props.onSave).toHaveBeenCalledWith("Fractals (copy)");
     expect(props.onHide).toHaveBeenCalled();

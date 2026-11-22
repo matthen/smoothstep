@@ -1,5 +1,5 @@
 import { Button, Group, TextInput } from '@mantine/core';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 
 import AppModal from '../app/AppModal';
 import { DEFAULT_TITLE, MAX_TITLE_LENGTH } from '../lib/document';
@@ -30,8 +30,8 @@ export default function SaveCopy({show, title, onSave, onHide}: SaveCopyProps) {
     setInputValue(value);
   };
 
-  const save = (event?: FormEvent) => {
-    event?.preventDefault();
+  const save = (event: SubmitEvent) => {
+    event.preventDefault();
     onSave(copy);
     onHide();
   };

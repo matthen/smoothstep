@@ -2,17 +2,13 @@
 // animated one until the animation plays. And the timeline's rows, which grow as they're needed.
 import { expect, test } from '@playwright/test';
 
-import { canvasCenter, near, offline, setCode } from './helpers';
+import { canvasCenter, near, offline, setCode, skipTour } from './helpers';
 
 const GREY = "#define brightness iFloat0\n#define unused iFloat5\n" +
   "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  fragColor = vec4(vec3(brightness), 1.);\n}";
 
 test.beforeEach(async ({context}) => {
-  await context.addInitScript(() => {
-    if (window.location.protocol.startsWith("http")) {
-      window.localStorage.setItem("smoothstep.tour", "taken");
-    }
-  });
+  await skipTour(context);
 });
 
 test("a slider sets an iFloat, with a range of its own, and both are saved", async ({page, context}) => {

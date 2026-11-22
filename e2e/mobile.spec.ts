@@ -1,7 +1,7 @@
 // The phone layout: the canvas on top, and a switch between the code, timeline and textures.
 import { devices, expect, test } from '@playwright/test';
 
-import { offline, transitionTimes } from './helpers';
+import { offline, skipTour, transitionTimes } from './helpers';
 
 test.use(devices['Pixel 7']);
 
@@ -9,7 +9,7 @@ test("on a phone, the welcome screen has no ✕ and keeps its buttons on screen"
   const errors = await offline(context);
   await page.goto("./");
   const welcome = page.getByRole("dialog");
-  await expect(welcome.getByRole("heading", {name: "Welcome"})).toBeVisible();
+  await expect(welcome.getByRole("heading", {name: "Build animations with GLSL"})).toBeVisible();
   await expect(welcome.locator(".mantine-Modal-close")).toHaveCount(0);
   const viewport = page.viewportSize()!;
   for (const name of ["Learn", "Continue"]) {
@@ -150,4 +150,24 @@ test("on a phone, the canvas's size shows for a few seconds after a tap, and the
   await expect(info).toContainText(/\d+×\d+px/);
   await page.screenshot({path: "test-results/mobile-overlays.png"});
   expect(errors).toEqual([]);
+});
+
+test.describe("on the narrowest phone", () => {
+  test.use({viewport: {width: 320, height: 568}});
+
+  test("the play bar's buttons fit on one row, and full screen puts them beside the scrub bar", async ({page, context}) => {
+    await skipTour(context);
+    await page.goto("./#new");
+    const play = page.getByRole("button", {name: "Play"});
+    const full = page.getByRole("button", {name: "Full screen"});
+    await expect(full).toBeVisible();
+    expect((await full.boundingBox())!.y).toBeCloseTo((await play.boundingBox())!.y, 0);
+    await full.tap();
+    const exit = page.getByRole("button", {name: "Exit full screen"});
+    await expect(exit).toBeVisible();
+    const slider = (await page.locator("div.slider").boundingBox())!;
+    const playBox = (await play.boundingBox())!;
+    expect(slider.y).toBeLessThan(playBox.y + playBox.height);
+    expect(slider.y + slider.height).toBeGreaterThan(playBox.y);
+  });
 });

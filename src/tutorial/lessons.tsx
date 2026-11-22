@@ -549,7 +549,7 @@ vec3 inside = mix(vec3(0.3, 0.55, 1.0), vec3(1.0, 0.6, 0.2), warmth);`}</Lines>
         title: "Change the length",
         body: <>
           <p>
-            A new animation is 12 seconds long. Type a new length in the box at the end of the play bar, or
+            A new animation is 12 seconds long. Type a new length in the duration box in the play bar, or
             drag the end of the timeline.
           </p>
           <p>

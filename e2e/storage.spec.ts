@@ -18,6 +18,16 @@ let zipPath = "";
 let onePath = "";
 let docId = "";
 
+// The parts of the downloaded files these tests read.
+interface ExportManifest {
+  images: {id: string; file: string}[];
+}
+interface AnimationFile {
+  format: string;
+  images: Record<string, unknown>;
+  document: Record<string, unknown>;
+}
+
 test.beforeAll(() => {
   dir = mkdtempSync(join(tmpdir(), "smoothstep-e2e-"));
   zipPath = join(dir, "export.zip");
@@ -121,13 +131,13 @@ test("after a browser restart the animation and texture are still there", async 
 
 test("the downloads hold the animation, thumbnail and shrunk image", () => {
   const files = unzipSync(readFileSync(zipPath));
-  const manifest = JSON.parse(strFromU8(files["manifest.json"]!));
-  const image = manifest.images[0];
+  const manifest = JSON.parse(strFromU8(files["manifest.json"]!)) as ExportManifest;
+  const image = manifest.images[0]!;
   expect(Object.keys(files).sort()).toEqual(
     ["manifest.json", `animations/${docId}.json`, `thumbnails/${docId}.png`, image.file].sort());
   const png = PNG.sync.read(Buffer.from(files[image.file]!));
   expect([png.width, png.height]).toEqual([4096, 3072]);
-  const one = JSON.parse(readFileSync(onePath, "utf8"));
+  const one = JSON.parse(readFileSync(onePath, "utf8")) as AnimationFile;
   expect(one.format).toBe("smoothstep-animation");
   expect(Object.keys(one.images)).toEqual([image.id]);
 });
@@ -154,7 +164,7 @@ test("another fresh browser imports the single file, recognises bare JSON, and k
   expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
 
   // The same document as bare JSON, keys in another order, is recognised.
-  const one = JSON.parse(readFileSync(onePath, "utf8"));
+  const one = JSON.parse(readFileSync(onePath, "utf8")) as AnimationFile;
   const barePath = join(dir, "bare.json");
   writeFileSync(barePath, JSON.stringify(Object.fromEntries(Object.entries(one.document).reverse())));
   expect(await importFile(page, barePath)).toEqual({message: expect.stringContaining("1 animation already here."), rows: 1});

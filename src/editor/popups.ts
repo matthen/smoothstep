@@ -36,7 +36,7 @@ const popupField = StateField.define<Popup | null>({
     if (!popup) return null;
     let { from, to } = popup;
     const resized = tr.effects.find((e) => e.is(resizeValue));
-    if (resized) to = from + (resized.value as number);
+    if (resized) to = from + resized.value;
     else if (tr.docChanged) {
       from = tr.changes.mapPos(from, 1);
       to = Math.max(from, tr.changes.mapPos(to, -1));

@@ -28,13 +28,13 @@ a {
 
 .mobileOnly {
   @include desktop {
-    display: none !important;
+    display: none !important; /* stylelint-disable-line declaration-no-important -- a utility class must beat any component's display */
   }
 }
 
 .desktopOnly {
   @include phone {
-    display: none !important;
+    display: none !important; /* stylelint-disable-line declaration-no-important -- a utility class must beat any component's display */
   }
 }
 
@@ -283,21 +283,43 @@ a {
   position: relative;
   min-height: 0;
   padding: 8px 16px 0;
+  --bar-height: #{$player-bar-height};
+
+  &[data-two-rows] {
+    --bar-height: #{$player-bar-height-two-rows};
+  }
 
   @include desktop {
     grid-area: auto;
   }
 
   @include phone {
-    height: min(max(52dvh, 240px), 100vw);
+    // Room for the canvas, plus the play bar's second row if it has one.
+    height: calc(min(max(52dvh, 240px), 100vw) + var(--bar-height) - #{$player-bar-height});
     padding: 8px 12px 0;
 
     // Reading or writing code needs the room more than the canvas does.
     [data-mobile-tab="code"] &, [data-mobile-tab="learn"] & {
-      height: min(max(34dvh, 200px), 100vw);
+      height: calc(min(max(34dvh, 200px), 100vw) + var(--bar-height) - #{$player-bar-height});
+    }
+  }
+
+  // Full screen: the canvas and its play bar over everything else, which dialogs still open above.
+  .app[data-full-view] & {
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    height: 100dvh;
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    background: $dt-gray-darker;
+
+    #toggleWideCanvas {
+      display: none;
     }
   }
 }
+
 
 .mobileTabs {
   grid-area: tabs;
@@ -417,12 +439,12 @@ a {
 
 // The canvas and its overlays.
 div#canvasContainer {
-  height: calc(100% - 56px);
+  height: calc(100% - var(--bar-height));
   min-height: 128px;
   position: relative;
   display: flex;
 
-  #canvas {
+  canvas {
     background-color: #000;
     display: block;
     margin: auto;
@@ -473,11 +495,26 @@ div#canvasContainer {
   }
 }
 
-div.playerButtons .aspectRatioPicker {
+div.playerButtons .aspectRatioPicker, div.playerButtons .fullViewButton {
   flex: none;
+}
+
+div.playerButtons .aspectRatioPicker {
   select {
-    width: 84px;
+    width: 96px;
     font-variant-numeric: tabular-nums;
+  }
+
+  // In the narrowest panes the menu drops its icon, so the ratio still fits.
+  .previewPane[data-two-rows="narrow"] & {
+    select {
+      width: 84px;
+      padding-inline-start: 12px;
+    }
+
+    .mantine-NativeSelect-section[data-position="left"] {
+      display: none;
+    }
   }
 }
 
@@ -1065,6 +1102,10 @@ div#textures .texturesHint {
   border-radius: 6px;
   border-left: 3px solid $dt-purple;
   background: $dt-gray-darker;
+
+  .linkList + & {
+    margin-top: 16px;
+  }
 
   .welcomeTipTitle {
     display: flex;

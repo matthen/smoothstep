@@ -3,7 +3,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { PNG } from 'pngjs';
 
-import { canvasCenter, dismissAlert, editorCode, fileMenu, MAGENTA, near, offline, setCode, solidPNG, TEXTURE_SHADER } from './helpers';
+import { canvasCenter, dismissAlert, editorCode, fileMenu, MAGENTA, near, offline, setCode, skipTour, solidPNG, TEXTURE_SHADER } from './helpers';
 
 const FILE_URL = "https://example.com/anims/magenta.smoothstep.json";
 
@@ -48,11 +48,7 @@ async function shareDialog(page: Page) {
 
 test.beforeEach(async ({context}) => {
   // No tour offer over the header's buttons.
-  await context.addInitScript(() => {
-    if (window.location.protocol.startsWith("http")) {
-      window.localStorage.setItem("smoothstep.tour", "taken");
-    }
-  });
+  await skipTour(context);
 });
 
 test("a share link carries the animation", async ({page, context}) => {

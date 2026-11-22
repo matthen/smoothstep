@@ -36,6 +36,16 @@ export async function offline(context: BrowserContext, {tips = false} = {}): Pro
   return errors;
 }
 
+// Marks the tour as taken, so its offer doesn't cover the page.
+export async function skipTour(context: BrowserContext) {
+  // about:blank has no storage, so skip it there.
+  await context.addInitScript(() => {
+    if (window.location.protocol.startsWith("http")) {
+      window.localStorage.setItem("smoothstep.tour", "taken");
+    }
+  });
+}
+
 export function solidPNG(width: number, height: number, [r, g, b]: [number, number, number]): Buffer {
   const png = new PNG({width, height});
   for (let i = 0; i < png.data.length; i += 4) {

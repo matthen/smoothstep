@@ -1,10 +1,11 @@
 import { ActionIcon, Button, Group, Kbd, Loader, Menu, SegmentedControl, Tabs, Text, TextInput, Tooltip } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 import { flushSync } from 'react-dom';
 import {
   TbBook, TbBrandGithub, TbChevronDown, TbCopy, TbDeviceFloppy, TbDownload, TbFile, TbFolderOpen, TbHammer,
-  TbCircleCheckFilled, TbCode, TbHeart, TbHelp, TbHome, TbKeyboard, TbLink, TbRoute, TbSchool, TbShare, TbVideo,
+  TbCircleCheckFilled, TbCode, TbHeart, TbHelp, TbHome, TbKeyboard, TbLink, TbMaximize, TbMinimize, TbRoute, TbSchool, TbShare, TbVideo,
 } from 'react-icons/tb';
 
 import Acknowledgements from '../dialogs/Acknowledgements';
@@ -35,7 +36,7 @@ import AspectRatioPicker from '../dialogs/AspectRatioPicker';
 import Canvas, { type CanvasHandle, type CanvasLayout, type Shaders } from '../render/Canvas';
 import type { CompileResult, ShaderId } from '../render/Renderer';
 import { floatNames } from '../timeline/names';
-import PlayerControls from '../timeline/PlayerControls';
+import PlayerControls, { PLAYER_ONE_ROW_WIDTH, PLAYER_SECOND_ROW_WIDTH } from '../timeline/PlayerControls';
 import Sliders, { floatsInCode, inputsInCode } from '../timeline/Sliders';
 import Timeline from '../timeline/Timeline';
 import { lessonTitle, type TabCode, type TutorialState } from '../tutorial/lessons';
@@ -116,9 +117,48 @@ export default function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [scrubbing, setScrubbing] = useState(false);
   const [imagesVersion, setImagesVersion] = useState(0);
-  const [layout, setLayout] = useState<CanvasLayout>({width: 0, height: 0, top: 0});
+  const [layout, setLayout] = useState<CanvasLayout>({width: 0, height: 0, top: 0, containerWidth: 0});
   const [showFooter, setShowFooter] = useState(true);
   const [wideCanvas, setWideCanvas] = useState(false);
+  // The canvas and its play bar filling the screen. The browser's own full screen hides its bars
+  // too where it's allowed; iPhones only allow it for videos, so there the page alone fills it.
+  const [fullView, setFullView] = useState(false);
+  const pressedBackground = useRef(false);
+  const isBackground = (event: ReactMouseEvent) =>
+    event.target === event.currentTarget || (event.target as HTMLElement).id === "canvasContainer";
+  const setFull = (on: boolean) => {
+    setFullView(on);
+    if (on) {
+      if (document.fullscreenEnabled) {
+        void document.documentElement.requestFullscreen().catch(() => {});
+      }
+    } else if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => {});
+    }
+  };
+  useEffect(() => {
+    if (!fullView) {
+      return;
+    }
+    // Esc leaves the browser's full screen by itself; this covers the page-only one, unless Esc is
+    // closing a dialog over it.
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !anyModalOpen()) {
+        setFull(false);
+      }
+    };
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        setFullView(false);
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+    };
+  }, [fullView]);
   const phone = usePhone();
   const touch = useTouch();
   useKeyboardInset();
@@ -305,7 +345,7 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = localStore.onImagesChanged(() => setImagesVersion(v => v + 1));
     const route = initialRoute;
-    localStore.init().catch(error => {
+    void localStore.init().catch((error: unknown) => {
       console.error(error);
       setAlert(STORAGE_BLOCKED);
     }).then(async () => {
@@ -685,6 +725,7 @@ export default function App() {
   return (
     <div
       className="app" data-footer={showFooter ? "open" : "closed"} data-wide={wideCanvas || undefined}
+      data-full-view={fullView || undefined}
       data-mobile-tab={mobileTab} data-tutorial={tutorialOpen || undefined}
     >
       <header className="appHeader">
@@ -805,7 +846,21 @@ export default function App() {
               lineErrors={errorShader === tab ? lineErrors : []}
             />)}
         </section>
-        <section className="previewPane">
+        <section
+          className="previewPane"
+          // The play bar's second row, when one row of controls is wider than the pane, with smaller
+          // controls when even that row is.
+          data-two-rows={fullView || layout.containerWidth >= PLAYER_ONE_ROW_WIDTH ? undefined :
+            layout.containerWidth < PLAYER_SECOND_ROW_WIDTH ? "narrow" : ""}
+          // In full screen, a click on the background around the canvas and play bar leaves it. A drag
+          // from the canvas that ends there clicks their common ancestor, so the press must start there too.
+          onPointerDown={event => { pressedBackground.current = isBackground(event); }}
+          onClick={event => {
+            if (fullView && pressedBackground.current && isBackground(event)) {
+              setFull(false);
+            }
+          }}
+        >
           <Canvas
             ref={canvasRef}
             shaders={shaders} buildId={buildId} textureURLs={textureURLs}
@@ -819,12 +874,22 @@ export default function App() {
             onSeek={seek} onPlayPause={() => setIsPlaying(p => !p)} onReset={() => seek(0)}
             onDurationChange={onDurationChange}
             onScrubStart={() => setScrubbing(true)} onScrubEnd={() => setScrubbing(false)}
-            width={layout.width || undefined} top={layout.top}
-            extra={
-              <AspectRatioPicker
-                value={doc.aspectRatio} onChange={(aspectRatio: AspectRatio) => updateDoc({aspectRatio})}
-              />
-            }
+            width={layout.width || undefined} top={layout.top} playOnly={fullView}
+            extra={<>
+              {!fullView &&
+                <AspectRatioPicker
+                  value={doc.aspectRatio} onChange={(aspectRatio: AspectRatio) => updateDoc({aspectRatio})}
+                />}
+              <Tooltip label={fullView ? "Exit full screen (Esc)" : "Full screen"} position="bottom">
+                <ActionIcon
+                  variant="default" size="input-sm" className="fullViewButton"
+                  aria-label={fullView ? "Exit full screen" : "Full screen"}
+                  onMouseDown={event => event.preventDefault()} onClick={() => setFull(!fullView)}
+                >
+                  {fullView ? <TbMinimize /> : <TbMaximize />}
+                </ActionIcon>
+              </Tooltip>
+            </>}
           />
         </section>
       </main>

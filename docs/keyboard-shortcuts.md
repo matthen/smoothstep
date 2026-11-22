@@ -37,6 +37,7 @@ Click the canvas or an empty part of the page first, so the code editor doesn't 
 | `0` to `9` | jump to 0%, 10%, … 90% of the way through |
 | `Backspace` or `Delete` | delete the selected transition on the timeline |
 | `Ctrl` (`⌘` on a Mac) and scroll, or pinch | zoom the timeline in or out, around the pointer |
+| `Esc` | leave full screen, which the button at the end of the play bar opens |
 
 ## Editor helpers
 

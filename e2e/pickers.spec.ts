@@ -16,7 +16,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) { fragColor = vec4(c, 1.0)
 async function textCenter(page: Page, text: string) {
   return page.locator(".cm-content").evaluate((root, text) => {
     for (const line of root.querySelectorAll(".cm-line")) {
-      let target = line.textContent!.indexOf(text);
+      let target = line.textContent.indexOf(text);
       if (target < 0) continue;
       target += Math.floor(text.length / 2);
       const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);

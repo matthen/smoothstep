@@ -3,26 +3,43 @@
 
 // Player controls under the canvas.
 div.playerButtons {
-  // top and width are set inline, to sit under the canvas.
+  // top and --canvas-width are set inline, to sit under the canvas.
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
+  width: var(--canvas-width);
   max-width: calc(100% - 24px);
-  // Matches the space canvasContainer leaves below the canvas.
-  height: 56px;
-  padding: 12px 0 0;
+  // The preview pane sets it, and leaves that much room below the canvas.
+  height: var(--bar-height);
+  padding: 4px 0 0;
 
-  // Phone canvases can be narrow, so the controls use the full width instead.
-  @include phone {
-    width: calc(100% - 24px) !important;
+  // When the pane is too narrow for one row, the controls use its full width, with the scrub bar on
+  // a row of its own above the buttons, as in a phone's video player.
+  .previewPane[data-two-rows] & {
+    width: calc(100% - 24px);
+    flex-wrap: wrap;
+    row-gap: 2px;
+
+    .mantine-NumberInput-root {
+      margin-left: auto;
+    }
   }
   display: flex;
   align-items: center;
   gap: 10px;
 
   .durationInput {
-    width: 80px;
+    width: 88px;
     font-variant-numeric: tabular-nums;
+  }
+
+  // So the second row's buttons still fit on one line.
+  .previewPane[data-two-rows="narrow"] & {
+    column-gap: 6px;
+
+    .durationInput {
+      width: 78px;
+    }
   }
 
   div.slider {
@@ -35,6 +52,11 @@ div.playerButtons {
     cursor: pointer;
     user-select: none;
     touch-action: none;
+
+    .previewPane[data-two-rows] & {
+      order: -1;
+      flex: 1 0 calc(100% - 12px);
+    }
   }
 
   div.timeBar {

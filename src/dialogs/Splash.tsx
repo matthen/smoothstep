@@ -1,4 +1,4 @@
-import { Button, Group, Menu, SimpleGrid, Text, Title } from '@mantine/core';
+import { Button, FocusTrap, Group, Menu, SimpleGrid, Text, Title } from '@mantine/core';
 import { useEffect, useState, type ReactNode } from 'react';
 import { TbBulb, TbRoute, TbSchool } from 'react-icons/tb';
 
@@ -70,17 +70,19 @@ export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
       withCloseButton={!phone}
       title={<span className="splashTitle"><img src={asset("images/logo.svg")} width="20" height="20" alt="" /><span>smoothstep<i>.io</i></span></span>}
     >
-      <SimpleGrid cols={{base: 1, sm: 2}} spacing="xl">
+      {/* On a phone, focus nothing at first, so no link or button shows a focus ring. */}
+      {phone && <FocusTrap.InitialFocus />}
+      <SimpleGrid cols={{base: 1, sm: 2}} spacing="xl" verticalSpacing="md">
         <div>
-          <Title order={1} size="h2" mb="sm">Welcome</Title>
-          <Text mb="sm">
-            smoothstep.io is a toolkit for building animations in the WebGL Shader language.
+          <Title order={1} size="h3" mb="xs">Build animations with GLSL</Title>
+          <Text mb="xs">
+            Write a fragment shader and animate its inputs on a timeline. There are pickers for numbers and
+            colours, buffers for simulations, your own images as textures, and video export.
           </Text>
-          <Text mb="md" c="dimmed" size="sm">
-            Animations and the images you add are saved in this browser. Use File &rarr; Open
-            to download them as files, or to open files saved elsewhere.
+          <Text c="dimmed" size="sm">
+            Free and <a href={REPO_URL} target="_blank" rel="noreferrer">open source</a>, with no account
+            needed. Your work is saved in this browser.
           </Text>
-          <WelcomeTip />
         </div>
         <div>
           {recentDocs.length > 0 &&
@@ -96,8 +98,8 @@ export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
                   </LinkItem>,
                 )}
               </div>
-            </>
-          }
+            </>}
+          <WelcomeTip />
         </div>
       </SimpleGrid>
       <Title order={2} size="h5" mt="xl" mb="sm">Examples</Title>

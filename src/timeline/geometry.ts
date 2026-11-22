@@ -7,7 +7,7 @@ export const DEFAULT_PX_PER_SECOND = 40;
 // The furthest zoom in, unless fitting the timeline needs more.
 export const MAX_PX_PER_SECOND = 400;
 // Room after the timeline's end, so its last tick and the end marker aren't at the edge.
-export const END_PADDING = 12;
+const END_PADDING = 12;
 export const ROW_HEIGHT = 30;
 // Rows only react to the pointer between these heights, where the transitions are drawn.
 export const ROW_BAND_TOP = 3;

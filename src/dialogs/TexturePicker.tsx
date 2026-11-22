@@ -127,7 +127,7 @@ function UploadForm({onUploaded, onMessage}: {onUploaded(): void; onMessage(text
         {selected && selectedFile &&
           <>
             <img src={selected.preview} alt={selectedFile.name} />  {selectedFile.name}
-            <Button onClick={handleUpload} disabled={uploading}>Add</Button>
+            <Button onClick={event => void handleUpload(event)} disabled={uploading}>Add</Button>
             {uploading && <Loader size="xs" role="status" />}
           </>
         }
@@ -163,7 +163,7 @@ export default function TexturePicker(
 
   useEffect(() => {
     if (show) {
-      listImages().then(setUploads).catch(error => {
+      listImages().then(setUploads).catch((error: unknown) => {
         console.log(error);
         onMessage("Error listing your images.");
       });
@@ -176,7 +176,7 @@ export default function TexturePicker(
       return;
     }
     const timer = window.setTimeout(() =>
-      bodyRef.current?.querySelector(".picker.selected")?.scrollIntoView?.({block: "center"}), 50);
+      bodyRef.current?.querySelector(".picker.selected")?.scrollIntoView({block: "center"}), 50);
     return () => window.clearTimeout(timer);
   }, [show]);
 
@@ -289,7 +289,7 @@ export default function TexturePicker(
           </>}
         <Group justify="flex-end" mt="lg">
           <Button variant="default" onClick={() => setShowConfirm(false)}>Cancel</Button>
-          <Button color="red" onClick={() => toDelete && handleDelete(toDelete)}>Delete</Button>
+          <Button color="red" onClick={() => toDelete && void handleDelete(toDelete)}>Delete</Button>
         </Group>
       </AppModal>
     </>

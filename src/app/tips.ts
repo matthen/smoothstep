@@ -37,8 +37,8 @@ export function tipContent(id: TipId, phone: boolean): Tip {
     case "transitions":
       return {
         title: "Your first transition",
-        message: "Set the values it moves between, and choose smoothstep, linear or step. In your code, " +
-          "`#define size iFloat0` gives the input a name, and the timeline shows it.",
+        message: "Set the values it moves between, and how it moves, like smoothstep or linear. A line like " +
+          "`#define size iFloat0` in your code names that row `size`, so you can write `size` instead of `iFloat0`.",
       };
     case "backup":
       return {

@@ -1,5 +1,5 @@
 import {useEffect, useEffectEvent, useState} from "react";
-import type {MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode} from "react";
+import type {CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode} from "react";
 import {ActionIcon, NumberInput, Tooltip} from "@mantine/core";
 import {TbPlayerPauseFilled, TbPlayerPlayFilled, TbPlayerSkipBackFilled} from "react-icons/tb";
 import {formatTime} from "./geometry";
@@ -18,11 +18,18 @@ export interface PlayerControlsProps {
   onScrubEnd(): void;
   width: number | undefined;
   top: number;
+  // Leaves out the duration box, to play the animation like a video.
+  playOnly?: boolean;
   // Shown after the duration, such as the aspect ratio picker.
   extra?: ReactNode;
 }
 
-const MIN_WIDTH = 200;
+// The narrowest the play bar can be with all its controls on one row, leaving the scrub bar room; with
+// the scrub bar on a row of its own, the narrowest the second row fits at its usual sizes; and with
+// only the play buttons and full screen.
+export const PLAYER_ONE_ROW_WIDTH = 444;
+export const PLAYER_SECOND_ROW_WIDTH = 340;
+const PLAY_ONLY_WIDTH = 240;
 
 function fractionAt(element: HTMLElement, clientX: number): number {
   const rect = element.getBoundingClientRect();
@@ -108,7 +115,7 @@ function DurationInput({duration, onDurationChange}: Pick<PlayerControlsProps, "
     <Tooltip label="Duration in seconds" position="bottom">
       <NumberInput
         classNames={{input: "durationInput"}}
-        size="xs"
+        size="sm"
         aria-label="Duration (seconds)"
         step={1}
         min={0.1}
@@ -158,17 +165,17 @@ export default function PlayerControls(props: PlayerControlsProps) {
   const keepFocus = (event: ReactMouseEvent) => event.preventDefault();
 
   return (
-    <div className="playerButtons" style={{top, width: Math.max(width ?? MIN_WIDTH, MIN_WIDTH)}}>
+    <div className="playerButtons" style={{top, "--canvas-width": `${Math.max(width ?? 0, props.playOnly ? PLAY_ONLY_WIDTH : PLAYER_ONE_ROW_WIDTH)}px`} as CSSProperties}>
       <ActionIcon.Group>
-        <ActionIcon variant="default" size="lg" aria-label="Back to the start" onMouseDown={keepFocus} onClick={onReset}>
+        <ActionIcon variant="default" size="input-sm" aria-label="Back to the start" onMouseDown={keepFocus} onClick={onReset}>
           <TbPlayerSkipBackFilled />
         </ActionIcon>
-        <ActionIcon variant="default" size="lg" aria-label={isPlaying ? "Pause" : "Play"} onMouseDown={keepFocus} onClick={onPlayPause}>
+        <ActionIcon variant="default" size="input-sm" aria-label={isPlaying ? "Pause" : "Play"} onMouseDown={keepFocus} onClick={onPlayPause}>
           {isPlaying ? <TbPlayerPauseFilled /> : <TbPlayerPlayFilled />}
         </ActionIcon>
       </ActionIcon.Group>
       <ScrubSlider {...props} />
-      <DurationInput duration={duration} onDurationChange={props.onDurationChange} />
+      {!props.playOnly && <DurationInput duration={duration} onDurationChange={props.onDurationChange} />}
       {props.extra}
     </div>
   );

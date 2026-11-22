@@ -342,9 +342,9 @@ export function createColorPicker(
         <div class="ss-color-bar-cursor-left"></div><div class="ss-color-bar-cursor-right"></div></div>
     </div>
     <button type="button" class="ss-color-link" title="Edit as a direction">+</button>`;
-  const q = <T extends HTMLElement>(sel: string) => dom.querySelector(sel) as T;
+  const q = (sel: string) => dom.querySelector<HTMLElement>(sel)!;
   const patch = q('.ss-color-patch');
-  const discCanvas = q<HTMLCanvasElement>('.ss-color-disc');
+  const discCanvas = dom.querySelector<HTMLCanvasElement>('.ss-color-disc')!;
   const cover = q('.ss-color-disc-cover');
   const cursor = q('.ss-color-disc-cursor');
   const barEl = q('.ss-color-bar');

@@ -12,7 +12,7 @@ interface PlayerData {
 const style = document.createElement("style");
 style.textContent = PLAYER_CSS;
 document.head.append(style);
-const data = JSON.parse(document.getElementById("animation")!.textContent!) as PlayerData;
+const data = JSON.parse(document.getElementById("animation")!.textContent) as PlayerData;
 startPlayer(document.getElementById("player")!, {
   doc: parseDocument(data.document),
   textureURLs: data.textures,

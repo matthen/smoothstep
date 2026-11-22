@@ -1,14 +1,10 @@
 // Menu paths and web addresses in the code are links.
 import { expect, test } from '@playwright/test';
 
-import { offline, setCode } from './helpers';
+import { offline, setCode, skipTour } from './helpers';
 
 test.beforeEach(async ({context}) => {
-  await context.addInitScript(() => {
-    if (window.location.protocol.startsWith("http")) {
-      window.localStorage.setItem("smoothstep.tour", "taken");
-    }
-  });
+  await skipTour(context);
 });
 
 test("a link in a comment opens a menu item, a tab or a web address", async ({page, context}) => {
