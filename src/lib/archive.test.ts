@@ -164,7 +164,7 @@ describe("importFiles", () => {
     const summary = await importFiles([
       new File(["not json"], "a.json"), new File([JSON.stringify(bad)], "b.json"),
     ]);
-    expect(summary).toMatchObject({animations: 0, images: 0, unchanged: 0, failed: 2});
+    expect(summary).toEqual({animations: 0, images: 0, unchanged: 0, failed: 2, ids: []});
     expect(importMessage(summary)).toBe("2 items couldn't be read.");
   });
 

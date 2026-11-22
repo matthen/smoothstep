@@ -549,6 +549,8 @@ export default function App() {
         window.history.replaceState({}, "", documentHref(id));
       }
       setDocumentId(id);
+      // Now one of the user's own animations, even if it's deleted later.
+      setSharedFrom(null);
       // Edits made while saving are still unsaved.
       setHasUnsavedChanges(docRef.current !== json);
       showMessage(message);
@@ -584,13 +586,16 @@ export default function App() {
     }
     try {
       const summary = await archive.importFiles(Array.from(files));
-      const [only] = summary.ids;
-      if (only && summary.ids.length === 1 && summary.failed === 0) {
-        openHash(documentHref(only), hasUnsavedChanges);
+      const ids = [...new Set(summary.ids)];
+      const [only] = ids;
+      if (only && ids.length === 1 && summary.failed === 0 && openHash(documentHref(only), hasUnsavedChanges)) {
         return;
       }
+      // Several animations, or one the user chose not to open over unsaved changes: list them.
       setLibraryVersion(v => v + 1);
-      setDialog("open");
+      if (ids.length > 0) {
+        setDialog("open");
+      }
       setAlert(archive.importMessage(summary));
     } catch (error) {
       console.error(error);

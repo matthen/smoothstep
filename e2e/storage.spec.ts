@@ -53,14 +53,12 @@ async function openDialog(page: Page) {
 
 // A file holding one animation opens it, adding it to the browser's animations unless it's there.
 async function openFile(page: Page, path: string): Promise<string> {
-  const before = page.url();
+  // Opening reloads the page, even when the animation is already open.
+  const loaded = page.waitForEvent("load");
   await page.getByTestId("importInput").setInputFiles(path);
-  await expect(page).toHaveURL(/#anim\/\w+$/);
+  await loaded;
   await expect(page.locator("#titleInput")).toHaveValue("Static test");
-  if (page.url() === before) {
-    // Already open, so the page reloads without the address changing.
-    await page.waitForLoadState("load");
-  }
+  expect(page.url()).toMatch(/#anim\/\w+$/);
   return page.url().split("/").pop()!;
 }
 
