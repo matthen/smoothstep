@@ -72,33 +72,30 @@ export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
     >
       <SimpleGrid cols={{base: 1, sm: 2}} spacing="xl">
         <div>
-          <Title order={1} size="h2" mb="sm">Welcome</Title>
-          <Text mb="sm">
-            smoothstep.io is a toolkit for building animations in the WebGL Shader language.
+          <Title order={1} size="h3" mb="xs">A GLSL animation builder</Title>
+          <Text mb="xs">
+            Write a fragment shader and animate its inputs on a timeline. Add your own images as textures,
+            and export the result as a video or GIF.
           </Text>
           <Text mb="md" c="dimmed" size="sm">
-            Animations and the images you add are saved in this browser. Use File &rarr; Open
-            to download them as files, or to open files saved elsewhere.
+            Free and open source, with no account needed. Your work is saved in this browser.
           </Text>
           <WelcomeTip />
         </div>
-        <div>
-          {recentDocs.length > 0 &&
-            <>
-              <Title order={2} size="h5" mb="xs">Your recent animations</Title>
-              <div className="linkList">
-                {recentDocs.map(doc =>
-                  <LinkItem
-                    href={documentHref(doc.id)} key={doc.id} onClick={onHide}
-                    icon={doc.thumbnail ? thumbnail(doc.thumbnail) : <span className="thumbnail" />}
-                  >
-                    {doc.title}
-                  </LinkItem>,
-                )}
-              </div>
-            </>
-          }
-        </div>
+        {recentDocs.length > 0 &&
+          <div>
+            <Title order={2} size="h5" mb="xs">Your recent animations</Title>
+            <div className="linkList">
+              {recentDocs.map(doc =>
+                <LinkItem
+                  href={documentHref(doc.id)} key={doc.id} onClick={onHide}
+                  icon={doc.thumbnail ? thumbnail(doc.thumbnail) : <span className="thumbnail" />}
+                >
+                  {doc.title}
+                </LinkItem>,
+              )}
+            </div>
+          </div>}
       </SimpleGrid>
       <Title order={2} size="h5" mt="xl" mb="sm">Examples</Title>
       <ExampleGallery onOpen={onHide} />
