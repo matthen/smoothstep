@@ -11,6 +11,7 @@ export interface CanvasLayout {
   width: number;   // displayed size in CSS pixels
   height: number;
   top: number;     // bottom edge of the canvas within the container's offset parent, for the player controls
+  containerWidth: number;
 }
 
 export interface CanvasHandle {
@@ -113,8 +114,8 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
       props.onRestart();
     }
     needsRender.current = true;
-    props.onLayout({width, height, top: container[2] + marginTop + height});
-  }, [width, height, marginTop, container[2]]); // eslint-disable-line react-hooks/exhaustive-deps
+    props.onLayout({width, height, top: container[2] + marginTop + height, containerWidth: container[0]});
+  }, [width, height, marginTop, container[0], container[2]]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const renderer = rendererRef.current;

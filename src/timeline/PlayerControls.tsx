@@ -24,7 +24,12 @@ export interface PlayerControlsProps {
   extra?: ReactNode;
 }
 
-const MIN_WIDTH = 200;
+// The narrowest the play bar can be with all its controls on one row, leaving the scrub bar room; with
+// the scrub bar on a row of its own, the narrowest the second row fits at its usual sizes; and with
+// only the play buttons and full screen.
+export const PLAYER_ONE_ROW_WIDTH = 444;
+export const PLAYER_SECOND_ROW_WIDTH = 340;
+const PLAY_ONLY_WIDTH = 240;
 
 function fractionAt(element: HTMLElement, clientX: number): number {
   const rect = element.getBoundingClientRect();
@@ -160,7 +165,7 @@ export default function PlayerControls(props: PlayerControlsProps) {
   const keepFocus = (event: ReactMouseEvent) => event.preventDefault();
 
   return (
-    <div className="playerButtons" style={{top, "--canvas-width": `${Math.max(width ?? MIN_WIDTH, MIN_WIDTH)}px`} as CSSProperties}>
+    <div className="playerButtons" style={{top, "--canvas-width": `${Math.max(width ?? 0, props.playOnly ? PLAY_ONLY_WIDTH : PLAYER_ONE_ROW_WIDTH)}px`} as CSSProperties}>
       <ActionIcon.Group>
         <ActionIcon variant="default" size="input-sm" aria-label="Back to the start" onMouseDown={keepFocus} onClick={onReset}>
           <TbPlayerSkipBackFilled />

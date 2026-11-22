@@ -44,16 +44,9 @@ $phone-pane-height: calc(100dvh - 52px);
   }
 }
 
-// Phones as narrow as the iPhone SE, where the play bar's second row needs smaller boxes to fit.
-@mixin narrow-phone {
-  @media (max-width: 359.98px) {
-    @content;
-  }
-}
-
-// The play bar under the canvas: one row, or two on a phone.
+// The play bar under the canvas: one row, or two when the pane is narrow.
 $player-bar-height: 56px;
-$player-bar-height-phone: 100px;
+$player-bar-height-two-rows: 100px;
 
 // Landscape phones and short windows: the editor and canvas fill the screen, and the page
 // scrolls down to the timeline.

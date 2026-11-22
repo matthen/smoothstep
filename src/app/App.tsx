@@ -1,6 +1,7 @@
 import { ActionIcon, Button, Group, Kbd, Loader, Menu, SegmentedControl, Tabs, Text, TextInput, Tooltip } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 import { flushSync } from 'react-dom';
 import {
   TbBook, TbBrandGithub, TbChevronDown, TbCopy, TbDeviceFloppy, TbDownload, TbFile, TbFolderOpen, TbHammer,
@@ -35,7 +36,7 @@ import AspectRatioPicker from '../dialogs/AspectRatioPicker';
 import Canvas, { type CanvasHandle, type CanvasLayout, type Shaders } from '../render/Canvas';
 import type { CompileResult, ShaderId } from '../render/Renderer';
 import { floatNames } from '../timeline/names';
-import PlayerControls from '../timeline/PlayerControls';
+import PlayerControls, { PLAYER_ONE_ROW_WIDTH, PLAYER_SECOND_ROW_WIDTH } from '../timeline/PlayerControls';
 import Sliders, { floatsInCode, inputsInCode } from '../timeline/Sliders';
 import Timeline from '../timeline/Timeline';
 import { lessonTitle, type TabCode, type TutorialState } from '../tutorial/lessons';
@@ -116,12 +117,15 @@ export default function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [scrubbing, setScrubbing] = useState(false);
   const [imagesVersion, setImagesVersion] = useState(0);
-  const [layout, setLayout] = useState<CanvasLayout>({width: 0, height: 0, top: 0});
+  const [layout, setLayout] = useState<CanvasLayout>({width: 0, height: 0, top: 0, containerWidth: 0});
   const [showFooter, setShowFooter] = useState(true);
   const [wideCanvas, setWideCanvas] = useState(false);
   // The canvas and its play bar filling the screen. The browser's own full screen hides its bars
   // too where it's allowed; iPhones only allow it for videos, so there the page alone fills it.
   const [fullView, setFullView] = useState(false);
+  const pressedBackground = useRef(false);
+  const isBackground = (event: ReactMouseEvent) =>
+    event.target === event.currentTarget || (event.target as HTMLElement).id === "canvasContainer";
   const setFull = (on: boolean) => {
     setFullView(on);
     if (on) {
@@ -136,9 +140,10 @@ export default function App() {
     if (!fullView) {
       return;
     }
-    // Esc leaves the browser's full screen by itself; this covers the page-only one.
+    // Esc leaves the browser's full screen by itself; this covers the page-only one, unless Esc is
+    // closing a dialog over it.
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !anyModalOpen()) {
         setFull(false);
       }
     };
@@ -843,10 +848,15 @@ export default function App() {
         </section>
         <section
           className="previewPane"
-          // In full screen, a click on the background around the canvas and play bar leaves it.
+          // The play bar's second row, when one row of controls is wider than the pane, with smaller
+          // controls when even that row is.
+          data-two-rows={fullView || layout.containerWidth >= PLAYER_ONE_ROW_WIDTH ? undefined :
+            layout.containerWidth < PLAYER_SECOND_ROW_WIDTH ? "narrow" : ""}
+          // In full screen, a click on the background around the canvas and play bar leaves it. A drag
+          // from the canvas that ends there clicks their common ancestor, so the press must start there too.
+          onPointerDown={event => { pressedBackground.current = isBackground(event); }}
           onClick={event => {
-            const target = event.target as HTMLElement;
-            if (fullView && (target === event.currentTarget || target.id === "canvasContainer")) {
+            if (fullView && pressedBackground.current && isBackground(event)) {
               setFull(false);
             }
           }}

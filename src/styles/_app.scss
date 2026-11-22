@@ -285,19 +285,22 @@ a {
   padding: 8px 16px 0;
   --bar-height: #{$player-bar-height};
 
+  &[data-two-rows] {
+    --bar-height: #{$player-bar-height-two-rows};
+  }
+
   @include desktop {
     grid-area: auto;
   }
 
   @include phone {
-    --bar-height: #{$player-bar-height-phone};
-    // Room for the canvas, plus the play bar's second row.
-    height: calc(min(max(52dvh, 240px), 100vw) + #{$player-bar-height-phone - $player-bar-height});
+    // Room for the canvas, plus the play bar's second row if it has one.
+    height: calc(min(max(52dvh, 240px), 100vw) + var(--bar-height) - #{$player-bar-height});
     padding: 8px 12px 0;
 
     // Reading or writing code needs the room more than the canvas does.
     [data-mobile-tab="code"] &, [data-mobile-tab="learn"] & {
-      height: calc(min(max(34dvh, 200px), 100vw) + #{$player-bar-height-phone - $player-bar-height});
+      height: calc(min(max(34dvh, 200px), 100vw) + var(--bar-height) - #{$player-bar-height});
     }
   }
 
@@ -307,25 +310,12 @@ a {
     inset: 0;
     z-index: 150;
     height: 100dvh;
-    // The editing controls are left out, so the play bar is one row on phones too.
-    --bar-height: #{$player-bar-height};
     padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
       max(8px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
     background: $dt-gray-darker;
 
     #toggleWideCanvas {
       display: none;
-    }
-
-    @include phone {
-      div.playerButtons {
-        flex-wrap: nowrap;
-
-        div.slider {
-          order: 0;
-          flex: 1;
-        }
-      }
     }
   }
 }
@@ -515,8 +505,8 @@ div.playerButtons .aspectRatioPicker {
     font-variant-numeric: tabular-nums;
   }
 
-  // The narrowest phones drop the icon, so the ratio still fits.
-  @include narrow-phone {
+  // In the narrowest panes the menu drops its icon, so the ratio still fits.
+  .previewPane[data-two-rows="narrow"] & {
     select {
       width: 84px;
       padding-inline-start: 12px;

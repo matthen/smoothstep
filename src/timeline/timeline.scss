@@ -13,9 +13,9 @@ div.playerButtons {
   height: var(--bar-height);
   padding: 4px 0 0;
 
-  // Phone canvases can be narrow, so the controls use the full width instead, with the scrub bar on
+  // When the pane is too narrow for one row, the controls use its full width, with the scrub bar on
   // a row of its own above the buttons, as in a phone's video player.
-  @include phone {
+  .previewPane[data-two-rows] & {
     width: calc(100% - 24px);
     flex-wrap: wrap;
     row-gap: 2px;
@@ -34,7 +34,7 @@ div.playerButtons {
   }
 
   // So the second row's buttons still fit on one line.
-  @include narrow-phone {
+  .previewPane[data-two-rows="narrow"] & {
     column-gap: 6px;
 
     .durationInput {
@@ -53,7 +53,7 @@ div.playerButtons {
     user-select: none;
     touch-action: none;
 
-    @include phone {
+    .previewPane[data-two-rows] & {
       order: -1;
       flex: 1 0 calc(100% - 12px);
     }
