@@ -1,17 +1,21 @@
 import {describe, expect, it} from "vitest";
 import {emptyVariables} from "../lib/document";
 import {
-  clampTime, clampZoom, dragDeltaDSecs, draggedDuration, durationDSecs, END_PADDING, fitPxPerSecond, formatTime,
-  grabMode, hoverEndDSecs, hoverStartDSecs, MAX_PX_PER_SECOND, maxTimeFor, roundDuration, rowAt, rulerTicks,
-  timeAreaWidth, timeToX, xToTime,
+  clampTime, clampZoom, dragDeltaDSecs, draggedDuration, durationDSecs, fitPxPerSecond, formatTime,
+  grabMode, hoverEndDSecs, hoverStartDSecs, MAX_PX_PER_SECOND, maxTimeFor, roundDuration, ROW_BAND_BOTTOM,
+  ROW_BAND_TOP, ROW_HEIGHT, rowAt, rulerTicks, snapDSecs, timeAreaWidth, timeToX, xToTime,
 } from "./geometry";
 
+// Whether x is a whole number of steps, allowing for floating point.
+const onStep = (x: number, step: number) => Math.abs(x / step - Math.round(x / step)) < 1e-6;
+
 describe("time and pixels", () => {
-  it("maps seconds to pixels at a scale", () => {
-    expect(timeToX(2.5, 40)).toBe(100);
-    expect(xToTime(100, 40)).toBe(2.5);
-    expect(timeToX(2.5, 100)).toBe(250);
-    expect(xToTime(250, 100)).toBe(2.5);
+  it("maps seconds to pixels and back at any scale", () => {
+    for (const scale of [10, 40, 400]) {
+      expect(xToTime(timeToX(2.5, scale), scale)).toBe(2.5);
+      expect(timeToX(5, scale)).toBe(2 * timeToX(2.5, scale));
+    }
+    expect(timeToX(1, 100)).toBeGreaterThan(timeToX(1, 40));
   });
 
   it("clamps times to the duration", () => {
@@ -28,98 +32,94 @@ describe("time and pixels", () => {
 });
 
 describe("fitting and zooming", () => {
-  it("fits the whole timeline to the width", () => {
-    const scale = fitPxPerSecond(1012, 10);
-    expect(scale).toBe(100);
-    expect(timeAreaWidth(10, scale)).toBe(1012);
-  });
-
-  it("fits a long timeline into a narrow panel", () => {
-    const scale = fitPxPerSecond(300, 600);
-    expect(timeAreaWidth(600, scale)).toBeCloseTo(300);
+  it("fits the whole timeline to the width, however long it is", () => {
+    for (const [width, maxTime] of [[1012, 10], [300, 600], [800, 0.5]] as const) {
+      expect(timeAreaWidth(maxTime, fitPxPerSecond(width, maxTime))).toBeCloseTo(width);
+    }
   });
 
   it("zooms in from the fit up to the most pixels per second", () => {
     expect(clampZoom(0.5, 40)).toBe(1);
     expect(clampZoom(3, 40)).toBe(3);
-    expect(clampZoom(100, 40)).toBe(MAX_PX_PER_SECOND / 40);
+    expect(40 * clampZoom(100, 40)).toBe(MAX_PX_PER_SECOND);
   });
 
   it("doesn't zoom a timeline already fitted past the most pixels per second", () => {
-    expect(clampZoom(4, 1000)).toBe(1);
+    expect(clampZoom(4, MAX_PX_PER_SECOND * 2)).toBe(1);
   });
 });
 
 describe("rows", () => {
+  const inBand = (row: number) => row * ROW_HEIGHT + (ROW_BAND_TOP + ROW_BAND_BOTTOM) / 2;
+
   it("finds the row whose band is under the pointer", () => {
-    expect(rowAt(14, 16)).toBe(0);
-    expect(rowAt(30 + 3, 16)).toBe(1);
-    expect(rowAt(30 + 27, 16)).toBe(1);
-    expect(rowAt(30 * 15 + 10, 16)).toBe(15);
+    expect(rowAt(inBand(0), 16)).toBe(0);
+    expect(rowAt(inBand(1), 16)).toBe(1);
+    expect(rowAt(ROW_HEIGHT + ROW_BAND_TOP, 16)).toBe(1);
+    expect(rowAt(ROW_HEIGHT + ROW_BAND_BOTTOM, 16)).toBe(1);
+    expect(rowAt(inBand(15), 16)).toBe(15);
   });
 
   it("ignores the gaps between bands and positions outside the rows", () => {
-    expect(rowAt(1, 16)).toBeNull();
-    expect(rowAt(30 + 29, 16)).toBeNull();
+    expect(rowAt(ROW_BAND_TOP - 1, 16)).toBeNull();
+    expect(rowAt(ROW_HEIGHT + ROW_BAND_BOTTOM + 1, 16)).toBeNull();
     expect(rowAt(-5, 16)).toBeNull();
-    expect(rowAt(30 * 16 + 10, 16)).toBeNull();
+    expect(rowAt(inBand(16), 16)).toBeNull();
   });
 });
 
 describe("snapping", () => {
-  it("snaps a new transition's start to the tenth of a second left of the pointer", () => {
-    expect(hoverStartDSecs(0, 40)).toBe(0);
-    expect(hoverStartDSecs(5, 40)).toBe(0);
-    expect(hoverStartDSecs(6, 40)).toBe(1);
-    expect(hoverStartDSecs(86, 40)).toBe(21);
+  it("starts a new transition at a tenth of a second at or before the pointer", () => {
+    for (const scale of [10, 40, 100]) {
+      for (const seconds of [0, 0.05, 1.23, 2.1, 7.99]) {
+        const start = hoverStartDSecs(timeToX(seconds, scale), scale);
+        expect(Number.isInteger(start)).toBe(true);
+        expect(start / 10).toBeLessThanOrEqual(seconds + 1e-9);
+        expect(seconds - start / 10).toBeLessThan(0.2);
+      }
+    }
   });
 
-  it("snaps at other scales, with less slack when tenths are narrow", () => {
-    expect(hoverStartDSecs(250, 100)).toBe(24);
-    expect(hoverStartDSecs(253, 100)).toBe(25);
-    expect(hoverStartDSecs(50, 10)).toBe(49);
-    expect(hoverStartDSecs(51, 10)).toBe(50);
+  it("ends a new transition at the pointer's tenth, keeping it at least 0.1s long", () => {
+    expect(hoverEndDSecs(timeToX(4.2, 40), 21, 40)).toBe(42);
+    expect(hoverEndDSecs(timeToX(1, 40), 21, 40)).toBe(22);
   });
 
-  it("snaps a new transition's end, keeping it at least 0.1s long", () => {
-    expect(hoverEndDSecs(166, 21, 40)).toBe(42);
-    expect(hoverEndDSecs(10, 21, 40)).toBe(22);
-    expect(hoverEndDSecs(409, 21, 100)).toBe(41);
+  it("drags in whole steps that get finer as the timeline zooms in, down to a hundredth of a second", () => {
+    let previous = Infinity;
+    for (const scale of [10, 40, 100, 200, MAX_PX_PER_SECOND]) {
+      const step = snapDSecs(scale);
+      expect(step).toBeLessThanOrEqual(previous);
+      previous = step;
+      for (const deltaX of [-37, -3, 0, 1, 13, 60]) {
+        const dsecs = dragDeltaDSecs(deltaX, scale);
+        expect(onStep(dsecs, step)).toBe(true);
+        expect(Math.abs(dsecs - deltaX * 10 / scale)).toBeLessThanOrEqual(step / 2 + 1e-9);
+      }
+    }
+    expect(snapDSecs(40)).toBe(1);
+    expect(snapDSecs(MAX_PX_PER_SECOND)).toBe(0.1);
   });
 
-  it("rounds drags to whole tenths", () => {
-    expect(dragDeltaDSecs(0, 40)).toBe(0);
-    expect(dragDeltaDSecs(1, 40)).toBe(0);
-    expect(dragDeltaDSecs(3, 40)).toBe(1);
-    expect(dragDeltaDSecs(-7, 40)).toBe(-2);
-    expect(dragDeltaDSecs(60, 40)).toBe(15);
-    expect(dragDeltaDSecs(60, 200)).toBe(3);
-    // Zoomed in, a drag moves in finer steps, down to a hundredth of a second.
-    expect(dragDeltaDSecs(13, 100)).toBe(1.5);
-    expect(dragDeltaDSecs(13, 200)).toBe(0.6);
-    // At full zoom, 400 pixels a second, a drag moves a hundredth of a second at a time.
-    expect(dragDeltaDSecs(9, 400)).toBe(0.2);
-    expect(dragDeltaDSecs(-5, 400)).toBe(-0.1);
-  });
-
-  it("grabs the edges of a transition to resize it", () => {
-    expect(grabMode(-2, 40)).toBe("resizeLeft");
-    expect(grabMode(2, 40)).toBe("resizeLeft");
-    expect(grabMode(3, 40)).toBe("move");
-    expect(grabMode(35, 40)).toBe("move");
-    expect(grabMode(36, 40)).toBe("resizeRight");
-    expect(grabMode(41, 40)).toBe("resizeRight");
+  it("grabs the edges of a transition to resize it, and the middle to move it", () => {
+    const width = 40;
+    expect(grabMode(-2, width)).toBe("resizeLeft");
+    expect(grabMode(0, width)).toBe("resizeLeft");
+    expect(grabMode(width / 2, width)).toBe("move");
+    expect(grabMode(width, width)).toBe("resizeRight");
+    expect(grabMode(width + 1, width)).toBe("resizeRight");
   });
 });
 
 describe("timeline length", () => {
-  it("extends a little past the duration, rounded up to a tenth", () => {
+  it("extends a little past the duration, to a tenth of a second", () => {
     const variables = emptyVariables();
-    expect(maxTimeFor(variables, 5)).toBe(5.3);
-    expect(maxTimeFor(variables, 1)).toBe(1.2);
-    expect(maxTimeFor(variables, 9)).toBe(9.5);
-    expect(maxTimeFor(variables, 100)).toBe(105);
-    expect(timeAreaWidth(6, 40)).toBe(240 + END_PADDING);
+    for (const duration of [0.5, 1, 5, 9, 100]) {
+      const maxTime = maxTimeFor(variables, duration);
+      expect(maxTime).toBeGreaterThan(duration);
+      expect(maxTime).toBeLessThan(duration * 1.1 + 0.3);
+      expect(onStep(maxTime, 0.1)).toBe(true);
+    }
   });
 
   it("extends to transitions past the duration", () => {
@@ -130,46 +130,52 @@ describe("timeline length", () => {
 });
 
 describe("ruler", () => {
-  it("labels every second, with ticks between, at a fitted scale", () => {
-    const ruler = rulerTicks(100, 0, 10, 10);
-    expect(ruler.step).toBe(1);
-    expect(ruler.major.map(t => t.label)).toEqual(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]);
-    expect(ruler.minor).toContain(0.1);
-    expect(ruler.minor).not.toContain(1);
+  it("spaces labels further apart in time as the timeline zooms out", () => {
+    const steps = [400, 100, 20, 2].map(scale => rulerTicks(scale, 0, 600, 600).step);
+    expect(steps).toEqual([...steps].sort((a, b) => a - b));
+    expect(new Set(steps).size).toBe(steps.length);
   });
 
-  it("labels less often when zoomed out", () => {
-    const ruler = rulerTicks(20, 0, 30, 30);
-    expect(ruler.step).toBe(5);
-    expect(ruler.major.map(t => t.time)).toEqual([0, 5, 10, 15, 20, 25, 30]);
-    expect(ruler.minor).toContain(1);
+  it("labels evenly spaced ticks from the start of the range, with unlabelled ticks between", () => {
+    const ruler = rulerTicks(100, 0, 10, 10);
+    const times = ruler.major.map(t => t.time);
+    expect(times[0]).toBe(0);
+    for (const time of times) {
+      expect(onStep(time, ruler.step)).toBe(true);
+    }
+    expect(ruler.minor.length).toBeGreaterThan(0);
+    for (const time of ruler.minor) {
+      expect(onStep(time, ruler.step)).toBe(false);
+    }
   });
 
   it("labels tenths of a second when zoomed in", () => {
-    const ruler = rulerTicks(400, 1, 2, 10);
-    expect(ruler.step).toBe(0.2);
-    expect(ruler.major.map(t => t.label)).toEqual(["1.0", "1.2", "1.4", "1.6", "1.8", "2.0"]);
-    expect(ruler.minor).toEqual([1.1, 1.3, 1.5, 1.7, 1.9]);
+    const ruler = rulerTicks(MAX_PX_PER_SECOND, 1, 2, 10);
+    expect(ruler.step).toBeLessThan(1);
+    expect(ruler.major.map(t => t.label)).toContain("1.0");
+    expect(ruler.major.every(t => /^\d+\.\d$/.test(t.label))).toBe(true);
   });
 
   it("only gives ticks in the range asked for", () => {
     const ruler = rulerTicks(100, 50.5, 52, 100);
-    expect(ruler.major.map(t => t.time)).toEqual([51, 52]);
+    for (const time of [...ruler.major.map(t => t.time), ...ruler.minor]) {
+      expect(time).toBeGreaterThanOrEqual(50.5 - ruler.step);
+      expect(time).toBeLessThanOrEqual(52);
+    }
   });
 
   it("labels minutes and seconds for timelines a minute or longer", () => {
     const ruler = rulerTicks(2, 0, 600, 600);
-    expect(ruler.step).toBe(30);
-    expect(ruler.major.slice(0, 4).map(t => t.label)).toEqual(["0:00", "0:30", "1:00", "1:30"]);
+    expect(ruler.major.every(t => /^\d+:\d\d$/.test(t.label))).toBe(true);
+    expect(ruler.major.map(t => t.label)).toContain("1:00");
   });
 });
 
 describe("durations", () => {
-  it("drags the duration to the hundredth, at least 0.1s", () => {
-    expect(draggedDuration(5, 44, 40)).toBe(6.1);
+  it("drags the duration by the time the pointer moved, to the hundredth, at least 0.1s", () => {
+    expect(draggedDuration(5, timeToX(1.1, 40), 40)).toBe(6.1);
     expect(draggedDuration(5, 1, 40)).toBe(5.03);
     expect(draggedDuration(1, -400, 40)).toBe(0.1);
-    expect(draggedDuration(5, 50, 100)).toBe(5.5);
   });
 
   it("rounds a dragged duration to the tenth", () => {

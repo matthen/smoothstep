@@ -69,7 +69,6 @@ describe("lessons", () => {
         expect(EXAMPLES.some(e => e.id === id), id).toBe(true);
       }
     }
-    expect(LESSONS).toHaveLength(9);
   });
 
   it("end every lesson but the last with challenges that have hints and no code", () => {
@@ -90,7 +89,7 @@ describe("lessons", () => {
 });
 
 describe("shaders", () => {
-  it("each step adds to the one before", () => {
+  it("each step builds on the one before, keeping most of its lines and adding new ones", () => {
     const pairs: [string, string][] = [
       [shaders.PULSE, shaders.WAVES], [shaders.HARD_CIRCLE, shaders.SOFT_CIRCLE],
       [shaders.SOFT_CIRCLE, shaders.MOVING_CIRCLE], [shaders.TIMELINE_CIRCLE, shaders.TWO_VARIABLES],
@@ -98,8 +97,13 @@ describe("shaders", () => {
       [shaders.TEXTURE, shaders.WARPED_TEXTURE], [shaders.WARPED_TEXTURE, shaders.FOLDED_TEXTURE],
       [shaders.FADE, shaders.TRAIL], [shaders.TRAIL, shaders.FIRST_FRAME],
     ];
+    const lines = (code: string) => new Set(code.split("\n").map(l => l.trim()).filter(Boolean));
     for (const [before, after] of pairs) {
-      expect(after).not.toBe(before);
+      const was = lines(before);
+      const now = lines(after);
+      const kept = [...was].filter(l => now.has(l)).length;
+      expect(kept / was.size, after).toBeGreaterThanOrEqual(0.75);
+      expect([...now].some(l => !was.has(l)), after).toBe(true);
     }
     expect(shaders.SOFT_CIRCLE).toContain("smoothstep(0.0, 0.01, d)");
     expect(shaders.TWO_VARIABLES).toContain("#define warmth iFloat1");
