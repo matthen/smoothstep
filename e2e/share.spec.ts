@@ -139,9 +139,11 @@ test("File → Import adds a gist to your animations and opens it, once", async 
   // Saved with its image, so it shows after a reload, and importing it again adds no copy.
   await page.reload();
   expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
+  await page.goto("about:blank");
+  await page.goto("./#new");
   await importLink("https://gist.github.com/someone/abc123");
+  await expect(page).toHaveURL(url);
   await expect(page.locator("#titleInput")).toHaveValue("Magenta file");
-  expect(page.url()).toBe(url);
   await fileMenu(page, "Open");
   await expect(page.getByRole("dialog", {name: "Open"}).getByText("Magenta file")).toHaveCount(1);
 });

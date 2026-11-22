@@ -86,7 +86,7 @@ function showMessage(text: string, loading = false) {
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof localStore.StorageFullError ? error.message + " Delete some animations or uploads, " +
-    "or download everything from the Open dialog and clear space." : fallback;
+    "or use Export all in the Open dialog and clear space." : fallback;
 }
 
 export default function App() {
@@ -615,7 +615,7 @@ export default function App() {
       id = await archive.importDocument(linked, images);
     } catch (error) {
       console.error(error);
-      throw error instanceof ShareError ? error : new Error("Couldn't import that animation.");
+      throw error instanceof ShareError ? error : new Error(errorMessage(error, "Couldn't import that animation."));
     }
     setLibraryVersion(v => v + 1);
     setDialog(openHash(documentHref(id), hasUnsavedChanges) ? null : "open");

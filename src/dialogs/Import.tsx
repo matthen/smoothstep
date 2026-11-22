@@ -43,7 +43,11 @@ export default function Import({show, onHide, onChooseFiles, onImportLink}: Impo
   };
 
   return (
-    <AppModal opened={show} onClose={onHide} title="Import">
+    // Closing can't stop a link that's loading, so it waits until the link is imported or fails.
+    <AppModal
+      opened={show} onClose={onHide} title="Import"
+      closeOnEscape={!busy} closeOnClickOutside={!busy} withCloseButton={!busy}
+    >
       <Stack gap="sm">
         <Text size="sm">
           Adds animations to the ones saved in this browser. Choose an animation file you downloaded, or a
@@ -64,7 +68,7 @@ export default function Import({show, onHide, onChooseFiles, onImportLink}: Impo
               error={error} onChange={event => {setText(event.target.value); setError(null);}}
             />
             <Group justify="flex-end">
-              <Button variant="default" onClick={onHide}>Cancel</Button>
+              <Button variant="default" onClick={onHide} disabled={busy}>Cancel</Button>
               <Button type="submit" disabled={!text.trim()} loading={busy}>Import link</Button>
             </Group>
           </Stack>

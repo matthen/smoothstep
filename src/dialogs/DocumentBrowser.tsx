@@ -134,7 +134,7 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
             Import below adds one from a file or a link.
           </Text>}
         <Text c="dimmed" size="sm" mt="sm">
-          Animations are saved in this browser only. Download them to keep a backup
+          Animations are saved in this browser only. Export them to keep a backup
           or to move them to another computer.
         </Text>
         <Title order={2} size="h5" mt="lg" mb="xs">Examples</Title>
