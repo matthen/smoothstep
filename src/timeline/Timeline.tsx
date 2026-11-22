@@ -7,15 +7,17 @@ import {variableValue} from "../lib/document";
 import type {Transition, TransitionType, Variable} from "../lib/document";
 import {rowPaths, valueRange} from "./curves";
 import {
-  clampTime, clampZoom, DEFAULT_PX_PER_SECOND, dragDeltaDSecs, draggedDuration, durationDSecs, fitPxPerSecond,
-  grabMode, hoverEndDSecs, hoverStartDSecs, maxTimeFor, ROW_HEIGHT, roundDSecs, roundDuration, rowAt, rulerTicks,
-  snapDSecs, timeAreaWidth, timeToX, xToTime,
+  clampTime, clampZoom, DEFAULT_PX_PER_SECOND, durationDSecs, fitPxPerSecond, grabMode, maxTimeFor, ROW_HEIGHT,
+  roundDSecs, roundDuration, rowAt, rulerTicks, timeAreaWidth, timeToX, xToTime,
 } from "./geometry";
-import type {GrabMode} from "./geometry";
+import {
+  extendCreating, liftGesture, moveGesture, newTransitionAt, NO_TOUCHES, shownCreating, startCreating, touchDown,
+  touchUp,
+} from "./gestures";
+import type {Gesture, Rows, Span} from "./gestures";
 import {keyAction, shortcutsAllowed} from "./keys";
 import {
-  dragTransition, insertTransition, isInsertable, parseValue, removeTransition, replaceTransition,
-  withTransitions,
+  insertTransition, isInsertable, parseValue, removeTransition, replaceTransition, withTransitions,
 } from "./transitions";
 import {useEasedRanges} from "./useEasedRanges";
 import "./timeline.scss";
@@ -40,16 +42,6 @@ interface Selection {
   row: number;
   startDSecs: number;
 }
-
-type Gesture =
-  | {kind: "idle"}
-  // A new transition: dragged out with the button held, or clicked twice (`released` after the first).
-  | {kind: "creating"; row: number; startDSecs: number; endDSecs: number; released: boolean; byTouch: boolean}
-  // The scale stays put while dragging, though the timeline's length can change.
-  | {kind: "dragging"; mode: GrabMode; row: number; index: number; original: Transition[]; startX: number;
-     moved: Transition; pxPerSecond: number}
-  | {kind: "scrubbing"}
-  | {kind: "duration"; startX: number; startDuration: number; latest: number; pxPerSecond: number};
 
 // Text typed into the value inputs, kept until it's valid and the input loses focus.
 interface Drafts {
@@ -104,9 +96,7 @@ export default function Timeline(props: TimelineProps) {
   const [zoom, setZoom] = useState(1);
   const anchorRef = useRef<Anchor | null>(null);
   const pinchRef = useRef<Pinch | null>(null);
-  // The fingers down on the rows, and whether two were down at once since the last were lifted.
-  const touchesRef = useRef(new Set<number>());
-  const multiTouchRef = useRef(false);
+  const touchesRef = useRef(NO_TOUCHES);
   const lastTimeRef = useRef(currentTime);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [hover, setHover] = useState<Selection | null>(null);
@@ -128,6 +118,7 @@ export default function Timeline(props: TimelineProps) {
   const ruler = rulerTicks(pps, Math.max(0, xToTime(scrollLeft, pps) - 1),
     Math.min(maxTime, xToTime(scrollLeft + viewWidth, pps) + 1), maxTime);
   const currentDSecs = currentTime * 10;
+  const rows: Rows = {transitions: variables.slice(0, rowCount).map(v => v.transitions), maxDSecs, pxPerSecond: pps};
   const ranges = useEasedRanges(variables.slice(0, rowCount).map(v => valueRange(v.transitions)));
 
   // Measured again when the panel is shown, as a hidden one measures zero.
@@ -243,13 +234,8 @@ export default function Timeline(props: TimelineProps) {
     setDrafts(d => ({...d, [field]: undefined}));
   }
 
-  function create(row: number, startDSecs: number, endDSecs: number) {
+  function create({row, startDSecs, endDSecs}: Span) {
     const transitions = variables[row]!.transitions;
-    setGesture({kind: "idle"});
-    if (!isInsertable(transitions, startDSecs, endDSecs, maxDSecs)) {
-      setHover(null);
-      return;
-    }
     // A first transition starts from the value its slider set.
     const value = transitions.length > 0 ? variableValue(transitions, startDSecs / 10) : variables[row]!.value ?? 0;
     const inserted = insertTransition(transitions, {startDSecs, endDSecs, startValue: value, endValue: value, type: "smoothstep"});
@@ -264,13 +250,10 @@ export default function Timeline(props: TimelineProps) {
   }
 
   function updateHover(x: number, y: number) {
-    const row = rowAt(y, rowCount);
-    if (row === null) {
+    if (rowAt(y, rowCount) === null) {
       return;
     }
-    const startDSecs = hoverStartDSecs(x, pps);
-    const next = isInsertable(variables[row]!.transitions, startDSecs, startDSecs + 1, maxDSecs) ?
-      {row, startDSecs} : null;
+    const next = newTransitionAt(rows, x, y);
     if (next?.row !== hover?.row || next?.startDSecs !== hover?.startDSecs) {
       setHover(next);
     }
@@ -283,40 +266,27 @@ export default function Timeline(props: TimelineProps) {
   function handlePointerMove(event: ReactPointerEvent) {
     const gesture = gestureRef.current;
     const {x, y} = position(event);
-    switch (gesture.kind) {
-      case "scrubbing":
-        onSeek(clampTime(xToTime(x, pps), duration));
-        return;
-      case "duration": {
-        const latest = draggedDuration(gesture.startDuration, x - gesture.startX, gesture.pxPerSecond);
-        if (latest !== gesture.latest) {
-          setGesture({...gesture, latest});
-          onDurationChange(latest);
-        }
-        return;
+    if (gesture.kind === "scrubbing") {
+      onSeek(clampTime(xToTime(x, pps), duration));
+      return;
+    }
+    if (gesture.kind === "idle") {
+      // A finger has no hover, and its moves are scrolls.
+      if (!selected && event.pointerType !== "touch") {
+        updateHover(x, y);
       }
-      case "dragging": {
-        const moved = dragTransition(gesture.original, gesture.index, gesture.mode, dragDeltaDSecs(x - gesture.startX, pps), maxDSecs, snapDSecs(pps));
-        if (moved.startDSecs !== gesture.moved.startDSecs || moved.endDSecs !== gesture.moved.endDSecs) {
-          setGesture({...gesture, moved});
-          setRow(gesture.row, replaceTransition(gesture.original, gesture.index, moved));
-          setSelection({row: gesture.row, startDSecs: moved.startDSecs});
-        }
-        return;
-      }
-      case "creating": {
-        const endDSecs = hoverEndDSecs(x, gesture.startDSecs, pps);
-        if (endDSecs !== gesture.endDSecs &&
-            isInsertable(variables[gesture.row]!.transitions, gesture.startDSecs, endDSecs, maxDSecs)) {
-          setGesture({...gesture, endDSecs});
-        }
-        return;
-      }
-      case "idle":
-        // A finger has no hover, and its moves are scrolls.
-        if (!selected && event.pointerType !== "touch") {
-          updateHover(x, y);
-        }
+      return;
+    }
+    const next = moveGesture(gesture, rows, x);
+    if (next === gesture) {
+      return;
+    }
+    setGesture(next);
+    if (next.kind === "duration") {
+      onDurationChange(next.latest);
+    } else if (next.kind === "dragging") {
+      setRow(next.row, replaceTransition(next.original, next.index, next.moved));
+      setSelection({row: next.row, startDSecs: next.moved.startDSecs});
     }
   }
 
@@ -329,9 +299,8 @@ export default function Timeline(props: TimelineProps) {
     const current = gestureRef.current;
     // Two fingers are a pinch, which neither starts nor ends a transition.
     if (event.pointerType === "touch") {
-      touchesRef.current.add(event.pointerId);
-      if (touchesRef.current.size > 1) {
-        multiTouchRef.current = true;
+      touchesRef.current = touchDown(touchesRef.current, event.pointerId);
+      if (touchesRef.current.pinch) {
         if (current.kind === "creating" && !current.released) {
           cancelCreating();
         }
@@ -344,11 +313,7 @@ export default function Timeline(props: TimelineProps) {
     }
     // The second click of a click-twice creation sets the end where it lands.
     if (current.kind === "creating" && current.released) {
-      const {x} = position(event);
-      const endDSecs = hoverEndDSecs(x, current.startDSecs, pps);
-      if (isInsertable(variables[current.row]!.transitions, current.startDSecs, endDSecs, maxDSecs)) {
-        setGesture({...current, endDSecs});
-      }
+      setGesture(extendCreating(current, rows, position(event).x));
       return;
     }
     if (event.button !== 0 || current.kind !== "idle") {
@@ -361,64 +326,41 @@ export default function Timeline(props: TimelineProps) {
       return;
     }
     const {x, y} = position(event);
-    const row = rowAt(y, rowCount);
-    if (row === null) {
-      return;
-    }
-    const startDSecs = hoverStartDSecs(x, pps);
-    if (isInsertable(variables[row]!.transitions, startDSecs, startDSecs + 1, maxDSecs)) {
-      const byTouch = event.pointerType === "touch";
+    const byTouch = event.pointerType === "touch";
+    const next = startCreating(rows, x, y, byTouch);
+    if (next) {
       if (!byTouch) {
-        setHover({row, startDSecs});
+        setHover({row: next.row, startDSecs: next.startDSecs});
       }
-      setGesture({kind: "creating", row, startDSecs, endDSecs: startDSecs + 1, released: false, byTouch});
+      setGesture(next);
       capture(event);
     }
   }
 
   // Forgets a lifted finger, and says whether it was part of a pinch.
   function liftTouch(event: ReactPointerEvent): boolean {
-    const wasPinch = multiTouchRef.current;
-    touchesRef.current.delete(event.pointerId);
-    if (touchesRef.current.size === 0) {
-      multiTouchRef.current = false;
-    }
+    const wasPinch = touchesRef.current.pinch;
+    touchesRef.current = touchUp(touchesRef.current, event.pointerId);
     return wasPinch;
   }
 
   function handlePointerUp(event: ReactPointerEvent) {
     const gesture = gestureRef.current;
-    if (event.pointerType === "touch") {
-      if (liftTouch(event)) {
-        return;
-      }
-      // A touch can't hover, so the second tap sets the end where it lifts. A second tap in another
-      // row, or where the transition can't end, cancels it instead.
-      if (gesture.kind === "creating" && gesture.released) {
-        const {x, y} = position(event);
-        const endDSecs = hoverEndDSecs(x, gesture.startDSecs, pps);
-        const fits = isInsertable(variables[gesture.row]!.transitions, gesture.startDSecs, endDSecs, maxDSecs);
-        if (fits && Math.floor(y / ROW_HEIGHT) === gesture.row) {
-          create(gesture.row, gesture.startDSecs, endDSecs);
-        } else {
-          cancelCreating();
-        }
-        return;
-      }
+    const byTouch = event.pointerType === "touch";
+    if (byTouch && liftTouch(event)) {
+      return;
     }
-    switch (gesture.kind) {
-      case "creating":
-        if (gesture.released || gesture.endDSecs > gesture.startDSecs + 1) {
-          create(gesture.row, gesture.startDSecs, gesture.endDSecs);
-        } else {
-          setGesture({...gesture, released: true});
-        }
-        return;
-      case "duration":
-        onDurationChange(roundDuration(gesture.latest));
-        break;
+    if (gesture.kind === "duration") {
+      onDurationChange(roundDuration(gesture.latest));
     }
-    setGesture({kind: "idle"});
+    const {x, y} = position(event);
+    const lifted = liftGesture(gesture, rows, x, y, byTouch);
+    setGesture(lifted.gesture);
+    if (lifted.add) {
+      create(lifted.add);
+    } else if (gesture.kind === "creating" && lifted.gesture.kind === "idle") {
+      setHover(null);
+    }
   }
 
   function handlePointerLeave(event: ReactPointerEvent) {
@@ -614,8 +556,7 @@ export default function Timeline(props: TimelineProps) {
     };
   }, []);
 
-  // A touch shows its transition only once it lifts as a tap, so a swipe to scroll doesn't flash one.
-  const creating = gesture.kind === "creating" && !(gesture.byTouch && !gesture.released) ? gesture : null;
+  const creating = shownCreating(gesture);
   const pending = creating ? {row: creating.row, startDSecs: creating.startDSecs, endDSecs: creating.endDSecs as number | null} :
     hover ? {...hover, endDSecs: null} : null;
   const heading = selected && selection ? {row: selection.row, ...selected} : pending;
