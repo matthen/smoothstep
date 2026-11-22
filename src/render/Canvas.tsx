@@ -6,6 +6,7 @@ import type { AspectRatio } from '../lib/document';
 import { useLatest } from '../lib/useLatest';
 import { fitCanvas } from './layout';
 import { Renderer, type CompileResult } from './Renderer';
+import { renderSteps, stepAt } from './steps';
 
 export interface CanvasLayout {
   width: number;   // displayed size in CSS pixels
@@ -32,7 +33,7 @@ interface CanvasProps {
   textureURLs: string[];
   time: number;
   duration: number;
-  frameIndex: number;
+  stepClock: number;  // seconds played since the simulation restarted
   variableValues: number[];
   aspectRatio: AspectRatio;
   onBuilt(result: CompileResult): void;
@@ -67,11 +68,20 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
   const marginTop = Math.max(0, (container[1] - height) / 2);
   const marginSide = Math.max(0, (container[0] - width) / 2);
 
+  // The last simulation step drawn, or -1 before the first after a restart.
+  const renderedStep = useRef(-1);
+  const restart = useCallback(() => {
+    renderedStep.current = -1;
+    propsRef.current.onRestart();
+  }, [propsRef]);
+
   const renderFrame = useCallback(() => {
     const p = propsRef.current;
-    rendererRef.current?.render({
-      time: p.time, duration: p.duration, frameIndex: p.frameIndex, variableValues: p.variableValues,
-    });
+    const renderer = rendererRef.current;
+    if (renderer) {
+      renderedStep.current = renderSteps(renderer, renderedStep.current, p.stepClock, p.time,
+        (time, frameIndex) => ({time, duration: p.duration, frameIndex, variableValues: p.variableValues}), 4);
+    }
   }, [propsRef]);
 
   useImperativeHandle(ref, () => ({
@@ -111,7 +121,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
 
   useEffect(() => {
     if (rendererRef.current?.setSize(width, height)) {
-      props.onRestart();
+      restart();
     }
     needsRender.current = true;
     props.onLayout({width, height, top: container[2] + marginTop + height, containerWidth: container[0]});
@@ -125,7 +135,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     const result = renderer.setCode(props.shaders.code, props.shaders.buffers, props.shaders.shared);
     props.onBuilt(result);
     if (result.ok) {
-      props.onRestart();
+      restart();
     }
     needsRender.current = true;
   }, [props.shaders, props.buildId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -133,13 +143,13 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
   useEffect(() => {
     rendererRef.current?.setTextures(props.textureURLs);
     rendererRef.current?.clearTargets();
-    propsRef.current.onRestart();
+    restart();
     needsRender.current = true;
-  }, [props.textureURLs, propsRef]);
+  }, [props.textureURLs, restart]);
 
   useEffect(() => {
     needsRender.current = true;
-  }, [props.time, props.variableValues, props.duration]);
+  }, [props.time, props.stepClock, props.variableValues, props.duration]);
 
   // Render on animation frames when something changed, keeping a smoothed frame rate.
   useEffect(() => {
@@ -184,7 +194,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
           <div className="fps" style={{top: marginTop + 8, right: marginSide + 8}}>
             <p>{width}&times;{height}px</p>
             {fps ? <p>{fps} fps</p> : null}
-            <p>{props.frameIndex}</p>
+            <p>{stepAt(props.stepClock)}</p>
           </div>
         </>
       )}

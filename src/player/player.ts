@@ -3,6 +3,7 @@
 import { bufferCodes, variableValues, type AnimationDocument } from '../lib/document';
 import { fitCanvas } from '../render/layout';
 import { Renderer } from '../render/Renderer';
+import { renderSteps } from '../render/steps';
 
 export interface PlayerOptions {
   doc: AnimationDocument;
@@ -68,14 +69,17 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link}: Pl
   }
 
   let time = 0;
-  let frameIndex = 0;
+  // Seconds played since the simulation restarted, and the last of its steps drawn.
+  let stepClock = 0;
+  let rendered = -1;
   let playing = true;
   let visible = true;
   let last: number | null = null;
 
   const restart = () => {
     time = 0;
-    frameIndex = 0;
+    stepClock = 0;
+    rendered = -1;
     renderer.clearTargets();
   };
 
@@ -84,7 +88,8 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link}: Pl
     canvas.style.width = width + "px";
     canvas.style.height = height + "px";
     if (renderer.setSize(width, height)) {
-      frameIndex = 0;
+      stepClock = 0;
+      rendered = -1;
     }
   };
   new ResizeObserver(resize).observe(container);
@@ -103,16 +108,18 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link}: Pl
   const frame = (now: number) => {
     if (playing && visible) {
       if (last !== null) {
-        time += Math.max(0, (now - last) / 1000);
+        const elapsed = Math.max(0, (now - last) / 1000);
+        time += elapsed;
+        stepClock += elapsed;
         if (time > doc.duration) {
           time = 0;
-          frameIndex = 0;
+          stepClock = 0;
+          rendered = -1;
         }
       }
-      renderer.render({
-        time, duration: doc.duration, frameIndex, variableValues: variableValues(doc.variables, time),
-      });
-      frameIndex += 1;
+      rendered = renderSteps(renderer, rendered, stepClock, time, (t, frameIndex) => ({
+        time: t, duration: doc.duration, frameIndex, variableValues: variableValues(doc.variables, t),
+      }), 4);
       last = now;
     } else {
       last = null;

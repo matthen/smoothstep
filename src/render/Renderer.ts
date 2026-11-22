@@ -421,19 +421,25 @@ export class Renderer {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
 
-  render(inputs: FrameInputs) {
+  // Draws a frame. With `step`, the buffers and iPrevFrame move on a frame; without it, the image is
+  // redrawn from the same buffers and previous frame, as between the simulation's steps.
+  render(inputs: FrameInputs, step = true) {
     const gl = this.gl;
     if (!this.program || !this.targets) {
       return;
     }
     const [input, output] = this.targets;
-    for (const i of this.used) {
-      const [latest, older] = this.bufferTargets.get(i)!;
-      this.draw(this.bufferPrograms[i]!, older, inputs, input);
-      this.bufferTargets.set(i, [older, latest]);
+    if (step) {
+      for (const i of this.used) {
+        const [latest, older] = this.bufferTargets.get(i)!;
+        this.draw(this.bufferPrograms[i]!, older, inputs, input);
+        this.bufferTargets.set(i, [older, latest]);
+      }
     }
     this.draw(this.program, output, inputs, input);
-    this.targets = [output, input];
+    if (step) {
+      this.targets = [output, input];
+    }
 
     gl.useProgram(this.copyProgram);
     gl.bindVertexArray(this.copyProgram.vao);
