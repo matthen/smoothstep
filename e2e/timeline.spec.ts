@@ -214,9 +214,18 @@ test("stepping a value moves the curve, then the row rescales to fit it", async 
   await page.locator(".timeArea .variableRow").nth(4).locator(".transition").first().click();
   const curve = page.locator(".timeArea .variableRow").nth(4).locator("svg.curves path.selected");
   const before = (await curve.getAttribute("d"))!;
+  // Records every shape the curve takes, since the moved one only lasts while the row eases.
+  await curve.evaluate(path => {
+    const shapes: string[] = [];
+    (window as unknown as {curveShapes: string[]}).curveShapes = shapes;
+    new MutationObserver(() => shapes.push(path.getAttribute("d") ?? "")).observe(path, {attributes: true});
+  });
   await page.locator("#endValueInput").focus();
   await page.keyboard.press("ArrowUp");
-  await expect.poll(() => curve.getAttribute("d"), {intervals: [20]}).not.toBe(before);
+  // The curve moves away, then settles back where it was.
+  await expect.poll(() => page.evaluate(
+    start => (window as unknown as {curveShapes: string[]}).curveShapes.some(d => d !== start), before,
+  )).toBe(true);
   await expect.poll(() => curve.getAttribute("d")).toBe(before);
   expect(errors).toEqual([]);
 });

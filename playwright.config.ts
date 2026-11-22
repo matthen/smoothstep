@@ -6,8 +6,9 @@ const PORT = 4173;
 export default defineConfig({
   testDir: 'e2e',
   timeout: 120_000,
-  fullyParallel: false,
-  workers: 1,
+  // Each test has its own browser context, so its storage is its own.
+  fullyParallel: true,
+  workers: process.env.CI ? 4 : undefined,
   reporter: process.env.CI ? [['list'], ['html', {open: 'never'}]] : 'list',
   use: {
     baseURL: `http://localhost:${PORT}/sub/`,
