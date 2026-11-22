@@ -51,7 +51,7 @@ function desktopSteps({showPane}: TourOptions): DriveStep[] {
       popover: {
         title: "The canvas",
         description: "Your shader runs here, live. Point at it to see its size and frame rate. The arrow " +
-          "beside it makes it wider.",
+          "beside it makes it wider, or drag the line between the code and the canvas to any width.",
         side: "left",
       },
     },
