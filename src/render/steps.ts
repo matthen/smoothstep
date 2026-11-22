@@ -6,7 +6,7 @@ import type { FrameInputs } from './Renderer';
 export const STEPS_PER_SECOND = 60;
 
 // The step reached `seconds` after the simulation restarted. Steps fall half a step early, so a 60Hz
-// screen's slightly uneven frames each still take one step.
+// screen's slightly uneven frames each still take one.
 export function stepAt(seconds: number): number {
   return Math.floor(seconds * STEPS_PER_SECOND + 0.5);
 }
@@ -16,37 +16,47 @@ export interface StepRenderer {
   render(inputs: FrameInputs): void;
 }
 
-// The last step drawn (-1 for none since a restart) and the clock when it was drawn.
 export interface Steps {
+  // The last step drawn, or -1 for none since a restart.
   rendered: number;
+  // The clock when it was drawn.
   clock: number;
+  // How many steps of the clock's were dropped, when frames came too slowly to take them all.
+  dropped: number;
 }
 
-export const RESTART: Steps = {rendered: -1, clock: 0};
+export const RESTART: Steps = {rendered: -1, clock: 0, dropped: 0};
 
 // Draws the frame at iTime `time`, `clock` seconds after the simulation restarted, and returns the
-// steps drawn. A shader with no state is drawn once. One with state takes each step it hasn't drawn,
-// at the iTime that step fell at, and draws nothing between steps. At most `maxSteps` are taken in one
-// call, so a page that falls behind runs the simulation slower rather than skipping steps. With the
-// clock where it was, as when paused and a value changes, it draws once more without counting a step.
+// steps drawn.
+// - A shader with no state is drawn once.
+// - One with state takes each step that's due, at the iTime it fell at, and draws nothing between
+//   steps. After a restart it draws only step 0, so set-up runs however late the first frame is.
+// - It takes at most `maxSteps` in one call, and drops the rest, so a page that falls behind runs the
+//   simulation slower rather than skipping ahead or catching up later.
+// - With the clock where it was, as when paused and a value changes, it draws again at the same step.
 export function renderSteps(
   renderer: StepRenderer, steps: Steps, clock: number, time: number,
   inputs: (time: number, frameIndex: number) => FrameInputs, maxSteps = Infinity,
 ): Steps {
-  const target = stepAt(clock);
-  const restarted = steps.rendered < 0 || target < steps.rendered;
   if (!renderer.hasState) {
-    renderer.render(inputs(time, target));
-    return {rendered: target, clock};
+    const step = stepAt(clock);
+    renderer.render(inputs(time, step));
+    return {rendered: step, clock, dropped: 0};
   }
-  if (!restarted && clock === steps.clock) {
+  const due = stepAt(clock) - steps.dropped;
+  if (steps.rendered < 0 || due < steps.rendered) {
+    renderer.render(inputs(time, 0));
+    return {rendered: 0, clock, dropped: stepAt(clock)};
+  }
+  if (clock === steps.clock) {
     renderer.render(inputs(time, steps.rendered));
     return steps;
   }
-  const from = restarted ? 0 : steps.rendered + 1;
-  const to = Math.min(target, from + maxSteps - 1);
-  for (let step = from; step <= to; step++) {
-    renderer.render(inputs(Math.max(0, time - clock + step / STEPS_PER_SECOND), step));
+  const to = Math.min(due, steps.rendered + maxSteps);
+  const timeOf = (step: number) => Math.max(0, time - clock + (step + steps.dropped) / STEPS_PER_SECOND);
+  for (let step = steps.rendered + 1; step <= to; step++) {
+    renderer.render(inputs(timeOf(step), step));
   }
-  return to < from ? {rendered: steps.rendered, clock} : {rendered: to, clock};
+  return {rendered: to, clock, dropped: steps.dropped + due - to};
 }

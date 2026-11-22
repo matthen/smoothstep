@@ -51,17 +51,29 @@ describe("a shader with state", () => {
     expect(draws.map(d => d.frameIndex)).toEqual(Array.from({length: stepAt(1) + 1}, (_, i) => i));
   });
 
-  it("falls behind rather than skip steps, starting from the first after a late restart", () => {
-    const draws = play([0.5, 1, 1.5], true, 4);
-    expect(draws.map(d => d.frameIndex)).toEqual(Array.from({length: 12}, (_, i) => i));
+  it("starts from the first step however late the first frame after a restart is", () => {
+    expect(play([0.5]).map(d => d.frameIndex)).toEqual([0]);
+  });
+
+  it("runs slower when frames come too slowly, without skipping steps or catching up later", () => {
+    const slow = [0, 0.5, 1];
+    const fast = [1 + 1 / 60, 1 + 2 / 60, 1 + 3 / 60];
+    const draws = play([...slow, ...fast], true, 4);
+    expect(draws.map(d => d.frameIndex)).toEqual(Array.from({length: draws.length}, (_, i) => i));
+    const perFrame = [...slow, ...fast].map((_, frame) => draws.filter(d => d.frame === frame).length);
+    expect(perFrame.slice(1, 3)).toEqual([4, 4]);
+    expect(perFrame.slice(3)).toEqual([1, 1, 1]);
   });
 
   it("steps at the times they fell at when it restarted partway through the animation", () => {
     const times: number[] = [];
     const renderer = {hasState: true, render: (inputs: FrameInputs) => times.push(inputs.time)};
     const inputs = (time: number, frameIndex: number) => ({time, duration: 10, frameIndex, variableValues: []});
-    // Restarted at 4 s, and now three steps on.
-    renderSteps(renderer, RESTART, 3 / STEPS_PER_SECOND, 4 + 3 / STEPS_PER_SECOND, inputs);
+    // Restarted at 4 s, then a frame for each step.
+    let steps = RESTART;
+    for (let step = 0; step < 4; step++) {
+      steps = renderSteps(renderer, steps, step / STEPS_PER_SECOND, 4 + step / STEPS_PER_SECOND, inputs);
+    }
     expect(times).toHaveLength(4);
     times.forEach((time, step) => expect(time - 4).toBeCloseTo(step / STEPS_PER_SECOND, 6));
   });
@@ -70,7 +82,8 @@ describe("a shader with state", () => {
     const draws: number[] = [];
     const renderer = {hasState: true, render: (inputs: FrameInputs) => draws.push(inputs.frameIndex)};
     const inputs = (time: number, frameIndex: number) => ({time, duration: 10, frameIndex, variableValues: []});
-    const steps = renderSteps(renderer, RESTART, 0.1, 0.1, inputs);
+    const started = renderSteps(renderer, RESTART, 0, 0, inputs);
+    const steps = renderSteps(renderer, started, 0.1, 0.1, inputs);
     renderSteps(renderer, steps, 0.1, 0.1, inputs);
     expect(draws.slice(-2)).toEqual([stepAt(0.1), stepAt(0.1)]);
   });

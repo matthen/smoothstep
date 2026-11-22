@@ -6,7 +6,7 @@ import type { AspectRatio } from '../lib/document';
 import { useLatest } from '../lib/useLatest';
 import { fitCanvas } from './layout';
 import { Renderer, type CompileResult } from './Renderer';
-import { renderSteps, RESTART, stepAt } from './steps';
+import { renderSteps, RESTART } from './steps';
 
 export interface CanvasLayout {
   width: number;   // displayed size in CSS pixels
@@ -193,7 +193,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
           <div className="fps" style={{top: marginTop + 8, right: marginSide + 8}}>
             <p>{width}&times;{height}px</p>
             {fps ? <p>{fps} fps</p> : null}
-            <p>{stepAt(props.stepClock)}</p>
+            <p>{Math.max(0, steps.current.rendered)}</p>
           </div>
         </>
       )}
