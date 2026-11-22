@@ -51,15 +51,26 @@ async function openDialog(page: Page) {
   return page.getByRole("dialog", {name: "Open"});
 }
 
-async function importFile(page: Page, path: string): Promise<{message: string; rows: number}> {
+// A file holding one animation opens it, adding it to the browser's animations unless it's there.
+async function openFile(page: Page, path: string): Promise<string> {
+  const before = page.url();
+  await page.getByTestId("importInput").setInputFiles(path);
+  await expect(page).toHaveURL(/#anim\/\w+$/);
+  await expect(page.locator("#titleInput")).toHaveValue("Static test");
+  if (page.url() === before) {
+    // Already open, so the page reloads without the address changing.
+    await page.waitForLoadState("load");
+  }
+  return page.url().split("/").pop()!;
+}
+
+async function savedCount(page: Page): Promise<number> {
   const modal = await openDialog(page);
-  await modal.locator("input[type=file]").setInputFiles(path);
-  await page.getByText(/added|already here|couldn't be read/).waitFor();
-  const message = await dismissAlert(page);
+  await expect(modal.locator("tbody tr").first()).toBeVisible();
   const rows = await modal.locator("tbody tr").count();
   await page.keyboard.press("Escape");
   await expect(modal).toBeHidden();
-  return {message, rows};
+  return rows;
 }
 
 test("first visit: make and save an animation with an uploaded texture", async ({baseURL}) => {
@@ -142,15 +153,13 @@ test("the downloads hold the animation, thumbnail and shrunk image", () => {
   expect(Object.keys(one.images)).toEqual([image.id]);
 });
 
-test("a fresh browser imports the zip, then the single file is already there", async ({baseURL}) => {
+test("a fresh browser opens the zip of its one animation, then finds the single file already there", async ({baseURL}) => {
   const {context, page, errors} = await browser("b", baseURL!);
   await page.goto("./#new");
-  expect(await importFile(page, zipPath)).toEqual({message: expect.stringContaining("1 animation and 1 image added."), rows: 1});
-  expect((await importFile(page, onePath)).message).toContain("1 animation already here.");
-  const modal = await openDialog(page);
-  await modal.getByText("Static test").click();
-  await expect(page.locator("#titleInput")).toHaveValue("Static test");
+  expect(await openFile(page, zipPath)).toBe(docId);
+  expect(await openFile(page, onePath)).toBe(docId);
   expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
+  expect(await savedCount(page)).toBe(1);
   expect(errors).toEqual([]);
   await context.close();
 });
@@ -158,23 +167,24 @@ test("a fresh browser imports the zip, then the single file is already there", a
 test("another fresh browser imports the single file, recognises bare JSON, and keeps edits", async ({baseURL}) => {
   const {context, page, errors} = await browser("c", baseURL!);
   await page.goto("./#new");
-  expect((await importFile(page, onePath)).message).toContain("1 animation and 1 image added.");
-  const modal = await openDialog(page);
-  await modal.getByText("Static test").click();
+  expect(await openFile(page, onePath)).toBe(docId);
   expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
 
   // The same document as bare JSON, keys in another order, is recognised.
   const one = JSON.parse(readFileSync(onePath, "utf8")) as AnimationFile;
   const barePath = join(dir, "bare.json");
   writeFileSync(barePath, JSON.stringify(Object.fromEntries(Object.entries(one.document).reverse())));
-  expect(await importFile(page, barePath)).toEqual({message: expect.stringContaining("1 animation already here."), rows: 1});
+  expect(await openFile(page, barePath)).toBe(docId);
+  expect(await savedCount(page)).toBe(1);
 
   // Edit and save the local copy, then import the older file twice: one extra copy, not two.
   await setCode(page, "// edited");
   await page.keyboard.press("ControlOrMeta+s");
   await expect(page.getByText("Animation saved.")).toBeVisible();
-  expect((await importFile(page, onePath)).message).toContain("1 animation and 0 images added.");
-  expect(await importFile(page, onePath)).toEqual({message: expect.stringContaining("1 animation already here."), rows: 2});
+  const older = await openFile(page, onePath);
+  expect(older).not.toBe(docId);
+  expect(await openFile(page, onePath)).toBe(older);
+  expect(await savedCount(page)).toBe(2);
 
   // File > New with unsaved changes: cancelling keeps the URL and code; accepting resets, even from #new.
   const before = page.url();

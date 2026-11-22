@@ -1,10 +1,10 @@
 import { ActionIcon, Alert, Button, Group, ScrollArea, Table, Text, Title } from '@mantine/core';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TbDownload, TbFileImport, TbTrash } from 'react-icons/tb';
 
 import AppModal from '../app/AppModal';
 import { usePhone } from '../app/usePhone';
-import { animationFile, download, exportAll, importFiles, importMessage } from '../lib/archive';
+import { animationFile, download, exportAll } from '../lib/archive';
 import { documentHref } from '../lib/config';
 import { deleteDocument, getDocument, listDocuments, StorageFullError, type DocumentSummary } from '../lib/localStore';
 import ExampleGallery from './ExampleGallery';
@@ -17,6 +17,10 @@ interface DocumentBrowserProps {
   currentId: string | null;
   onDeleted(id: string): void;
   onMessage(text: string): void;
+  // Asks for animation files from the computer.
+  onOpenFile(): void;
+  // Changes when animations are added from elsewhere, so the list updates.
+  version: number;
 }
 
 function errorText(error: unknown, fallback: string): string {
@@ -24,12 +28,11 @@ function errorText(error: unknown, fallback: string): string {
   return error instanceof StorageFullError ? error.message : fallback;
 }
 
-export default function DocumentBrowser({show, onHide, currentId, onDeleted, onMessage}: DocumentBrowserProps) {
+export default function DocumentBrowser({show, onHide, currentId, onDeleted, onMessage, onOpenFile, version}: DocumentBrowserProps) {
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
   const [toDelete, setToDelete] = useState<DocumentSummary | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
-  const fileInput = useRef<HTMLInputElement>(null);
   const phone = usePhone();
 
   const updateList = () => {
@@ -40,7 +43,7 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
     if (show) {
       updateList();
     }
-  }, [show]);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [show, version]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDownload = async (document: DocumentSummary) => {
     try {
@@ -62,25 +65,6 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
       onMessage(errorText(error, "Error downloading animations."));
     } finally {
       setBusy(false);
-    }
-  };
-
-  const handleImport = async (files: FileList | null) => {
-    if (!files || files.length === 0) {
-      return;
-    }
-    setBusy(true);
-    try {
-      const summary = await importFiles(Array.from(files));
-      updateList();
-      onMessage(importMessage(summary));
-    } catch (error) {
-      onMessage(errorText(error, "Error opening file."));
-    } finally {
-      setBusy(false);
-      if (fileInput.current) {
-        fileInput.current.value = "";
-      }
     }
   };
 
@@ -155,13 +139,8 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
         </Text>
         <Title order={2} size="h5" mt="lg" mb="xs">Examples</Title>
         <ExampleGallery onOpen={onHide} />
-        <input
-          type="file" accept=".json,.zip,application/json,application/zip" multiple
-          ref={fileInput} style={{display: "none"}} data-testid="importInput"
-          onChange={event => void handleImport(event.target.files)}
-        />
-        <Group mt="lg" gap="xs">
-          <Button variant="default" leftSection={<TbFileImport />} disabled={busy} onClick={() => fileInput.current?.click()}>
+        <Group gap="xs" className="modalActions">
+          <Button variant="default" leftSection={<TbFileImport />} onClick={onOpenFile}>
             Open file…
           </Button>
           <Button

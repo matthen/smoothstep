@@ -684,6 +684,17 @@ div#textures .texturesHint {
   }
 }
 
+// A dialog's buttons, pinned to its bottom edge while what's above them scrolls.
+.modalActions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin: var(--mantine-spacing-lg) calc(-1 * var(--mantine-spacing-md)) calc(-1 * var(--mantine-spacing-md));
+  padding: 12px var(--mantine-spacing-md) calc(12px + env(safe-area-inset-bottom));
+  background: var(--mantine-color-body);
+  border-top: 1px solid $dt-gray;
+}
+
 // The Open dialog.
 .documentBrowser {
   tr.opened td {
@@ -1401,5 +1412,15 @@ div#textures .texturesHint {
   }
   .sliderValue input {
     color: $dt-orange;
+  }
+}
+
+// Marks an example or shared animation that hasn't been saved as one of your own.
+.appHeader .sourceBadge {
+  flex: none;
+  margin-left: 4px;
+
+  @include phone {
+    display: none;
   }
 }

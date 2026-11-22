@@ -1,10 +1,10 @@
-import { ActionIcon, Button, Group, Kbd, Loader, Menu, SegmentedControl, Tabs, Text, TextInput, Tooltip } from '@mantine/core';
+import { ActionIcon, Badge, Button, Group, Kbd, Loader, Menu, SegmentedControl, Tabs, Text, TextInput, Tooltip } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react';
 import { flushSync } from 'react-dom';
 import {
-  TbBook, TbBrandGithub, TbChevronDown, TbCopy, TbDeviceFloppy, TbDownload, TbFile, TbFolderOpen, TbHammer,
+  TbBook, TbBrandGithub, TbChevronDown, TbCopy, TbDeviceFloppy, TbDownload, TbFile, TbFileImport, TbFolderOpen, TbHammer,
   TbCircleCheckFilled, TbCode, TbHeart, TbHelp, TbHome, TbKeyboard, TbLink, TbMaximize, TbMinimize, TbRoute, TbSchool, TbShare, TbVideo,
 } from 'react-icons/tb';
 
@@ -196,6 +196,11 @@ export default function App() {
 
   // The link the animation opened from, which can be shared again while it's unchanged.
   const [sharedFrom, setSharedFrom] = useState<Route | null>(null);
+  // Bumped when files are added to the browser's animations, so the Open dialog lists them.
+  const [libraryVersion, setLibraryVersion] = useState(0);
+  const fileInput = useRef<HTMLInputElement>(null);
+  // An example or shared animation, not yet saved: saving it makes a copy in the browser's animations.
+  const copySource = sharedFrom !== null && documentId === null;
 
   // Animated values held by their sliders, by row, until the animation plays or the playhead moves.
   const [held, setHeld] = useState<ReadonlyMap<number, number>>(new Map());
@@ -538,13 +543,15 @@ export default function App() {
     }
     try {
       const id = await localStore.saveDocument(asCopy ? null : documentId, json, canvasRef.current?.captureFrame() ?? null);
+      const message = asCopy || (documentId === null && sharedFrom) ? "Saved a copy to your animations." :
+        documentId === null ? "Saved to your animations." : "Animation saved.";
       if (id !== documentId) {
         window.history.replaceState({}, "", documentHref(id));
       }
       setDocumentId(id);
       // Edits made while saving are still unsaved.
       setHasUnsavedChanges(docRef.current !== json);
-      showMessage("Animation saved.");
+      showMessage(message);
       showTip({kind: "saved"});
     } catch (error) {
       console.error(error);
@@ -569,6 +576,32 @@ export default function App() {
     }
   }, [doc, documentId]);
 
+  // Adds animation files from the computer to the browser's animations, and opens the one a single
+  // file holds.
+  const openFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) {
+      return;
+    }
+    try {
+      const summary = await archive.importFiles(Array.from(files));
+      const [only] = summary.ids;
+      if (only && summary.ids.length === 1 && summary.failed === 0) {
+        openHash(documentHref(only), hasUnsavedChanges);
+        return;
+      }
+      setLibraryVersion(v => v + 1);
+      setDialog("open");
+      setAlert(archive.importMessage(summary));
+    } catch (error) {
+      console.error(error);
+      setAlert("Error opening file.");
+    } finally {
+      if (fileInput.current) {
+        fileInput.current.value = "";
+      }
+    }
+  };
+
   // A link clicked in a code comment, like "[Help → Tutorial]" or "[Sliders]", opens that menu item or tab.
   const appLinkRef = useLatest((link: AppLink) => {
     const showPanel = (tab: PanelTab) => {
@@ -588,6 +621,7 @@ export default function App() {
       "File → New": () => openHash("#new", hasUnsavedChanges),
       "File → Open": () => setDialog("open"),
       "File → Open from link": () => setDialog("openLink"),
+      "File → Open file": () => fileInput.current?.click(),
       "File → Save": () => void save(false),
       "File → Download animation file": () => void download(),
       "Help → Welcome": () => setDialog("splash"),
@@ -758,6 +792,12 @@ export default function App() {
             }
           }}
         />
+        {copySource &&
+          <Tooltip label="Saving keeps a copy in your animations, and leaves this one as it is" withArrow>
+            <Badge variant="light" color="gray" size="sm" className="sourceBadge">
+              {sharedFrom.kind === "example" ? "Example" : "Shared"}
+            </Badge>
+          </Tooltip>}
         <Group gap={4} wrap="nowrap" className="headerActions headerEnd">
           <Menu>
             <Menu.Target>
@@ -769,15 +809,19 @@ export default function App() {
               </Button>
             </Menu.Target>
             <Menu.Dropdown>
+              <Menu.Label>In this browser</Menu.Label>
               <Menu.Item component="a" href="#new" leftSection={<TbFile />}>New</Menu.Item>
               <Menu.Item leftSection={<TbFolderOpen />} onClick={() => setDialog("open")}>Open</Menu.Item>
-              <Menu.Item leftSection={<TbLink />} onClick={() => setDialog("openLink")}>Open from link</Menu.Item>
               <Menu.Item
                 leftSection={<TbDeviceFloppy />} onClick={() => void save(false)} fw={hasUnsavedChanges ? 600 : undefined}
                 rightSection={touch ? undefined : <Kbd size="xs">{MOD_KEY} S</Kbd>}
-              >Save</Menu.Item>
+              >{copySource ? "Save a copy" : "Save"}</Menu.Item>
               {documentId &&
                 <Menu.Item leftSection={<TbCopy />} onClick={() => setDialog("saveCopy")}>Save copy</Menu.Item>}
+              <Menu.Divider />
+              <Menu.Label>Files and links</Menu.Label>
+              <Menu.Item leftSection={<TbFileImport />} onClick={() => fileInput.current?.click()}>Open file</Menu.Item>
+              <Menu.Item leftSection={<TbLink />} onClick={() => setDialog("openLink")}>Open from link</Menu.Item>
               <Menu.Item leftSection={<TbDownload />} onClick={() => void download()}>
                 Download animation file
                 <Text size="xs" c="dimmed">Code, timeline and textures, to open again later</Text>
@@ -995,6 +1039,13 @@ export default function App() {
           }
         }}
         onMessage={setAlert}
+        onOpenFile={() => fileInput.current?.click()}
+        version={libraryVersion}
+      />
+      <input
+        type="file" accept=".json,.zip,application/json,application/zip" multiple
+        ref={fileInput} style={{display: "none"}} data-testid="importInput"
+        onChange={event => void openFiles(event.target.files)}
       />
       <OpenLink
         show={dialog === "openLink"} onHide={() => setDialog(null)}

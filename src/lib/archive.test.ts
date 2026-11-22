@@ -76,7 +76,7 @@ describe("importFiles", () => {
     const file = await zipFile();
     await clearStore();
     const summary = await importFiles([file]);
-    expect(summary).toEqual({animations: 2, images: 1, unchanged: 0, failed: 0});
+    expect(summary).toMatchObject({animations: 2, images: 1, unchanged: 0, failed: 0});
     const after = await localStore.allDocuments();
     const byId = (docs: localStore.StoredDocument[]) => Object.fromEntries(docs.map(d => [d.id, d]));
     for (const doc of before) {
@@ -87,10 +87,20 @@ describe("importFiles", () => {
     expect(new Uint8Array(await image!.blob.arrayBuffer())).toEqual(JPEG);
   });
 
+  it("names the animation a file holds, whether it was added or already here", async () => {
+    await seed();
+    const [doc] = await localStore.allDocuments();
+    const file = await animationFile(doc!);
+    const asFile = new File([await file.blob.arrayBuffer()], file.filename);
+    expect((await importFiles([asFile])).ids).toEqual([doc!.id]);
+    await clearStore();
+    expect((await importFiles([asFile])).ids).toEqual([doc!.id]);
+  });
+
   it("changes nothing when importing the same file again", async () => {
     await seed();
     const file = await zipFile();
-    expect(await importFiles([file])).toEqual({animations: 0, images: 0, unchanged: 2, failed: 0});
+    expect(await importFiles([file])).toMatchObject({animations: 0, images: 0, unchanged: 2, failed: 0});
     expect(await localStore.allDocuments()).toHaveLength(2);
   });
 
@@ -133,7 +143,7 @@ describe("importFiles", () => {
       "export/images/bbbb00000001.png": PNG,
     });
     const summary = await importFiles([new File([zipped], "x.zip")]);
-    expect(summary).toEqual({animations: 1, images: 1, unchanged: 0, failed: 0});
+    expect(summary).toMatchObject({animations: 1, images: 1, unchanged: 0, failed: 0});
     expect((await localStore.getDocument("bbbb0000d001"))!.json.aspectRatio).toEqual([1, 1]);
     expect((await localStore.getImage("bbbb00000001"))!.blob.type).toBe("image/png");
   });
@@ -144,9 +154,9 @@ describe("importFiles", () => {
     const bare = new File([JSON.stringify(docWithTexture("Bare", null))], "bare.json");
     await clearStore();
     const summary = await importFiles([new File([await one.blob.arrayBuffer()], one.filename), bare]);
-    expect(summary).toEqual({animations: 2, images: 1, unchanged: 0, failed: 0});
+    expect(summary).toMatchObject({animations: 2, images: 1, unchanged: 0, failed: 0});
     expect(one.filename).toBe("With texture.smoothstep.json");
-    expect(await importFiles([bare])).toEqual({animations: 0, images: 0, unchanged: 1, failed: 0});
+    expect(await importFiles([bare])).toMatchObject({animations: 0, images: 0, unchanged: 1, failed: 0});
   });
 
   it("counts unreadable files and invalid animations as failed", async () => {
@@ -154,7 +164,7 @@ describe("importFiles", () => {
     const summary = await importFiles([
       new File(["not json"], "a.json"), new File([JSON.stringify(bad)], "b.json"),
     ]);
-    expect(summary).toEqual({animations: 0, images: 0, unchanged: 0, failed: 2});
+    expect(summary).toMatchObject({animations: 0, images: 0, unchanged: 0, failed: 2});
     expect(importMessage(summary)).toBe("2 items couldn't be read.");
   });
 

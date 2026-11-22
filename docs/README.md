@@ -36,12 +36,20 @@ show tips" turns them off.
 
 ## Saving your work
 
-smoothstep.io saves your animations and the images you add in your browser. File → Open lists the
-animations saved there. You can download each one from that list, or click "Download all files"
-to save everything as a zip. "Open file…" opens files you downloaded before. File → Download
-animation file saves the animation you have open as a `.smoothstep.json` file. Your browser is
-the only place your work is kept, so download anything you want to back up or move to another
-computer.
+smoothstep.io saves your animations and the images you add in your browser. The File menu keeps
+the two kinds of saving apart:
+
+* **In this browser**: File → Save keeps the animation you have open, and File → Open lists the
+  animations saved there. Saving an example, or an animation someone shared with you, keeps a copy
+  as one of your own and leaves the original as it is. Until you save it, a tag beside the title
+  says it's an example or shared.
+* **Files and links**: File → Download animation file saves the animation you have open as a
+  `.smoothstep.json` file, and File → Open file opens one, adding it to your animations in this
+  browser. The Open dialog's "Download all files" saves everything as a zip, which File → Open
+  file can open again.
+
+Your browser is the only place your work is kept, so download anything you want to back up or move
+to another computer.
 
 ## Sharing
 
