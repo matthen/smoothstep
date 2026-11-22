@@ -22,6 +22,8 @@ const POSTER_SECONDS = 4;
 const START = {
   "26d46785c1f6": 40,  // The cellular automaton starts from an empty screen.
   "5c81f0d3a7e2": 7,  // The ink takes a few seconds to swirl.
+  "db5ea9765f9f": 4,  // The snowflake starts from one hexagon.
+  "be71615e6614": 5,  // The camera moves in to the cut after a few seconds.
 };
 const posters = process.argv.includes("--posters");
 const args = process.argv.slice(2).filter(a => a !== "--posters");

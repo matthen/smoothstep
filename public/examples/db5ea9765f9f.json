@@ -1,0 +1,115 @@
+{
+  "title": "Hexagonal growth",
+  "code": "// IMAGE: draws each living cell of [iBuffer0] as a hexagon that grows in when it's born, coloured\n// by the generation it was born in. [zoom] on the timeline sets how many cells fit across.\n\n// Distance from the centre of a hexagon, 0.5 at its edge.\nfloat hexDist(vec2 p) {\n  p = abs(p);\n  return max(dot(p, normalize(vec2(1., SQRT3))), p.x);\n}\n\n// The cell a point is in, and where the point is in that cell.\nivec2 hexCell(vec2 p, out vec2 inCell) {\n  vec2 r = vec2(1., SQRT3);\n  vec2 a = mod(p, r) - 0.5 * r;\n  vec2 b = mod(p - 0.5 * r, r) - 0.5 * r;\n  inCell = dot(a, a) < dot(b, b) ? a : b;\n  vec2 centre = p - inCell;\n  return ivec2(round(centre.x * 2.), round(centre.y * 2. / SQRT3));\n}\n\nvec3 generationColor(float generation) {\n  vec3 rainbow = 0.5 + 0.5 * cos(0.2 + generation * vec3(11.25, 7.5, 30.) + vec3(0.6, 2.7, 3.));\n  return mix(rainbow, vec3(1.), 0.3);\n}\n\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  vec2 uv = (fragCoord - 0.5 * iResolution.xy) / iResolution.y;\n  vec2 inCell;\n  ivec2 cell = hexCell(zoom * uv.yx, inCell);\n  vec2 state = readCell(cell);\n  // A new hexagon grows from its centre over its first second.\n  float grown = smoothstep(0., 60., float(iFrame) - state.y);\n  float border = max(0.04, zoom / 400.);\n  float inside = 0.5 - hexDist(inCell);\n  vec3 col = generationColor(state.y / float(STEPS_PER_GENERATION)) * state.x;\n  col *= smoothstep(0.01, 0., (1. - grown) - inside + border);\n  fragColor = vec4(col, 1.);\n}\n",
+  "shared": "// SHARED: the hexagonal grid, used by both tabs.\n#define zoom iFloat0  // How many cells fit across the canvas's height.\n\n// Steps between generations. [iFrame] moves on 60 times a second, so this is twice a second.\nconst int STEPS_PER_GENERATION = 30;\nconst float SQRT3 = 1.7320508;\n\n// Cells are numbered with \"doubled\" coordinates: x + y is always even, and the six neighbours of\n// a cell are 2 steps away along x, or 1 step along each of x and y. Cell (0, 0) is in the middle\n// of the canvas, and is kept in the middle of [iBuffer0].\nivec2 bufferCentre() {\n  return 2 * (ivec2(iResolution.xy) / 4);\n}\n\nconst ivec2 NEIGHBOURS[6] = ivec2[6](\n  ivec2(2, 0), ivec2(-2, 0), ivec2(1, 1), ivec2(-1, 1), ivec2(1, -1), ivec2(-1, -1));\n\n// What [iBuffer0] holds for a cell: whether it's alive (x), and the step it was born on (y).\nvec2 readCell(ivec2 cell) {\n  ivec2 p = cell + bufferCentre();\n  if (any(lessThan(p, ivec2(0))) || any(greaterThanEqual(p, ivec2(iResolution.xy)))) {\n    return vec2(0.);\n  }\n  return texelFetch(iBuffer0, p, 0).xy;\n}\n",
+  "buffers": [
+    {
+      "code": "// iBuffer0: THE GROWTH. Each pixel is one hexagonal cell (see the [Shared] tab). It starts with one\n// living cell in the middle. Each generation, an empty cell with exactly one living neighbour comes\n// alive, and a living cell stays alive for good.\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  ivec2 cell = ivec2(fragCoord) - bufferCentre();\n  vec2 here = readCell(cell);\n  if (iFrame == 0) {\n    // Born a second before the start, so it's fully grown from the first frame.\n    fragColor = vec4(cell == ivec2(0) ? vec2(1., -60.) : vec2(0.), 0., 1.);\n    return;\n  }\n  if (here.x > 0.5 || iFrame % STEPS_PER_GENERATION != 0) {\n    fragColor = vec4(here, 0., 1.);\n    return;\n  }\n  int living = 0;\n  for (int i = 0; i < 6; i++) {\n    living += int(readCell(cell + NEIGHBOURS[i]).x > 0.5);\n  }\n  fragColor = vec4(living == 1 ? vec2(1., float(iFrame)) : vec2(0.), 0., 1.);\n}\n"
+    }
+  ],
+  "duration": 45,
+  "aspectRatio": [
+    16,
+    9
+  ],
+  "textures": [
+    {
+      "id": "iTexture0",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture1",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture2",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture3",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture4",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture5",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture6",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture7",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    }
+  ],
+  "variables": [
+    {
+      "transitions": [
+        {
+          "startDSecs": 10,
+          "endDSecs": 150,
+          "startValue": 7,
+          "endValue": 67,
+          "type": "smoothstep"
+        }
+      ]
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    }
+  ]
+}
