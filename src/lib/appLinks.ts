@@ -1,7 +1,7 @@
 // Places in the app that a code comment can link to by naming them in square brackets, like
 // "[Help → Tutorial]" or "the [Sliders] tab".
 const MENU_PATHS = [
-  "File → New", "File → Open", "File → Save", "File → Open file", "File → Open from link", "File → Download animation file",
+  "File → New", "File → Open", "File → Save", "File → Import", "File → Export",
   "Help → Welcome", "Help → Take the tour", "Help → Tutorial", "Help → Shader inputs",
   "Help → Keyboard shortcuts", "Help → Documentation", "Help → Source code", "Help → Acknowledgements",
 ] as const;

@@ -338,6 +338,17 @@ export async function importFiles(files: Iterable<File>): Promise<ImportSummary>
   return summary;
 }
 
+// Saves an animation loaded from a link, with its images, unless the same animation is already
+// stored. Returns its id.
+export async function importDocument(json: AnimationDocument, images: Map<string, Blob>): Promise<string> {
+  const same = (await knownDocuments()).contents.get(canonicalJSON(json));
+  if (same) {
+    return same;
+  }
+  images.forEach((blob, id) => localStore.addTemporaryImage(id, blob));
+  return localStore.saveDocument(null, json, null);
+}
+
 export function importMessage({animations, images, unchanged, failed}: ImportSummary): string {
   const plural = (n: number, word: string) => n + " " + word + (n === 1 ? "" : "s");
   const parts: string[] = [];

@@ -18,7 +18,7 @@ interface DocumentBrowserProps {
   onDeleted(id: string): void;
   onMessage(text: string): void;
   // Asks for animation files from the computer.
-  onOpenFile(): void;
+  onImport(): void;
   // Changes when animations are added from elsewhere, so the list updates.
   version: number;
 }
@@ -28,7 +28,7 @@ function errorText(error: unknown, fallback: string): string {
   return error instanceof StorageFullError ? error.message : fallback;
 }
 
-export default function DocumentBrowser({show, onHide, currentId, onDeleted, onMessage, onOpenFile, version}: DocumentBrowserProps) {
+export default function DocumentBrowser({show, onHide, currentId, onDeleted, onMessage, onImport, version}: DocumentBrowserProps) {
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
   const [toDelete, setToDelete] = useState<DocumentSummary | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -131,7 +131,7 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
         {documents.length === 0 &&
           <Text c="dimmed" size="sm">
             You have no saved animations yet. File → Save keeps the one you're working on here, and
-            "Open file…" below opens one you downloaded.
+            Import below adds one from a file or a link.
           </Text>}
         <Text c="dimmed" size="sm" mt="sm">
           Animations are saved in this browser only. Download them to keep a backup
@@ -140,14 +140,14 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
         <Title order={2} size="h5" mt="lg" mb="xs">Examples</Title>
         <ExampleGallery onOpen={onHide} />
         <Group gap="xs" className="modalActions">
-          <Button variant="default" leftSection={<TbFileImport />} onClick={onOpenFile}>
-            Open file…
+          <Button variant="default" leftSection={<TbFileImport />} onClick={onImport}>
+            Import…
           </Button>
           <Button
             variant="default" leftSection={<TbDownload />} ml="auto"
             disabled={busy || documents.length === 0} onClick={() => void handleDownloadAll()}
           >
-            Download all files
+            Export all
           </Button>
         </Group>
       </AppModal>

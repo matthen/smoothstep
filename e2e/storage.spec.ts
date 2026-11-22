@@ -118,7 +118,7 @@ test("after a browser restart the animation and texture are still there", async 
   const modal = await openDialog(page);
   await expect(modal.locator("tbody tr")).toHaveCount(1);
   let download = page.waitForEvent("download");
-  await modal.getByRole("button", {name: "Download all files"}).click();
+  await modal.getByRole("button", {name: "Export all"}).click();
   await (await download).saveAs(zipPath);
   download = page.waitForEvent("download");
   await modal.locator("button[title='Download file']").first().click();

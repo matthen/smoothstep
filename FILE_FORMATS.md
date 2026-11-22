@@ -39,7 +39,7 @@ An animation is a JSON object, as produced by `App.toJSON()`:
 
 ## One animation: `<title>.smoothstep.json`
 
-File → Download saves the open animation, and the download button in File → Open saves a
+File → Export saves the open animation, and the download button in File → Open saves a
 stored one. Either way you get a JSON file with the uploaded images it uses embedded:
 
 ```json
@@ -63,7 +63,7 @@ stored one. Either way you get a JSON file with the uploaded images it uses embe
 
 ## Everything: `smoothstep-animations-<date>.zip`
 
-"Download all" in File → Open saves this zip:
+"Export all" in File → Open saves this zip:
 
 ```
 manifest.json

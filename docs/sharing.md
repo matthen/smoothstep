@@ -16,7 +16,7 @@ share the images too, share an animation file instead, as below.
 
 ## An animation file
 
-File → Download animation file saves a `.smoothstep.json` file with your own images inside it.
+File → Export downloads a `.smoothstep.json` file with your own images inside it.
 smoothstep.io can open one of these from any website that lets other sites read its files. Put the file
 online, then paste its address into "Link to a file online" in Share, and Share gives you a link that
 opens it. The link reads the file each time it's opened, so if you change the file at that address, the
@@ -35,9 +35,10 @@ link opens the new version.
   the file (it must send an `Access-Control-Allow-Origin` header). GitHub, GitHub Pages and most
   static hosting do.
 
-File → Open from link takes any of these: a smoothstep.io link, a gist's address, a file's page on
-github.com, or a file's address. Whoever opens the animation gets the images with it, and they're
-kept in their browser if they save it.
+File → Import takes any of these links: a smoothstep.io link, a gist's address, a file's page on
+github.com, or a file's address. It adds the animation to the ones saved in your browser, with its
+images. Whoever opens a link someone sent them gets the images too, and they're kept in their browser
+if they save the animation.
 
 ## On a website
 

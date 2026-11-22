@@ -115,22 +115,35 @@ test("opens an animation file from a URL with its images, and keeps them once sa
   expect(errors).toEqual([]);
 });
 
-test("opens a gist from Open from link", async ({page, context}) => {
+test("File → Import adds a gist to your animations and opens it, once", async ({page, context}) => {
   await offline(context);
   await serve(page, "https://api.github.com/gists/abc123", {files: {
     "magenta.smoothstep.json": {filename: "magenta.smoothstep.json", content: JSON.stringify(animationFile())},
   }});
+  const importLink = async (link: string) => {
+    await page.getByRole("button", {name: "File", exact: true}).click();
+    await page.getByRole("menuitem", {name: /^Import/}).click();
+    const modal = page.getByRole("dialog", {name: "Import"});
+    await modal.getByLabel("Link", {exact: true}).fill(link);
+    await modal.getByRole("button", {name: "Import link"}).click();
+    return modal;
+  };
   await page.goto("./#new");
-  await fileMenu(page, "Open from link");
-  const modal = page.getByRole("dialog", {name: "Open from link"});
-  await modal.getByLabel("Link", {exact: true}).fill("not a link");
-  await modal.getByRole("button", {name: "Open"}).click();
-  await expect(modal).toContainText("That isn't a link to an animation.");
-  await modal.getByLabel("Link", {exact: true}).fill("https://gist.github.com/someone/abc123");
-  await modal.getByRole("button", {name: "Open"}).click();
-  await expect(page).toHaveURL(/#gist\/abc123$/);
+  await expect(await importLink("not a link")).toContainText("That isn't a link to an animation.");
+  await page.keyboard.press("Escape");
+  await importLink("https://gist.github.com/someone/abc123");
+  await expect(page).toHaveURL(/#anim\/[a-f0-9]+$/);
+  const url = page.url();
   await expect(page.locator("#titleInput")).toHaveValue("Magenta file");
   expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
+  // Saved with its image, so it shows after a reload, and importing it again adds no copy.
+  await page.reload();
+  expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
+  await importLink("https://gist.github.com/someone/abc123");
+  await expect(page.locator("#titleInput")).toHaveValue("Magenta file");
+  expect(page.url()).toBe(url);
+  await fileMenu(page, "Open");
+  await expect(page.getByRole("dialog", {name: "Open"}).getByText("Magenta file")).toHaveCount(1);
 });
 
 test("says why a link didn't open", async ({page, context}) => {

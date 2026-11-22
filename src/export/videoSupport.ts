@@ -5,9 +5,9 @@ export function noVideoReason(): string | null {
     return null;
   }
   if (!window.isSecureContext) {
-    return "Browsers only encode video for pages opened over https, or from this computer. Export a GIF or " +
+    return "Browsers only encode video for pages opened over https, or from this computer. Render a GIF or " +
       "PNG frames instead, or open smoothstep.io from an https address.";
   }
-  return "This browser can't encode video. Export a GIF or PNG frames instead, or use a recent version of " +
+  return "This browser can't encode video. Render a GIF or PNG frames instead, or use a recent version of " +
     "Chrome, Edge, Firefox or Safari.";
 }

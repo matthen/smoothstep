@@ -18,13 +18,13 @@ for (const type of ["webm", "mp4", "gif", "png"]) {
     await page.goto("./#example/534226b1d5ed");
     await expect(page.locator("#titleInput")).toHaveValue("Minimal Animation");
     await page.locator(".durationInput").fill("1");
-    await page.getByRole("button", {name: "Export video"}).click();
-    const modal = page.getByRole("dialog", {name: /Export video/});
+    await page.getByRole("button", {name: "Render"}).click();
+    const modal = page.getByRole("dialog", {name: /Render/});
     await modal.locator("input[type=number]").first().fill("128");
     await expect(modal.locator("input[type=number]").nth(1)).toHaveValue("30");
     await modal.locator("select").selectOption(type);
     const download = page.waitForEvent("download", {timeout: 90_000});
-    await modal.getByRole("button", {name: "Export"}).click();
+    await modal.getByRole("button", {name: "Render"}).click();
     const file = await download;
     const path = test.info().outputPath(file.suggestedFilename());
     await file.saveAs(path);

@@ -43,7 +43,7 @@ export function tipContent(id: TipId, phone: boolean): Tip {
     case "backup":
       return {
         title: "Saved in this browser",
-        message: "Your animations are kept in this browser only. File → Download animation file saves a copy " +
+        message: "Your animations are kept in this browser only. File → Export downloads a copy " +
           "you can back up, and Share gives you a link to send to people.",
       };
   }
