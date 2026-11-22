@@ -1,6 +1,6 @@
 // Places in the app that a code comment can link to by naming them in square brackets, like
 // "[Help → Tutorial]" or "the [Sliders] tab".
-export const MENU_PATHS = [
+const MENU_PATHS = [
   "File → New", "File → Open", "File → Open from link", "File → Save", "File → Download animation file",
   "Help → Welcome", "Help → Take the tour", "Help → Tutorial", "Help → Shader inputs",
   "Help → Keyboard shortcuts", "Help → Documentation", "Help → Source code", "Help → Acknowledgements",
@@ -8,7 +8,7 @@ export const MENU_PATHS = [
 
 // The panels under the canvas, and the code tabs. "Animation" is the Timeline tab's old name, kept so
 // comments written with it still link.
-export const TABS = ["Timeline", "Animation", "Sliders", "Textures", "Image", "Shared", "iBuffer0", "iBuffer1", "iBuffer2", "iBuffer3"] as const;
+const TABS = ["Timeline", "Animation", "Sliders", "Textures", "Image", "Shared", "iBuffer0", "iBuffer1", "iBuffer2", "iBuffer3"] as const;
 
 export const APP_LINKS = [...MENU_PATHS, ...TABS] as const;
 

@@ -3,10 +3,11 @@
 
 // Player controls under the canvas.
 div.playerButtons {
-  // top and width are set inline, to sit under the canvas.
+  // top and --canvas-width are set inline, to sit under the canvas.
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
+  width: var(--canvas-width);
   max-width: calc(100% - 24px);
   // Matches the space canvasContainer leaves below the canvas.
   height: 56px;
@@ -15,17 +16,11 @@ div.playerButtons {
   // Phone canvases can be narrow, so the controls use the full width instead, with the scrub bar on
   // a row of its own above the buttons, as in a phone's video player.
   @include phone {
-    width: calc(100% - 24px) !important;
+    width: calc(100% - 24px);
     height: 100px;
     padding-top: 4px;
     flex-wrap: wrap;
     row-gap: 2px;
-
-    // Doubled to outweigh the slider's own flex below.
-    div.slider.slider {
-      order: -1;
-      flex: 1 0 calc(100% - 12px);
-    }
 
     .mantine-NumberInput-root {
       margin-left: auto;
@@ -50,6 +45,11 @@ div.playerButtons {
     cursor: pointer;
     user-select: none;
     touch-action: none;
+
+    @include phone {
+      order: -1;
+      flex: 1 0 calc(100% - 12px);
+    }
   }
 
   div.timeBar {

@@ -20,7 +20,11 @@ function playerScript(): Plugin {
           lib: {entry: 'src/player/standalone.ts', formats: ['iife'], name: 'smoothstepPlayer'},
         },
       });
-      const output = (Array.isArray(result) ? result[0]! : result as {output: {code?: string}[]}).output[0]!;
+      const bundle = Array.isArray(result) ? result[0]! : result;
+      if (!("output" in bundle)) {
+        throw new Error("Building the standalone player gave a watcher, not a bundle");
+      }
+      const output = bundle.output[0];
       return 'export default ' + JSON.stringify(output.code);
     },
   };

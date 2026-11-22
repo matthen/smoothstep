@@ -9,7 +9,7 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
   min-height: 0;
 
   &[hidden] {
-    display: none !important;
+    display: none;
   }
 
   .cm-editor {
@@ -66,7 +66,7 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
   .cm-matchingBracket,
   .cm-focused .cm-matchingBracket {
     background: none;
-    color: #fff !important;
+    color: #fff;
     text-decoration: underline;
   }
 

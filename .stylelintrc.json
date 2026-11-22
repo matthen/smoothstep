@@ -1,0 +1,10 @@
+{
+  "customSyntax": "postcss-scss",
+  "reportNeedlessDisables": true,
+  "rules": {
+    "declaration-no-important": true,
+    "selector-max-id": 1,
+    "selector-max-specificity": "1,4,3",
+    "selector-disallowed-list": [["/\\.([\\w-]+)[^\\s>+~,]*\\.\\1(?![\\w-])/"], {"message": "Don't repeat a class to raise specificity"}]
+  }
+}

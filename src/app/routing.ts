@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 
 import { useLatest } from '../lib/useLatest';
 
-export { parseHash, type Route } from '../lib/routes';
+export { parseHash } from '../lib/routes';
 
 // Set once the user has agreed to discard changes, so beforeunload doesn't ask again.
 let confirmedLeaving = false;

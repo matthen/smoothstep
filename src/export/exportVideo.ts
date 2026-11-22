@@ -3,7 +3,7 @@
 import { zip } from 'fflate';
 import { applyPalette, GIFEncoder, quantize } from 'gifenc';
 import {
-  BufferTarget, CanvasSource, getFirstEncodableVideoCodec, Mp4OutputFormat, Output, QUALITY_HIGH,
+  BufferTarget, CanvasSource, getFirstEncodableVideoCodec, Mp4OutputFormat, Output, Quality,
   WebMOutputFormat, type VideoCodec,
 } from 'mediabunny';
 
@@ -16,7 +16,7 @@ import { noVideoReason } from './videoSupport';
 
 export { exportSize, frameCount };
 
-export class ExportCancelled extends Error {}
+class ExportCancelled extends Error {}
 
 interface Encoder {
   addFrame(index: number): Promise<void>;
@@ -38,7 +38,7 @@ async function videoEncoder(
   }
   const target = new BufferTarget();
   const output = new Output({format: type === "mp4" ? new Mp4OutputFormat() : new WebMOutputFormat(), target});
-  const source = new CanvasSource(canvas, {codec, quality: QUALITY_HIGH});
+  const source = new CanvasSource(canvas, {codec, quality: new Quality("high")});
   output.addVideoTrack(source, {frameRate: fps});
   await output.start();
   return {
@@ -55,14 +55,15 @@ function gifEncoder(canvas: HTMLCanvasElement, fps: number): Encoder {
   const gif = GIFEncoder();
   const context = canvas.getContext("2d", {willReadFrequently: true})!;
   return {
-    addFrame: async () => {
+    addFrame: () => {
       const {data, width, height} = context.getImageData(0, 0, canvas.width, canvas.height);
       const palette = quantize(data, 256);
       gif.writeFrame(applyPalette(data, palette), width, height, {palette, delay: 1000 / fps});
+      return Promise.resolve();
     },
-    finish: async () => {
+    finish: () => {
       gif.finish();
-      return new Blob([gif.bytes() as Uint8Array<ArrayBuffer>], {type: "image/gif"});
+      return Promise.resolve(new Blob([gif.bytes() as Uint8Array<ArrayBuffer>], {type: "image/gif"}));
     },
     cancel: async () => {},
   };

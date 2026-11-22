@@ -62,9 +62,9 @@ describe("exportAll", () => {
       "animations/aaaa0000d001.json", "animations/aaaa0000d002.json", "images/aaaa00000001.jpg",
       "manifest.json", "thumbnails/aaaa0000d001.png",
     ]);
-    const manifest = JSON.parse(strFromU8(files["manifest.json"]!));
+    const manifest = JSON.parse(strFromU8(files["manifest.json"]!)) as {format: string; animations: {id: string}[]};
     expect(manifest.format).toBe("smoothstep-export");
-    expect(manifest.animations.map((a: {id: string}) => a.id)).toEqual(["aaaa0000d002", "aaaa0000d001"]);
+    expect(manifest.animations.map(a => a.id)).toEqual(["aaaa0000d002", "aaaa0000d001"]);
     expect(files["images/aaaa00000001.jpg"]).toEqual(JPEG);
   });
 });

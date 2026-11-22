@@ -1,5 +1,5 @@
 import { Button, Group, Stack, Text, TextInput } from '@mantine/core';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 
 import AppModal from '../app/AppModal';
 import { routeFromLink, routeHash } from '../lib/routes';
@@ -24,7 +24,7 @@ export default function OpenLink({show, onHide, onOpen}: OpenLinkProps) {
     }
   }
 
-  const open = (event: FormEvent) => {
+  const open = (event: SubmitEvent) => {
     event.preventDefault();
     const route = routeFromLink(text);
     if (!route || route.kind === "anim" || route.kind === "tutorial") {

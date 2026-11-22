@@ -1,4 +1,5 @@
 // IndexedDB and object URLs for jsdom.
+/* eslint-disable @typescript-eslint/no-unnecessary-condition -- jsdom lacks these, though the DOM types say they exist */
 import 'fake-indexeddb/auto';
 
 let nextURL = 0;
@@ -9,6 +10,7 @@ URL.revokeObjectURL ??= () => {};
 if (typeof window !== "undefined") {
   window.matchMedia ??= (query: string) => ({
     matches: false, media: query, onchange: null,
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- MediaQueryList still has them, and older code calls them
     addListener: () => {}, removeListener: () => {},
     addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
   });

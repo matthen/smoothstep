@@ -1,5 +1,5 @@
 import {useEffect, useEffectEvent, useState} from "react";
-import type {MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode} from "react";
+import type {CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode} from "react";
 import {ActionIcon, NumberInput, Tooltip} from "@mantine/core";
 import {TbPlayerPauseFilled, TbPlayerPlayFilled, TbPlayerSkipBackFilled} from "react-icons/tb";
 import {formatTime} from "./geometry";
@@ -158,7 +158,7 @@ export default function PlayerControls(props: PlayerControlsProps) {
   const keepFocus = (event: ReactMouseEvent) => event.preventDefault();
 
   return (
-    <div className="playerButtons" style={{top, width: Math.max(width ?? MIN_WIDTH, MIN_WIDTH)}}>
+    <div className="playerButtons" style={{top, "--canvas-width": `${Math.max(width ?? MIN_WIDTH, MIN_WIDTH)}px`} as CSSProperties}>
       <ActionIcon.Group>
         <ActionIcon variant="default" size="input-sm" aria-label="Back to the start" onMouseDown={keepFocus} onClick={onReset}>
           <TbPlayerSkipBackFilled />

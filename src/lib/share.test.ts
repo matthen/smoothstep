@@ -17,13 +17,13 @@ function withUserImage(): AnimationDocument {
 }
 
 function mockFetch(responses: Record<string, {status?: number; body: unknown}>) {
-  const fetch = vi.fn(async (url: string) => {
+  const fetch = vi.fn((url: string) => {
     const response = responses[url];
     if (!response) {
-      throw new TypeError("Failed to fetch");
+      return Promise.reject(new TypeError("Failed to fetch"));
     }
     const body = typeof response.body === "string" ? response.body : JSON.stringify(response.body);
-    return new Response(body, {status: response.status ?? 200});
+    return Promise.resolve(new Response(body, {status: response.status ?? 200}));
   });
   vi.stubGlobal("fetch", fetch);
   return fetch;

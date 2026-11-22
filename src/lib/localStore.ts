@@ -78,8 +78,8 @@ export function newId(): string {
 }
 
 export async function init(): Promise<void> {
-  // Ask the browser not to evict our data under storage pressure (best effort).
-  navigator.storage?.persist?.().catch(() => {});
+  // Ask the browser not to evict our data under storage pressure (best effort; no navigator.storage on http or jsdom).
+  (navigator.storage as StorageManager | undefined)?.persist().catch(() => {});
   const images = await values<StoredImage>(store("images"));
   images.forEach(cacheImageURL);
   imagesChanged();

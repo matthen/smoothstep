@@ -3,22 +3,22 @@ import { StreamLanguage, StringStream, type StreamParser } from '@codemirror/lan
 
 import { MAX_BUFFERS } from '../lib/document';
 
-export const KEYWORDS = (
+const KEYWORDS = (
   'sampler1D sampler2D sampler3D samplerCube sampler1DShadow sampler2DShadow ' +
   'const attribute uniform varying break continue discard return ' +
   'for while do if else struct in out inout'
 ).split(' ');
 
-export const TYPES = 'float int bool void vec2 vec3 vec4 ivec2 ivec3 ivec4 bvec2 bvec3 bvec4 mat2 mat3 mat4'.split(' ');
+const TYPES = 'float int bool void vec2 vec3 vec4 ivec2 ivec3 ivec4 bvec2 bvec3 bvec4 mat2 mat3 mat4'.split(' ');
 
-export const UNIFORMS = [
+const UNIFORMS = [
   'iFrame', 'iTime', 'iPrevFrame', 'iResolution', 'iDuration',
   ...Array.from({ length: 8 }, (_, i) => `iTexture${i}`),
   ...Array.from({ length: 16 }, (_, i) => `iFloat${i}`),
   ...Array.from({ length: MAX_BUFFERS }, (_, i) => `iBuffer${i}`),
 ];
 
-export const BUILTINS = [
+const BUILTINS = [
   ...UNIFORMS,
   'mainImage',
   ...(
@@ -36,7 +36,7 @@ export const BUILTINS = [
   ).split(' '),
 ];
 
-export const ATOMS = ['true', 'false'];
+const ATOMS = ['true', 'false'];
 
 // Completion words in the old editor's order.
 export const HINT_WORDS = [...new Set([...BUILTINS, ...KEYWORDS, ...TYPES, ...ATOMS])];
@@ -93,8 +93,7 @@ function popContext(state: GlslState): Context {
 
 function tokenComment(stream: StringStream, state: GlslState): GlslToken {
   let maybeEnd = false;
-  let ch: string | void;
-  while ((ch = stream.next())) {
+  for (let ch = stream.next(); ch; ch = stream.next()) {
     if (ch === '/' && maybeEnd) {
       state.tokenize = null;
       break;
@@ -107,8 +106,7 @@ function tokenComment(stream: StringStream, state: GlslState): GlslToken {
 function tokenString(quote: string): Tokenizer {
   return (stream, state) => {
     let escaped = false;
-    let next: string | void;
-    while ((next = stream.next()) != null) {
+    for (let next = stream.next(); next != null; next = stream.next()) {
       if (next === quote && !escaped) break;
       escaped = !escaped && next === '\\';
     }
@@ -176,7 +174,13 @@ function tokenBase(stream: StringStream, state: GlslState): GlslToken | null {
   return 'variableName';
 }
 
-export const glslParser: StreamParser<GlslState> = {
+// Resets curPunc here rather than in token(), where TS would then narrow it to null across the tokenizer call.
+function readToken(stream: StringStream, state: GlslState): GlslToken | null {
+  curPunc = null;
+  return (state.tokenize ?? tokenBase)(stream, state);
+}
+
+const glslParser: StreamParser<GlslState> = {
   name: 'glsl',
   startState: () => ({
     tokenize: null,
@@ -197,8 +201,7 @@ export const glslParser: StreamParser<GlslState> = {
       state.startOfLine = true;
     }
     if (stream.eatSpace()) return null;
-    curPunc = null;
-    const style = (state.tokenize ?? tokenBase)(stream, state);
+    const style = readToken(stream, state);
     if (style === 'comment' || style === 'meta') return style;
     if (ctx.align == null) ctx.align = true;
 

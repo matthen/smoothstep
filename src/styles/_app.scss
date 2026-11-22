@@ -28,13 +28,13 @@ a {
 
 .mobileOnly {
   @include desktop {
-    display: none !important;
+    display: none !important; /* stylelint-disable-line declaration-no-important -- a utility class must beat any component's display */
   }
 }
 
 .desktopOnly {
   @include phone {
-    display: none !important;
+    display: none !important; /* stylelint-disable-line declaration-no-important -- a utility class must beat any component's display */
   }
 }
 
@@ -304,7 +304,7 @@ a {
     position: fixed;
     inset: 0;
     z-index: 150;
-    height: 100dvh !important;
+    height: 100dvh;
     padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
       max(8px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
     background: $dt-gray-darker;
@@ -450,7 +450,7 @@ div#canvasContainer {
   position: relative;
   display: flex;
 
-  #canvas {
+  canvas {
     background-color: #000;
     display: block;
     margin: auto;

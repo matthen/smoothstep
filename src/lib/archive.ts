@@ -7,7 +7,7 @@ import * as localStore from './localStore';
 import type { StoredDocument } from './localStore';
 
 export const ANIMATION_FORMAT = "smoothstep-animation";
-export const EXPORT_FORMAT = "smoothstep-export";
+const EXPORT_FORMAT = "smoothstep-export";
 const VERSION = 1;
 const ID_PATTERN = /^[a-f0-9]{1,32}$/;
 
@@ -90,7 +90,7 @@ export function imageType(bytes: Uint8Array): string {
   return "image/png";
 }
 
-export function validThumbnail(value: unknown): string | null {
+function validThumbnail(value: unknown): string | null {
   return typeof value === "string" && value.startsWith("data:image/png;base64,") ? value : null;
 }
 
@@ -259,7 +259,7 @@ async function importImage(entry: ImageEntry, bytes: Uint8Array, summary: Import
 }
 
 async function importAnimationFile(obj: unknown, summary: ImportSummary, known: Known) {
-  const file = obj as Record<string, unknown>;
+  const file = obj as Record<string, unknown> | null;
   if (file && file.format === ANIMATION_FORMAT) {
     const images = (file.images ?? {}) as Record<string, ImageEntry & {data?: unknown}>;
     for (const [id, image] of Object.entries(images)) {

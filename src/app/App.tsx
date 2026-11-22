@@ -125,7 +125,9 @@ export default function App() {
   const setFull = (on: boolean) => {
     setFullView(on);
     if (on) {
-      document.documentElement.requestFullscreen?.().catch(() => {});
+      if (document.fullscreenEnabled) {
+        void document.documentElement.requestFullscreen().catch(() => {});
+      }
     } else if (document.fullscreenElement) {
       void document.exitFullscreen().catch(() => {});
     }
@@ -338,7 +340,7 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = localStore.onImagesChanged(() => setImagesVersion(v => v + 1));
     const route = initialRoute;
-    localStore.init().catch(error => {
+    void localStore.init().catch((error: unknown) => {
       console.error(error);
       setAlert(STORAGE_BLOCKED);
     }).then(async () => {

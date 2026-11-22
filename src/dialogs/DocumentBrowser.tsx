@@ -33,7 +33,7 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
   const phone = usePhone();
 
   const updateList = () => {
-    listDocuments().then(setDocuments).catch(error => onMessage(errorText(error, "Error finding animations.")));
+    listDocuments().then(setDocuments).catch((error: unknown) => onMessage(errorText(error, "Error finding animations.")));
   };
 
   useEffect(() => {
@@ -130,7 +130,7 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
                     <Table.Td visibleFrom="sm">{timeAgo(document.created)}</Table.Td>
                     <Table.Td>
                       <Group gap={4} wrap="nowrap">
-                        <ActionIcon variant="subtle" color="gray" title="Download file" aria-label="Download file" onClick={() => handleDownload(document)}>
+                        <ActionIcon variant="subtle" color="gray" title="Download file" aria-label="Download file" onClick={() => void handleDownload(document)}>
                           <TbDownload />
                         </ActionIcon>
                         <ActionIcon
@@ -158,7 +158,7 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
         <input
           type="file" accept=".json,.zip,application/json,application/zip" multiple
           ref={fileInput} style={{display: "none"}} data-testid="importInput"
-          onChange={event => handleImport(event.target.files)}
+          onChange={event => void handleImport(event.target.files)}
         />
         <Group mt="lg" gap="xs">
           <Button variant="default" leftSection={<TbFileImport />} disabled={busy} onClick={() => fileInput.current?.click()}>
@@ -166,7 +166,7 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
           </Button>
           <Button
             variant="default" leftSection={<TbDownload />} ml="auto"
-            disabled={busy || documents.length === 0} onClick={handleDownloadAll}
+            disabled={busy || documents.length === 0} onClick={() => void handleDownloadAll()}
           >
             Download all files
           </Button>
@@ -183,7 +183,7 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
           </>}
         <Group justify="flex-end" mt="lg">
           <Button variant="default" onClick={() => setShowConfirm(false)}>Cancel</Button>
-          <Button color="red" onClick={() => toDelete && handleDelete(toDelete)}>Delete</Button>
+          <Button color="red" onClick={() => toDelete && void handleDelete(toDelete)}>Delete</Button>
         </Group>
       </AppModal>
     </>

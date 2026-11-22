@@ -23,7 +23,7 @@ class ErrorWidget extends WidgetType {
 
 export const setLineErrors = StateEffect.define<LineError[]>();
 
-export function errorDecorations(state: EditorState, errors: LineError[]): DecorationSet {
+function errorDecorations(state: EditorState, errors: LineError[]): DecorationSet {
   const { doc } = state;
   const widgets = errors.map((error) => {
     const line = doc.line(Math.max(1, Math.min(doc.lines, error.line + 1)));

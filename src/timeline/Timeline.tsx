@@ -114,7 +114,7 @@ export default function Timeline(props: TimelineProps) {
   // Pointer handlers read the gesture from here, as moves can arrive before React re-renders.
   const gestureRef = useRef<Gesture>(gesture);
   const [drafts, setDrafts] = useState<Drafts>({});
-  const touch = useMediaQuery("(hover: none)") ?? false;
+  const touch = useMediaQuery("(hover: none)");
 
   const maxDSecs = durationDSecs(duration);
   const maxTime = maxTimeFor(variables, duration);

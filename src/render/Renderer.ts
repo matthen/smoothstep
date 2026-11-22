@@ -121,7 +121,7 @@ const BUFFER_UNIT = TEXTURE_UNIT + NUM_TEXTURES;  // Up to 13 units in all; WebG
 
 type Program = WebGLProgram & {vao: WebGLVertexArrayObject | null};
 
-export class WebGLUnavailableError extends Error {}
+class WebGLUnavailableError extends Error {}
 
 export class Renderer {
   readonly gl: WebGL2RenderingContext;
@@ -208,7 +208,7 @@ export class Renderer {
       return {program: null, log: fragment.log, stage: "compile"};
     }
     const vertex = this.compile(gl.VERTEX_SHADER, VERTEX_SHADER);
-    const program = gl.createProgram()!;
+    const program = gl.createProgram();
     gl.attachShader(program, vertex.shader!);
     gl.attachShader(program, fragment.shader);
     gl.linkProgram(program);
@@ -281,7 +281,7 @@ export class Renderer {
 
   private target(isBuffer: boolean): Target {
     const gl = this.gl;
-    const texture = gl.createTexture()!;
+    const texture = gl.createTexture();
     gl.activeTexture(gl.TEXTURE0 + PREV_FRAME_UNIT);
     gl.bindTexture(gl.TEXTURE_2D, texture);
     if (isBuffer && this.floatBuffers) {
@@ -295,7 +295,7 @@ export class Renderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-    const framebuffer = gl.createFramebuffer()!;
+    const framebuffer = gl.createFramebuffer();
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -304,7 +304,7 @@ export class Renderer {
 
   private blackTexture(): WebGLTexture {
     const gl = this.gl;
-    const texture = gl.createTexture()!;
+    const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
     return texture;
@@ -343,7 +343,7 @@ export class Renderer {
     await Promise.all(this.textureURLs.map(url => {
       const image = this.images.get(url);
       if (!image || image.complete) {
-        return undefined;
+        return Promise.resolve();
       }
       return new Promise<void>(resolve => {
         image.addEventListener("load", () => resolve(), {once: true});
@@ -364,7 +364,7 @@ export class Renderer {
       this.textureUnits[slot] = this.blackTexture();
       return;
     }
-    const texture = gl.createTexture()!;
+    const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
