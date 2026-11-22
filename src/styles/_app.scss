@@ -1126,6 +1126,10 @@ div#textures .texturesHint {
   border-left: 3px solid $dt-purple;
   background: $dt-gray-darker;
 
+  .linkList + & {
+    margin-top: 16px;
+  }
+
   .welcomeTipTitle {
     display: flex;
     align-items: center;
