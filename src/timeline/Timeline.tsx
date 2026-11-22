@@ -596,7 +596,7 @@ export default function Timeline(props: TimelineProps) {
         {!heading && !touch && variables.every(variable => variable.transitions.length === 0) &&
           <p className="hint">
             Then use <code>iFloat0</code> to <code>iFloat15</code> in your code, like any number.
-            {" "}<code>#define size iFloat0</code> names a row.
+            {" "}A line like <code>#define size iFloat0</code> names the <code>iFloat0</code> row <code>size</code>.
           </p>}
         {selected &&
           <form className="transitionForm" onSubmit={e => e.preventDefault()}>
