@@ -1,0 +1,169 @@
+{
+  "title": "Julia ring",
+  "code": "// A ring built from Julia sets. Going around the ring, each slice through it is the Julia set for\n// a point on the edge of the Mandelbrot set's main cardioid. The ring is ray marched, with a wedge\n// cut out of it to show the slices, and the cut faces reflect a gradient sky.\n// The camera and the cut follow the timeline: try changing a row, or [twist] on its own.\n#define tilt iFloat0     // How far the ring tips towards the camera.\n#define turn iFloat1     // The ring's turn about its axis, in quarter turns.\n#define twist iFloat2    // How many times the Julia sets go around the ring.\n#define cut iFloat3      // How wide the wedge cut out of the ring is.\n#define closeUp iFloat4  // Moves the camera in close to the cut faces.\n\n#define PI 3.14159265\n\nvec3 rotate(vec3 p, vec3 axis, float angle) {\n  axis = normalize(axis);\n  return mix(dot(axis, p) * axis, p, cos(angle)) - sin(angle) * cross(axis, p);\n}\n\n// The point on the edge of the main cardioid at angle a.\nvec2 cardioid(float a) {\n  vec2 c = -vec2(cos(a), sin(a)) * (1. + cos(a)) / 2.;\n  return c + vec2(0.2499, 0.);\n}\n\n// Distance from z to the Julia set for c, estimated from how fast z escapes.\nfloat juliaDist(vec2 z, vec2 c) {\n  vec2 dz = vec2(1., 0.);\n  for (int i = 0; i < 100; i++) {\n    if (dot(z, z) > 32.) {\n      return 0.5 * sqrt(dot(z, z) / dot(dz, dz)) * log(dot(z, z));\n    }\n    dz = 2. * vec2(z.x * dz.x - z.y * dz.y, z.x * dz.y + z.y * dz.x);\n    z = vec2(z.x * z.x - z.y * z.y, 2. * z.x * z.y) + c;\n  }\n  return 0.;\n}\n\n// The ring: the slice at each angle around the y axis is a Julia set, 4 from the centre.\nfloat ringDist(vec3 p) {\n  vec2 slice = vec2(length(p.xz) - 4., p.y);\n  return juliaDist(slice, cardioid(atan(p.x, p.z) - 2. * PI * twist));\n}\n\n// The wedge cut out of the ring, between two planes through its axis.\nfloat wedgeDist(vec3 p) {\n  float back = 2.5;\n  float front = back - 1.5 * cut;\n  vec3 n1 = vec3(sin(front + PI), 0., cos(front + PI));\n  vec3 n2 = vec3(sin(back), 0., cos(back));\n  return max(dot(p, n1), dot(p, n2));\n}\n\nfloat scene(vec3 pos, out bool onCut) {\n  vec3 p = rotate(pos, vec3(1., 0., 0.), 0.4 + 0.2 * tilt);\n  p = rotate(p, vec3(0., 1., 0.), 0.5 * PI * turn);\n  float ring = ringDist(p);\n  float wedge = -wedgeDist(p);\n  onCut = wedge > ring;\n  return max(ring, wedge);\n}\n\nvec3 sceneNormal(vec3 p, float d) {\n  bool unused;\n  float eps = 0.1;\n  return normalize(vec3(\n    scene(p + vec3(eps, 0., 0.), unused),\n    scene(p + vec3(0., eps, 0.), unused),\n    scene(p + vec3(0., 0., eps), unused)) - d);\n}\n\n// The sky the cut faces reflect: a glowing horizon between a deep blue zenith and a dark floor,\n// with its hue drifting around the horizon.\nvec3 sky(vec3 dir) {\n  vec3 horizon = vec3(1., 0.55, 0.3);\n  vec3 col = dir.y > 0.\n    ? mix(horizon, vec3(0.08, 0.15, 0.55), pow(dir.y, 0.4))\n    : mix(horizon, vec3(0.12, 0.04, 0.18), pow(-dir.y, 0.3));\n  float around = atan(dir.z, dir.x);\n  return col * (0.75 + 0.25 * cos(3. * around + vec3(0., 2., 4.)));\n}\n\n// The colour of a point on the ring: the cut faces reflect the photo, and the ring's surface is\n// lit by one light.\nvec3 shade(vec3 p, float d, bool onCut, vec3 dir) {\n  vec3 n = sceneNormal(p, d);\n  if (onCut) {\n    return 1.2 * sky(reflect(dir, n));\n  }\n  vec4 light = vec4(3., 2., 4., 9.);\n  vec3 toLight = light.xyz - p;\n  float falloff = 1. - pow(min(1., length(toLight) / light.w), 2.);\n  return vec3(2. * max(0., dot(n, normalize(toLight))) * falloff);\n}\n\nvec3 trace(vec3 origin, vec3 dir) {\n  vec3 p = origin;\n  bool onCut = false;\n  float d = 1.;\n  // The distance estimate overshoots near the set, so march a fraction of it.\n  float stepScale = 0.45 + 0.17 * closeUp;\n  for (int i = 0; i < 160; i++) {\n    d = scene(p, onCut);\n    // Further away, a pixel covers more of the ring, so it needn't get as close.\n    if (d < 0.0005 * length(p - origin)) {\n      break;\n    }\n    p += stepScale * d * dir;\n  }\n  // A ray that ran out of steps close to the ring still lands on it, rather than leaving a speck.\n  return d < 0.01 ? shade(p, d, onCut, dir) : vec3(0.);\n}\n\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  vec3 origin = mix(vec3(0., 0., 9.5), vec3(2., -2.5, 3.8), closeUp);\n  // Four rays around the pixel and two through its centre, to smooth the edges.\n  vec3 col = vec3(0.);\n  for (int i = 0; i <= 4; i++) {\n    float a = 0.2 + 2. * PI * float(i + 1) / 4.;\n    vec2 offset = i < 4 ? 0.6 * vec2(cos(a), sin(a)) : vec2(0.);\n    vec2 uv = 0.7 * (2. * (fragCoord + offset) - iResolution.xy) / iResolution.y;\n    vec3 dir = normalize(vec3(uv, -1.));\n    dir = rotate(dir, vec3(0., 1., 0.), 0.5 * closeUp);\n    dir = rotate(dir, vec3(1., 0., 0.), -0.5 * closeUp);\n    col += (i < 4 ? 1. : 2.) * trace(origin, dir);\n  }\n  fragColor = vec4(col / 6., 1.);\n}\n",
+  "duration": 18,
+  "aspectRatio": [
+    16,
+    9
+  ],
+  "textures": [
+    {
+      "id": "iTexture0",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture1",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture2",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture3",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture4",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture5",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture6",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture7",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    }
+  ],
+  "variables": [
+    {
+      "transitions": [
+        {
+          "startDSecs": 0,
+          "endDSecs": 20,
+          "startValue": 0,
+          "endValue": 1,
+          "type": "smoothstep"
+        },
+        {
+          "startDSecs": 150,
+          "endDSecs": 180,
+          "startValue": 1,
+          "endValue": 0,
+          "type": "smoothstep"
+        }
+      ]
+    },
+    {
+      "transitions": [
+        {
+          "startDSecs": 0,
+          "endDSecs": 20,
+          "startValue": 1,
+          "endValue": 0,
+          "type": "smoothstep"
+        },
+        {
+          "startDSecs": 120,
+          "endDSecs": 180,
+          "startValue": 0,
+          "endValue": -3,
+          "type": "smoothstep"
+        }
+      ]
+    },
+    {
+      "transitions": [
+        {
+          "startDSecs": 40,
+          "endDSecs": 180,
+          "startValue": 0,
+          "endValue": 2,
+          "type": "smoothstep"
+        }
+      ]
+    },
+    {
+      "transitions": [
+        {
+          "startDSecs": 20,
+          "endDSecs": 40,
+          "startValue": 0,
+          "endValue": 1,
+          "type": "smoothstep"
+        },
+        {
+          "startDSecs": 160,
+          "endDSecs": 180,
+          "startValue": 1,
+          "endValue": 0,
+          "type": "smoothstep"
+        }
+      ]
+    },
+    {
+      "transitions": [
+        {
+          "startDSecs": 55,
+          "endDSecs": 80,
+          "startValue": 0,
+          "endValue": 1,
+          "type": "smoothstep"
+        },
+        {
+          "startDSecs": 140,
+          "endDSecs": 160,
+          "startValue": 1,
+          "endValue": 0,
+          "type": "smoothstep"
+        }
+      ]
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    }
+  ]
+}

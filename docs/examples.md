@@ -10,12 +10,18 @@ If you change an example, save it to keep it as one of your own animations.
   the shapes of spherical harmonics and left to spring back, reflecting a 360° photo.
 * [Menger sponge dissection](https://smoothstep.io/app/#example/2ed11c16d844): a Menger sponge, sliced
   open by a moving plane.
+* [Julia ring](https://smoothstep.io/app/#example/be71615e6614): a ring whose slices are the Julia
+  sets along the edge of the Mandelbrot set's main cardioid, cut open to show them.
 * [Domain warping](https://smoothstep.io/app/#example/19bb8790cb0d): fractal noise fed back into
   itself, like marbled paper.
 * [Kaleidoscope](https://smoothstep.io/app/#example/d692b3fe2561): a painting, mirrored into turning
   segments with polar coordinates.
 * [Glowing trails](https://smoothstep.io/app/#example/3156da0acaeb): dots that leave fading trails,
   drawn on top of the previous frame.
+* [Pokémon type battles](https://smoothstep.io/app/#example/65ca463c0318): cells of the 18 Pokémon
+  types fight their neighbours, and the type chart decides who wins.
+* [Hexagonal growth](https://smoothstep.io/app/#example/db5ea9765f9f): one hexagon grows into a
+  snowflake, as each empty cell with exactly one living neighbour comes alive.
 * [Truchet tiles](https://smoothstep.io/app/#example/bd2cdbfe233d): tiles that turn smoothly, rejoining
   into winding paths.
 * [Metaballs](https://smoothstep.io/app/#example/3d6489cf0694): blobs that melt into each other and
