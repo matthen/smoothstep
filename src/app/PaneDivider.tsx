@@ -16,13 +16,6 @@ export function previewWidthCSS(width: number): string {
   return `min(${width}px, max(${MIN_PREVIEW}px, 100% - ${MIN_EDITOR}px))`;
 }
 
-// Whether a width is nearer the wide preset than the narrow one, as set in _app.scss's --preview-width.
-export function nearerWidePreset(width: number, viewportWidth: number): boolean {
-  const narrow = Math.min(512, 0.45 * viewportWidth);
-  const wide = Math.min(768, 0.6 * viewportWidth);
-  return width > (narrow + wide) / 2;
-}
-
 const KEY = "smoothstep.previewWidth";
 
 export function storedPreviewWidth(): number | null {

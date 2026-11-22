@@ -74,13 +74,6 @@ a {
     }
   }
 
-  &[data-wide] {
-    --preview-width: min(#{$wide-right-width}, 60vw);
-    #toggleWideCanvas {
-      transform: rotate(180deg);
-    }
-  }
-
   // Phones always show the chosen pane, so collapsing only applies on desktop.
   &[data-footer="closed"] {
     @include desktop {
@@ -261,7 +254,24 @@ a {
     transition: background 120ms;
   }
 
-  &:hover::after, &:focus-visible::after, .workspace[data-resizing] &::after {
+  // The grab handle, always shown, in the middle of the line.
+  &::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 3px;
+    z-index: 1;
+    width: 6px;
+    height: 36px;
+    margin-top: -18px;
+    border-radius: 3px;
+    background: $dt-gray;
+    box-shadow: inset 0 0 0 1px rgba($dt-gray-medium, 0.35);
+    transition: background 120ms;
+  }
+
+  &:hover::after, &:focus-visible::after, .workspace[data-resizing] &::after,
+  &:hover::before, &:focus-visible::before, .workspace[data-resizing] &::before {
     background: $dt-purple;
   }
 
@@ -360,10 +370,6 @@ a {
     padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
       max(8px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
     background: $dt-gray-darker;
-
-    #toggleWideCanvas {
-      display: none;
-    }
   }
 }
 
@@ -562,27 +568,6 @@ div.playerButtons .aspectRatioPicker {
     .mantine-NativeSelect-section[data-position="left"] {
       display: none;
     }
-  }
-}
-
-#toggleWideCanvas {
-  position: absolute;
-  // Over the divider, which it sits on when the canvas fills its side's width.
-  z-index: 6;
-  padding: 4px;
-  cursor: pointer;
-  background: none;
-  border: none;
-  color: $dt-gray-medium;
-  transition: transform $transition-duration, color 150ms;
-  display: flex;
-
-  &:hover {
-    color: $dt-gray-light;
-  }
-
-  @include phone {
-    display: none;
   }
 }
 

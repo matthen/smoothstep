@@ -36,7 +36,7 @@ import AspectRatioPicker from '../dialogs/AspectRatioPicker';
 import Canvas, { type CanvasHandle, type CanvasLayout, type Shaders } from '../render/Canvas';
 import type { CompileResult, ShaderId } from '../render/Renderer';
 import { floatNames } from '../timeline/names';
-import PaneDivider, { nearerWidePreset, previewWidthCSS, storedPreviewWidth, storePreviewWidth } from './PaneDivider';
+import PaneDivider, { previewWidthCSS, storedPreviewWidth, storePreviewWidth } from './PaneDivider';
 import PlayerControls, { PLAYER_ONE_ROW_WIDTH, PLAYER_SECOND_ROW_WIDTH } from '../timeline/PlayerControls';
 import Sliders, { floatsInCode, inputsInCode } from '../timeline/Sliders';
 import Timeline from '../timeline/Timeline';
@@ -124,10 +124,7 @@ export default function App() {
   const [showFooter, setShowFooter] = useState(true);
   // The canvas side's width set with the divider, or null for a preset.
   const [previewWidth, setPreviewWidth] = useState<number | null>(storedPreviewWidth);
-  const [wideCanvas, setWideCanvas] = useState(false);
   const customWidth = tutorialOpen ? null : previewWidth;
-  // Which way the chevron points: from the dragged width when there is one.
-  const wideShown = customWidth === null ? wideCanvas : nearerWidePreset(customWidth, window.innerWidth);
   const [resizing, setResizing] = useState(false);
   const workspaceRef = useRef<HTMLElement>(null);
   useEffect(() => storePreviewWidth(previewWidth), [previewWidth]);
@@ -734,7 +731,7 @@ export default function App() {
 
   return (
     <div
-      className="app" data-footer={showFooter ? "open" : "closed"} data-wide={wideShown || undefined}
+      className="app" data-footer={showFooter ? "open" : "closed"}
       data-full-view={fullView || undefined}
       data-mobile-tab={mobileTab} data-tutorial={tutorialOpen || undefined}
     >
@@ -885,10 +882,7 @@ export default function App() {
             time={time} duration={doc.duration} stepClock={stepClock} variableValues={values}
             aspectRatio={doc.aspectRatio}
             onBuilt={onBuilt}
-            onRestart={restartFrames} onLayout={setLayout} onToggleWide={() => {
-              setPreviewWidth(null);
-              setWideCanvas(!wideShown);
-            }}
+            onRestart={restartFrames} onLayout={setLayout}
           />
           <PlayerControls
             duration={doc.duration} currentTime={time} isPlaying={isPlaying}
