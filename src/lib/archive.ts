@@ -20,6 +20,8 @@ export interface ImportSummary {
   images: number;
   unchanged: number;
   failed: number;
+  // Every animation in the files, added or already here, so one can be opened.
+  ids: string[];
 }
 
 export interface DownloadableFile {
@@ -176,14 +178,15 @@ export async function exportAll(): Promise<DownloadableFile & {count: number}> {
 
 interface Known {
   ids: Set<string>;
-  contents: Set<string>;
+  // Each stored animation's id, by its content.
+  contents: Map<string, string>;
 }
 
 async function knownDocuments(): Promise<Known> {
   const docs = await localStore.allDocuments();
   return {
     ids: new Set(docs.map(d => d.id)),
-    contents: new Set(docs.map(d => canonicalJSON(d.json))),
+    contents: new Map(docs.map(d => [canonicalJSON(d.json), d.id])),
   };
 }
 
@@ -204,20 +207,24 @@ async function importAnimation(entry: ImportEntry, summary: ImportSummary, known
   const hasId = typeof entry.id === "string" && ID_PATTERN.test(entry.id);
   let id = hasId ? entry.id as string : localStore.newId();
   const modified = parseTime(entry.modified, now);
-  if (!hasId && known.contents.has(content)) {
+  const same = known.contents.get(content);
+  if (!hasId && same) {
     summary.unchanged += 1;
+    summary.ids.push(same);
     return;
   }
   if (known.ids.has(id)) {
     const existing = await localStore.getDocument(id);
     if (existing && canonicalJSON(existing.json) === content) {
       summary.unchanged += 1;
+      summary.ids.push(id);
       return;
     }
     if (existing && existing.modified > modified) {
       // Would be saved alongside; unless an earlier import already did that.
-      if (known.contents.has(content)) {
+      if (same) {
         summary.unchanged += 1;
+        summary.ids.push(same);
         return;
       }
       id = localStore.newId();
@@ -228,8 +235,9 @@ async function importAnimation(entry: ImportEntry, summary: ImportSummary, known
     json, thumbnail: validThumbnail(entry.thumbnail),
   });
   known.ids.add(id);
-  known.contents.add(content);
+  known.contents.set(content, id);
   summary.animations += 1;
+  summary.ids.push(id);
 }
 
 interface ImageEntry {
@@ -312,7 +320,7 @@ async function importZip(bytes: Uint8Array, summary: ImportSummary, known: Known
 }
 
 export async function importFiles(files: Iterable<File>): Promise<ImportSummary> {
-  const summary: ImportSummary = {animations: 0, images: 0, unchanged: 0, failed: 0};
+  const summary: ImportSummary = {animations: 0, images: 0, unchanged: 0, failed: 0, ids: []};
   const known = await knownDocuments();
   for (const file of files) {
     try {

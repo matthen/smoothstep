@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { render } from '../test/render';
-import { newDocument } from '../lib/document';
 import * as localStore from '../lib/localStore';
 import DocumentBrowser from './DocumentBrowser';
 import { addDocument, clearStore } from './testUtils';
@@ -17,7 +16,7 @@ beforeEach(async () => {
 });
 
 function renderBrowser(currentId: string | null = null) {
-  const props = {show: true, onHide: vi.fn(), currentId, onDeleted: vi.fn(), onMessage: vi.fn()};
+  const props = {show: true, onHide: vi.fn(), currentId, onDeleted: vi.fn(), onMessage: vi.fn(), onOpenFile: vi.fn(), version: 0};
   render(<DocumentBrowser {...props} />);
   return props;
 }
@@ -72,15 +71,5 @@ describe("DocumentBrowser", () => {
     renderBrowser();
     expect(await screen.findByText(/You have no saved animations yet\. File → Save/)).toBeTruthy();
     expect(screen.getByRole("button", {name: /Download all files/}).hasAttribute("disabled")).toBe(true);
-  });
-
-  it("imports files and reports the result", async () => {
-    const props = renderBrowser();
-    await screen.findByText("Older");
-    const doc = {...newDocument(), title: "Imported"};
-    const file = new File([JSON.stringify(doc)], "imported.json", {type: "application/json"});
-    await userEvent.upload(screen.getByTestId("importInput"), file);
-    expect(await screen.findByText("Imported")).toBeTruthy();
-    expect(props.onMessage).toHaveBeenCalledWith("1 animation and 0 images added.");
   });
 });

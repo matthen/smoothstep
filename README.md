@@ -21,8 +21,7 @@ the result as video. It all runs in your browser, with no server or sign-in.
 I started smoothstep.io in 2021 as a closed-source hosted site, with accounts that kept your
 animations on a server and let you share them with links. In November 2026 I rewrote it to run entirely in the browser, with no
 server or accounts, and released it here as open source under the MIT licence. If you saved your
-animations from the old site with "Download my data", open that zip with File → Open → "Open
-file…".
+animations from the old site with "Download my data", open that zip with File → Open file.
 
 You can use it at **[smoothstep.io](https://smoothstep.io)**, or run your own copy. To learn, start
 the [tutorial](https://smoothstep.io/app/#tutorial): it runs in the app, beside the editor, and each step
@@ -49,7 +48,7 @@ in your browser.
 
 smoothstep.io keeps your animations and the images you add in your browser's storage. You can download one
 animation, or all of them as a zip, to back them up or move them to another computer, and open
-them again with File → Open → "Open file…".
+them again with File → Open file.
 
 Sharing needs no server. Share gives you a link with the whole animation compressed into it,
 code to show it playing on any website, and a player file that works offline. smoothstep.io also opens

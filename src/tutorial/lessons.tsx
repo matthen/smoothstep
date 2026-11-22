@@ -1000,7 +1000,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
           </p>
           <p>
             To keep a copy elsewhere, use File → Download animation file. It holds the code, the timeline and the
-            textures, and File → Open → "Open file…" opens it again.
+            textures, and File → Open file opens it again.
           </p>
         </>,
       },

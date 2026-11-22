@@ -41,3 +41,18 @@ test("a link in a comment opens a menu item, a tab or a web address", async ({pa
   expect((await popup).url()).toBe("https://example.com/");
   expect(errors).toEqual([]);
 });
+
+test("an example is marked until it's saved, and saving keeps a copy as one of your own", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#example/534226b1d5ed");
+  const tag = page.locator(".appHeader").getByText("Example", {exact: true});
+  await expect(tag).toBeVisible();
+  await page.getByRole("button", {name: "File"}).click();
+  await page.getByRole("menu").getByText("Save a copy", {exact: true}).click();
+  await expect(page.getByText("Saved a copy to your animations.")).toBeVisible();
+  await expect(page).toHaveURL(/#anim\/\w+$/);
+  await expect(tag).toBeHidden();
+  await page.getByRole("button", {name: "File"}).click();
+  await expect(page.getByRole("menu").getByText("Save", {exact: true})).toBeVisible();
+  expect(errors).toEqual([]);
+});
