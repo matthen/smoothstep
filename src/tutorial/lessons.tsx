@@ -1008,8 +1008,9 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         title: "Add the layer",
         body: <>
           <p>
-            A shader is good at working out a colour for every pixel, but it's hard to write words or draw a
-            few shapes in one. The Canvas2D layer is for that. It's code in JavaScript, the language of web
+            A shader works out the colour of each pixel on its own, so drawing text or a few simple shapes
+            with one is fiddly: every pixel has to work out whether it's inside a letter. The Canvas2D layer
+            is for that. It's code in JavaScript, the language of web
             pages, that draws on a canvas of its own, over the shader.
           </p>
           <p>
