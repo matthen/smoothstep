@@ -1,13 +1,14 @@
 // The service worker: after one visit the app loads and works with no network, textures and examples
 // keep once used, and a new version waits for the user to reload into it.
 import { expect, test, type Page } from '@playwright/test';
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { extname, join } from 'node:path';
 
-import { addTab, canvasCenter, dismissAlert, docsPanel, MAGENTA, near, offline, OPEN_EDITOR, setCode, skipTour } from './helpers';
+import { addTab, canvasCenter, dismissAlert, docsPanel, expectCenter, MAGENTA, near, offline, OPEN_EDITOR, setCode, skipTour } from './helpers';
 
 test.use({serviceWorkers: "allow"});
 
@@ -39,7 +40,7 @@ test("after one visit, the app loads and works with no network", async ({page, c
   await expect(page.locator(OPEN_EDITOR)).toBeVisible();
   await setCode(page, BLUE_IMAGE);
   await page.keyboard.press("Shift+Enter");
-  await expect(async () => expect(near(await canvasCenter(page), [0, 0, 255])).toBe(true)).toPass();
+  await expectCenter(page, [0, 0, 255]);
 
   // The Docs tab and the Canvas2D layer's editor load parts of the app only when first used.
   await page.getByRole("button", {name: "Help"}).click();
@@ -49,7 +50,7 @@ test("after one visit, the app loads and works with no network", async ({page, c
   await addTab(page, "Add the Canvas2D layer");
   await setCode(page, 'import planck from "planck";\n' + MAGENTA_HALF);
   await page.keyboard.press("Shift+Enter");
-  await expect(async () => expect(near(await canvasCenter(page), MAGENTA)).toBe(true)).toPass({timeout: 15_000});
+  await expectCenter(page, MAGENTA);
 
   await page.keyboard.press("ControlOrMeta+s");
   await expect(page).toHaveURL(/#anim\/[a-f0-9]+$/);
@@ -100,7 +101,7 @@ test("textures and examples work offline once used, and others fail as they woul
   await page.reload();
   await expect(page.locator("#titleInput")).toHaveValue("Using textures");
   expect(await part()).toEqual({status: 206, length: 100});
-  await expect(async () => expect(near(await canvasCenter(page), online, 30)).toBe(true)).toPass();
+  await expectCenter(page, online, {tolerance: 30});
 
   // A texture never used: the slot stays black, as with no network and no worker.
   await page.getByRole("tab", {name: "Textures"}).click();
@@ -108,7 +109,7 @@ test("textures and examples work offline once used, and others fail as they woul
   const picker = page.getByRole("dialog");
   await picker.getByAltText("photos/nickypainting.jpg preview").click();
   await picker.getByRole("button", {name: "Apply changes"}).click();
-  await expect(async () => expect(near(await canvasCenter(page), [0, 0, 0], 20)).toBe(true)).toPass();
+  await expectCenter(page, [0, 0, 0], {tolerance: 20});
 
   // An example never opened says it couldn't load.
   await page.goto("./#example/d692b3fe2561");
@@ -123,10 +124,21 @@ const TYPES: Record<string, string> = {
   ".woff2": "font/woff2", ".mp4": "video/mp4", ".ico": "image/x-icon",
 };
 
+// The cache plan built into sw.js, as in src/pwa/cachePlan.ts.
+interface Plan {
+  version: string;
+  precache: Record<string, string>;
+  runtime: Record<string, string>;
+}
+const revision = (data: string | Buffer) => createHash("sha256").update(data).digest("hex").slice(0, 16);
+// What the live server sends for a file it doesn't have: the site's home page.
+const HOME_PAGE = "<!doctype html><title>Home</title>";
+
 // A copy of the build at /app/ on a server of its own, so a test can publish a new version.
 async function serveCopy() {
   const root = mkdtempSync(join(tmpdir(), "smoothstep-"));
-  cpSync("dist", join(root, "app"), {recursive: true});
+  const app = join(root, "app");
+  cpSync("dist", app, {recursive: true});
   const server = createServer((request, response) => {
     let path = join(root, decodeURIComponent(new URL(request.url!, "http://x").pathname));
     if (path.endsWith("/")) {
@@ -137,19 +149,74 @@ async function serveCopy() {
       response.writeHead(200, {"Content-Type": TYPES[extname(path)] ?? "application/octet-stream", "Cache-Control": "no-cache"});
       response.end(body);
     } catch {
-      response.writeHead(404).end();
+      response.writeHead(200, {"Content-Type": "text/html", "Cache-Control": "no-cache"}).end(HOME_PAGE);
     }
   });
   await new Promise<void>(resolve => server.listen(0, "localhost", resolve));
+  let versions = 1;
   return {
     url: `http://localhost:${(server.address() as AddressInfo).port}/app/`,
-    // A new version, as after a deploy: the worker's file changes.
-    publish: () => writeFileSync(join(root, "app/sw.js"), readFileSync(join(root, "app/sw.js"), "utf8") + "\n// v2\n"),
+    // A new version, as after a deploy: `change` edits the files in `app` and their plan. Returns its version.
+    publish: (change?: (plan: Plan, app: string) => void) => {
+      const [first, ...rest] = readFileSync(join(app, "sw.js"), "utf8").split("\n");
+      const plan = JSON.parse(first!.replace(/^const CACHE_PLAN = /, "").replace(/;$/, "")) as Plan;
+      change?.(plan, app);
+      plan.version = revision(JSON.stringify([plan.precache, plan.runtime]) + ++versions);
+      writeFileSync(join(app, "sw.js"), [`const CACHE_PLAN = ${JSON.stringify(plan)};`, ...rest].join("\n"));
+      return plan.version;
+    },
     close: () => {
       server.close();
       rmSync(root, {recursive: true, force: true});
     },
   };
+}
+
+// The chunk that Help → Keyboard shortcuts loads when first used.
+const REFERENCE_CHUNK = "assets/" + readdirSync("dist/assets").find(name => /^ReferencePanel-.*\.js$/.test(name))!;
+
+// Changes a precached file's contents, giving it a new revision.
+function rewrite(plan: Plan, app: string, path: string, text: string) {
+  writeFileSync(join(app, path), text);
+  plan.precache[path] = revision(text);
+}
+
+// The files in the worker's cache, as paths in the app with their revisions.
+function cachedFiles(page: Page): Promise<string[]> {
+  return page.evaluate(async () => {
+    const name = (await caches.keys()).find(key => key.startsWith("smoothstep "))!;
+    const scope = name.slice("smoothstep ".length);
+    return (await (await caches.open(name)).keys()).map(request => request.url.slice(scope.length)).sort();
+  });
+}
+
+// The version the worker controlling the page last activated with.
+function activeVersion(page: Page): Promise<string> {
+  return page.evaluate(async () => {
+    const name = (await caches.keys()).find(key => key.startsWith("smoothstep "))!;
+    const plan = await (await caches.open(name)).match(name.slice("smoothstep ".length) + "__cache-plan.json");
+    return ((await plan!.json()) as {version: string}).version;
+  });
+}
+
+// Checks for a new version, and resolves with how its install ends: "installed" or "redundant".
+function installUpdate(page: Page): Promise<string> {
+  return page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.ready;
+    const found = new Promise<ServiceWorker>(resolve =>
+      registration.addEventListener("updatefound", () => resolve(registration.installing!), {once: true}));
+    await registration.update();
+    const worker = await found;
+    return new Promise<string>(resolve => {
+      const check = () => {
+        if (worker.state === "installed" || worker.state === "redundant") {
+          resolve(worker.state);
+        }
+      };
+      worker.addEventListener("statechange", check);
+      check();
+    });
+  });
 }
 
 test("a new version waits for Reload, which asks before losing unsaved changes", async ({page, context}) => {
@@ -160,7 +227,7 @@ test("a new version waits for Reload, which asks before losing unsaved changes",
     await waitForWorker(page);
     const notice = page.locator(".mantine-Notification-root").filter({hasText: "A new version of smoothstep.io is ready"});
 
-    site.publish();
+    const v2 = site.publish();
     await page.evaluate(async () => (await navigator.serviceWorker.ready).update());
     await expect(notice).toBeVisible();
     // It never reloads by itself.
@@ -179,17 +246,106 @@ test("a new version waits for Reload, which asks before losing unsaved changes",
     await expect(notice).toBeVisible();
 
     page.once("dialog", dialog => void dialog.accept());
-    const before = await page.evaluate(() => navigator.serviceWorker.controller?.scriptURL);
+    expect(await activeVersion(page)).not.toBe(v2);
     await Promise.all([page.waitForEvent("load"), notice.getByRole("button", {name: "Reload"}).click()]);
     await expect(page.locator(OPEN_EDITOR)).toBeVisible();
     await expect(notice).toHaveCount(0);
     // The new version controls the page and has nothing newer waiting.
-    expect(await page.evaluate(async () => {
-      const registration = await navigator.serviceWorker.ready;
-      return {waiting: registration.waiting !== null, script: navigator.serviceWorker.controller?.scriptURL};
-    })).toEqual({waiting: false, script: before});
-    expect(await page.evaluate(() => fetch("sw.js").then(r => r.text()))).toContain("// v2");
+    expect(await activeVersion(page)).toBe(v2);
+    expect(await page.evaluate(async () => (await navigator.serviceWorker.ready).waiting)).toBeNull();
     expect(errors).toEqual([]);
+  } finally {
+    site.close();
+  }
+});
+
+test("an update that changes a chunk keeps the last version's copy, and drops older ones", async ({page, context}) => {
+  const errors = await offline(context);
+  const site = await serveCopy();
+  const notice = page.locator(".mantine-Notification-root").filter({hasText: "A new version of smoothstep.io is ready"});
+  const update = async (text: string) => {
+    site.publish((plan, app) => rewrite(plan, app, REFERENCE_CHUNK, readFileSync(join("dist", REFERENCE_CHUNK), "utf8") + text));
+    expect(await installUpdate(page)).toBe("installed");
+    await expect(notice).toBeVisible();
+    await Promise.all([page.waitForEvent("load"), notice.getByRole("button", {name: "Reload"}).click()]);
+    await expect(page.locator(OPEN_EDITOR)).toBeVisible();
+  };
+  const copies = async () => (await cachedFiles(page)).filter(path => path.startsWith(REFERENCE_CHUNK + "?"));
+  const original = REFERENCE_CHUNK + "?__rev=" + revision(readFileSync(join("dist", REFERENCE_CHUNK)));
+  try {
+    await page.goto(site.url + "#new");
+    await waitForWorker(page);
+    expect(await copies()).toEqual([original]);
+
+    await update("\n// v2\n");
+    const second = REFERENCE_CHUNK + "?__rev=" + revision(readFileSync(join("dist", REFERENCE_CHUNK), "utf8") + "\n// v2\n");
+    expect(await copies()).toEqual([original, second].sort());
+
+    await update("\n// v3\n");
+    const third = REFERENCE_CHUNK + "?__rev=" + revision(readFileSync(join("dist", REFERENCE_CHUNK), "utf8") + "\n// v3\n");
+    expect(await copies()).toEqual([second, third].sort());
+    // The changed chunk still works.
+    await page.getByRole("button", {name: "Help"}).click();
+    await page.getByRole("menuitem", {name: "Keyboard shortcuts"}).click();
+    await expect(docsPanel(page).getByRole("row", {name: /build the code/})).toContainText("Shift + Enter");
+    expect(errors).toEqual([]);
+  } finally {
+    site.close();
+  }
+});
+
+test("a page still on the last version loads its chunks after the next takes over, though the server has dropped them", async ({page, context}) => {
+  const errors = await offline(context);
+  const site = await serveCopy();
+  let loads = 0;
+  page.on("load", () => loads++);
+  try {
+    await page.goto(site.url + "#new");
+    await waitForWorker(page);
+    // The next version renamed the chunk, so the server answers for the old name with its home page.
+    const v2 = site.publish((plan, app) => {
+      rmSync(join(app, REFERENCE_CHUNK));
+      plan.precache = Object.fromEntries(Object.entries(plan.precache).filter(([path]) => path !== REFERENCE_CHUNK));
+      rewrite(plan, app, REFERENCE_CHUNK.replace("ReferencePanel-", "ReferencePanel-new"), "export {};");
+    });
+    expect(await installUpdate(page)).toBe("installed");
+    // Another tab reloads into it, and this one is left on the last version.
+    await page.evaluate(async () => {
+      const next = (await navigator.serviceWorker.ready).waiting!;
+      const activated = new Promise(resolve => next.addEventListener("statechange", () => next.state === "activated" && resolve(null)));
+      next.postMessage({type: "skipWaiting"});
+      await activated;
+    });
+    expect(await activeVersion(page)).toBe(v2);
+
+    // Out of the way of the Help menu.
+    await page.locator(".mantine-Notification-closeButton").click();
+    await page.getByRole("button", {name: "Help"}).click();
+    await page.getByRole("menuitem", {name: "Keyboard shortcuts"}).click();
+    await expect(docsPanel(page).getByRole("row", {name: /build the code/})).toContainText("Shift + Enter");
+    expect(loads).toBe(1);
+    expect(errors).toEqual([]);
+  } finally {
+    site.close();
+  }
+});
+
+test("a new version that can't download every file it needs doesn't install", async ({page, context}) => {
+  const errors = await offline(context);
+  const site = await serveCopy();
+  try {
+    await page.goto(site.url + "#new");
+    await waitForWorker(page);
+    const before = await activeVersion(page);
+    // Mid-deploy, say: the plan names a chunk that isn't on the server yet.
+    site.publish(plan => {
+      plan.precache["assets/coming-soon.js"] = revision("export {};");
+    });
+    expect(await installUpdate(page)).toBe("redundant");
+    expect((await cachedFiles(page)).filter(path => path.startsWith("assets/coming-soon.js"))).toEqual([]);
+    expect(await activeVersion(page)).toBe(before);
+    await expect(page.getByText("A new version of smoothstep.io is ready")).toHaveCount(0);
+    expect(errors.filter(error => !error.includes("Couldn't fetch"))).toEqual([]);
   } finally {
     site.close();
   }
@@ -213,17 +369,22 @@ test("the worker only handles the app's own directory", async ({page, context}) 
 test("files opened with the installed app are imported as File → Import imports them", async ({page, context}) => {
   const errors = await offline(context);
   const text = readFileSync("public/examples/534226b1d5ed.json", "utf8");
-  // Chromium's launchQueue, holding a file as when the installed app opens one.
+  // Chromium's launchQueue, holding a file as when the installed app opens one. Like Chromium, it
+  // gives the file again after every reload.
   await context.addInitScript(text => {
-    const file = new File([text], "Minimal.smoothstep.json", {type: "application/json"});
+    const file = new File([text], "Minimal.smoothstep.json", {type: "application/json", lastModified: 1});
     Object.defineProperty(window, "launchQueue", {value: {setConsumer: (consumer: (params: unknown) => void) => {
-      if (window.location.hash === "") {
-        consumer({files: [{getFile: () => Promise.resolve(file)}]});
-      }
+      consumer({files: [{getFile: () => Promise.resolve(file)}]});
     }}});
   }, text);
+  let loads = 0;
+  page.on("load", () => loads++);
   await page.goto("./");
   await expect(page).toHaveURL(/#anim\/[a-f0-9]+$/);
+  await expect(page.locator("#titleInput")).toHaveValue("Minimal Animation");
+  // Opened with one reload, and no more.
+  await page.waitForTimeout(2000);
+  expect(loads).toBe(2);
   await expect(page.locator("#titleInput")).toHaveValue("Minimal Animation");
   expect(errors).toEqual([]);
 });

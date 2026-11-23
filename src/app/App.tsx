@@ -729,7 +729,7 @@ export default function App() {
 
   // Adds animation files from the computer to the browser's animations, and opens the one a single
   // file holds.
-  const openFiles = async (files: FileList | File[] | null) => {
+  const openFiles = async (files: FileList | File[] | null, launched = false) => {
     if (!files || files.length === 0) {
       return;
     }
@@ -737,7 +737,12 @@ export default function App() {
       const summary = await archive.importFiles(Array.from(files));
       const ids = [...new Set(summary.ids)];
       const [only] = ids;
-      if (only && ids.length === 1 && summary.failed === 0 && openHash(documentHref(only), hasUnsavedChanges)) {
+      const single = only !== undefined && ids.length === 1 && summary.failed === 0;
+      // A launch opening the animation already open is this window's own, given again after it reloaded.
+      if (single && launched && window.location.hash === documentHref(only)) {
+        return;
+      }
+      if (single && openHash(documentHref(only), hasUnsavedChanges)) {
         return;
       }
       // Several animations, or one the user chose not to open over unsaved changes: list them.
@@ -758,7 +763,7 @@ export default function App() {
 
   // Files opened with the installed app, as File → Import opens them.
   const openFilesRef = useLatest(openFiles);
-  useEffect(() => onLaunchFiles(files => void openFilesRef.current(files)), [openFilesRef]);
+  useEffect(() => onLaunchFiles(files => void openFilesRef.current(files, true)), [openFilesRef]);
 
   // Adds the animation at a link to this browser's animations, and opens it.
   const importLink = async (route: Route) => {

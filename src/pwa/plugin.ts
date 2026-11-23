@@ -6,9 +6,9 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { build, type Plugin } from 'vite';
 
-import { cachePlan, WORKER_FILE, type CachePlan } from './cachePlan.ts';
+import { cachePlan, REVISION_LENGTH, WORKER_FILE, type CachePlan } from './cachePlan.ts';
 
-const hash = (data: string | Uint8Array) => createHash('sha256').update(data).digest('hex').slice(0, 16);
+const hash = (data: string | Uint8Array) => createHash('sha256').update(data).digest('hex').slice(0, REVISION_LENGTH);
 
 function publicFiles(dir: string): Map<string, string> {
   let entries;

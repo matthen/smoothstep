@@ -26,7 +26,7 @@ describe("findTarget", () => {
   const find = (url: string, navigation = false) => findTarget(url, SCOPE, PLAN, navigation);
 
   it("serves the app's page for its directory, index.html, and any query or hash", () => {
-    const page = {kind: "precache", url: SCOPE + "index.html", key: cacheKey(SCOPE, "index.html", "r1")};
+    const page = {kind: "precache", url: SCOPE + "index.html", key: cacheKey(SCOPE, "index.html", "r1"), revision: "r1"};
     expect(find(SCOPE, true)).toEqual(page);
     expect(find(SCOPE + "index.html", true)).toEqual(page);
     expect(find(SCOPE + "#example/19bb8790cb0d", true)).toEqual(page);
@@ -56,6 +56,8 @@ describe("findTarget", () => {
   it("marks other files in the app's directory as unknown, such as an old version's chunk", () => {
     expect(find(SCOPE + "assets/main-old.js")).toEqual({kind: "unknown"});
     expect(find(SCOPE + "%E0%A4%A", true)).toEqual({kind: "unknown"});
+    expect(find(SCOPE + "constructor")).toEqual({kind: "unknown"});
+    expect(find(SCOPE + "__proto__")).toEqual({kind: "unknown"});
   });
 
   it("gives a changed file a new key", () => {

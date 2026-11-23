@@ -1,4 +1,5 @@
-import '@fontsource/monda/700.css';
+// Only for the app's name, so only its Latin letters.
+import '@fontsource/monda/latin-700.css';
 import './styles/mantine';
 import './styles/main.scss';
 

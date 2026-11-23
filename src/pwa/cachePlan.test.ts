@@ -9,7 +9,8 @@ const BUILD = new Map([
   ["index.html", "a"], ["embed.html", "b"], ["sw.js", "c"], ["site.webmanifest", "d"],
   ["assets/main-Bnw4Lrse.js", "e"], ["assets/javascript-D3PAb3ne.js", "f"], ["assets/ReferencePanel-CkEojZNM.js", "g"],
   ["assets/main-Czi7ms34.css", "h"], ["docs/index.html", "i"], ["docs/docs.css", "j"], ["docs/images/screenshot.png", "k"],
-  ["fonts/inter-latin-wght-normal.woff2", "l"], ["libs/planck.js", "m"], ["images/logo.svg", "n"],
+  ["fonts/inter-latin-wght-normal.woff2", "l"], ["assets/monda-latin-700-normal-x.woff", "u"],
+  ["libs/planck.js", "m"], ["images/logo.svg", "n"],
   ["android-chrome-192x192.png", "o"], ["images/textures/photos/cats1.jpg", "p"], ["examples/19bb8790cb0d.json", "q"],
   ["examples/19bb8790cb0d.mp4", "r"], ["robots.txt", "s"], ["images/textures/.DS_Store", "t"],
 ]);
@@ -20,15 +21,15 @@ describe("cachePlan", () => {
   it("precaches the pages, every chunk, the docs site, fonts, libraries and icons", () => {
     expect(Object.keys(plan.precache).sort()).toEqual([
       "android-chrome-192x192.png", "assets/ReferencePanel-CkEojZNM.js", "assets/javascript-D3PAb3ne.js",
-      "assets/main-Bnw4Lrse.js", "assets/main-Czi7ms34.css", "docs/docs.css", "docs/images/screenshot.png",
-      "docs/index.html", "embed.html", "fonts/inter-latin-wght-normal.woff2", "images/logo.svg", "index.html",
+      "assets/main-Bnw4Lrse.js", "assets/main-Czi7ms34.css", "docs/docs.css", "docs/index.html", "embed.html", "fonts/inter-latin-wght-normal.woff2", "images/logo.svg", "index.html",
       "libs/planck.js", "site.webmanifest",
     ]);
   });
 
-  it("keeps textures and examples only once they're used", () => {
+  it("keeps textures, examples, the docs' screenshots and .woff fonts only once they're used", () => {
     expect(Object.keys(plan.runtime).sort()).toEqual([
-      "examples/19bb8790cb0d.json", "examples/19bb8790cb0d.mp4", "images/textures/photos/cats1.jpg",
+      "assets/monda-latin-700-normal-x.woff", "docs/images/screenshot.png", "examples/19bb8790cb0d.json",
+      "examples/19bb8790cb0d.mp4", "images/textures/photos/cats1.jpg",
     ]);
   });
 

@@ -29,7 +29,7 @@ export function planKeys(scope: string, plan: CachePlan): string[] {
 }
 
 export type Target =
-  | {kind: "precache" | "runtime"; url: string; key: string}
+  | {kind: "precache" | "runtime"; url: string; key: string; revision: string}
   // In the scope but not one of this version's files, such as an older version's chunk.
   | {kind: "unknown"};
 
@@ -53,9 +53,9 @@ export function findTarget(requestURL: string, scope: string, plan: CachePlan, n
     path += "index.html";
   }
   for (const kind of ["precache", "runtime"] as const) {
-    const revision = plan[kind][path];
-    if (revision !== undefined) {
-      return {kind, url: scope + path, key: cacheKey(scope, path, revision)};
+    if (Object.hasOwn(plan[kind], path)) {
+      const revision = plan[kind][path]!;
+      return {kind, url: scope + path, key: cacheKey(scope, path, revision), revision};
     }
   }
   return {kind: "unknown"};

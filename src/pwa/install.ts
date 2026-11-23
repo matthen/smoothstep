@@ -56,13 +56,27 @@ interface LaunchQueue {
   setConsumer(consumer: (params: LaunchParams) => void): void;
 }
 
+const LAUNCH_KEY = "smoothstep.launchedWith";
+
 // Calls `open` with the files the installed app was opened with, in browsers that can open files
-// with apps (Chromium's launchQueue).
+// with apps (Chromium's launchQueue). Chromium gives them again after each reload, so a window
+// opens them only once.
 export function onLaunchFiles(open: (files: File[]) => void) {
   const queue = (window as {launchQueue?: LaunchQueue}).launchQueue;
   queue?.setConsumer(params => {
     if (params.files?.length) {
-      void Promise.all(params.files.map(handle => handle.getFile())).then(open, (error: unknown) => console.error(error));
+      void Promise.all(params.files.map(handle => handle.getFile())).then(files => {
+        const launch = JSON.stringify(files.map(file => [file.name, file.size, file.lastModified]));
+        try {
+          if (sessionStorage.getItem(LAUNCH_KEY) === launch) {
+            return;
+          }
+          sessionStorage.setItem(LAUNCH_KEY, launch);
+        } catch {
+          // No storage: App checks too that the file isn't already open.
+        }
+        open(files);
+      }, (error: unknown) => console.error(error));
     }
   });
 }

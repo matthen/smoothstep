@@ -56,6 +56,23 @@ describe("onLaunchFiles", () => {
     delete (window as {launchQueue?: unknown}).launchQueue;
   });
 
+  it("opens them once, though Chromium gives them again after each reload", async () => {
+    sessionStorage.clear();
+    const open = vi.fn();
+    const file = new File(["{}"], "a.smoothstep.json", {lastModified: 1});
+    const other = new File(["{}"], "b.smoothstep.json", {lastModified: 1});
+    // Each page load sets a consumer of its own; this window's storage outlasts them.
+    for (const launched of [file, file, other]) {
+      Object.assign(window, {launchQueue: {setConsumer: (consumer: (params: unknown) => void) => {
+        consumer({files: [{getFile: () => Promise.resolve(launched)}]});
+      }}});
+      onLaunchFiles(open);
+      await new Promise(resolve => setTimeout(resolve));
+    }
+    expect(open.mock.calls).toEqual([[[file]], [[other]]]);
+    delete (window as {launchQueue?: unknown}).launchQueue;
+  });
+
   it("does nothing in browsers that can't open files with apps", () => {
     expect(() => onLaunchFiles(vi.fn())).not.toThrow();
   });
