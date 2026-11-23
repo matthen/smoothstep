@@ -3,7 +3,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useSta
 
 import type { AspectRatio } from '../lib/document';
 import { useLatest } from '../lib/useLatest';
-import { fitCanvas } from './layout';
+import { drawingSize, fitCanvas, SlowFrames } from './layout';
 import { Renderer, type CompileResult } from './Renderer';
 import { renderSteps, RESTART } from './steps';
 
@@ -63,6 +63,9 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     }
   };
   const [width, height] = fitCanvas(container[0], container[1], props.aspectRatio);
+  // Set when this build's preview was too slow to draw at the screen's full resolution.
+  const [lowRes, setLowRes] = useState(false);
+  const [pixelWidth, pixelHeight] = drawingSize(width, height, window.devicePixelRatio, lowRes);
   const marginTop = Math.max(0, (container[1] - height) / 2);
   const marginSide = Math.max(0, (container[0] - width) / 2);
 
@@ -88,7 +91,15 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
         return null;
       }
       renderFrame();
-      return canvas.toDataURL("image/png");  // Same task as the draw, so the buffer is still there.
+      // In the same task as the draw, so the buffer is still there. Thumbnails stay at the CSS size.
+      if (canvas.width === width && canvas.height === height) {
+        return canvas.toDataURL("image/png");
+      }
+      const thumbnail = document.createElement("canvas");
+      thumbnail.width = width;
+      thumbnail.height = height;
+      thumbnail.getContext("2d")?.drawImage(canvas, 0, 0, width, height);
+      return thumbnail.toDataURL("image/png");
     },
   }));
 
@@ -117,12 +128,15 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
   }, []);
 
   useEffect(() => {
-    if (rendererRef.current?.setSize(width, height)) {
+    if (rendererRef.current?.setSize(pixelWidth, pixelHeight)) {
       restart();
     }
     needsRender.current = true;
     props.onLayout({width, height, top: container[2] + marginTop + height, containerWidth: container[0]});
-  }, [width, height, marginTop, container[0], container[2]]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [width, height, pixelWidth, pixelHeight, marginTop, container[0], container[2]]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Each build gets another try at full resolution.
+  useEffect(() => setLowRes(false), [props.buildId]);
 
   useEffect(() => {
     const renderer = rendererRef.current;
@@ -148,27 +162,29 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     needsRender.current = true;
   }, [props.time, props.stepClock, props.variableValues, props.duration]);
 
-  // Render on animation frames when something changed, keeping a smoothed frame rate.
+  // Render on animation frames when something changed, keeping a smoothed frame rate, and dropping
+  // to 1× if it stays slow.
   useEffect(() => {
     let id = 0;
-    let last: number | null = null;
-    let frameMs = 0;
     let updates = 0;
+    const frames = new SlowFrames();
     const loop = (now: number) => {
       if (needsRender.current) {
         needsRender.current = false;
         renderFrame();
-        if (last !== null) {
-          frameMs = frameMs ? 0.9 * frameMs + 0.1 * (now - last) : now - last;
+        const rate = frames.frame(now);
+        if (rate !== null) {
           updates += 1;
-          if (updates % 10 === 0 && frameMs > 0) {
-            const value = Math.round(1000 / frameMs);
+          if (updates % 10 === 0) {
+            const value = Math.round(rate);
             setFps(value > 20 ? Math.round(value / 3) * 3 : value);
           }
+          if (frames.slow) {
+            setLowRes(true);
+          }
         }
-        last = now;
       } else {
-        last = null;
+        frames.idle();
       }
       id = requestAnimationFrame(loop);
     };
@@ -182,7 +198,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
         <>
           <canvas ref={canvasRef} id="canvas" style={{width, height}} />
           <div className="fps" style={{top: marginTop + 8, right: marginSide + 8}}>
-            <p>{width}&times;{height}px</p>
+            <p>{pixelWidth}&times;{pixelHeight}px</p>
             {fps ? <p>{fps} fps</p> : null}
             <p>{Math.max(0, steps.current.rendered)}</p>
           </div>
