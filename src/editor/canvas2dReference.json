@@ -1,0 +1,396 @@
+[
+  {
+    "name": "setup",
+    "kind": "function",
+    "oneLiner": "Runs once after each build and each restart, before the first draw. Optional: whatever it returns is passed to draw as data.",
+    "signatures": ["function setup({width, height, duration, floats, textures})"]
+  },
+  {
+    "name": "draw",
+    "kind": "function",
+    "oneLiner": "Runs once a step, 60 times a second while the animation plays, to draw on the canvas.",
+    "signatures": ["function draw(ctx, {time, frame, duration, width, height, floats, textures, data})"]
+  },
+  {
+    "name": "ctx",
+    "kind": "input",
+    "type": "context",
+    "oneLiner": "The canvas's 2D drawing context, scaled so the canvas is 1080 units tall.",
+    "signatures": ["OffscreenCanvasRenderingContext2D ctx"],
+    "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D"
+  },
+  {
+    "name": "time",
+    "kind": "input",
+    "type": "number",
+    "oneLiner": "The time of this step, in seconds, the same as iTime.",
+    "signatures": ["number time"]
+  },
+  {
+    "name": "frame",
+    "kind": "input",
+    "type": "number",
+    "oneLiner": "The step number, the same as iFrame. It goes back to 0 when the layer restarts.",
+    "signatures": ["number frame"]
+  },
+  {
+    "name": "duration",
+    "kind": "input",
+    "type": "number",
+    "oneLiner": "The length of the animation, in seconds.",
+    "signatures": ["number duration"]
+  },
+  {
+    "name": "width",
+    "kind": "input",
+    "type": "number",
+    "oneLiner": "The canvas's width in canvas units: 1920 for 16:9, as the canvas is 1080 units tall.",
+    "signatures": ["number width"]
+  },
+  {
+    "name": "height",
+    "kind": "input",
+    "type": "number",
+    "oneLiner": "The canvas's height in canvas units, always 1080.",
+    "signatures": ["number height"]
+  },
+  {
+    "name": "floats",
+    "kind": "input",
+    "type": "number[]",
+    "oneLiner": "The 16 timeline values at this time: floats[0] is iFloat0.",
+    "signatures": ["number[] floats"]
+  },
+  {
+    "name": "textures",
+    "kind": "input",
+    "type": "ImageBitmap[]",
+    "oneLiner": "The 8 texture slots, ready for ctx.drawImage, or null for an empty slot.",
+    "signatures": ["(ImageBitmap | null)[] textures"]
+  },
+  {
+    "name": "data",
+    "kind": "input",
+    "type": "any",
+    "oneLiner": "Whatever setup returned. Only draw gets it.",
+    "signatures": ["any data"]
+  },
+  {
+    "name": "drawList",
+    "kind": "helper",
+    "oneLiner": "Draws a nested list of commands with y up from -1 to 1, like a shader's uv. view shows another part of the plane.",
+    "signatures": ["drawList(ctx, list, view = {xmin, xmax, ymin, ymax})"]
+  },
+  {
+    "name": "clear",
+    "kind": "helper",
+    "oneLiner": "Clears the whole canvas to transparent, or to a colour.",
+    "signatures": ["clear(ctx)", "clear(ctx, colour)"]
+  },
+  {
+    "name": "seededRandom",
+    "kind": "helper",
+    "oneLiner": "A function that returns random numbers from 0 up to 1, the same ones each time for the same seed.",
+    "signatures": ["seededRandom(seed = 1)"]
+  },
+  {
+    "name": "Set",
+    "kind": "helper",
+    "oneLiner": "Sets the context's properties for the rest of its list. lineDash takes an array. new Set() is still JavaScript's Set.",
+    "signatures": ["Set({fillStyle, strokeStyle, lineWidth, font, globalAlpha, lineDash, ...})"]
+  },
+  {
+    "name": "Disk",
+    "kind": "helper",
+    "oneLiner": "A filled circle, or its outline with edge: true and fill: false. Angles draw an arc; sector joins its ends to the centre.",
+    "signatures": ["Disk({center = [0, 0], radius = 1, fill = true, edge = false, startAngle = 0, endAngle = 2π, sector = false, radiusInPixels = false})"]
+  },
+  {
+    "name": "Polygon",
+    "kind": "helper",
+    "oneLiner": "A filled shape through the points, like [[0, 0], [1, 0], [0, 1]].",
+    "signatures": ["Polygon({pts, fill = true, edge = false})"]
+  },
+  {
+    "name": "Line",
+    "kind": "helper",
+    "oneLiner": "A line through the points. closed joins the last point to the first.",
+    "signatures": ["Line({pts, closed = false})"]
+  },
+  {
+    "name": "Text",
+    "kind": "helper",
+    "oneLiner": "Text at a point in the current font, upright and the same size whatever the list's scale.",
+    "signatures": ["Text({at = [0, 0], text, align, baseline, fill = true, edge = false})"]
+  },
+  {
+    "name": "Rotate",
+    "kind": "helper",
+    "oneLiner": "Turns what follows in its list anticlockwise by angle radians, about center.",
+    "signatures": ["Rotate({angle, center = [0, 0]})"]
+  },
+  {
+    "name": "Translate",
+    "kind": "helper",
+    "oneLiner": "Moves what follows in its list by offset, like [0.5, 0].",
+    "signatures": ["Translate({offset})"]
+  },
+  {
+    "name": "Scale",
+    "kind": "helper",
+    "oneLiner": "Makes what follows in its list bigger or smaller about center. scaleX and scaleY scale one direction.",
+    "signatures": ["Scale({scale = 1, scaleX = scale, scaleY = scale, center = [0, 0]})"]
+  },
+  {
+    "name": "AbsoluteLineWidth",
+    "kind": "helper",
+    "oneLiner": "Sets the line width in canvas units, whatever the list's scale. Lines in a drawList start 2 units wide.",
+    "signatures": ["AbsoluteLineWidth(units)"]
+  },
+  {
+    "name": "fillRect",
+    "kind": "ctx",
+    "oneLiner": "Fills a rectangle with the fill style.",
+    "signatures": ["ctx.fillRect(x, y, width, height)"]
+  },
+  {
+    "name": "strokeRect",
+    "kind": "ctx",
+    "oneLiner": "Outlines a rectangle with the stroke style and line width.",
+    "signatures": ["ctx.strokeRect(x, y, width, height)"]
+  },
+  {
+    "name": "clearRect",
+    "kind": "ctx",
+    "oneLiner": "Makes a rectangle transparent.",
+    "signatures": ["ctx.clearRect(x, y, width, height)"]
+  },
+  {
+    "name": "fillText",
+    "kind": "ctx",
+    "oneLiner": "Draws text at a point, in the current font and fill style.",
+    "signatures": ["ctx.fillText(text, x, y)", "ctx.fillText(text, x, y, maxWidth)"]
+  },
+  {
+    "name": "strokeText",
+    "kind": "ctx",
+    "oneLiner": "Outlines text at a point, in the current font and stroke style.",
+    "signatures": ["ctx.strokeText(text, x, y)", "ctx.strokeText(text, x, y, maxWidth)"]
+  },
+  {
+    "name": "measureText",
+    "kind": "ctx",
+    "oneLiner": "Measures text in the current font: measureText(text).width is how wide it is.",
+    "signatures": ["ctx.measureText(text)"]
+  },
+  {
+    "name": "beginPath",
+    "kind": "ctx",
+    "oneLiner": "Starts a new path, forgetting the last one.",
+    "signatures": ["ctx.beginPath()"]
+  },
+  {
+    "name": "closePath",
+    "kind": "ctx",
+    "oneLiner": "Joins the path's current point back to its start.",
+    "signatures": ["ctx.closePath()"]
+  },
+  {
+    "name": "moveTo",
+    "kind": "ctx",
+    "oneLiner": "Starts a new piece of the path at a point.",
+    "signatures": ["ctx.moveTo(x, y)"]
+  },
+  {
+    "name": "lineTo",
+    "kind": "ctx",
+    "oneLiner": "Adds a straight line to a point to the path.",
+    "signatures": ["ctx.lineTo(x, y)"]
+  },
+  {
+    "name": "arc",
+    "kind": "ctx",
+    "oneLiner": "Adds a circular arc to the path. Angles are in radians, clockwise from the x axis as y goes down.",
+    "signatures": ["ctx.arc(x, y, radius, startAngle, endAngle)", "ctx.arc(x, y, radius, startAngle, endAngle, counterclockwise)"]
+  },
+  {
+    "name": "ellipse",
+    "kind": "ctx",
+    "oneLiner": "Adds an elliptical arc to the path.",
+    "signatures": ["ctx.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle)"]
+  },
+  {
+    "name": "rect",
+    "kind": "ctx",
+    "oneLiner": "Adds a rectangle to the path.",
+    "signatures": ["ctx.rect(x, y, width, height)"]
+  },
+  {
+    "name": "quadraticCurveTo",
+    "kind": "ctx",
+    "oneLiner": "Adds a quadratic Bézier curve to the path.",
+    "signatures": ["ctx.quadraticCurveTo(cpx, cpy, x, y)"]
+  },
+  {
+    "name": "bezierCurveTo",
+    "kind": "ctx",
+    "oneLiner": "Adds a cubic Bézier curve to the path.",
+    "signatures": ["ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)"]
+  },
+  {
+    "name": "fill",
+    "kind": "ctx",
+    "oneLiner": "Fills the path with the fill style.",
+    "signatures": ["ctx.fill()", "ctx.fill(fillRule)"]
+  },
+  {
+    "name": "stroke",
+    "kind": "ctx",
+    "oneLiner": "Outlines the path with the stroke style and line width.",
+    "signatures": ["ctx.stroke()"]
+  },
+  {
+    "name": "clip",
+    "kind": "ctx",
+    "oneLiner": "Limits drawing to inside the path, until restore.",
+    "signatures": ["ctx.clip()"]
+  },
+  {
+    "name": "save",
+    "kind": "ctx",
+    "oneLiner": "Remembers the styles, transform and clip, for restore to bring back.",
+    "signatures": ["ctx.save()"]
+  },
+  {
+    "name": "restore",
+    "kind": "ctx",
+    "oneLiner": "Brings back the styles, transform and clip from the last save.",
+    "signatures": ["ctx.restore()"]
+  },
+  {
+    "name": "translate",
+    "kind": "ctx",
+    "oneLiner": "Moves the origin of what's drawn next.",
+    "signatures": ["ctx.translate(x, y)"]
+  },
+  {
+    "name": "rotate",
+    "kind": "ctx",
+    "oneLiner": "Turns what's drawn next clockwise by angle radians, about the origin.",
+    "signatures": ["ctx.rotate(angle)"]
+  },
+  {
+    "name": "scale",
+    "kind": "ctx",
+    "oneLiner": "Scales what's drawn next, about the origin.",
+    "signatures": ["ctx.scale(x, y)"]
+  },
+  {
+    "name": "setTransform",
+    "kind": "ctx",
+    "oneLiner": "Replaces the transform. The canvas starts each draw scaled to 1080 units tall.",
+    "signatures": ["ctx.setTransform(a, b, c, d, e, f)"]
+  },
+  {
+    "name": "drawImage",
+    "kind": "ctx",
+    "oneLiner": "Draws an image, like one of textures, optionally scaled or cropped.",
+    "signatures": ["ctx.drawImage(image, dx, dy)", "ctx.drawImage(image, dx, dy, dWidth, dHeight)", "ctx.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)"]
+  },
+  {
+    "name": "setLineDash",
+    "kind": "ctx",
+    "oneLiner": "Makes lines dashed, with lengths of dashes and gaps. An empty array makes them solid.",
+    "signatures": ["ctx.setLineDash(segments)"]
+  },
+  {
+    "name": "createLinearGradient",
+    "kind": "ctx",
+    "oneLiner": "A gradient along a line, for fillStyle or strokeStyle. Add colours with addColorStop.",
+    "signatures": ["ctx.createLinearGradient(x0, y0, x1, y1)"]
+  },
+  {
+    "name": "createRadialGradient",
+    "kind": "ctx",
+    "oneLiner": "A gradient between two circles, for fillStyle or strokeStyle. Add colours with addColorStop.",
+    "signatures": ["ctx.createRadialGradient(x0, y0, r0, x1, y1, r1)"]
+  },
+  {
+    "name": "fillStyle",
+    "kind": "ctx",
+    "oneLiner": "The colour, gradient or pattern that fills shapes and text, like \"orange\" or \"#ffcc00\".",
+    "signatures": ["ctx.fillStyle = colour"]
+  },
+  {
+    "name": "strokeStyle",
+    "kind": "ctx",
+    "oneLiner": "The colour, gradient or pattern of lines and outlines.",
+    "signatures": ["ctx.strokeStyle = colour"]
+  },
+  {
+    "name": "lineWidth",
+    "kind": "ctx",
+    "oneLiner": "The width of lines, in the current coordinates. It starts at 2 canvas units.",
+    "signatures": ["ctx.lineWidth = width"]
+  },
+  {
+    "name": "lineCap",
+    "kind": "ctx",
+    "oneLiner": "How lines end: \"butt\", \"round\" or \"square\".",
+    "signatures": ["ctx.lineCap = \"butt\" | \"round\" | \"square\""]
+  },
+  {
+    "name": "lineJoin",
+    "kind": "ctx",
+    "oneLiner": "How lines meet at corners: \"miter\", \"round\" or \"bevel\".",
+    "signatures": ["ctx.lineJoin = \"miter\" | \"round\" | \"bevel\""]
+  },
+  {
+    "name": "font",
+    "kind": "ctx",
+    "oneLiner": "The text's size, font and optional weight, like \"600 64px Inter\". It starts as 48px Inter.",
+    "signatures": ["ctx.font = \"[weight] size family\""]
+  },
+  {
+    "name": "textAlign",
+    "kind": "ctx",
+    "oneLiner": "Where text sits across from its point: \"left\", \"center\", \"right\", \"start\" or \"end\".",
+    "signatures": ["ctx.textAlign = \"left\" | \"center\" | \"right\" | \"start\" | \"end\""]
+  },
+  {
+    "name": "textBaseline",
+    "kind": "ctx",
+    "oneLiner": "Where text sits up and down from its point: \"alphabetic\", \"top\", \"middle\", \"bottom\"…",
+    "signatures": ["ctx.textBaseline = \"alphabetic\" | \"top\" | \"hanging\" | \"middle\" | \"ideographic\" | \"bottom\""]
+  },
+  {
+    "name": "globalAlpha",
+    "kind": "ctx",
+    "oneLiner": "How opaque what's drawn next is, from 0 to 1.",
+    "signatures": ["ctx.globalAlpha = alpha"]
+  },
+  {
+    "name": "globalCompositeOperation",
+    "kind": "ctx",
+    "oneLiner": "How what's drawn next mixes with the canvas: \"source-over\" as usual, \"lighter\" to add, \"destination-out\" to rub out…",
+    "signatures": ["ctx.globalCompositeOperation = operation"]
+  },
+  {
+    "name": "shadowBlur",
+    "kind": "ctx",
+    "oneLiner": "How blurred shadows are. Shadows show once shadowColor is set.",
+    "signatures": ["ctx.shadowBlur = amount"]
+  },
+  {
+    "name": "shadowColor",
+    "kind": "ctx",
+    "oneLiner": "The colour of shadows, which are off while it's transparent.",
+    "signatures": ["ctx.shadowColor = colour"]
+  },
+  {
+    "name": "filter",
+    "kind": "ctx",
+    "oneLiner": "A CSS filter for what's drawn next, like \"blur(4px)\".",
+    "signatures": ["ctx.filter = \"filter\""]
+  }
+]

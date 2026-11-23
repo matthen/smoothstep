@@ -34,6 +34,11 @@ An animation is a JSON object, as produced by `App.toJSON()`:
   `iBuffer0` to `iBuffer3`. An animation with no buffers leaves it out.
 - `shared` is optional: code with definitions every tab can use. An animation with none leaves it
   out.
+- `layers` is optional: the Canvas2D layer, as `[{"kind": "canvas2d", "code": "...", "overlay": true}]`.
+  `code` is its JavaScript, and `overlay` says whether its drawing is shown over the image (true
+  when left out). There is at most one layer for now; `kind` is there so other kinds of layer can
+  follow. An animation with no layer leaves it out. Share links, gists, exported files and player
+  files all carry it.
 
 `archive.validateDocument` checks these rules on import.
 

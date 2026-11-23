@@ -4,7 +4,7 @@
 </h1>
 
 <p align="center">
-  Make animations in the WebGL shader language, right in your browser.<br>
+  Make animations with WebGL shaders and a little JavaScript, right in your browser.<br>
   <b><a href="https://smoothstep.io">Open smoothstep.io</a></b> ·
   <a href="https://smoothstep.io/app/#tutorial">Tutorial</a> ·
   <a href="docs/">Documentation</a>
@@ -16,7 +16,8 @@
 
 smoothstep.io is a toolkit for making animations in the WebGL shader language. You write a
 GLSL fragment shader, animate its inputs on a timeline, give it image textures, and export
-the result as video. It all runs in your browser, with no server or sign-in.
+the result as video. For text, shapes and physics, a Canvas2D layer adds JavaScript that draws on a
+2D canvas over the image. It all runs in your browser, with no server or sign-in.
 
 I started smoothstep.io in 2021 as a closed-source hosted site, with accounts that kept your
 animations on a server and let you share them with links. In November 2026 I rewrote it to run entirely in the browser, with no
@@ -43,7 +44,10 @@ values while you watch. You get 8
 texture slots, `iTexture0` to `iTexture7`, which take built-in photos, noise, tiling textures
 and font sheets, or your own images up to 4096px. Up to 4 buffers, `iBuffer0` to `iBuffer3`,
 are extra shaders that draw before the image each frame and hold any numbers, so you can run
-simulations across frames. smoothstep.io exports WebM, MP4, animated GIFs and PNG frames, all made
+simulations across frames. A Canvas2D layer is JavaScript that draws on a 2D canvas each step, with
+drawing helpers, fonts, and built-in physics, noise and triangulation libraries; its drawing goes
+over the image, and every shader can read it as `iCanvas2D` ([docs/canvas2d.md](docs/canvas2d.md)).
+smoothstep.io exports WebM, MP4, animated GIFs and PNG frames, all made
 in your browser.
 
 smoothstep.io keeps your animations and the images you add in your browser's storage. You can download one
@@ -93,6 +97,8 @@ Sass for the app's own styles, CodeMirror 6 for the code editor, and WebGL 2 for
   Share downloads.
 - `src/render/` compiles and draws the buffers and the image, and maps compile errors back to
   lines of your code.
+- `src/layer/` runs the Canvas2D layer: a worker inside a sandboxed iframe, with the drawing helpers
+  (`helpers.ts`), the built-in libraries (`libraries.ts`) and fonts (`fonts.ts`).
 - `src/editor/` is the code editor, with GLSL highlighting, hints, the inline pickers and the
   tabs for the image, buffers and shared code.
   The pickers are adapted from [glslEditor](https://github.com/patriciogonzalezvivo/glslEditor).
@@ -112,13 +118,15 @@ and the example animations in `examples/`: each has its `.json`, a `.png` thumbn
 
 `tools/` has the scripts that generate data. `buildTextures.py` makes the texture list and
 thumbnails, `buildFonts.py` draws the font sheets, and `buildFunctions.py` makes the list of
-GLSL built-ins the editor's hints show. `makeExamplePreviews.mjs` renders the examples' previews
+GLSL built-ins the editor's hints show. `buildLayerAssets.mjs` bundles the Canvas2D layer's libraries
+into `public/libs/` and copies its fonts into `public/fonts/`. `makeExamplePreviews.mjs` renders the examples' previews
 and thumbnails with the app's own exporter. The end-to-end tests are in `e2e/`. They block every
 request that isn't to your own machine, so they also check that the app works offline.
 
 ## Licence
 
-The code is under the [MIT licence](LICENSE). The built-in textures and fonts keep their own
+The code is under the [MIT licence](LICENSE). The built-in textures and fonts, and the libraries
+the Canvas2D layer can import (planck.js, matter.js, simplex-noise and d3-delaunay), keep their own
 licences, listed in [CREDITS.md](public/images/textures/CREDITS.md).
 
 smoothstep.io is made by [Matt Henderson](https://www.matthen.com/).

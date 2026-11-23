@@ -5,6 +5,9 @@ You make animations in smoothstep.io by writing a fragment shader in the WebGL s
 built-in textures or add your own images. When it's ready, you export it as video at any
 frame rate and resolution. It all runs in your browser at [smoothstep.io](https://smoothstep.io).
 
+To draw text, shapes or physics simulations, add a [Canvas2D layer](canvas2d.md): JavaScript that draws
+on a 2D canvas over the image.
+
 [Start the tutorial](https://smoothstep.io/app/#tutorial), which runs in the app beside the editor, or
 [open smoothstep.io](https://smoothstep.io).
 
@@ -25,6 +28,8 @@ frame rate and resolution. It all runs in your browser at [smoothstep.io](https:
 - [Keyboard shortcuts](keyboard-shortcuts.md), also in the app under Help → Keyboard shortcuts
 - [Coding specification](coding-specification.md), also in the app under Help → Shader inputs: the
   inputs your shader can use, buffers and shared code
+- [The Canvas2D layer](canvas2d.md): JavaScript that draws text, shapes and physics over the image, with
+  built-in libraries
 
 ## Help in the app
 
@@ -60,8 +65,8 @@ the details.
 ## Acknowledgements
 
 Click Acknowledgements at the bottom of the app to see the open-source projects smoothstep.io is
-built on. The built-in textures and fonts are credited, with their licences, in
-[CREDITS.md](../public/images/textures/CREDITS.md).
+built on. The built-in textures and fonts, and the libraries the Canvas2D layer can import, are
+credited, with their licences, in [CREDITS.md](../public/images/textures/CREDITS.md).
 
 ## Feedback
 

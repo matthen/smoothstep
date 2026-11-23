@@ -24,6 +24,7 @@ async function main() {
     startPlayer(container, {
       doc, textureURLs,
       link: {href: appLink(window.location.hash), text: "Open in smoothstep.io"},
+      layerAssets: async () => (await import('../layer/bundled')).bundledAssets,
     });
   } catch (error) {
     if (error instanceof ShareError) {

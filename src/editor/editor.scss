@@ -160,6 +160,9 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
   .tok-type { color: $dt-pink; }
   .tok-builtin { color: $dt-green; }
   .tok-variable { color: $dt-gray-light; }
+  // The Canvas2D tab marks its helpers and inputs around or inside the highlighter's own span.
+  .tok-builtin .tok-variable,
+  .tok-builtin .tok-property { color: inherit; }
   .tok-atom,
   .tok-number { color: $dt-purple; }
   .tok-comment { color: $dt-blue; }
@@ -184,6 +187,7 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
   .tok-string { color: $dt-yellow; }
   .tok-meta { color: $dt-gray-light; }
   .tok-operator { color: $dt-pink; }
+  .tok-property { color: $dt-orange; }
 }
 
 // Tooltips live in document.body so they can overflow the editor.

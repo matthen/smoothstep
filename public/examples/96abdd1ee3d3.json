@@ -1,0 +1,111 @@
+{
+  "title": "Hypocycloids",
+  "code": "// IMAGE: a deep blue background with a soft light in the middle. The curves are drawn by the\n// [Canvas2D] tab, over this.\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  vec2 uv = (2.0 * fragCoord - iResolution.xy) / iResolution.y;\n  float glow = exp(-1.5 * dot(uv, uv));\n  vec3 color = mix(vec3(0.008, 0.004, 0.08), vec3(0.05, 0.06, 0.2), glow);\n  fragColor = vec4(color, 1.0);\n}\n",
+  "layers": [
+    {
+      "kind": "canvas2d",
+      "code": "// CANVAS2D: two circles roll around a fixed one, one inside and one outside, and a point on each\n// traces its curve. A port of an animation drawn with the same nested-list helpers.\n// [Sliders] sets n, how many times the small circles fit around the big one.\n\nconst DURATION = 12;\n\n// The integral of smoothstep from a to t: speeds up from 0, then goes on at 1 per second.\nfunction smoothstepIntegral(t, a, b) {\n  if (t <= a) return 0;\n  if (t >= b) return (b - a) / 2 + (t - b);\n  const u = (t - a) / (b - a);\n  return (b - a) * (u * u * u - u * u * u * u / 2);\n}\n\n// Points from `from` towards `to`, `step` apart.\nfunction range(from, to, step) {\n  const points = [];\n  for (let x = from; step > 0 ? x < to : x > to; x += step) points.push(x);\n  return points;\n}\n\nfunction draw(ctx, {time, floats}) {\n  clear(ctx);\n  // Eases in, turns twice round at a steady speed, then eases out again.\n  let theta = 4 * Math.PI *\n    (smoothstepIntegral(time, 0, 4) - smoothstepIntegral(time, DURATION - 4, DURATION)) / (DURATION - 4);\n  theta = Math.min(theta, 4 * Math.PI - 1e-5);\n  const n = Math.max(2, Math.round(floats[0]));\n  const r = 1 / n;\n  // The first time round draws the curves; the second rubs them out.\n  const firstHalf = theta < 2 * Math.PI;\n  const inside = th => [\n    Math.sin(th) * (1 - r) - Math.sin(th * (1 - r) / r) * r,\n    Math.cos(th) * (1 - r) + Math.cos(th * (1 - r) / r) * r,\n  ];\n  const outside = th => [\n    Math.sin(th) * (1 + r) - Math.sin(th * (1 + r) / r) * r,\n    Math.cos(th) * (1 + r) - Math.cos(th * (1 + r) / r) * r,\n  ];\n  const angles = range(firstHalf ? 0 : 4 * Math.PI, theta, firstHalf ? 0.01 : -0.01);\n  const plotRange = 1 + 2 * r + 0.1;\n  // A point on a rolling circle.\n  const dot = Disk({center: [0, 1], radius: 16, edge: true, radiusInPixels: true});\n\n  drawList(ctx, [\n    AbsoluteLineWidth(4),\n    Set({strokeStyle: \"#ffffff\"}),\n    Disk({center: [0, 0], radius: 1, fill: false, edge: true}),\n    [\n      Set({strokeStyle: \"#bbeafe\"}),\n      Line({pts: angles.map(inside)}),\n      Line({pts: angles.map(outside)}),\n    ],\n    [\n      Rotate({angle: -theta}),  // Clockwise, as the curves go.\n      Set({fillStyle: \"#ffffff16\"}),\n      [\n        Disk({center: [0, 1 - r], radius: r, edge: true}),\n        Rotate({angle: theta / r, center: [0, 1 - r]}),\n        Set({fillStyle: \"#f39034\", strokeStyle: \"black\"}),\n        dot,\n      ],\n      [\n        Disk({center: [0, 1 + r], radius: r, edge: true}),\n        Rotate({angle: -theta / r, center: [0, 1 + r]}),\n        Set({fillStyle: \"#f39034\", strokeStyle: \"black\"}),\n        dot,\n      ],\n    ],\n  ], {xmin: -plotRange, xmax: plotRange, ymin: -plotRange, ymax: plotRange});\n}\n",
+      "overlay": true
+    }
+  ],
+  "duration": 12,
+  "aspectRatio": [
+    1,
+    1
+  ],
+  "textures": [
+    {
+      "id": "iTexture0",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture1",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture2",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture3",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture4",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture5",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture6",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture7",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    }
+  ],
+  "variables": [
+    {
+      "transitions": [],
+      "value": 3,
+      "min": 2,
+      "max": 12
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    }
+  ]
+}

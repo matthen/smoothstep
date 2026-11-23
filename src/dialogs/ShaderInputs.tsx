@@ -3,6 +3,10 @@ import { Button, Group, Table, Text, Title, Tooltip, UnstyledButton } from '@man
 import AppModal from '../app/AppModal';
 import CopyText from '../app/CopyText';
 import { usePhone } from '../app/usePhone';
+import { CANVAS2D_REFERENCE } from '../editor/canvas2dReference';
+import { FONT_FAMILIES } from '../layer/fonts';
+import { LIBRARIES } from '../layer/libraries';
+import { DOCS_URL } from '../lib/config';
 
 interface ShaderInputsProps {
   show: boolean;
@@ -21,7 +25,13 @@ const INPUTS: {name: string; last?: string; type: string; description: string}[]
   {name: "iFloat0", last: "iFloat15", type: "float", description: "The 16 numbers set on the timeline or with sliders."},
   {name: "iBuffer0", last: "iBuffer3", type: "sampler2D",
     description: "What each buffer drew most recently, when the animation has buffers."},
+  {name: "iCanvas2D", type: "sampler2D",
+    description: "What the Canvas2D layer drew this step, with premultiplied alpha. Transparent without a Canvas2D layer."},
 ];
+
+// The Canvas2D layer's, as the editor explains them.
+const LAYER_INPUTS = CANVAS2D_REFERENCE.filter(entry => entry.kind === "input");
+const LAYER_HELPERS = CANVAS2D_REFERENCE.filter(entry => entry.kind === "helper");
 
 function Name({name, last}: {name: string; last?: string}) {
   return (
@@ -90,14 +100,83 @@ export default function ShaderInputs({show, onHide}: ShaderInputsProps) {
 
       <Title order={2} size="h5" mt="lg" mb={4}>Buffers and shared code</Title>
       <Text size="sm">
-        The ⊕ button above the code adds a buffer: another shader that draws before the image each frame. Every
+        The ⊕ above the code adds a buffer or the Canvas2D layer. A buffer is another shader that draws before
+        the image each frame. Every
         tab can read what it drew as <code>iBuffer0</code>, <code>iBuffer1</code> and so on. The tabs go in the
         order they draw, so reading an earlier buffer gives this frame's picture, and reading the same buffer or a
         later one gives the last frame's. Buffers hold any numbers, not just colours, in all four channels, so
         they can run simulations.
       </Text>
       <Text size="sm" mt="xs">
-        Functions, constants and <code>#define</code>s in the Shared tab can be used in every tab.
+        Functions, constants and <code>#define</code>s in the Shared GLSL tab can be used in every shader tab.
+      </Text>
+
+      <Title order={2} size="h5" mt="lg" mb={4}>Canvas2D layer</Title>
+      <Text size="sm" mb="xs">
+        The Canvas2D layer is JavaScript that draws on a 2D canvas, on the same 60-a-second steps as the buffers.
+        Its tab comes first, so every shader reads this step's drawing as <code>iCanvas2D</code>. With "Draw over
+        the image" on, the drawing also goes over the image.
+      </Text>
+      <pre className="codeBlock">{
+        "// Runs after each build and restart. Optional; what it returns is data.\n" +
+        "function setup({width, height, duration, floats, textures}) {\n" +
+        "  return {};\n" +
+        "}\n\n" +
+        "function draw(ctx, {time, frame, duration, width, height, floats, textures, data}) {\n" +
+        "  clear(ctx);\n" +
+        "  ctx.fillText(\"Hello\", 60, 110);\n" +
+        "}"
+      }</pre>
+      <Text size="sm" mb="xs">
+        The canvas is 1080 units tall whatever its real size, with y down from the top left. It keeps what's drawn
+        until you <code>clear(ctx)</code>. Variables outside the functions keep their values between steps. Fonts:
+        {" "}{FONT_FAMILIES.join(", ")}.
+      </Text>
+      <Table className="inputTable" verticalSpacing={6}>
+        <Table.Tbody>
+          {LAYER_INPUTS.map(input =>
+            <Table.Tr key={input.name}>
+              <Table.Td className="inputType"><code>{input.type}</code></Table.Td>
+              <Table.Td className="inputNameCell"><Name name={input.name} /></Table.Td>
+              <Table.Td>{input.oneLiner}</Table.Td>
+            </Table.Tr>,
+          )}
+        </Table.Tbody>
+      </Table>
+
+      <Title order={3} size="h6" mt="md" mb={4}>Drawing helpers</Title>
+      <Text size="sm" mb="xs">
+        <code>drawList</code> draws nested lists of commands with y up from -1 to 1, like a shader's uv.
+      </Text>
+      <Table className="inputTable" verticalSpacing={6}>
+        <Table.Tbody>
+          {LAYER_HELPERS.map(helper =>
+            <Table.Tr key={helper.name}>
+              <Table.Td className="inputSignature"><code>{helper.signatures.join("\n")}</code></Table.Td>
+              <Table.Td>{helper.oneLiner}</Table.Td>
+            </Table.Tr>,
+          )}
+        </Table.Tbody>
+      </Table>
+
+      <Title order={3} size="h6" mt="md" mb={4}>Libraries</Title>
+      <Text size="sm" mb="xs">Import a library on its own line at the top of the code.</Text>
+      <Table className="inputTable" verticalSpacing={6}>
+        <Table.Tbody>
+          {LIBRARIES.map(library =>
+            <Table.Tr key={library.name}>
+              <Table.Td className="inputSignature"><code>{library.example}</code></Table.Td>
+              <Table.Td>
+                <a href={library.url} target="_blank" rel="noreferrer">{library.title}</a>: {library.about}
+              </Table.Td>
+            </Table.Tr>,
+          )}
+        </Table.Tbody>
+      </Table>
+      <Text size="sm" mt="xs">
+        Click a helper, an input or a <code>ctx</code> method in the code to see what it does.{" "}
+        <a href={DOCS_URL + "/canvas2d.md"} target="_blank" rel="noreferrer">The Canvas2D layer</a> in the docs has
+        examples and more about each helper.
       </Text>
 
       <Title order={2} size="h5" mt="lg" mb={4}>Coming from Shadertoy</Title>

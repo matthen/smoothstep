@@ -13,4 +13,9 @@ describe("linksIn", () => {
     expect(linksIn(text).map(l => l.target)).toEqual(["Help → Tutorial", "Sliders", "iBuffer1"]);
     expect(linksIn(text)[0]).toMatchObject({from: 3, to: 20});
   });
+
+  it("links the Shared GLSL tab by its old name too", () => {
+    expect(linksIn("// See [Shared GLSL] or [Shared], not [Shared JS].").map(l => l.target))
+      .toEqual(["Shared GLSL", "Shared"]);
+  });
 });

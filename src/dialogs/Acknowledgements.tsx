@@ -2,6 +2,7 @@ import { Button, Group } from '@mantine/core';
 import type { ReactNode } from 'react';
 
 import AppModal from '../app/AppModal';
+import { LIBRARIES } from '../layer/libraries';
 
 interface AcknowledgementsProps {
   show: boolean;
@@ -42,6 +43,13 @@ export default function Acknowledgements({show, onHide}: AcknowledgementsProps) 
           <li><Link href="https://github.com/dracula/dracula-theme/">Dracula theme</Link></li>
         </ul>
         <p>
+          The Canvas2D layer can import these libraries, each under its own licence:
+        </p>
+        <ul>
+          {LIBRARIES.map(library =>
+            <li key={library.name}><Link href={library.url}>{library.title}</Link> ({library.licence} licence)</li>)}
+        </ul>
+        <p>
           The default textures are free to reuse: CC0 photos from Flickr, public domain
           textures and NASA imagery, a photo under the Unsplash License, and work by
           Nicky and Matt Henderson. Thanks to the artists:
@@ -59,7 +67,7 @@ export default function Acknowledgements({show, onHide}: AcknowledgementsProps) 
           <li>NASA Goddard Space Flight Center (Blue Marble: Reto Stöckli, Robert Simmon)</li>
         </ul>
         <p>
-          The font textures are drawn with Courier Prime, Arimo, Tinos, Inter and Exo 2,
+          The font textures, and text on the Canvas2D layer, use Courier Prime, Arimo, Tinos, Inter and Exo 2,
           under the <Link href="https://openfontlicense.org">SIL Open Font License</Link>.
         </p>
       <Group justify="flex-end" mt="lg"><Button variant="default" onClick={onHide}>Close</Button></Group>

@@ -1,23 +1,47 @@
 // Click helpers: inline pickers on values, definitions of built-ins, and underlining every use of a clicked variable.
 import { syntaxTree } from '@codemirror/language';
-import { Annotation, StateEffect, StateField, type EditorState, type Extension } from '@codemirror/state';
+import { Annotation, StateEffect, StateField, type EditorState, type Extension, type Line } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, showTooltip, type DecorationSet, type Tooltip } from '@codemirror/view';
 import glslFunctions from './glslFunctions.json';
 import {
   createColorPicker, createDirectionPicker, createFloatPicker, createVec2Picker, type PickerWidget,
 } from './pickers';
-import { findPickerMatch, formatFloat, formatVec, parseVec, type PickerKind } from './pickerValues';
+import {
+  findPickerMatch, formatCssColor, formatFloat, formatJsNumber, formatVec, jsNumberScale, parseCssColor, parseVec,
+  type PickerKind, type PickerMatch,
+} from './pickerValues';
 
 // Marks transactions made by dragging a picker.
 export const pickerEdit = Annotation.define<boolean>();
 
-interface Definition {
+export interface Definition {
   functionName: string;
   oneLiner: string;
   signatures: string[];
   helpUrl?: string;
 }
-const definitions = new Map((glslFunctions as Definition[]).map((d) => [d.functionName, d]));
+
+// What a click finds, in one language.
+export interface ClickConfig {
+  // The value at column `ch` of `line` to open a picker on, if it can have one there.
+  pickerAt(state: EditorState, line: Line, ch: number): PickerMatch | null;
+  // The definition to show for the word at from..to.
+  definitionAt(state: EditorState, from: number, name: string): Definition | null;
+  // Whether a click on the word at `from` underlines its other uses.
+  illuminates(state: EditorState, from: number): boolean;
+}
+
+const glslDefinitions = new Map((glslFunctions as Definition[]).map((d) => [d.functionName, d]));
+
+const glslClicks: ClickConfig = {
+  pickerAt(state, line, ch) {
+    const match = findPickerMatch(line.text, ch);
+    return match && nodeNameAt(state, line.from + match.from) !== 'comment' ? match : null;
+  },
+  definitionAt: (state, from, name) =>
+    nodeNameAt(state, from) === 'variableName.standard' ? glslDefinitions.get(name) ?? null : null,
+  illuminates: (state, from) => nodeNameAt(state, from) === 'variableName',
+};
 
 interface Popup {
   from: number;
@@ -71,6 +95,12 @@ function pickerWidget(view: EditorView, kind: PickerKind, text: string): PickerW
   switch (kind) {
     case 'float':
       return createFloatPicker(parseFloat(text), (v) => update(formatFloat(v)));
+    case 'number': {
+      const value = parseFloat(text);
+      return createFloatPicker(value, (v, scale) => update(formatJsNumber(v, text, scale)), jsNumberScale(value));
+    }
+    case 'cssColor':
+      return createColorPicker(parseCssColor(text) ?? [1, 1, 1], (rgb) => update(formatCssColor(rgb, text)));
     case 'vec2':
       return createVec2Picker(values, (v) => update(formatVec(v)));
     case 'direction':
@@ -147,17 +177,16 @@ const illuminateField = StateField.define<{ word: string | null; decorations: De
 });
 
 // `pos` comes from the click's coordinates: on touch devices the selection catches up later.
-function onClick(view: EditorView, pos: number, touch: boolean) {
+function onClick(view: EditorView, pos: number, touch: boolean, config: ClickConfig) {
   const { state } = view;
   const wasOpen = state.field(popupField) !== null;
   const sel = state.selection.main;
   const selecting = !sel.empty && pos >= sel.from && pos <= sel.to;
   const line = state.doc.lineAt(pos);
-  const match = selecting ? null : findPickerMatch(line.text, pos - line.from);
-  const usable = match && nodeNameAt(state, line.from + match.from) !== 'comment';
+  const match = selecting ? null : config.pickerAt(state, line, pos - line.from);
   view.dispatch({ effects: [setIlluminated.of(null), setPopup.of(null)] });
-  if (selecting || (wasOpen && usable)) return;
-  if (match && usable) {
+  if (selecting || (wasOpen && match)) return;
+  if (match) {
     openPicker(view, line.from + match.from, line.from + match.to, match.kind, match.text, pos - line.from - match.from);
     // On a touch screen the keyboard would cover the picker.
     if (touch) view.contentDOM.blur();
@@ -166,13 +195,12 @@ function onClick(view: EditorView, pos: number, touch: boolean) {
   const word = state.wordAt(pos);
   if (!word) return;
   const name = state.sliceDoc(word.from, word.to);
-  const node = nodeNameAt(state, word.from);
-  const def = definitions.get(name);
-  if (def && node === 'variableName.standard') {
+  const def = config.definitionAt(state, word.from, name);
+  if (def) {
     const create = () => ({ dom: popupDom(definitionDom(def)), offset: { x: 0, y: 8 } });
     const tooltip: Tooltip = { pos: word.from, above: false, create };
     view.dispatch({ effects: setPopup.of({ from: word.from, to: word.to, anchor: 0, tooltip }) });
-  } else if (node === 'variableName' && name.length > 1) {
+  } else if (config.illuminates(state, word.from) && name.length > 1) {
     view.dispatch({ effects: setIlluminated.of(name) });
   }
 }
@@ -196,7 +224,7 @@ const dismissPlugin = ViewPlugin.define((view) => {
   };
 });
 
-export function clickHelpers(): Extension {
+export function clickHelpers(config: ClickConfig = glslClicks): Extension {
   // Older Safari's click events aren't PointerEvents, so remember the press's pointer type.
   let pointerType = 'mouse';
   return [
@@ -210,7 +238,7 @@ export function clickHelpers(): Extension {
       },
       click: (e, view) => {
         const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
-        if (pos !== null) onClick(view, pos, pointerType !== 'mouse');
+        if (pos !== null) onClick(view, pos, pointerType !== 'mouse', config);
         return false;
       },
     }),

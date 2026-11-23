@@ -6,9 +6,12 @@ const MENU_PATHS = [
   "Help → Keyboard shortcuts", "Help → Documentation", "Help → Source code", "Help → Acknowledgements",
 ] as const;
 
-// The panels under the canvas, and the code tabs. "Animation" is the Timeline tab's old name, kept so
-// comments written with it still link.
-const TABS = ["Timeline", "Animation", "Sliders", "Textures", "Image", "Shared", "iBuffer0", "iBuffer1", "iBuffer2", "iBuffer3"] as const;
+// The panels under the canvas, and the code tabs. "Animation", "Shared" and "Canvas" are the Timeline,
+// Shared GLSL and Canvas2D tabs' old names, kept so comments written with them still link.
+const TABS = [
+  "Timeline", "Animation", "Sliders", "Textures", "Image", "Shared GLSL", "Shared", "Canvas2D", "Canvas",
+  "iBuffer0", "iBuffer1", "iBuffer2", "iBuffer3",
+] as const;
 
 export const APP_LINKS = [...MENU_PATHS, ...TABS] as const;
 

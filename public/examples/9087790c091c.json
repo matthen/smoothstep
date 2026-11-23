@@ -1,0 +1,130 @@
+{
+  "title": "Drawing with the Canvas2D layer",
+  "code": "// IMAGE: a slowly moving gradient. The [Canvas2D] tab draws over it, and this shader also reads that\n// drawing as iCanvas2D, to give everything on it a soft glow.\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  vec2 uv = fragCoord / iResolution.xy;\n  vec3 color = mix(vec3(0.05, 0.12, 0.2), vec3(0.2, 0.06, 0.25), uv.x + 0.2 * sin(iTime + 3. * uv.y));\n\n  // Blur the Canvas2D layer by averaging it around this pixel, and add it as light.\n  vec4 glow = vec4(0.);\n  for (int ring = 1; ring <= 4; ring++) {\n    for (int i = 0; i < 8; i++) {\n      float angle = 6.2832 * (float(i) + 0.5 * float(ring)) / 8.;\n      vec2 offset = vec2(cos(angle), sin(angle)) * float(ring) * 5. / iResolution;\n      glow += texture(iCanvas2D, uv + offset);\n    }\n  }\n  color += 0.5 * glow.rgb / 32.;\n  fragColor = vec4(color, 1.);\n}\n",
+  "layers": [
+    {
+      "kind": "canvas2d",
+      "code": "// CANVAS2D: a tour of the Canvas2D layer. It draws text and shapes over the [Image] shader, which also\n// reads this drawing as iCanvas2D to give it a soft glow. [Help → Shader inputs] lists what you can use.\nimport planck from \"planck\";  // Built-in libraries come in with import lines at the top.\n\n// setup runs once after each build. It works out a looping path here, which draw plays back;\n// whatever it returns is `data` in draw.\nfunction setup({duration}) {\n  const random = seededRandom(3);  // The same numbers on every run.\n  const wobbles = [1, 2, 3].map(k => ({k, size: 0.25 * random(), phase: 6.28 * random()}));\n  const path = [];\n  for (let i = 0; i <= 600; i++) {\n    const t = 2 * Math.PI * i / 600;\n    let r = 0.3;\n    for (const w of wobbles) r += 0.1 * w.size * Math.sin(3 * w.k * t + w.phase);\n    path.push([r * Math.cos(2 * t), r * Math.sin(3 * t)]);\n  }\n\n  // A small physics world: balls dropped into a box.\n  const world = new planck.World({gravity: planck.Vec2(0, -10)});\n  const box = world.createBody();\n  for (const [a, b] of [[[0, 0], [4, 0]], [[0, 0], [0, 3]], [[4, 0], [4, 3]]]) {\n    box.createFixture(planck.Edge(planck.Vec2(...a), planck.Vec2(...b)));\n  }\n  const balls = [];\n  for (let i = 0; i < 7; i++) {\n    const ball = world.createDynamicBody(planck.Vec2(0.6 + 0.45 * i, 3.5 + 0.7 * i));\n    ball.createFixture(planck.Circle(0.25), {density: 1, restitution: 0.8});\n    balls.push(ball);\n  }\n  return {path, duration, world, balls};\n}\n\n// A second canvas that's faded, never cleared, so what's drawn on it leaves a trail.\nlet trails = null;\n\n// draw runs once a step, 60 times a second. Raw ctx sizes are in units of a canvas 1080 tall.\nfunction draw(ctx, {time, frame, width, height, floats, textures, data}) {\n  clear(ctx);  // Without this, each step draws over the last.\n\n  // Text, with the fonts of the font textures.\n  ctx.fillStyle = \"white\";\n  ctx.font = \"700 80px Inter\";\n  ctx.fillText(\"Hello, canvas\", 90, 150);\n  ctx.font = \"300 36px Inter\";\n  ctx.fillText(\"JavaScript drawing over a shader\", 94, 205);\n\n  // A texture slot, drawn as a picture in a frame. [Textures] sets which image it is.\n  if (textures[0]) {\n    ctx.save();\n    ctx.translate(width - 330, 230);\n    ctx.rotate(0.06 * Math.sin(time));\n    ctx.fillStyle = \"white\";\n    ctx.fillRect(-190, -140, 380, 280);\n    ctx.drawImage(textures[0], -175, -125, 350, 250);\n    ctx.restore();\n  }\n\n  // drawList: nested lists in shader-style coordinates (y up, -1 to 1). Each petal is a sublist,\n  // turned by its own Rotate, which doesn't affect the rest.\n  const petal = Polygon({pts: [[0, 0], [0.07, 0.15], [0, 0.32], [-0.07, 0.15]], edge: true});\n  drawList(ctx, [\n    Translate({offset: [0, 0.05]}),\n    Set({strokeStyle: \"white\", lineWidth: 0.006}),\n    Array.from({length: 8}, (_, k) => [\n      Rotate({angle: k * Math.PI / 4 + 0.5 * time}),\n      Set({fillStyle: `hsla(${30 + 25 * k}, 90%, 65%, 0.75)`}),\n      petal,\n    ]),\n    Set({fillStyle: \"#ffe9a0\"}),\n    Disk({radius: 0.05, edge: true}),\n  ]);\n\n  // Trails: a dot follows the path from setup, on the second canvas.\n  if (!trails) {\n    trails = new OffscreenCanvas(ctx.canvas.width, ctx.canvas.height);\n  }\n  const tctx = trails.getContext(\"2d\");\n  tctx.setTransform(ctx.getTransform());  // The same units as ctx.\n  tctx.globalCompositeOperation = \"destination-out\";\n  tctx.fillStyle = \"rgba(0, 0, 0, 0.04)\";\n  tctx.fillRect(0, 0, width, height);\n  tctx.globalCompositeOperation = \"source-over\";\n  const point = data.path[Math.floor(600 * time / data.duration) % 600];\n  drawList(tctx, [\n    Translate({offset: [-1.2, -0.2]}),\n    Set({fillStyle: \"#7fe7ff\"}),\n    Disk({center: point, radius: 10, radiusInPixels: true}),\n  ]);\n  ctx.drawImage(trails, 0, 0, width, height);\n\n  // iFloat0 moves this ball along its track. It's animated on the [Timeline]; drag it in [Sliders].\n  const x = -1.3 + 1.8 * floats[0];\n  drawList(ctx, [\n    Set({strokeStyle: \"#ffffff60\", fillStyle: \"white\", font: \"500 30px Inter\"}),\n    AbsoluteLineWidth(6),\n    Line({pts: [[-1.3, -0.82], [0.5, -0.82]]}),\n    Set({fillStyle: \"#ff7aa8\"}),\n    Disk({center: [x, -0.82], radius: 0.05}),\n    Set({fillStyle: \"white\"}),\n    Text({at: [x, -0.72], text: \"iFloat0 = \" + floats[0].toFixed(2), align: \"center\"}),\n  ]);\n\n  // The physics world moves on 1/60 s each step. Its metres are turned into canvas units here.\n  data.world.step(1 / 60);\n  ctx.save();\n  ctx.translate(width - 440, 980);\n  ctx.scale(90, -90);  // 90 units to a metre, with y up.\n  ctx.strokeStyle = \"white\";\n  ctx.lineWidth = 0.04;\n  ctx.strokeRect(0, 0, 4, 3.2);\n  data.balls.forEach((ball, i) => {\n    const p = ball.getPosition();\n    ctx.fillStyle = `hsl(${180 + 25 * i}, 80%, 65%)`;\n    ctx.beginPath();\n    ctx.arc(p.x, p.y, 0.25, 0, 2 * Math.PI);\n    ctx.fill();\n  });\n  ctx.restore();\n}\n",
+      "overlay": true
+    }
+  ],
+  "duration": 12,
+  "aspectRatio": [
+    16,
+    9
+  ],
+  "textures": [
+    {
+      "id": "iTexture0",
+      "url": "photos/nickypainting.jpg",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture1",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture2",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture3",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture4",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture5",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture6",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture7",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    }
+  ],
+  "variables": [
+    {
+      "transitions": [
+        {
+          "startDSecs": 10,
+          "endDSecs": 30,
+          "startValue": 0,
+          "endValue": 1,
+          "type": "smoothstep"
+        },
+        {
+          "startDSecs": 60,
+          "endDSecs": 80,
+          "startValue": 1,
+          "endValue": 0.3,
+          "type": "smoothstep"
+        },
+        {
+          "startDSecs": 90,
+          "endDSecs": 110,
+          "startValue": 0.3,
+          "endValue": 0,
+          "type": "smoothstep"
+        }
+      ]
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    }
+  ]
+}

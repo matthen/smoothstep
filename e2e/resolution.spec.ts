@@ -1,15 +1,20 @@
 // On a high-DPI screen the preview draws more pixels than it takes up, so it's sharp, in the app and
-// the embedded player.
+// the embedded player, with the shaders and the Canvas2D layer agreeing on the size.
 import { expect, test, type Page } from '@playwright/test';
 import { PNG } from 'pngjs';
 
-import { offline, OPEN_EDITOR, setCode, skipTour } from './helpers';
+import { addTab, MAGENTA, near, offline, OPEN_EDITOR, setCode, skipTour } from './helpers';
 
 test.use({deviceScaleFactor: 2});
 
-// White on the right half of the frame, by iResolution.
+// White on the right half of the frame, by iResolution, with the Canvas2D layer's drawing over it.
 const HALVES = "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n" +
-  "  fragColor = vec4(vec3(step(0.5, fragCoord.x / iResolution.x)), 1.);\n}";
+  "  vec4 drawn = texture(iCanvas2D, fragCoord / iResolution.xy);\n" +
+  "  vec3 col = vec3(step(0.5, fragCoord.x / iResolution.x));\n" +
+  "  fragColor = vec4(drawn.rgb + (1. - drawn.a) * col, 1.);\n}";
+// Magenta over the top half, in the layer's own units.
+const TOP_HALF = "function draw(ctx, {width, height}) {\n  clear(ctx);\n" +
+  "  ctx.fillStyle = \"rgb(220, 20, 200)\";\n  ctx.fillRect(0, 0, width, height / 2);\n}";
 
 async function drawingAndDisplay(page: Page, selector: string) {
   return page.locator(selector).evaluate((canvas: HTMLCanvasElement) => {
@@ -38,19 +43,25 @@ test.beforeEach(async ({context}) => {
   await skipTour(context);
 });
 
-test("the preview draws at twice its size on a 2× screen, and the shader fills it", async ({page, context}) => {
+test("the preview draws at twice its size on a 2× screen, and the shaders and layer fill it", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./");
   await page.getByRole("button", {name: "Continue"}).click();
   await setCode(page, HALVES);
+  await addTab(page, "Add the Canvas2D layer");
+  await setCode(page, TOP_HALF);
   await page.keyboard.press("Shift+Enter");
 
   const {drawing, display} = await drawingAndDisplay(page, "#canvas");
   expect(drawing).toEqual(display.map(d => 2 * d));
-  // The size shown over the canvas is the size the shader draws at.
+  // The size shown over the canvas is the size the shaders draw at.
   await expect(page.locator("#canvasContainer .fps p").first()).toHaveText(`${drawing[0]}×${drawing[1]}px`);
-  await expect.poll(() => coloursAt(page, [[0.75, 0.5], [0.25, 0.5]]), SLOW_FRAMES)
-    .toEqual([[255, 255, 255], [0, 0, 0]]);
+  // The bottom half is the shader's, and the top the layer's, which may come a few frames later.
+  await expect.poll(async () => {
+    const [bottomRight, bottomLeft, topLeft, topRight] =
+      await coloursAt(page, [[0.75, 0.75], [0.25, 0.75], [0.25, 0.25], [0.75, 0.25]]);
+    return [bottomRight, bottomLeft, near(topLeft!, MAGENTA), near(topRight!, MAGENTA)];
+  }, SLOW_FRAMES).toEqual([[255, 255, 255], [0, 0, 0], true, true]);
   expect(errors).toEqual([]);
 });
 
@@ -98,7 +109,7 @@ test("a slow preview drops to 1× without losing the simulation, and the next bu
   await page.setViewportSize({width: 800, height: 600});
   await page.goto("./");
   await page.getByRole("button", {name: "Continue"}).click();
-  await page.getByRole("button", {name: "Add a buffer"}).click();
+  await addTab(page, "Add a buffer");
   await setCode(page, MARKS_START);
   await page.getByRole("tab", {name: "Image", exact: true}).click();
   await setCode(page, CHECKS_MARK);

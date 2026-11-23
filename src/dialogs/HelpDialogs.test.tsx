@@ -2,6 +2,7 @@ import { cleanup, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { HELPER_NAMES } from '../layer/helpers';
 import { render } from '../test/render';
 import KeyboardShortcuts from './KeyboardShortcuts';
 import ShaderInputs from './ShaderInputs';
@@ -36,5 +37,18 @@ describe("ShaderInputs", () => {
     }
     await user.click(within(dialog).getByRole("button", {name: "iPrevFrame"}));
     expect(await navigator.clipboard.readText()).toBe("iPrevFrame");
+  });
+
+  it("tabulates the Canvas2D layer's inputs, every helper with its defaults, and the libraries", () => {
+    render(<ShaderInputs show={true} onHide={() => {}} />);
+    const dialog = screen.getByRole("dialog", {name: "Shader inputs"});
+    const row = (text: string | RegExp) => within(dialog).getByText(text).closest("tr")!.textContent;
+    expect(row("time")).toMatch(/^number.*seconds/);
+    expect(row("textures")).toMatch(/null for an empty slot/);
+    for (const name of HELPER_NAMES) {
+      expect(within(dialog).getAllByText(new RegExp("^" + name + "\\(")).length).toBeGreaterThan(0);
+    }
+    expect(row(/^Disk\(/)).toMatch(/radius = 1.*filled circle/);
+    expect(row('import planck from "planck";')).toMatch(/physics/);
   });
 });

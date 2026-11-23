@@ -55,11 +55,23 @@ interface Buffer {
   code: string;
 }
 
+// JavaScript that draws on a 2D canvas each step. With `overlay` its drawing is shown over the image;
+// either way every shader can read it as iCanvas2D.
+export interface CanvasLayer {
+  kind: "canvas2d";
+  code: string;
+  overlay: boolean;
+}
+
+const MAX_LAYERS = 1;
+
 export interface AnimationDocument {
   title: string;
   code: string;
   // Left out when there are none, so animations without buffers are saved as before.
   buffers?: Buffer[];
+  // Left out when there are none. A list, each with its kind, so other kinds of layer can follow.
+  layers?: CanvasLayer[];
   // Code that goes before the image's and every buffer's own code. Left out when there's none.
   shared?: string;
   duration: number;  // Seconds.
@@ -96,26 +108,74 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 }`;
 }
 
+// A new Canvas2D layer's code, which draws a label and a turning shape over the image.
+export const NEW_CANVAS_CODE = `// The Canvas2D layer: JavaScript that draws over the image, 60 times a second.
+// [Help → Shader inputs] lists what it can use. Shaders can read the drawing as iCanvas2D.
+
+// Runs once after each build. Whatever it returns is \`data\` in draw.
+function setup({width, height}) {
+  return {sides: 5};
+}
+
+// Runs once per step. Sizes are in units of a canvas 1080 tall, whatever its real size.
+function draw(ctx, {time, width, height, data}) {
+  clear(ctx);  // The canvas keeps the last frame unless you clear it.
+
+  ctx.fillStyle = "white";
+  ctx.font = "600 64px Inter";
+  ctx.fillText("Hello, canvas", 60, 110);
+
+  // drawList draws nested lists of shapes, with y up and from -1 to 1 like a shader's uv.
+  const corners = [];
+  for (let i = 0; i < data.sides; i++) {
+    const angle = 2 * Math.PI * i / data.sides;
+    corners.push([0.4 * Math.cos(angle), 0.4 * Math.sin(angle)]);
+  }
+  drawList(ctx, [
+    Set({strokeStyle: "white", fillStyle: "#ffffff30"}),
+    [Rotate({angle: time}), Polygon({pts: corners, edge: true})],
+    Disk({center: [0, 0], radius: 0.02}),
+  ]);
+}
+`;
+
 export function bufferCodes(doc: AnimationDocument): string[] {
   return (doc.buffers ?? []).map(buffer => buffer.code);
 }
 
-// The code that compiles with the image's: the buffers', and the code they all share.
+// The animation's Canvas2D layer, if it has one.
+export function canvasLayer(doc: AnimationDocument): CanvasLayer | undefined {
+  return doc.layers?.[0];
+}
+
+// The document with its Canvas2D layer set, or removed with null.
+export function withCanvasLayer(doc: AnimationDocument, layer: CanvasLayer | null): AnimationDocument {
+  const next: AnimationDocument = {...doc, layers: layer ? [layer] : []};
+  if (!layer) {
+    delete next.layers;
+  }
+  return next;
+}
+
+// The code that builds with the image's: the buffers', the code they all share, and the canvas
+// layer's (null without one).
 export interface ShaderExtras {
   buffers: string[];
   shared: string;
+  canvas: string | null;
 }
 
 export function shaderExtras(doc: AnimationDocument): ShaderExtras {
-  return {buffers: bufferCodes(doc), shared: doc.shared ?? ""};
+  return {buffers: bufferCodes(doc), shared: doc.shared ?? "", canvas: canvasLayer(doc)?.code ?? null};
 }
 
 export function sameExtras(a: ShaderExtras, b: ShaderExtras): boolean {
-  return a.shared === b.shared && a.buffers.length === b.buffers.length && a.buffers.every((c, i) => c === b.buffers[i]);
+  return a.shared === b.shared && a.canvas === b.canvas &&
+    a.buffers.length === b.buffers.length && a.buffers.every((c, i) => c === b.buffers[i]);
 }
 
-// What the Shared tab shows before anything's written in it.
-export const SHARED_PLACEHOLDER = `// Functions, constants and #defines here can be used in every tab: the image and each buffer.
+// What the Shared GLSL tab shows before anything's written in it.
+export const SHARED_PLACEHOLDER = `// Functions, constants and #defines here can be used in every shader tab: the image and each buffer.
 `;
 
 export function emptyTextures(): TextureSlot[] {
@@ -224,10 +284,20 @@ export function parseDocument(value: unknown): AnimationDocument {
   });
   if (json.shared !== undefined && typeof json.shared !== "string") {fail("shared");}
   const shared = (json.shared ?? "") as string;
+  if (json.layers !== undefined && (!Array.isArray(json.layers) || json.layers.length > MAX_LAYERS)) {
+    fail("layers");
+  }
+  const layers = ((json.layers ?? []) as unknown[]).map((layer, i): CanvasLayer => {
+    if (!isRecord(layer) || layer.kind !== "canvas2d" || typeof layer.code !== "string") {fail("layer " + i);}
+    const l = layer as Record<string, unknown>;
+    // Drawn over the image unless it says not.
+    return {kind: "canvas2d", code: l.code as string, overlay: l.overlay !== false};
+  });
   return {
     title: json.title as string,
     code: json.code as string,
     ...(buffers.length > 0 ? {buffers} : {}),
+    ...(layers.length > 0 ? {layers} : {}),
     ...(shared ? {shared} : {}),
     duration: json.duration as number,
     aspectRatio: [aspectRatio[0], aspectRatio[1]] as AspectRatio,

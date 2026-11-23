@@ -1,4 +1,6 @@
-# Texture credits and licences
+# Credits and licences for textures, libraries and fonts
+
+## Textures
 
 These images are not covered by the code's licence; each keeps its own, below.
 Licences were checked on 19 Nov 2026.
@@ -21,3 +23,21 @@ Licences were checked on 19 Nov 2026.
 | `watermark.png` | The smoothstep.io logo | Same as the code |
 
 Thumbnails (`*_thumb.*`) are smaller copies of the files above and share their licences.
+
+## Canvas2D layer libraries and fonts
+
+The Canvas2D layer can import these libraries. Each is bundled, unchanged apart from minifying, into
+one file in `public/libs/` by `tools/buildLayerAssets.mjs`, and keeps its own licence.
+
+| File | Library | Version | Licence |
+|---|---|---|---|
+| `libs/planck.js` | [planck.js](https://piqnt.com/planck.js/) | 1.5.1 | MIT |
+| `libs/matter-js.js` | [matter.js](https://brm.io/matter-js/) | 0.20.0 | MIT |
+| `libs/simplex-noise.js` | [simplex-noise](https://github.com/jwagner/simplex-noise.js) | 4.0.3 | MIT |
+| `libs/d3-delaunay.js` | [d3-delaunay](https://github.com/d3/d3-delaunay) | 6.0.6 | ISC |
+| | with [delaunator](https://github.com/mapbox/delaunator) | 5.1.0 | ISC |
+| | with [robust-predicates](https://github.com/mourner/robust-predicates) | 3.0.3 | Unlicense |
+
+The fonts in `public/fonts/` are the same families as the font textures above: Inter, Arimo,
+Exo 2, Tinos and Courier Prime, from [Fontsource](https://fontsource.org), under the
+[SIL Open Font License 1.1](https://openfontlicense.org).

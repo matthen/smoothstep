@@ -1,15 +1,20 @@
 // A bare player for one animation, without React or the editor: used by the embedded player
 // (embed.html) and the standalone player file. It loops the animation, and a click pauses it.
-import { bufferCodes, variableValues, type AnimationDocument } from '../lib/document';
+import type { LayerAssets } from '../layer/assets';
+import type { CanvasLayer } from '../layer/CanvasLayer';
+import { bufferCodes, canvasLayer, EMPTY_TEXTURE, variableValues, type AnimationDocument } from '../lib/document';
+import { LayerSteps } from '../render/layerSteps';
 import { drawingSize, fitCanvas, SlowFrames } from '../render/layout';
 import { Renderer } from '../render/Renderer';
-import { renderSteps, RESTART } from '../render/steps';
+import { renderSteps, RESTART, restarts } from '../render/steps';
 
 export interface PlayerOptions {
   doc: AnimationDocument;
   textureURLs: string[];
   // Shown in the corner, such as "Open in smoothstep.io".
   link?: {href: string; text: string};
+  // Where a Canvas2D layer's libraries and fonts come from, asked for only if the animation has one.
+  layerAssets(): Promise<LayerAssets>;
 }
 
 export const PLAYER_CSS = `
@@ -34,7 +39,7 @@ export function showMessage(container: HTMLElement, text: string) {
   container.replaceChildren(message);
 }
 
-export function startPlayer(container: HTMLElement, {doc, textureURLs, link}: PlayerOptions) {
+export function startPlayer(container: HTMLElement, {doc, textureURLs, link, layerAssets}: PlayerOptions) {
   container.className = "smoothstepPlayer";
   const canvas = document.createElement("canvas");
   canvas.setAttribute("aria-label", doc.title);
@@ -76,11 +81,42 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link}: Pl
   let visible = true;
   let last: number | null = null;
 
+  // The animation's Canvas2D layer, once its code has loaded, and whether it has a frame to show.
+  const layerDoc = canvasLayer(doc);
+  let layer: {host: CanvasLayer; steps: LayerSteps} | null = null;
+  let layerFrame = false;
+  const configureLayer = () => {
+    if (layer && layerDoc && canvas.width > 0 && canvas.height > 0) {
+      layer.host.configure({
+        code: layerDoc.code, width: canvas.width, height: canvas.height, duration: doc.duration,
+        textures: doc.textures.map((t, i) =>
+          (t.url === EMPTY_TEXTURE && !t.isUserUploaded) || !textureURLs[i] ? null : textureURLs[i]),
+      });
+    }
+  };
+  if (layerDoc) {
+    renderer.setLayer(true);
+    renderer.layerOverlay = layerDoc.overlay;
+    void Promise.all([import('../layer/CanvasLayer'), layerAssets()]).then(([{CanvasLayer}, assets]) => {
+      const host = new CanvasLayer(assets, {
+        onFrame: bitmap => {
+          renderer.setLayerFrame(bitmap);
+          layerFrame = true;
+        },
+        onStatus: errors => errors.forEach(error => console.error("Canvas2D layer: " + error.message)),
+      });
+      layer = {host, steps: new LayerSteps(renderer, host)};
+      configureLayer();
+      restart();
+    }).catch((error: unknown) => console.error(error));
+  }
+
   const restart = () => {
     time = 0;
     stepClock = 0;
     steps = RESTART;
     renderer.clearTargets();
+    layer?.steps.restart();
   };
 
   // Sharp on high-DPI screens, unless that proves too slow.
@@ -94,6 +130,7 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link}: Pl
     if (renderer.setSize(...drawingSize(width, height, window.devicePixelRatio, lowRes), resample)) {
       stepClock = 0;
       steps = RESTART;
+      configureLayer();
     }
   };
   new ResizeObserver(() => resize()).observe(container);
@@ -119,11 +156,16 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link}: Pl
           time = 0;
           stepClock = 0;
           steps = RESTART;
+          // Also stops a layer stuck on a step, which the wait below would otherwise wait on for good.
+          layer?.steps.restart();
         }
       }
-      steps = renderSteps(renderer, steps, stepClock, time, (t, frameIndex) => ({
-        time: t, duration: doc.duration, frameIndex, variableValues: variableValues(doc.variables, t),
-      }), 4);
+      // A layer that has fallen behind is waited for, which slows the animation rather than the page.
+      if (!layer?.steps.busy || steps.rendered < 0 || restarts(steps, stepClock)) {
+        steps = renderSteps(layer?.steps ?? renderer, steps, stepClock, time, (t, frameIndex) => ({
+          time: t, duration: doc.duration, frameIndex, variableValues: variableValues(doc.variables, t),
+        }), 4);
+      }
       last = now;
       frames.frame(now);
       if (frames.slow && !lowRes) {
@@ -133,7 +175,11 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link}: Pl
     } else {
       last = null;
       frames.idle();
+      if (layerFrame) {
+        renderer.refresh();
+      }
     }
+    layerFrame = false;
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);

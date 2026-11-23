@@ -1,0 +1,383 @@
+// The Canvas2D layer: JavaScript drawing over the image and read by shaders as iCanvas2D, kept when
+// saved and shared, errors on their lines, and slow code that plays slowly without freezing the page.
+import { expect, test, type Page } from '@playwright/test';
+import * as net from 'node:net';
+import { PNG } from 'pngjs';
+
+import { addTab, MAGENTA, near, offline, OPEN_EDITOR, setCode, skipTour } from './helpers';
+
+const BLUE: [number, number, number] = [0, 0, 255];
+
+const BLUE_IMAGE = "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  fragColor = vec4(0., 0., 1., 1.);\n}";
+// Shows the Canvas2D layer's drawing over blue, read as a texture.
+const READS_CANVAS = "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n" +
+  "  vec4 drawn = texture(iCanvas2D, fragCoord / iResolution.xy);\n" +
+  "  fragColor = vec4(drawn.rgb + (1. - drawn.a) * vec3(0., 0., 1.), 1.);\n}";
+// Magenta over the top half of the canvas only, so which way up it is shows.
+const TOP_HALF = "function draw(ctx, {width, height}) {\n  clear(ctx);\n" +
+  "  ctx.fillStyle = \"rgb(220, 20, 200)\";\n  ctx.fillRect(0, 0, width, height / 2);\n}";
+
+function tabs(page: Page) {
+  return page.getByRole("tablist", {name: "Code, in the order it draws"}).getByRole("tab");
+}
+
+async function openTab(page: Page, name: string) {
+  // A tab's name also holds its remove button's.
+  const tab = page.getByRole("tab", {name: new RegExp("^" + name)});
+  await tab.click();
+  await expect(tab).toHaveAttribute("aria-selected", "true");
+}
+
+// The colours a quarter of the way down the canvas and three quarters down.
+async function topAndBottom(page: Page, selector = "#canvas"): Promise<[number, number, number][]> {
+  await page.waitForTimeout(800);
+  const png = PNG.sync.read(await page.locator(selector).screenshot());
+  return [0.25, 0.75].map(y => {
+    const i = (Math.floor(png.height * y) * png.width + Math.floor(png.width / 2)) * 4;
+    return [png.data[i]!, png.data[i + 1]!, png.data[i + 2]!];
+  });
+}
+
+async function expectTopMagenta(page: Page, selector?: string) {
+  await expect(async () => {
+    const [top, bottom] = await topAndBottom(page, selector);
+    expect(near(top!, MAGENTA)).toBe(true);
+    expect(near(bottom!, BLUE)).toBe(true);
+  }).toPass({timeout: 15_000});
+}
+
+async function start(page: Page) {
+  await page.goto("./");
+  await page.getByRole("button", {name: "Continue"}).click();
+  await setCode(page, BLUE_IMAGE);
+  await addTab(page, "Add the Canvas2D layer");
+  await expect(tabs(page)).toHaveText(["Canvas2D", "Image"]);
+  await expect(page.getByRole("tab", {name: "Canvas2D"})).toHaveAttribute("aria-selected", "true");
+  // Its editor has focus, so Shift+Enter builds straight away.
+  await expect(page.locator(".ss-code-editor:not([hidden]) .cm-content")).toBeFocused();
+}
+
+test.beforeEach(async ({context}) => {
+  await skipTour(context);
+});
+
+test("once the Canvas2D layer is there, ⊕ adds a buffer with no menu", async ({page, context}) => {
+  const errors = await offline(context);
+  await start(page);
+  await page.getByRole("button", {name: "Add a buffer", exact: true}).click();
+  await expect(page.getByRole("menu")).toBeHidden();
+  await expect(tabs(page)).toHaveText(["Shared GLSL", "Canvas2D", "iBuffer0", "Image"]);
+  // The shaders are a chain of arrows; the Canvas2D tab, being JavaScript, sits apart behind a divider.
+  const row = await page.getByRole("tablist", {name: "Code, in the order it draws"}).evaluate(list => [...list.children].map(child =>
+    child.getAttribute("role") === "tab" ? child.textContent : child.classList.contains("shaderDivider") ? "|" :
+      child.classList.contains("shaderThen") ? ">" : "+"));
+  expect(row).toEqual(["Shared GLSL", "|", "Canvas2D", "|", "iBuffer0", ">", "+", ">", "Image"]);
+  await expect(page.getByRole("tab", {name: "Canvas2D"}).locator(".shaderKind")).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("a Canvas2D layer draws over the image, shaders read it, and it's kept when saved and shared", async ({page, context}) => {
+  const errors = await offline(context);
+  await start(page);
+  await setCode(page, TOP_HALF);
+  await page.getByRole("button", {name: "Build"}).click();
+  await expectTopMagenta(page);
+
+  // Off, the drawing only shows where a shader reads it.
+  await page.getByLabel("Draw over the image").uncheck();
+  await expect(async () => {
+    const [top] = await topAndBottom(page);
+    expect(near(top!, BLUE)).toBe(true);
+  }).toPass();
+  await openTab(page, "Image");
+  await setCode(page, READS_CANVAS);
+  await page.keyboard.press("Shift+Enter");
+  await expectTopMagenta(page);
+
+  await page.keyboard.press("ControlOrMeta+s");
+  await expect(page).toHaveURL(/#anim\/[a-f0-9]+$/);
+  await page.reload();
+  await expect(tabs(page)).toHaveText(["Canvas2D", "Image"]);
+  await expectTopMagenta(page);
+  await openTab(page, "Canvas2D");
+  await expect(page.getByLabel("Draw over the image")).not.toBeChecked();
+  await expect(page.locator(OPEN_EDITOR)).toContainText("ctx.fillRect(0, 0, width, height / 2);");
+
+  await page.getByRole("button", {name: "Share"}).click();
+  const modal = page.getByRole("dialog", {name: "Share"});
+  const link = await modal.getByLabel("Link", {exact: true}).inputValue();
+  const download = page.waitForEvent("download");
+  await modal.getByRole("button", {name: "Download player file"}).click();
+  const path = test.info().outputPath("player.html");
+  await (await download).saveAs(path);
+  await page.keyboard.press("Escape");
+  // The player file runs the layer offline, with what it needs inside it.
+  const player = await context.newPage();
+  await player.goto("file://" + path);
+  await expectTopMagenta(player, "canvas");
+  await player.close();
+  const other = await context.newPage();
+  await other.goto(link);
+  await expect(tabs(other)).toHaveText(["Canvas2D", "Image"]);
+  await expectTopMagenta(other);
+
+  // The embedded player runs the layer too.
+  await other.goto(link.replace("/sub/#", "/sub/embed.html#"));
+  await expectTopMagenta(other, "canvas");
+  expect(errors).toEqual([]);
+});
+
+test("Canvas2D code can't reach the network, start workers, take the port or run timers while paused, and libraries come from import lines", async ({page, context}) => {
+  const errors = await offline(context);
+  // Counts every connection the layer's code might make: fetch, importScripts and WebSocket alike.
+  let connections = 0;
+  const server = net.createServer(socket => {
+    connections += 1;
+    socket.destroy();
+  });
+  await new Promise<void>(resolve => server.listen(0, "localhost", resolve));
+  const port = (server.address() as net.AddressInfo).port;
+  await start(page);
+  // Magenta only if planck loaded, there are no workers to start or timers that run while paused,
+  // and the port stayed the runtime's.
+  await setCode(page, [
+    'import planck from "planck";',
+    "",
+    "let grabbed = false;",
+    "Event.prototype.stopImmediatePropagation = function () {};",
+    "const post = MessagePort.prototype.postMessage;",
+    "MessagePort.prototype.postMessage = function (...args) {",
+    "  grabbed = true;",
+    "  return post.apply(this, args);",
+    "};",
+    "self.addEventListener(\"message\", () => {grabbed = true;}, {capture: true});",
+    "self.onmessage = () => {grabbed = true;};",
+    "",
+    "async function setup() {",
+    `  const url = "http://localhost:${port}/";`,
+    "  await fetch(url, {mode: \"no-cors\"}).catch(() => {});",
+    "  try { importScripts(url + \"script.js\"); } catch {}",
+    `  try { new WebSocket("ws://localhost:${port}/"); } catch {}`,
+    "  return {",
+    "    noWorkers: typeof Worker === \"undefined\" && typeof SharedWorker === \"undefined\",",
+    "    noTimers: typeof scheduler === \"undefined\" && typeof AbortSignal.timeout === \"undefined\",",
+    "  };",
+    "}",
+    "",
+    "function draw(ctx, {width, height, data}) {",
+    "  const world = new planck.World({gravity: planck.Vec2(0, -10)});",
+    "  const safe = data.noWorkers && data.noTimers && !grabbed && world.getGravity().y === -10;",
+    "  clear(ctx);",
+    "  ctx.fillStyle = safe ? \"rgb(220, 20, 200)\" : \"rgb(0, 255, 0)\";",
+    "  ctx.fillRect(0, 0, width, height / 2);",
+    "}",
+  ].join("\n"));
+  await page.getByRole("button", {name: "Build"}).click();
+  await expectTopMagenta(page);
+  await expect(page.locator(".ss-line-error")).toHaveCount(0);
+  await page.waitForTimeout(1000);
+  server.close();
+  expect(connections).toBe(0);
+  // Requests are refused before they're sent, so only the sandbox's own errors reach the console.
+  expect(errors.filter(e => !e.includes("Content Security Policy") && !e.includes("Failed to fetch"))).toEqual([]);
+});
+
+test("scrubbing while paused doesn't step the Canvas2D layer", async ({page, context}) => {
+  const errors = await offline(context);
+  await start(page);
+  // Magenta until draw has run more than once.
+  await setCode(page, "let draws = 0;\nfunction setup() {\n  draws = 0;\n}\n" +
+    "function draw(ctx, {width, height}) {\n  draws++;\n  clear(ctx);\n" +
+    "  ctx.fillStyle = draws === 1 ? \"rgb(220, 20, 200)\" : \"rgb(0, 255, 0)\";\n" +
+    "  ctx.fillRect(0, 0, width, height / 2);\n}");
+  await page.getByRole("button", {name: "Build"}).click();
+  await expectTopMagenta(page);
+  const box = (await page.getByRole("slider", {name: "Time"}).boundingBox())!;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(box.x + box.width * 0.2, y);
+  await page.mouse.down();
+  for (let i = 1; i <= 10; i++) {
+    await page.mouse.move(box.x + box.width * (0.2 + 0.06 * i), y);
+  }
+  await page.mouse.up();
+  await expectTopMagenta(page);
+  expect(errors).toEqual([]);
+});
+
+test("Canvas2D timers wait while the animation is paused", async ({page, context}) => {
+  const errors = await offline(context);
+  await start(page);
+  // Magenta once the timer has ticked, unless it ticked many times between two steps, as it would
+  // if it kept running while paused.
+  await setCode(page, "let ticks = 0;\nlet last = 0;\nlet jumped = false;\nsetInterval(() => ticks++, 50);\n" +
+    "function draw(ctx, {width, height}) {\n  jumped = jumped || ticks - last > 30;\n  last = ticks;\n  clear(ctx);\n" +
+    "  ctx.fillStyle = ticks > 3 && !jumped ? \"rgb(220, 20, 200)\" : \"rgb(0, 255, 0)\";\n" +
+    "  ctx.fillRect(0, 0, width, height / 2);\n}");
+  await page.getByRole("button", {name: "Build"}).click();
+  await page.getByRole("button", {name: "Play"}).click();
+  await expectTopMagenta(page);
+  await page.getByRole("button", {name: "Pause"}).click();
+  await page.waitForTimeout(4000);
+  await page.getByRole("button", {name: "Play"}).click();
+  // Checked once, as the layer starts afresh when the animation loops.
+  const [top] = await topAndBottom(page);
+  expect(near(top!, MAGENTA)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test("errors show under their lines, and the Canvas2D tab is marked", async ({page, context}) => {
+  const errors = await offline(context);
+  await start(page);
+  const errorAfter = async () => {
+    const error = page.locator(".ss-line-error").first();
+    await expect(error).toBeVisible();
+    return error.evaluate(el => el.previousElementSibling?.textContent);
+  };
+
+  // An error thrown in draw.
+  await setCode(page, "// Draws nothing.\nfunction draw(ctx) {\n  clear(ctx);\n  notAFunction();\n}");
+  await page.getByRole("button", {name: "Build"}).click();
+  expect(await errorAfter()).toBe("  notAFunction();");
+  await expect(page.getByRole("tab", {name: "Canvas2D"})).toHaveAttribute("data-error", "true");
+  await expect(page.locator(".ss-line-error")).toContainText("notAFunction");
+
+  // A syntax error.
+  await setCode(page, "function draw(ctx) {\n  const x = ;\n}");
+  await page.getByRole("button", {name: "Build"}).click();
+  await expect(page.locator(".ss-line-error")).toHaveCount(1);
+  expect(await errorAfter()).toBe("  const x = ;");
+
+  // Changing the canvas's size.
+  await setCode(page, "function draw(ctx) {\n  ctx.canvas.width = 500;\n}");
+  await page.getByRole("button", {name: "Build"}).click();
+  expect(await errorAfter()).toBe("  ctx.canvas.width = 500;");
+  await expect(page.locator(".ss-line-error")).toContainText("can't be changed");
+  // Even round the back way, a frame of the wrong size isn't taken.
+  await setCode(page, "function draw(ctx) {\n  Object.getOwnPropertyDescriptor(OffscreenCanvas.prototype, \"width\").set.call(ctx.canvas, 500);\n}");
+  await page.getByRole("button", {name: "Build"}).click();
+  await expect(page.locator(".ss-line-error")).toContainText("wasn't the animation's size");
+
+  // A library that isn't built in.
+  await setCode(page, "// Physics.\nimport box2d from \"box2d\";\nfunction draw(ctx) {}");
+  await page.getByRole("button", {name: "Build"}).click();
+  expect(await errorAfter()).toBe("import box2d from \"box2d\";");
+  await expect(page.locator(".ss-line-error")).toContainText("planck");
+
+  // Fixed, the error goes and the tab is no longer marked.
+  await setCode(page, TOP_HALF);
+  await page.getByRole("button", {name: "Build"}).click();
+  await expectTopMagenta(page);
+  await expect(page.locator(".ss-line-error")).toHaveCount(0);
+  await expect(page.getByRole("tab", {name: "Canvas2D"})).not.toHaveAttribute("data-error");
+  expect(errors).toEqual([]);
+});
+
+test("a draw that never finishes doesn't freeze the page, and building fixed code recovers", async ({page, context}) => {
+  const errors = await offline(context);
+  await start(page);
+  await setCode(page, "function draw(ctx, {frame}) {\n  if (frame > 10) {\n    while (true) {}\n  }\n}");
+  await page.getByRole("button", {name: "Build"}).click();
+  await page.getByRole("button", {name: "Play"}).click();
+  // It says what it's doing, without calling it an error.
+  await expect(page.getByRole("status").filter({hasText: /^Drawing step 11…$/})).toBeVisible({timeout: 10_000});
+  await expect(page.locator(".ss-line-error")).toHaveCount(0);
+  // The page keeps drawing frames while the Canvas2D code is stuck; a frozen page draws none.
+  const frames = await page.evaluate(() => new Promise<number>(resolve => {
+    let count = 0;
+    const end = performance.now() + 3000;
+    const tick = () => {
+      count++;
+      if (performance.now() < end) {
+        requestAnimationFrame(tick);
+      } else {
+        resolve(count);
+      }
+    };
+    requestAnimationFrame(tick);
+  }));
+  expect(frames).toBeGreaterThan(3);
+
+  // A render waits for the step too, and can still be cancelled.
+  await page.getByRole("button", {name: "Render"}).click();
+  const modal = page.getByRole("dialog", {name: /Render/});
+  await modal.getByRole("button", {name: "Render"}).click();
+  await page.waitForTimeout(1500);
+  await expect(modal.getByRole("progressbar")).toBeVisible();
+  await modal.getByRole("button", {name: "Cancel"}).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  // Cancelled, so the next render can start.
+  await page.getByRole("button", {name: "Render"}).click();
+  await expect(modal.getByRole("button", {name: "Render"})).toBeEnabled();
+  await modal.getByRole("button", {name: "Cancel"}).click();
+
+  // Building again stops it and runs the new code.
+  await setCode(page, TOP_HALF);
+  await page.getByRole("button", {name: "Build"}).click();
+  await expectTopMagenta(page);
+  await expect(page.getByText(/^Drawing step/)).toHaveCount(0);
+  await expect(page.locator(".ss-line-error")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("the embedded player keeps looping when a draw never finishes", async ({page, context}) => {
+  const errors = await offline(context);
+  await start(page);
+  await setCode(page, "function draw(ctx, {frame}) {\n  if (frame > 10) {\n    while (true) {}\n  }\n}");
+  await page.locator(".durationInput").fill("1");
+  await page.getByRole("button", {name: "Build"}).click();
+  await page.getByRole("button", {name: "Share", exact: true}).click();
+  const link = await page.getByRole("dialog", {name: "Share"}).getByLabel("Link", {exact: true}).inputValue();
+
+  const player = await context.newPage();
+  // Counts the frames the player draws.
+  await player.addInitScript(() => {
+    const w = window as unknown as {draws: number};
+    w.draws = 0;
+    const drawArrays = WebGL2RenderingContext.prototype.drawArrays;
+    WebGL2RenderingContext.prototype.drawArrays = function (...args) {
+      w.draws += 1;
+      drawArrays.apply(this, args);
+    };
+  });
+  await player.goto(link.replace("/sub/#", "/sub/embed.html#"));
+  await expect(player.locator("canvas")).toBeVisible();
+  const draws = () => player.evaluate(() => (window as unknown as {draws: number}).draws);
+  // Stuck on step 11 within the first second, it starts again each time it loops.
+  await player.waitForTimeout(1500);
+  const before = await draws();
+  await player.waitForTimeout(2500);
+  expect(await draws()).toBeGreaterThan(before);
+  expect(errors).toEqual([]);
+});
+
+test("Canvas2D code that never finishes starting says so, and building fixed code recovers", async ({page, context}) => {
+  const errors = await offline(context);
+  await start(page);
+  await setCode(page, "while (true) {}\nfunction draw(ctx) {}");
+  await page.getByRole("button", {name: "Build"}).click();
+  await expect(page.getByRole("status").filter({hasText: /^Running the Canvas2D code…$/})).toBeVisible({timeout: 10_000});
+  await expect(page.locator(".ss-line-error")).toHaveCount(0);
+  await page.getByRole("button", {name: "Play"}).click();
+  await page.waitForTimeout(500);
+  await expect(page.getByRole("status").filter({hasText: /^Running the Canvas2D code…$/})).toBeVisible();
+
+  await setCode(page, TOP_HALF);
+  await page.getByRole("button", {name: "Build"}).click();
+  await expectTopMagenta(page);
+  await expect(page.getByText(/^Running the Canvas2D code/)).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("the Canvas2D layer examples open and run without errors", async ({page, context}) => {
+  const errors = await offline(context);
+  for (const id of ["9087790c091c", "7852e2820a47", "96abdd1ee3d3", "65ca463c0318"]) {
+    await page.goto("about:blank");
+    await page.goto("./#example/" + id);
+    await expect(tabs(page).filter({hasText: /^Canvas2D/})).toHaveCount(1);
+    await page.getByRole("button", {name: "Play"}).click();
+    await page.waitForTimeout(1500);
+    await expect(page.locator(".ss-line-error")).toHaveCount(0);
+    await expect(page.getByRole("tab", {name: /^Canvas2D/})).not.toHaveAttribute("data-error");
+  }
+  expect(errors).toEqual([]);
+});

@@ -2,7 +2,7 @@
 // buffers the image uses, in order, then the image. Every shader renders into one of a pair of
 // framebuffers, so it can read its own previous frame: the image as iPrevFrame, and buffer k as
 // iBuffer<k>. Then the image is copied to the canvas.
-import { NUM_TEXTURES, NUM_VARIABLES } from '../lib/document';
+import { MAX_BUFFERS, NUM_TEXTURES, NUM_VARIABLES } from '../lib/document';
 import type { LineError } from '../lib/types';
 import { uses } from '../lib/glslCode';
 
@@ -27,7 +27,7 @@ void main() {
 // It's always three lines, so error line numbers are offset by the same amount.
 function shaderPrefix(numBuffers = 0): string {
   let uniforms = "uniform vec2 iResolution; uniform float iTime; uniform float iDuration; uniform int iFrame; ";
-  uniforms += "uniform sampler2D iPrevFrame; ";
+  uniforms += "uniform sampler2D iPrevFrame; uniform sampler2D iCanvas2D; ";
   for (let i = 0; i < NUM_TEXTURES; i++) {
     uniforms += `uniform sampler2D iTexture${i}; `;
   }
@@ -110,15 +110,17 @@ interface Target {
   texture: WebGLTexture;
 }
 
-// A tab of code: the image, buffer k, or the code they share. Also which one an error is in.
-export type ShaderId = "image" | "shared" | number;
+// A tab of code: the image, buffer k, the code they share, or the Canvas2D layer's JavaScript. Also
+// which one an error is in.
+export type ShaderId = "image" | "shared" | "canvas" | number;
 
 export type CompileResult = {ok: true} | {ok: false; shader: ShaderId; errors: LineError[]};
 
-// Texture units: the previous frame, then the texture slots, then the buffers.
+// Texture units: the previous frame, then the texture slots, then the buffers, then the Canvas2D layer.
 const PREV_FRAME_UNIT = 0;
 const TEXTURE_UNIT = 1;
-const BUFFER_UNIT = TEXTURE_UNIT + NUM_TEXTURES;  // Up to 13 units in all; WebGL 2 promises 16.
+const BUFFER_UNIT = TEXTURE_UNIT + NUM_TEXTURES;
+const CANVAS_UNIT = BUFFER_UNIT + MAX_BUFFERS;  // Up to 14 units in all; WebGL 2 promises 16.
 
 type Program = WebGLProgram & {vao: WebGLVertexArrayObject | null};
 
@@ -130,8 +132,14 @@ export class Renderer {
   private bufferPrograms: Program[] = [];
   // The buffers the image needs, in the order they render.
   private used: number[] = [];
-  // Whether a frame depends on the ones before, through buffers or iPrevFrame.
-  hasState = false;
+  // Whether the shaders' frames depend on the ones before, through buffers or iPrevFrame.
+  private shaderState = false;
+  // The Canvas2D layer's latest frame, which shaders read as iCanvas2D: transparent without a layer.
+  private canvasTexture: WebGLTexture;
+  private hasLayer = false;
+  // Whether the layer's frame is drawn over the image.
+  layerOverlay = true;
+  private lastInputs: FrameInputs | null = null;
   private copyProgram: Program;
   private uniforms = new WeakMap<WebGLProgram, Map<string, WebGLUniformLocation | null>>();
   // [last frame, the one before], for the image and for each buffer in use.
@@ -168,6 +176,48 @@ export class Renderer {
     for (let i = 0; i < NUM_TEXTURES; i++) {
       this.textureUnits.push(this.blackTexture());
     }
+    this.canvasTexture = this.blankCanvasTexture();
+  }
+
+  // Whether a frame depends on the ones before: the shaders' do, or there's a Canvas2D layer, which
+  // draws each step in turn.
+  get hasState(): boolean {
+    return this.shaderState || this.hasLayer;
+  }
+
+  private blankCanvasTexture(): WebGLTexture {
+    const gl = this.gl;
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+    for (const [name, value] of [
+      [gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR],
+      [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE],
+    ] as const) {
+      gl.texParameteri(gl.TEXTURE_2D, name, value);
+    }
+    return texture;
+  }
+
+  // Says whether the animation has a Canvas2D layer. Without one, iCanvas2D is transparent.
+  setLayer(hasLayer: boolean) {
+    if (this.hasLayer && !hasLayer) {
+      this.gl.deleteTexture(this.canvasTexture);
+      this.canvasTexture = this.blankCanvasTexture();
+    }
+    this.hasLayer = hasLayer;
+  }
+
+  // Takes the layer's latest frame, and closes it. The worker made it bottom row first with
+  // premultiplied alpha, as the unpack settings don't apply to bitmaps.
+  setLayerFrame(bitmap: ImageBitmap) {
+    const gl = this.gl;
+    if (this.hasLayer) {
+      gl.activeTexture(gl.TEXTURE0 + CANVAS_UNIT);
+      gl.bindTexture(gl.TEXTURE_2D, this.canvasTexture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, bitmap);
+    }
+    bitmap.close();
   }
 
   // Some drivers offer the extensions but still can't draw into a half-float texture.
@@ -252,7 +302,7 @@ export class Renderer {
     this.program = programs[0]!;
     this.bufferPrograms = programs.slice(1);
     this.used = buffersUsed(userCode(code, shared), buffers.map(b => userCode(b, shared)));
-    this.hasState = this.used.length > 0 || uses(userCode(code, shared), /\biPrevFrame\b/);
+    this.shaderState = this.used.length > 0 || uses(userCode(code, shared), /\biPrevFrame\b/);
     this.clearTargets();
     return {ok: true};
   }
@@ -431,6 +481,9 @@ export class Renderer {
     gl.activeTexture(gl.TEXTURE0 + PREV_FRAME_UNIT);
     gl.bindTexture(gl.TEXTURE_2D, prevFrame.texture);
     gl.uniform1i(this.uniform(program, "iPrevFrame"), PREV_FRAME_UNIT);
+    gl.activeTexture(gl.TEXTURE0 + CANVAS_UNIT);
+    gl.bindTexture(gl.TEXTURE_2D, this.canvasTexture);
+    gl.uniform1i(this.uniform(program, "iCanvas2D"), CANVAS_UNIT);
     this.textureUnits.forEach((texture, i) => {
       gl.activeTexture(gl.TEXTURE0 + TEXTURE_UNIT + i);
       gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -451,7 +504,6 @@ export class Renderer {
   }
 
   render(inputs: FrameInputs) {
-    const gl = this.gl;
     if (!this.program || !this.targets) {
       return;
     }
@@ -463,16 +515,42 @@ export class Renderer {
     }
     this.draw(this.program, output, inputs, input);
     this.targets = [output, input];
+    this.lastInputs = inputs;
+    this.present();
+  }
 
+  // Copies the image to the canvas, with the Canvas2D layer's frame over it if it's shown that way.
+  present() {
+    const gl = this.gl;
+    if (!this.targets) {
+      return;
+    }
     gl.useProgram(this.copyProgram);
     gl.bindVertexArray(this.copyProgram.vao);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.activeTexture(gl.TEXTURE0 + PREV_FRAME_UNIT);
-    gl.bindTexture(gl.TEXTURE_2D, output.texture);
+    gl.bindTexture(gl.TEXTURE_2D, this.targets[0].texture);
     gl.uniform1i(this.uniform(this.copyProgram, "iTexture"), PREV_FRAME_UNIT);
     gl.uniform2f(this.uniform(this.copyProgram, "iResolution"), this.width, this.height);
     gl.viewport(0, 0, this.width, this.height);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+    if (this.hasLayer && this.layerOverlay) {
+      gl.bindTexture(gl.TEXTURE_2D, this.canvasTexture);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+      gl.disable(gl.BLEND);
+    }
+  }
+
+  // Shows the Canvas2D layer's newest frame without moving on a step. Shaders that read iCanvas2D draw
+  // again with it, unless that would step their own state.
+  refresh() {
+    if (this.lastInputs && !this.shaderState) {
+      this.render(this.lastInputs);
+    } else {
+      this.present();
+    }
   }
 
   dispose() {
