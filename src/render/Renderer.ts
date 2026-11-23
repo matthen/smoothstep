@@ -257,17 +257,42 @@ export class Renderer {
     return {ok: true};
   }
 
-  // Returns whether the size changed, which clears the previous frame.
-  setSize(width: number, height: number): boolean {
+  // Returns whether the previous frame was cleared, as it is when the size changes, unless `resample`
+  // asks to stretch the previous frame and buffers to the new size instead.
+  setSize(width: number, height: number, resample = false): boolean {
     if (width === this.width && height === this.height && this.targets) {
       return false;
     }
+    const [oldWidth, oldHeight] = [this.width, this.height];
     this.width = width;
     this.height = height;
     this.gl.canvas.width = width;
     this.gl.canvas.height = height;
+    if (resample && this.targets) {
+      this.targets = this.resample(this.targets, false, oldWidth, oldHeight);
+      this.bufferTargets = new Map([...this.bufferTargets].map(([i, pair]) =>
+        [i, this.resample(pair, true, oldWidth, oldHeight)]));
+      return false;
+    }
     this.clearTargets();
     return true;
+  }
+
+  // New targets at the current size, holding the old ones' pictures, which are deleted.
+  private resample(pair: [Target, Target], isBuffer: boolean, oldWidth: number, oldHeight: number): [Target, Target] {
+    const gl = this.gl;
+    const resized = pair.map(old => {
+      const target = this.target(isBuffer);
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, old.framebuffer);
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, target.framebuffer);
+      gl.blitFramebuffer(0, 0, oldWidth, oldHeight, 0, 0, this.width, this.height, gl.COLOR_BUFFER_BIT, gl.LINEAR);
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+      gl.deleteFramebuffer(old.framebuffer);
+      gl.deleteTexture(old.texture);
+      return target;
+    });
+    return [resized[0]!, resized[1]!];
   }
 
   // Starts again from a blank previous frame and blank buffers (after a new shader or size, or a rewind).

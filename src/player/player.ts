@@ -86,16 +86,17 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link}: Pl
   // Sharp on high-DPI screens, unless that proves too slow.
   const frames = new SlowFrames();
   let lowRes = false;
-  const resize = () => {
+  // Dropping to 1× keeps the simulation going; a new size starts it again.
+  const resize = (resample = false) => {
     const [width, height] = fitCanvas(container.clientWidth, container.clientHeight, doc.aspectRatio);
     canvas.style.width = width + "px";
     canvas.style.height = height + "px";
-    if (renderer.setSize(...drawingSize(width, height, window.devicePixelRatio, lowRes))) {
+    if (renderer.setSize(...drawingSize(width, height, window.devicePixelRatio, lowRes), resample)) {
       stepClock = 0;
       steps = RESTART;
     }
   };
-  new ResizeObserver(resize).observe(container);
+  new ResizeObserver(() => resize()).observe(container);
   resize();
 
   // Rest when scrolled out of sight, so an embedded animation doesn't use the GPU for nothing.
@@ -127,7 +128,7 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link}: Pl
       frames.frame(now);
       if (frames.slow && !lowRes) {
         lowRes = true;
-        resize();
+        resize(true);
       }
     } else {
       last = null;

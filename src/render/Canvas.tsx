@@ -127,16 +127,24 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     return () => observer.disconnect();
   }, []);
 
+  // The CSS size last drawn at: when only the resolution changes, the simulation carries on.
+  const drawnSize = useRef<[number, number]>([0, 0]);
   useEffect(() => {
-    if (rendererRef.current?.setSize(pixelWidth, pixelHeight)) {
+    const resample = drawnSize.current[0] === width && drawnSize.current[1] === height;
+    drawnSize.current = [width, height];
+    if (rendererRef.current?.setSize(pixelWidth, pixelHeight, resample)) {
       restart();
     }
     needsRender.current = true;
     props.onLayout({width, height, top: container[2] + marginTop + height, containerWidth: container[0]});
   }, [width, height, pixelWidth, pixelHeight, marginTop, container[0], container[2]]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Each build gets another try at full resolution.
-  useEffect(() => setLowRes(false), [props.buildId]);
+  // Each build gets another try at full resolution, watched afresh.
+  const frames = useRef(new SlowFrames());
+  useEffect(() => {
+    frames.current = new SlowFrames();
+    setLowRes(false);
+  }, [props.buildId]);
 
   useEffect(() => {
     const renderer = rendererRef.current;
@@ -167,24 +175,23 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
   useEffect(() => {
     let id = 0;
     let updates = 0;
-    const frames = new SlowFrames();
     const loop = (now: number) => {
       if (needsRender.current) {
         needsRender.current = false;
         renderFrame();
-        const rate = frames.frame(now);
+        const rate = frames.current.frame(now);
         if (rate !== null) {
           updates += 1;
           if (updates % 10 === 0) {
             const value = Math.round(rate);
             setFps(value > 20 ? Math.round(value / 3) * 3 : value);
           }
-          if (frames.slow) {
+          if (frames.current.slow) {
             setLowRes(true);
           }
         }
       } else {
-        frames.idle();
+        frames.current.idle();
       }
       id = requestAnimationFrame(loop);
     };

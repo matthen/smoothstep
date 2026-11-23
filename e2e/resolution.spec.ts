@@ -3,7 +3,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { PNG } from 'pngjs';
 
-import { offline, setCode, skipTour } from './helpers';
+import { offline, OPEN_EDITOR, setCode, skipTour } from './helpers';
 
 test.use({deviceScaleFactor: 2});
 
@@ -53,5 +53,66 @@ test("the embedded player draws at twice its size on a 2× screen", async ({page
   await expect(page.locator("canvas")).toBeVisible();
   const {drawing, display} = await drawingAndDisplay(page, "canvas");
   expect(drawing).toEqual(display.map(d => 2 * d));
+  expect(errors).toEqual([]);
+});
+
+// Step 0 marks the buffer and notes its iTime, and later steps keep what it holds.
+const MARKS_START = "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n" +
+  "  vec4 last = texture(iBuffer0, fragCoord / iResolution.xy);\n" +
+  "  fragColor = iFrame == 0 ? vec4(1., iTime, 0., 1.) : last;\n}";
+// Green while the buffer holds the mark from the start of playback; red if it was lost or set again later.
+const CHECKS_MARK = "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n" +
+  "  vec4 mark = texture(iBuffer0, fragCoord / iResolution.xy);\n" +
+  "  fragColor = mark.r > 0.5 && mark.g < 0.5 ? vec4(0., 1., 0., 1.) : vec4(1., 0., 0., 1.);\n}";
+
+test("a slow preview drops to 1× without losing the simulation, and the next build tries 2× again", async ({page, context}) => {
+  const errors = await offline(context);
+  // While window.slowFrames counts down, each frame's callbacks run 50 ms late, so the preview is slow.
+  await page.addInitScript(() => {
+    const w = window as unknown as {slowFrames: number};
+    w.slowFrames = 0;
+    const raf = window.requestAnimationFrame.bind(window);
+    let lastFrame = -1;
+    window.requestAnimationFrame = callback => raf(now => {
+      if (now !== lastFrame && w.slowFrames > 0) {
+        w.slowFrames -= 1;
+      }
+      const slow = w.slowFrames > 0;
+      lastFrame = now;
+      if (slow) {
+        setTimeout(() => callback(performance.now()), 50);
+      } else {
+        callback(now);
+      }
+    });
+  });
+  await page.setViewportSize({width: 800, height: 600});
+  await page.goto("./");
+  await page.getByRole("button", {name: "Continue"}).click();
+  await page.getByRole("button", {name: "Add a buffer"}).click();
+  await setCode(page, MARKS_START);
+  await page.getByRole("tab", {name: "Image", exact: true}).click();
+  await setCode(page, CHECKS_MARK);
+  await page.keyboard.press("Shift+Enter");
+  const size = page.locator("#canvasContainer .fps p").first();
+  const sizeAt = async (ratio: number) => {
+    const {display} = await drawingAndDisplay(page, "#canvas");
+    return `${display[0]! * ratio}×${display[1]! * ratio}px`;
+  };
+  await expect(size).toHaveText(await sizeAt(2));
+  await page.getByRole("button", {name: "Play"}).click();
+  await expect.poll(() => colourAt(page, 0.5, 0.5)).toEqual([0, 255, 0]);
+
+  await page.evaluate(() => {(window as unknown as {slowFrames: number}).slowFrames = 10_000;});
+  await expect(size).toHaveText(await sizeAt(1), {timeout: 10_000});
+  expect(await colourAt(page, 0.5, 0.5)).toEqual([0, 255, 0]);
+
+  // Built while still slow, the new code gets a fresh look at 2×.
+  await page.locator(OPEN_EDITOR).click();
+  await page.keyboard.press("Shift+Enter");
+  await page.evaluate(() => {(window as unknown as {slowFrames: number}).slowFrames = 0;});
+  await expect(size).toHaveText(await sizeAt(2));
+  await page.waitForTimeout(1000);
+  await expect(size).toHaveText(await sizeAt(2));
   expect(errors).toEqual([]);
 });
