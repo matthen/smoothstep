@@ -8,7 +8,7 @@ import { useLatest } from '../lib/useLatest';
 import { LayerSteps } from './layerSteps';
 import { drawingSize, fitCanvas, SlowFrames } from './layout';
 import { Renderer, type CompileResult } from './Renderer';
-import { renderSteps, RESTART } from './steps';
+import { renderSteps, RESTART, restarts } from './steps';
 
 export interface CanvasLayout {
   width: number;   // displayed size in CSS pixels
@@ -61,6 +61,8 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
   // The container's width, height and offset within the pane, where the play bar is placed.
   const [container, setContainer] = useState<[number, number, number]>([0, 0, 0]);
   const [fps, setFps] = useState<number | null>(null);
+  // The step the Canvas2D layer has been drawing for a while.
+  const [layerBusy, setLayerBusy] = useState<number | null>(null);
   // Touch screens can't hover, so a tap shows the size and frame rate for a few seconds.
   const [overlays, setOverlays] = useState(false);
   const overlayTimer = useRef<number | undefined>(undefined);
@@ -76,6 +78,8 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
   // Set when this build's preview was too slow to draw at the screen's full resolution.
   const [lowRes, setLowRes] = useState(false);
   const [pixelWidth, pixelHeight] = drawingSize(width, height, window.devicePixelRatio, lowRes);
+  // The Canvas2D layer stays at full resolution, so dropping to 1× doesn't start it again.
+  const [layerWidth, layerHeight] = drawingSize(width, height, window.devicePixelRatio);
   const marginTop = Math.max(0, (container[1] - height) / 2);
   const marginSide = Math.max(0, (container[0] - width) / 2);
 
@@ -98,7 +102,8 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     if (!renderer) {
       return;
     }
-    if (layerSteps?.busy) {
+    // A restart goes ahead, which also stops a layer stuck on a step.
+    if (layerSteps?.busy && !restarts(steps.current, p.stepClock)) {
       needsRender.current = true;  // Try again next frame, when the layer may have caught up.
       return;
     }
@@ -206,7 +211,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     }
     const force = layerBuildId.current !== props.buildId;
     const config = {
-      code: layerCode, width: pixelWidth, height: pixelHeight, duration: props.duration, textures: props.layerTextures,
+      code: layerCode, width: layerWidth, height: layerHeight, duration: props.duration, textures: props.layerTextures,
     };
     const timer = window.setTimeout(() => {
       void import('../layer/bundled').then(({CanvasLayer, bundledAssets}) => {
@@ -220,6 +225,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
               needsPresent.current = true;
             },
             onStatus: errors => propsRef.current.onLayerStatus(errors),
+            onBusy: setLayerBusy,
           });
           layerRef.current = {layer, steps: new LayerSteps(renderer, layer)};
         }
@@ -234,7 +240,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
       });
     }, force || !layerRef.current ? 0 : LAYER_SETTLE_MS);
     return () => window.clearTimeout(timer);
-  }, [layerCode, props.buildId, width, height, pixelWidth, pixelHeight, props.duration, props.layerTextures, propsRef, restart]);
+  }, [layerCode, props.buildId, width, height, layerWidth, layerHeight, props.duration, props.layerTextures, propsRef, restart]);
 
   useEffect(() => () => {
     layerRef.current?.layer.dispose();
@@ -302,6 +308,11 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
             {fps ? <p>{fps} fps</p> : null}
             <p>{Math.max(0, steps.current.rendered)}</p>
           </div>
+          {layerBusy !== null ? (
+            <p className="layerBusy" role="status" style={{top: marginTop + 8, left: marginSide + 8}}>
+              Drawing step {layerBusy}…
+            </p>
+          ) : null}
         </>
       )}
     </div>

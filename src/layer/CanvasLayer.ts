@@ -27,16 +27,17 @@ export interface LayerCallbacks {
   onFrame(bitmap: ImageBitmap): void;
   // The layer's errors, on lines of its code; none once a run draws its first frame.
   onStatus(errors: LineError[]): void;
+  // The step the layer has been drawing for a while, or null once it's done.
+  onBusy?(frame: number | null): void;
 }
 
-// How long a worker may take to start and run setup, and to draw a batch of steps.
-const START_TIMEOUT_MS = 10_000;
-const STEP_TIMEOUT_MS = 1_000;
+// How long a step takes before the layer says it's still drawing it.
+const BUSY_MS = 1_000;
 // Steps waiting to be drawn before whoever is pushing them should wait.
 const MAX_WAITING = 12;
 
-export const TOO_SLOW = "The Canvas2D code took too long, so it was stopped. Build to run it again.";
 const NO_DRAW = "The Canvas2D code needs a draw function: function draw(ctx, {time}) { ... }";
+const WRONG_SIZE = "The Canvas2D frame wasn't the animation's size, so it was stopped. Build to run it again.";
 
 // What every run of one configuration shares.
 interface Prepared {
@@ -52,7 +53,8 @@ interface Run {
   inFlight: number | null;
   stepped: boolean;
   drawn: boolean;
-  timer: number | undefined;
+  // The step it's drawing now.
+  drawing: number;
 }
 
 async function loadBitmap(url: string): Promise<ImageBitmap | null> {
@@ -76,13 +78,15 @@ export class CanvasLayer {
   private current: Run | null = null;
   private standby: Run | null = null;
   private waiting: LayerInputs[] = [];
-  // After an error or a timeout, nothing runs until the next configure.
+  // After an error, nothing runs until the next configure.
   private stopped = false;
   private errors: LineError[] = [];
   private nextBatch = 1;
   private bitmaps = new Map<string, Promise<ImageBitmap | null>>();
   private pendingDraw: {resolve(bitmap: ImageBitmap): void; reject(error: Error): void} | null = null;
   private disposed = false;
+  private busyTimer: number | undefined;
+  private busyShown = false;
 
   constructor(
     private assets: LayerAssets, private callbacks: LayerCallbacks,
@@ -160,7 +164,7 @@ export class CanvasLayer {
           this.discardStandby();
         }
       }),
-      ready: false, inFlight: null, stepped: false, drawn: false, timer: undefined,
+      ready: false, inFlight: null, stepped: false, drawn: false, drawing: 0,
     };
     run.worker.port.onmessage = (event: MessageEvent<FromWorker>) => this.receive(run, prepared, event.data);
     // Each worker gets its own copies of the fonts and images.
@@ -168,23 +172,28 @@ export class CanvasLayer {
       type: "init", width: config.width, height: config.height, duration: config.duration,
       fonts: prepared.fonts, textures: prepared.textures,
     } satisfies ToWorker);
-    this.watch(run, START_TIMEOUT_MS);
     return run;
   }
 
-  // Stops the run if it doesn't answer in time: its code may be in a loop that never ends.
-  private watch(run: Run, ms: number) {
-    window.clearTimeout(run.timer);
-    run.timer = window.setTimeout(() => {
-      if (document.hidden) {
-        // A hidden page's timers and messages run late, so this proves nothing; look again later.
-        this.watch(run, ms);
-      } else if (run === this.current) {
-        this.fail([{line: 0, message: TOO_SLOW}]);
-      } else {
-        this.discardStandby();
+  // Slow code just plays slowly, and is stopped by the next build or restart. After a while drawing
+  // one batch, it says which step it's on.
+  private watchBusy() {
+    window.clearTimeout(this.busyTimer);
+    this.busyTimer = window.setTimeout(() => {
+      const run = this.current;
+      if (run && run.inFlight !== null) {
+        this.busyShown = true;
+        this.callbacks.onBusy?.(run.drawing);
       }
-    }, ms);
+    }, BUSY_MS);
+  }
+
+  private notBusy() {
+    window.clearTimeout(this.busyTimer);
+    if (this.busyShown) {
+      this.busyShown = false;
+      this.callbacks.onBusy?.(null);
+    }
   }
 
   // The worker runs the user's code, so nothing it sends is taken on trust.
@@ -194,25 +203,35 @@ export class CanvasLayer {
     }
     if (message?.type === "ready") {
       run.ready = true;
-      window.clearTimeout(run.timer);
       if (run === this.current) {
         if (message.registered === true && message.hasDraw !== true) {
           this.fail([{line: 0, message: NO_DRAW}]);
           return;
         }
         if (message.registered !== true) {
-          // Its code stopped with an error, which arrives on its own.
-          this.watch(run, START_TIMEOUT_MS);
-          return;
+          return;  // Its code stopped with an error, which arrives on its own.
         }
         this.flush();
       } else if (message.registered !== true || message.hasDraw !== true) {
         this.discardStandby();
       }
+    } else if (message?.type === "drawing" && run === this.current && typeof message.frame === "number" && Number.isInteger(message.frame)) {
+      run.drawing = message.frame;
+      if (this.busyShown) {
+        this.callbacks.onBusy?.(message.frame);
+      }
     } else if (message?.type === "frame" && run === this.current && message.id === run.inFlight &&
         message.bitmap instanceof ImageBitmap) {
-      window.clearTimeout(run.timer);
+      const config = this.config!;
+      if (message.bitmap.width !== config.width || message.bitmap.height !== config.height) {
+        message.bitmap.close();
+        this.fail([{line: 0, message: WRONG_SIZE}]);
+        return;
+      }
       run.inFlight = null;
+      if (this.waiting.length === 0) {
+        this.notBusy();
+      }
       if (!run.drawn) {
         run.drawn = true;
         this.callbacks.onStatus([]);
@@ -242,10 +261,10 @@ export class CanvasLayer {
   }
 
   private stopRun(run: Run | null) {
-    if (run) {
-      window.clearTimeout(run.timer);
-      run.worker.kill();
+    if (run === this.current) {
+      this.notBusy();
     }
+    run?.worker.kill();
   }
 
   private stopRuns() {
@@ -308,11 +327,13 @@ export class CanvasLayer {
     }
     const id = this.nextBatch++;
     run.inFlight = id;
+    run.drawing = this.waiting[0]!.frame;
     run.worker.port.postMessage({type: "steps", id, steps: this.waiting} satisfies ToWorker);
     this.waiting = [];
-    // The first batch also runs setup, which may work things out for a while.
-    this.watch(run, run.stepped ? STEP_TIMEOUT_MS : START_TIMEOUT_MS);
     run.stepped = true;
+    if (!this.busyShown) {
+      this.watchBusy();
+    }
   }
 
   // Draws one step and resolves with exactly its frame, for exports. One at a time.
@@ -330,6 +351,9 @@ export class CanvasLayer {
   dispose() {
     this.disposed = true;
     this.stopRuns();
+    const pending = this.pendingDraw;
+    this.pendingDraw = null;
+    pending?.reject(new Error("The Canvas2D layer was closed."));
     this.sandbox.dispose();
     for (const bitmap of this.bitmaps.values()) {
       void bitmap.then(b => b?.close());

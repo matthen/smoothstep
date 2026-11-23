@@ -6,7 +6,7 @@ import { bufferCodes, canvasLayer, EMPTY_TEXTURE, variableValues, type Animation
 import { LayerSteps } from '../render/layerSteps';
 import { drawingSize, fitCanvas, SlowFrames } from '../render/layout';
 import { Renderer } from '../render/Renderer';
-import { renderSteps, RESTART } from '../render/steps';
+import { renderSteps, RESTART, restarts } from '../render/steps';
 
 export interface PlayerOptions {
   doc: AnimationDocument;
@@ -159,7 +159,7 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link, lay
         }
       }
       // A layer that has fallen behind is waited for, which slows the animation rather than the page.
-      if (!layer?.steps.busy) {
+      if (!layer?.steps.busy || restarts(steps, stepClock)) {
         steps = renderSteps(layer?.steps ?? renderer, steps, stepClock, time, (t, frameIndex) => ({
           time: t, duration: doc.duration, frameIndex, variableValues: variableValues(doc.variables, t),
         }), 4);

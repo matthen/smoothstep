@@ -27,6 +27,11 @@ export interface Steps {
 
 export const RESTART: Steps = {rendered: -1, clock: 0, dropped: 0};
 
+// Whether the clock has gone back before the last step drawn, so the simulation starts again.
+export function restarts(steps: Steps, clock: number): boolean {
+  return stepAt(clock) - steps.dropped < steps.rendered;
+}
+
 // Draws the frame at iTime `time`, `clock` seconds after the simulation restarted, and returns the
 // steps drawn.
 // - A shader with no state is drawn once.
@@ -45,7 +50,7 @@ export function renderSteps(
     return {rendered: step, clock, dropped: 0};
   }
   const due = stepAt(clock) - steps.dropped;
-  if (steps.rendered < 0 || due < steps.rendered) {
+  if (steps.rendered < 0 || restarts(steps, clock)) {
     renderer.render(inputs(time, 0));
     return {rendered: 0, clock, dropped: stepAt(clock)};
   }
