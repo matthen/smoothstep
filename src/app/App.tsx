@@ -611,6 +611,7 @@ export default function App() {
       delete next.shared;
       return next;
     });
+    setSharedUntouched(false);
     setJustAdded(null);
     setHasUnsavedChanges(true);
     setCodeTab("image");
@@ -646,7 +647,8 @@ export default function App() {
   // Each tab has its own editor, hidden unless it's open, so it keeps its undo history and cursor.
   const codeTabs: {tab: ShaderId; code: string}[] = [
     ...(layer ? [{tab: "canvas" as const, code: layer.code}] : []),
-    ...(doc.shared !== undefined ? [{tab: "shared" as const, code: sharedUntouched ? SHARED_PLACEHOLDER : doc.shared}] : []),
+    ...(doc.shared !== undefined
+      ? [{tab: "shared" as const, code: sharedUntouched && doc.shared === "" ? SHARED_PLACEHOLDER : doc.shared}] : []),
     ...(doc.buffers ?? []).map((buffer, i) => ({tab: i, code: buffer.code})),
     {tab: "image", code: doc.code},
   ];
@@ -880,6 +882,7 @@ export default function App() {
         change.code = text;
       } else if (tab === "shared") {
         change.shared = text;
+        setSharedUntouched(false);
       } else {
         while (buffers.length <= tab) {
           buffers.push({code: newBufferCode(buffers.length)});
