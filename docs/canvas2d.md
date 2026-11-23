@@ -57,8 +57,10 @@ function draw(ctx, {time, frame, duration, width, height, floats, textures, data
 
 `draw` runs 60 times a second while the animation plays, on the same clock as buffers. It follows
 the same rules as `iFrame`: the steps start again at 0 when you build, when the animation loops, or
-when it goes back to the start. Dragging along the timeline doesn't step it. When you render a
-video, it runs from frame 0, every step in order, so the video matches what you saw.
+when it goes back to the start. Dragging along the timeline doesn't step it. While paused, the layer
+keeps its last frame when you scrub or drag a slider, even if it draws from `time` or `floats`;
+press play to draw again. When you render a video, it runs from frame 0, every step in order, so the
+video matches what you saw.
 
 Variables declared outside the two functions keep their values from one step to the next, so the
 layer can remember things, like a buffer can:
