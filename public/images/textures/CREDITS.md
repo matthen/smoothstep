@@ -40,3 +40,9 @@ one file in `public/libs/` by `tools/buildLayerAssets.mjs`, and keeps its own li
 The fonts in `public/fonts/` are the same families as the font textures above: Inter, Arimo,
 Exo 2, Tinos and Courier Prime, from [Fontsource](https://fontsource.org), under the
 [SIL Open Font License 1.1](https://openfontlicense.org).
+
+## The app's own font
+
+The app's name is set in Monda, from [Fontsource](https://fontsource.org), under the
+[SIL Open Font License 1.1](https://openfontlicense.org). It's bundled with the app, so it shows
+offline too.

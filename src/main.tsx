@@ -1,3 +1,4 @@
+import '@fontsource/monda/700.css';
 import './styles/mantine';
 import './styles/main.scss';
 

@@ -43,7 +43,8 @@ artists:
 - NASA Goddard Space Flight Center (Blue Marble: Reto Stöckli, Robert Simmon)
 
 The font textures, and text on the Canvas2D layer, use Courier Prime, Arimo, Tinos, Inter and
-Exo 2, under the [SIL Open Font License](https://openfontlicense.org).
+Exo 2, under the [SIL Open Font License](https://openfontlicense.org). The app's name is set in
+Monda, under the same licence.
 
 Each texture, font and library is listed with its licence in
 [CREDITS.md](../public/images/textures/CREDITS.md).

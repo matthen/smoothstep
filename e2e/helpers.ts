@@ -10,9 +10,8 @@ export const TEXTURE_SHADER = `void mainImage(out vec4 fragColor, in vec2 fragCo
 `;
 
 // Blocks every request that isn't to this machine, so tests prove the app works offline, and
-// collects page errors (a failed Google Fonts request is expected offline). Also turns off the
-// one-time tips, which would otherwise pop up over the flows being tested, unless `tips` is set, and
-// the Docs tab a new animation opens with, unless `docs` is set.
+// collects page errors. Also turns off the one-time tips, which would otherwise pop up over the flows
+// being tested, unless `tips` is set, and the Docs tab a new animation opens with, unless `docs` is set.
 export async function offline(context: BrowserContext, {tips = false, docs = false} = {}): Promise<string[]> {
   await context.route(/^https?:\/\/(?!localhost)/, route => route.abort());
   // about:blank has no storage, so skip it there.
