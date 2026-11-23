@@ -5,14 +5,14 @@ import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react';
 import { flushSync } from 'react-dom';
 import {
   TbBook, TbBrandGithub, TbChevronDown, TbCopy, TbDeviceFloppy, TbDownload, TbFile, TbFileImport, TbFolderOpen, TbHammer,
-  TbCircleCheckFilled, TbCode, TbHeart, TbHelp, TbHome, TbKeyboard, TbLink, TbMaximize, TbMinimize, TbRoute, TbSchool, TbShare, TbVideo,
+  TbCircleCheckFilled, TbCode, TbHeart, TbHelp, TbHome, TbKeyboard, TbMaximize, TbMinimize, TbRoute, TbSchool, TbShare, TbVideo,
 } from 'react-icons/tb';
 
 import Acknowledgements from '../dialogs/Acknowledgements';
 import DocumentBrowser from '../dialogs/DocumentBrowser';
 import ExportSettings from '../dialogs/ExportSettings';
 import type { ExportOptions, ExportProgress } from '../dialogs/exportTypes';
-import OpenLink from '../dialogs/OpenLink';
+import Import from '../dialogs/Import';
 import SaveCopy from '../dialogs/SaveCopy';
 import Share from '../dialogs/Share';
 import Splash from '../dialogs/Splash';
@@ -70,7 +70,7 @@ const KeyboardShortcuts = lazy(() => import('../dialogs/KeyboardShortcuts'));
 const ShaderInputs = lazy(() => import('../dialogs/ShaderInputs'));
 
 type Dialog =
-  "open" | "openLink" | "saveCopy" | "share" | "export" | "splash" | "acknowledgements" | "shortcuts" | "inputs";
+  "open" | "import" | "saveCopy" | "share" | "export" | "splash" | "acknowledgements" | "shortcuts" | "inputs";
 
 // Text with `code` in backticks.
 function withCode(text: string) {
@@ -86,7 +86,7 @@ function showMessage(text: string, loading = false) {
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof localStore.StorageFullError ? error.message + " Delete some animations or uploads, " +
-    "or download everything from the Open dialog and clear space." : fallback;
+    "or use Export all in the Open dialog and clear space." : fallback;
 }
 
 export default function App() {
@@ -607,6 +607,20 @@ export default function App() {
     }
   };
 
+  // Adds the animation at a link to this browser's animations, and opens it.
+  const importLink = async (route: Route) => {
+    let id: string;
+    try {
+      const {doc: linked, images} = await loadRoute(route);
+      id = await archive.importDocument(linked, images);
+    } catch (error) {
+      console.error(error);
+      throw error instanceof ShareError ? error : new Error(errorMessage(error, "Couldn't import that animation."));
+    }
+    setLibraryVersion(v => v + 1);
+    setDialog(openHash(documentHref(id), hasUnsavedChanges) ? null : "open");
+  };
+
   // A link clicked in a code comment, like "[Help → Tutorial]" or "[Sliders]", opens that menu item or tab.
   const appLinkRef = useLatest((link: AppLink) => {
     const showPanel = (tab: PanelTab) => {
@@ -625,10 +639,9 @@ export default function App() {
     const actions: Record<AppLink, () => void> = {
       "File → New": () => openHash("#new", hasUnsavedChanges),
       "File → Open": () => setDialog("open"),
-      "File → Open from link": () => setDialog("openLink"),
-      "File → Open file": () => fileInput.current?.click(),
       "File → Save": () => void save(false),
-      "File → Download animation file": () => void download(),
+      "File → Import": () => setDialog("import"),
+      "File → Export": () => void download(),
       "Help → Welcome": () => setDialog("splash"),
       "Help → Take the tour": () => void takeTour(),
       "Help → Tutorial": () => openHash(TUTORIAL_HREF, hasUnsavedChanges),
@@ -689,7 +702,7 @@ export default function App() {
       const {exportVideo} = await import('../export/exportVideo');
       archive.download(await exportVideo(doc, exportOptions, setExportProgress, controller.signal));
       setDialog(null);
-      showMessage("Video exported.");
+      showMessage("Video rendered.");
     } catch (error) {
       if (!controller.signal.aborted) {
         console.error(error);
@@ -814,7 +827,6 @@ export default function App() {
               </Button>
             </Menu.Target>
             <Menu.Dropdown>
-              <Menu.Label>In this browser</Menu.Label>
               <Menu.Item component="a" href="#new" leftSection={<TbFile />}>New</Menu.Item>
               <Menu.Item leftSection={<TbFolderOpen />} onClick={() => setDialog("open")}>Open</Menu.Item>
               <Menu.Item
@@ -824,12 +836,13 @@ export default function App() {
               {documentId &&
                 <Menu.Item leftSection={<TbCopy />} onClick={() => setDialog("saveCopy")}>Save copy</Menu.Item>}
               <Menu.Divider />
-              <Menu.Label>Files and links</Menu.Label>
-              <Menu.Item leftSection={<TbFileImport />} onClick={() => fileInput.current?.click()}>Open file</Menu.Item>
-              <Menu.Item leftSection={<TbLink />} onClick={() => setDialog("openLink")}>Open from link</Menu.Item>
+              <Menu.Item leftSection={<TbFileImport />} onClick={() => setDialog("import")}>
+                Import…
+                <Text size="xs" c="dimmed">From a file or a link</Text>
+              </Menu.Item>
               <Menu.Item leftSection={<TbDownload />} onClick={() => void download()}>
-                Download animation file
-                <Text size="xs" c="dimmed">Code, timeline and textures, to open again later</Text>
+                Export
+                <Text size="xs" c="dimmed">Download this animation as a file</Text>
               </Menu.Item>
             </Menu.Dropdown>
           </Menu>
@@ -870,10 +883,10 @@ export default function App() {
             Share
           </Button>
           <Button
-            variant="light" leftSection={<TbVideo />} className="exportButton" aria-label="Export video"
+            variant="light" leftSection={<TbVideo />} className="exportButton"
             onClick={() => {setExportError(null); setDialog("export");}}
           >
-            {phone ? "Export" : "Export video"}
+            Render
           </Button>
         </Group>
       </header>
@@ -1044,7 +1057,7 @@ export default function App() {
           }
         }}
         onMessage={setAlert}
-        onOpenFile={() => fileInput.current?.click()}
+        onImport={() => setDialog("import")}
         version={libraryVersion}
       />
       <input
@@ -1052,9 +1065,10 @@ export default function App() {
         ref={fileInput} style={{display: "none"}} data-testid="importInput"
         onChange={event => void openFiles(event.target.files)}
       />
-      <OpenLink
-        show={dialog === "openLink"} onHide={() => setDialog(null)}
-        onOpen={hash => openHash(hash, hasUnsavedChanges)}
+      <Import
+        show={dialog === "import"} onHide={() => setDialog(null)}
+        onChooseFiles={() => {setDialog(null); fileInput.current?.click();}}
+        onImportLink={importLink}
       />
       <Share
         show={dialog === "share"} doc={doc} onHide={() => setDialog(null)} onMessage={setAlert}

@@ -100,10 +100,10 @@ function desktopSteps({showPane}: TourOptions): DriveStep[] {
       element: ".headerActions",
       onHighlightStarted: () => showPane("animation"),
       popover: {
-        title: "Save, share, export and help",
-        description: `File saves your animation in this browser (<kbd>${MOD_KEY}</kbd> + <kbd>S</kbd>) and ` +
-          "downloads it as a file you can keep. Share gives you a link with the whole animation in it. " +
-          "Export video makes a WebM, MP4, GIF or PNG frames. Help has the tutorial, the shader inputs and " +
+        title: "Save, share, render and help",
+        description: `File saves your animation in this browser (<kbd>${MOD_KEY}</kbd> + <kbd>S</kbd>), and ` +
+          "imports and exports animation files. Share gives you a link with the whole animation in it. " +
+          "Render makes a WebM, MP4, GIF or PNG frames. Help has the tutorial, the shader inputs and " +
           "the keyboard shortcuts.",
         side: "bottom", align: "start",
       },
@@ -160,9 +160,9 @@ function phoneSteps({showPane}: TourOptions): DriveStep[] {
       element: ".headerActions",
       onHighlightStarted: () => showPane("code"),
       popover: {
-        title: "File, share, export and help",
-        description: "The file menu saves your animation in this browser and downloads it as a file. " +
-          "Next to it are Share, which gives you a link with the whole animation in it, Export video and Help.",
+        title: "File, share, render and help",
+        description: "The File menu saves your animation in this browser, and imports and exports animation files. " +
+          "Next to it are Share, which gives you a link with the whole animation in it, Render and Help.",
         side: "bottom", align: "end",
       },
     },

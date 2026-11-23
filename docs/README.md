@@ -36,17 +36,15 @@ show tips" turns them off.
 
 ## Saving your work
 
-smoothstep.io saves your animations and the images you add in your browser. The File menu keeps
-the two kinds of saving apart:
+smoothstep.io saves your animations and the images you add in your browser. File → Save keeps the
+animation you have open, and File → Open lists the animations saved there. Saving an example, or an
+animation someone shared with you, keeps a copy as one of your own and leaves the original as it is.
+Until you save it, a tag beside the title says it's an example or shared.
 
-* **In this browser**: File → Save keeps the animation you have open, and File → Open lists the
-  animations saved there. Saving an example, or an animation someone shared with you, keeps a copy
-  as one of your own and leaves the original as it is. Until you save it, a tag beside the title
-  says it's an example or shared.
-* **Files and links**: File → Download animation file saves the animation you have open as a
-  `.smoothstep.json` file, and File → Open file opens one, adding it to your animations in this
-  browser. The Open dialog's "Download all files" saves everything as a zip, which File → Open
-  file can open again.
+File → Export downloads the animation you have open as a `.smoothstep.json` file, and the Open
+dialog's "Export all" downloads everything as a zip. File → Import adds the animations in either kind
+of file to the ones in your browser, and opens the animation if there's only one. It also imports an
+animation from a link.
 
 Your browser is the only place your work is kept, so download anything you want to back up or move
 to another computer.
@@ -55,7 +53,7 @@ to another computer.
 
 Share gives you a link with the whole animation in it, a QR code of that link, code to show the
 animation playing on a website, and a player file. It also makes links that open an animation file
-you've put online, such as in a GitHub gist, which keeps your own images with it. File → Open from link opens animations that
+you've put online, such as in a GitHub gist, which keeps your own images with it. File → Import adds animations that
 others have shared, including animation files in GitHub gists. [Sharing animations](sharing.md) has
 the details.
 

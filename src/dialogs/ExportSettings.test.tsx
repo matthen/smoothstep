@@ -38,7 +38,7 @@ describe("ExportSettings", () => {
     expect(width.getAttribute("aria-invalid")).not.toBe("true");
     fireEvent.change(width, {target: {value: "-4"}});
     expect(width.getAttribute("aria-invalid")).toBe("true");
-    expect(screen.getByRole("button", {name: "Export"}).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", {name: "Render"}).hasAttribute("disabled")).toBe(true);
     const fps = screen.getByLabelText("Frame rate");
     fireEvent.change(fps, {target: {value: "0"}});
     expect(fps.getAttribute("aria-invalid")).toBe("true");
@@ -81,7 +81,7 @@ describe("ExportSettings", () => {
     expect(screen.getByText("Rendering frames")).toBeTruthy();
     expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("25");
     expect(screen.getByLabelText("Resolution width").hasAttribute("disabled")).toBe(true);
-    expect(screen.getByRole("button", {name: "Export"}).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", {name: "Render"}).hasAttribute("disabled")).toBe(true);
     rerender({progress: {stage: "encoding", fraction: 0.5}});
     expect(screen.getByText("Encoding")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", {name: "Cancel"}));
@@ -91,7 +91,7 @@ describe("ExportSettings", () => {
   it("exports and shows errors", async () => {
     const {props} = renderExport(GIF, null, "Encoding failed.");
     expect(screen.getByText("Encoding failed.")).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", {name: "Export"}));
+    await userEvent.click(screen.getByRole("button", {name: "Render"}));
     expect(props.onExport).toHaveBeenCalled();
   });
 });

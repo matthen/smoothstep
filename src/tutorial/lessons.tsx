@@ -800,7 +800,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
           </p>
           <p>
             Build it and play. Try <code>0.99</code> in place of <code>0.97</code> for a longer trail. How long
-            the trail is depends on how many frames a second your computer draws, but exported videos use the
+            the trail is depends on how many frames a second your computer draws, but rendered videos use the
             frame rate you choose.
           </p>
         </>,
@@ -999,8 +999,8 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
             browser, and File → Open lists everything you've saved.
           </p>
           <p>
-            To keep a copy elsewhere, use File → Download animation file. It holds the code, the timeline and the
-            textures, and File → Open file opens it again.
+            To keep a copy elsewhere, use File → Export. It downloads a file that holds the code, the timeline
+            and the textures, and File → Import adds it to your animations again.
           </p>
         </>,
       },
@@ -1026,10 +1026,10 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
       },
       {
         id: "export",
-        title: "Export a video",
+        title: "Render a video",
         body: <>
           <p>
-            Export video makes an MP4 or WebM video, an animated GIF, or a zip of PNG frames. You choose the
+            Render makes an MP4 or WebM video, an animated GIF, or a zip of PNG frames. You choose the
             size and the frame rate, and every frame is drawn in full, however long it takes, so the video is
             smooth even when the shader plays slowly here.
           </p>

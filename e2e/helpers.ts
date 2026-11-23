@@ -72,7 +72,7 @@ export async function editorCode(page: Page): Promise<string> {
 }
 
 export async function fileMenu(page: Page, item: string) {
-  await page.getByRole("button", {name: "File"}).click();
+  await page.getByRole("button", {name: "File", exact: true}).click();
   await page.getByRole("menu").getByText(item, {exact: true}).click();
 }
 

@@ -4,7 +4,7 @@ import 'fake-indexeddb/auto';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { animationFile, exportAll, importFiles, imageType, importMessage } from './archive';
+import { animationFile, exportAll, importDocument, importFiles, imageType, importMessage } from './archive';
 import { newDocument, type AnimationDocument } from './document';
 import * as localStore from './localStore';
 
@@ -175,6 +175,16 @@ describe("importFiles", () => {
     };
     await importFiles([new File([JSON.stringify(file)], "t.smoothstep.json")]);
     expect((await localStore.getDocument("cccc0000d001"))!.thumbnail).toBeNull();
+  });
+});
+
+describe("importDocument", () => {
+  it("adds an animation from a link once, and returns the stored one after that", async () => {
+    const doc = docWithTexture("Linked", null);
+    const id = await importDocument(doc, new Map());
+    expect((await localStore.getDocument(id))!.json).toEqual(doc);
+    expect(await importDocument(structuredClone(doc), new Map())).toBe(id);
+    expect(await localStore.allDocuments()).toHaveLength(1);
   });
 });
 

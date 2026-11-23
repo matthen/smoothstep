@@ -86,7 +86,7 @@ export default function ExportSettings(
     <AppModal
       opened={show} onClose={onCancel} closeOnEscape={!disabled} closeOnClickOutside={!disabled}
       withCloseButton={!disabled} trapFocus={!touch}
-      title={<Group gap="xs">Export video{disabled && <Loader size="xs" role="status" />}</Group>}
+      title={<Group gap="xs">Render{disabled && <Loader size="xs" role="status" />}</Group>}
       classNames={{content: "export"}}
     >
       <form onSubmit={event => event.preventDefault()}>
@@ -125,7 +125,7 @@ export default function ExportSettings(
       }
       <Group justify="flex-end" mt="lg">
         <Button variant="default" onClick={onCancel}>Cancel</Button>
-        <Button onClick={onExport} disabled={disabled || !widthValid || !fpsValid}>Export</Button>
+        <Button onClick={onExport} disabled={disabled || !widthValid || !fpsValid}>Render</Button>
       </Group>
     </AppModal>
   );

@@ -16,7 +16,7 @@ beforeEach(async () => {
 });
 
 function renderBrowser(currentId: string | null = null) {
-  const props = {show: true, onHide: vi.fn(), currentId, onDeleted: vi.fn(), onMessage: vi.fn(), onOpenFile: vi.fn(), version: 0};
+  const props = {show: true, onHide: vi.fn(), currentId, onDeleted: vi.fn(), onMessage: vi.fn(), onImport: vi.fn(), version: 0};
   render(<DocumentBrowser {...props} />);
   return props;
 }
@@ -70,6 +70,6 @@ describe("DocumentBrowser", () => {
     await clearStore();
     renderBrowser();
     expect(await screen.findByText(/You have no saved animations yet\. File → Save/)).toBeTruthy();
-    expect(screen.getByRole("button", {name: /Download all files/}).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", {name: /Export all/}).hasAttribute("disabled")).toBe(true);
   });
 });
