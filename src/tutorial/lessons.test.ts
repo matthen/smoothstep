@@ -346,6 +346,9 @@ describe("lesson 9: draw with JavaScript", () => {
   it("label something: the text shows the time, once built", () => {
     const atStart = withCanvas(NEW_CANVAS_CODE);
     expect(check("canvas-label", builtWithStep(step("canvas-label")), atStart)).toBe(true);
+    // A comma inside the text doesn't hide the time after it.
+    const comma = shaders.CANVAS_LABEL.replace('"Time: "', '"Time, "');
+    expect(check("canvas-label", withCanvas(comma, {builtCanvas: comma}), atStart)).toBe(true);
     // The starter code, which moves its text with the time but doesn't show it.
     expect(check("canvas-label", atStart, atStart)).toBe(false);
     expect(check("canvas-label", withCanvas(NEW_CANVAS_CODE.replace("Hello", "Hi")), atStart)).toBe(false);
@@ -364,6 +367,9 @@ describe("lesson 9: draw with JavaScript", () => {
     const atStart = withCanvas(shaders.CANVAS_SHAPES);
     expect(check("canvas-nested", builtWithStep(step("canvas-nested")), atStart)).toBe(true);
     expect(check("canvas-nested", withCanvas(shaders.CANVAS_SHAPES, {builtCanvas: shaders.CANVAS_SHAPES}), atStart)).toBe(false);
+    // The last step's code with a number changed, built: still one flat list.
+    const tweaked = shaders.CANVAS_SHAPES.replace("0.75", "0.5");
+    expect(check("canvas-nested", withCanvas(tweaked, {builtCanvas: tweaked}), atStart)).toBe(false);
   });
 
   it("shaders read the drawing: the image reads iCanvas2D, with Draw over the image off", () => {

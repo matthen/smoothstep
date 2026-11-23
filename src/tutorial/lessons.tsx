@@ -122,9 +122,14 @@ function animatedFloats(now: TutorialState): number[] {
     now.variables[i]?.transitions.some(t => t.startValue !== t.endValue));
 }
 
+// A list inside a drawList's list: one that starts with a Rotate, Translate, Scale or Set, after another
+// item or at the start of a list.
+const NESTED_LIST = /(\)\s*,|\[)\s*\[\s*(Rotate|Translate|Scale|Set)\s*\(/;
+
 // Canvas2D code whose fillText writes text made from the time.
 function writesTime(code: string): boolean {
-  return uses(code, /\bfillText\s*\([^,]*\btime\b/);
+  // The first argument, skipping over commas inside strings.
+  return uses(code, /\bfillText\s*\((?:"[^"]*"|'[^']*'|`[^`]*`|[^,"'`])*\btime\b/);
 }
 
 // A texture slot the code reads has an image in it.
@@ -1022,7 +1027,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
             move up and down over the shader.
           </p>
           <p>
-            The code has two functions. <code>setup</code> runs once when you build, and is empty for now; it's
+            The code has two functions. <code>setup</code> runs once at the start, before the first draw, and is empty for now; it's
             for working things out before the drawing starts. <code>draw</code> runs 60 times a second while the
             animation plays. <code>ctx</code> is what it draws with, and <code>clear(ctx)</code> rubs out the
             last drawing first.
@@ -1133,7 +1138,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         </>,
         tabs: [{tab: "canvas", code: shaders.CANVAS_ORBIT}],
         task: "Build Canvas2D code with a list inside the drawList.",
-        check: (now, atStart) => rebuilt(now, atStart) && uses(builtIn(now, "canvas"), /\[\s*(Rotate|Translate|Scale|Set)\s*\(/),
+        check: (now, atStart) => rebuilt(now, atStart) && uses(builtIn(now, "canvas"), NESTED_LIST),
       },
       {
         id: "canvas-shader",
@@ -1159,7 +1164,7 @@ vec4 drawing = texture(iCanvas2D, uv);`}</Lines>
             wobble reaches, and <code>30.0</code> how close together the waves are.
           </p>
         </>,
-        tabs: [{tab: "image", code: shaders.CANVAS_WOBBLE}],
+        tabs: [{tab: "canvas", code: shaders.CANVAS_ORBIT}, {tab: "image", code: shaders.CANVAS_WOBBLE}],
         task: "Build an image that reads iCanvas2D, and turn off Draw over the image.",
         check: (now, atStart) => rebuilt(now, atStart) && uses(now.builtCode, /\biCanvas2D\b/) &&
           now.canvas !== null && !now.canvasOverlay,
