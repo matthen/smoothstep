@@ -18,10 +18,11 @@ export function workerSource(code: string, libraries: readonly {name: string; co
     `const __smoothstep = (${workerRuntime.toString()})(${makeHelpers.toString()});\n` +
     libraries.map(library =>
       `__smoothstep.define(${JSON.stringify(library.name)}, function (module, exports) {\n${library.code}\n});\n`).join("") +
-    // The helpers are parameters of an outer function, so the code can declare its own things with their names.
-    `(function (${HELPER_NAMES.join(", ")}) { (function () {\n`;
+    // The runtime runs the code once it has its port. The helpers are parameters of an outer function,
+    // so the code can declare its own things with their names.
+    `__smoothstep.run(function () { (function (${HELPER_NAMES.join(", ")}) { (function () {\n`;
   const suffix = "\n;__smoothstep.start(typeof setup === \"function\" ? setup : null, " +
-    "typeof draw === \"function\" ? draw : null);\n})(); })(" + helpers + ");\n";
+    "typeof draw === \"function\" ? draw : null);\n})(); })(" + helpers + "); });\n";
   return {source: prefix + code + suffix, firstLine: prefix.split("\n").length, lines: code.split("\n").length};
 }
 

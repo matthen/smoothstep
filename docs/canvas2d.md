@@ -300,8 +300,12 @@ The canvas is always the animation's size, so setting `ctx.canvas.width` or `hei
 
 The Canvas2D code runs in a sandbox, apart from the rest of the page. It can't see the page, your
 saved animations or anything else in your browser, and it can't use the network or start workers of
-its own. Timers (`setTimeout` and `setInterval`) only run while the animation plays, so they don't
-keep working when it's paused. So it's safe to open an animation someone else made.
+its own. So it's safe to open an animation someone else made.
+
+To keep a paused animation from using your computer, `setTimeout` and `setInterval` wait while it's
+paused, and the browser's other ways of scheduling code for later, like `scheduler.postTask`, are
+taken away. This is a courtesy rather than part of the sandbox: code written to keep running can
+still find a way, but it still can't reach anything outside the sandbox.
 
 ## Sharing
 

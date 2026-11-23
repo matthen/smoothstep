@@ -127,7 +127,7 @@ test("a Canvas2D layer draws over the image, shaders read it, and it's kept when
   expect(errors).toEqual([]);
 });
 
-test("Canvas2D code can't reach the network or start workers, and libraries come from import lines", async ({page, context}) => {
+test("Canvas2D code can't reach the network, start workers, take the port or run timers while paused, and libraries come from import lines", async ({page, context}) => {
   const errors = await offline(context);
   // Counts every connection the layer's code might make: fetch, importScripts and WebSocket alike.
   let connections = 0;
@@ -138,11 +138,18 @@ test("Canvas2D code can't reach the network or start workers, and libraries come
   await new Promise<void>(resolve => server.listen(0, "localhost", resolve));
   const port = (server.address() as net.AddressInfo).port;
   await start(page);
-  // Magenta only if planck loaded, there are no workers to start, and the port stayed the runtime's.
+  // Magenta only if planck loaded, there are no workers to start or timers that run while paused,
+  // and the port stayed the runtime's.
   await setCode(page, [
     'import planck from "planck";',
     "",
     "let grabbed = false;",
+    "Event.prototype.stopImmediatePropagation = function () {};",
+    "const post = MessagePort.prototype.postMessage;",
+    "MessagePort.prototype.postMessage = function (...args) {",
+    "  grabbed = true;",
+    "  return post.apply(this, args);",
+    "};",
     "self.addEventListener(\"message\", () => {grabbed = true;}, {capture: true});",
     "self.onmessage = () => {grabbed = true;};",
     "",
@@ -151,12 +158,15 @@ test("Canvas2D code can't reach the network or start workers, and libraries come
     "  await fetch(url, {mode: \"no-cors\"}).catch(() => {});",
     "  try { importScripts(url + \"script.js\"); } catch {}",
     `  try { new WebSocket("ws://localhost:${port}/"); } catch {}`,
-    "  return {noWorkers: typeof Worker === \"undefined\" && typeof SharedWorker === \"undefined\"};",
+    "  return {",
+    "    noWorkers: typeof Worker === \"undefined\" && typeof SharedWorker === \"undefined\",",
+    "    noTimers: typeof scheduler === \"undefined\" && typeof AbortSignal.timeout === \"undefined\",",
+    "  };",
     "}",
     "",
     "function draw(ctx, {width, height, data}) {",
     "  const world = new planck.World({gravity: planck.Vec2(0, -10)});",
-    "  const safe = data.noWorkers && !grabbed && world.getGravity().y === -10;",
+    "  const safe = data.noWorkers && data.noTimers && !grabbed && world.getGravity().y === -10;",
     "  clear(ctx);",
     "  ctx.fillStyle = safe ? \"rgb(220, 20, 200)\" : \"rgb(0, 255, 0)\";",
     "  ctx.fillRect(0, 0, width, height / 2);",
