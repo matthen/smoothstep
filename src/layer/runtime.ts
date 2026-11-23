@@ -27,9 +27,7 @@ type UserDraw = (ctx: OffscreenCanvasRenderingContext2D, inputs: Record<string, 
 type ModuleFactory = (module: {exports: unknown}, exports: unknown) => void;
 
 interface WorkerEvent {
-  data?: {port?: MessagePort};
   reason?: unknown;
-  stopImmediatePropagation(): void;
 }
 
 interface WorkerScope {
@@ -46,74 +44,96 @@ export function workerRuntime(helpersFor: (env: HelperEnv) => Helpers) {
   const env: HelperEnv = {scale: 1, width: UNITS_TALL, height: UNITS_TALL};
   const helpers = helpersFor(env);
 
-  // The layer's code can't start workers of its own, or loop on frames or messages outside its steps.
+  // The layer's code can't start workers of its own, or loop on frames, messages or timers outside its steps.
   const global = self as unknown as Record<string, unknown>;
-  const remove = (name: string) => {
-    for (let o: object | null = global; o; o = Object.getPrototypeOf(o) as object | null) {
+  const remove = (name: string, from: object = global) => {
+    for (let o: object | null = from; o; o = Object.getPrototypeOf(o) as object | null) {
       Reflect.deleteProperty(o, name);
     }
   };
   ["Worker", "SharedWorker", "requestAnimationFrame", "cancelAnimationFrame", "MessageChannel",
-    "BroadcastChannel"].forEach(remove);
+    "BroadcastChannel", "scheduler", "TaskController"].forEach(name => remove(name));
+  if (typeof AbortSignal !== "undefined") {
+    remove("timeout", AbortSignal);
+  }
+
+  // What the runtime calls once the layer's code has run, kept here so that code can't replace it.
+  const {apply, deleteProperty} = Reflect;
+  const native = (prototype: object, name: string, part: "value" | "get" | "set") =>
+    Object.getOwnPropertyDescriptor(prototype, name)![part] as (...args: never[]) => unknown;
+  const postMessage = native(MessagePort.prototype, "postMessage", "value");
+  const setOnMessage = native(MessagePort.prototype, "onmessage", "set");
+  const dataOf = native(MessageEvent.prototype, "data", "get");
+  const stopImmediately = native(Event.prototype, "stopImmediatePropagation", "value");
 
   // Timers run only while steps are being drawn, or soon after: a timer that comes due while the
   // animation is paused waits for the next step, so a loop of them doesn't keep the worker busy.
+  // They're kept in objects with no prototype, so the layer's code can't patch how they're stored.
   const realNow = performance.now.bind(performance);
   const [nativeSetTimeout, nativeSetInterval, nativeClear] = [setTimeout, setInterval, clearTimeout];
-  ["setTimeout", "setInterval", "clearTimeout", "clearInterval"].forEach(remove);
+  ["setTimeout", "setInterval", "clearTimeout", "clearInterval"].forEach(name => remove(name));
   const IDLE_MS = 1000;
   let lastActive = -Infinity;
   let drawing = false;
   let nextTimer = 1;
-  const timers = new Map<number, ReturnType<typeof setTimeout>>();
-  const parked = new Map<number, () => void>();
+  const timers = Object.create(null) as Record<number, ReturnType<typeof setTimeout> | undefined>;
+  const parked = Object.create(null) as Record<number, (() => void) | undefined>;
   const awake = () => drawing || realNow() - lastActive < IDLE_MS;
   const call = (callback: unknown, args: unknown[]) => {
     if (typeof callback === "function") {
-      (callback as Callback)(...args);
+      apply(callback as Callback, undefined, args);
     }
   };
   const clear = (id: unknown) => {
-    nativeClear(timers.get(id as number));
-    timers.delete(id as number);
-    parked.delete(id as number);
+    if (typeof id === "number") {
+      nativeClear(timers[id]);
+      deleteProperty(timers, id);
+      deleteProperty(parked, id);
+    }
   };
   global.setTimeout = (callback: unknown, ms?: number, ...args: unknown[]) => {
     const id = nextTimer++;
-    timers.set(id, nativeSetTimeout(() => {
-      timers.delete(id);
+    timers[id] = nativeSetTimeout(() => {
+      deleteProperty(timers, id);
       if (awake()) {
         call(callback, args);
       } else {
-        parked.set(id, () => call(callback, args));
+        parked[id] = () => call(callback, args);
       }
-    }, ms));
+    }, ms);
     return id;
   };
   global.setInterval = (callback: unknown, ms?: number, ...args: unknown[]) => {
     const id = nextTimer++;
-    const start = () => timers.set(id, nativeSetInterval(() => {
-      if (awake()) {
-        call(callback, args);
-      } else {
-        nativeClear(timers.get(id));
-        timers.delete(id);
-        parked.set(id, () => {
-          start();
+    const start = () => {
+      timers[id] = nativeSetInterval(() => {
+        if (awake()) {
           call(callback, args);
-        });
-      }
-    }, ms));
+        } else {
+          nativeClear(timers[id]);
+          deleteProperty(timers, id);
+          parked[id] = () => {
+            start();
+            call(callback, args);
+          };
+        }
+      }, ms);
+    };
     start();
     return id;
   };
   global.clearTimeout = clear;
   global.clearInterval = clear;
+  // Runs the parked timers in turn, skipping any that an earlier one cleared.
   const wake = () => {
     drawing = true;
-    const due = [...parked.values()];
-    parked.clear();
-    due.forEach(resume => resume());
+    for (const id in parked) {
+      const resume = parked[id];
+      if (resume) {
+        deleteProperty(parked, id);
+        resume();
+      }
+    }
   };
 
   // Math.random repeats from one run to the next, and clocks give the animation's time.
@@ -162,7 +182,11 @@ export function workerRuntime(helpersFor: (env: HelperEnv) => Helpers) {
   let setupDone = false;
   let failed = false;
 
-  const send = (message: FromWorker, transfer: Transferable[] = []) => port?.postMessage(message, transfer);
+  const send = (message: FromWorker, transfer: Transferable[] = []) => {
+    if (port) {
+      apply(postMessage, port, [message, transfer]);
+    }
+  };
   const fail = (error: unknown) => {
     failed = true;
     const e = error as {message?: unknown; stack?: unknown; lineNumber?: unknown; line?: unknown} | null | undefined;
@@ -211,8 +235,8 @@ export function workerRuntime(helpersFor: (env: HelperEnv) => Helpers) {
     if (failed || !ctx || !canvas || !userDraw) {
       return;
     }
-    wake();
     try {
+      wake();
       await drawSteps(message);
     } finally {
       drawing = false;
@@ -251,18 +275,30 @@ export function workerRuntime(helpersFor: (env: HelperEnv) => Helpers) {
     send({type: "frame", id: message.id, bitmap}, [bitmap]);
   };
 
-  // Registered first, as a capturing listener, so no listener of the layer's code sees the port.
+  // The layer's code and the libraries' definitions, which run once the port has arrived.
+  let body: (() => void) | null = null;
+  const run = (code: () => void) => {
+    body = code;
+  };
+
+  // The port arrives before any of the layer's code runs, so that code never sees it, and listeners
+  // it adds get no messages.
   let queue = Promise.resolve();
   scope.addEventListener("message", event => {
-    event.stopImmediatePropagation();
-    if (!port && event.data?.port) {
-      port = event.data.port;
-      port.onmessage = (e: MessageEvent<ToWorker>) => {
-        queue = queue.then(() => handle(e.data)).catch(fail);
-      };
+    apply(stopImmediately, event, []);
+    const received = apply(dataOf, event, []) as {port?: MessagePort} | null;
+    if (!port && received?.port) {
+      port = received.port;
+      apply(setOnMessage, port, [(e: MessageEvent) => {
+        const message = apply(dataOf, e, []) as ToWorker;
+        queue = queue.then(() => handle(message)).catch(fail);
+      }]);
+      const code = body;
+      body = null;
+      code?.();
     }
   }, {capture: true});
   scope.addEventListener("unhandledrejection", event => fail(event.reason));
 
-  return {helpers, define, lib, start};
+  return {helpers, define, lib, start, run};
 }

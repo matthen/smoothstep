@@ -60,8 +60,10 @@ The snippets also include `drawList`, `planck`, `textures` and `trail`, from the
 
 `draw` runs 60 times a second while the animation plays, on the same clock as buffers. It follows
 the same rules as `iFrame`: the steps start again at 0 when you build, when the animation loops, or
-when it goes back to the start. Dragging along the timeline doesn't step it. When you render a
-video, it runs from frame 0, every step in order, so the video matches what you saw.
+when it goes back to the start. Dragging along the timeline doesn't step it. While paused, the layer
+keeps its last frame when you scrub or drag a slider, even if it draws from `time` or `floats`;
+press play to draw again. When you render a video, it runs from frame 0, every step in order, so the
+video matches what you saw.
 
 Variables declared outside the two functions keep their values from one step to the next, so the
 layer can remember things, like a buffer can:
@@ -295,8 +297,10 @@ function** adds it after the rest of your code and builds.
 
 Slow code is fine: the animation plays more slowly while each step draws, and a render waits for
 every step. Once a step has taken more than a second, "Drawing step 42…" shows over the canvas until
-it's done. The page keeps working while the code runs, even a loop that never ends, and building
-again stops it straight away.
+it's done. Code outside the two functions runs first, before any step, and if that takes more than a
+second, "Running the Canvas2D code…" shows. The page keeps working while the code runs, even a loop
+that never ends. Building again stops it straight away, and going back to the start or looping
+starts it afresh.
 
 The canvas is always the animation's size, so setting `ctx.canvas.width` or `height` is an error.
 
@@ -304,8 +308,12 @@ The canvas is always the animation's size, so setting `ctx.canvas.width` or `hei
 
 The Canvas2D code runs in a sandbox, apart from the rest of the page. It can't see the page, your
 saved animations or anything else in your browser, and it can't use the network or start workers of
-its own. Timers (`setTimeout` and `setInterval`) only run while the animation plays, so they don't
-keep working when it's paused. So it's safe to open an animation someone else made.
+its own. So it's safe to open an animation someone else made.
+
+To keep a paused animation from using your computer, `setTimeout` and `setInterval` wait while it's
+paused, and the browser's other ways of scheduling code for later, like `scheduler.postTask`, are
+taken away. This is a courtesy rather than part of the sandbox: code written to keep running can
+still find a way, but it still can't reach anything outside the sandbox.
 
 ## Sharing
 

@@ -153,7 +153,7 @@ test("a Canvas2D layer draws over the image, shaders read it, and it's kept when
   expect(errors).toEqual([]);
 });
 
-test("Canvas2D code can't reach the network or start workers, and libraries come from import lines", async ({page, context}) => {
+test("Canvas2D code can't reach the network, start workers, take the port or run timers while paused, and libraries come from import lines", async ({page, context}) => {
   const errors = await offline(context);
   // Counts every connection the layer's code might make: fetch, importScripts and WebSocket alike.
   let connections = 0;
@@ -164,11 +164,18 @@ test("Canvas2D code can't reach the network or start workers, and libraries come
   await new Promise<void>(resolve => server.listen(0, "localhost", resolve));
   const port = (server.address() as net.AddressInfo).port;
   await start(page);
-  // Magenta only if planck loaded, there are no workers to start, and the port stayed the runtime's.
+  // Magenta only if planck loaded, there are no workers to start or timers that run while paused,
+  // and the port stayed the runtime's.
   await setCode(page, [
     'import planck from "planck";',
     "",
     "let grabbed = false;",
+    "Event.prototype.stopImmediatePropagation = function () {};",
+    "const post = MessagePort.prototype.postMessage;",
+    "MessagePort.prototype.postMessage = function (...args) {",
+    "  grabbed = true;",
+    "  return post.apply(this, args);",
+    "};",
     "self.addEventListener(\"message\", () => {grabbed = true;}, {capture: true});",
     "self.onmessage = () => {grabbed = true;};",
     "",
@@ -177,12 +184,15 @@ test("Canvas2D code can't reach the network or start workers, and libraries come
     "  await fetch(url, {mode: \"no-cors\"}).catch(() => {});",
     "  try { importScripts(url + \"script.js\"); } catch {}",
     `  try { new WebSocket("ws://localhost:${port}/"); } catch {}`,
-    "  return {noWorkers: typeof Worker === \"undefined\" && typeof SharedWorker === \"undefined\"};",
+    "  return {",
+    "    noWorkers: typeof Worker === \"undefined\" && typeof SharedWorker === \"undefined\",",
+    "    noTimers: typeof scheduler === \"undefined\" && typeof AbortSignal.timeout === \"undefined\",",
+    "  };",
     "}",
     "",
     "function draw(ctx, {width, height, data}) {",
     "  const world = new planck.World({gravity: planck.Vec2(0, -10)});",
-    "  const safe = data.noWorkers && !grabbed && world.getGravity().y === -10;",
+    "  const safe = data.noWorkers && data.noTimers && !grabbed && world.getGravity().y === -10;",
     "  clear(ctx);",
     "  ctx.fillStyle = safe ? \"rgb(220, 20, 200)\" : \"rgb(0, 255, 0)\";",
     "  ctx.fillRect(0, 0, width, height / 2);",
@@ -332,6 +342,55 @@ test("a draw that never finishes doesn't freeze the page, and building fixed cod
   await expectTopMagenta(page);
   await expect(page.getByText(/^Drawing step/)).toHaveCount(0);
   await expect(page.locator(".ss-line-error")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("the embedded player keeps looping when a draw never finishes", async ({page, context}) => {
+  const errors = await offline(context);
+  await start(page);
+  await setCode(page, "function draw(ctx, {frame}) {\n  if (frame > 10) {\n    while (true) {}\n  }\n}");
+  await page.locator(".durationInput").fill("1");
+  await page.getByRole("button", {name: "Build"}).click();
+  await page.getByRole("button", {name: "Share"}).click();
+  const link = await page.getByRole("dialog", {name: "Share"}).getByLabel("Link", {exact: true}).inputValue();
+
+  const player = await context.newPage();
+  // Counts the frames the player draws.
+  await player.addInitScript(() => {
+    const w = window as unknown as {draws: number};
+    w.draws = 0;
+    const drawArrays = WebGL2RenderingContext.prototype.drawArrays;
+    WebGL2RenderingContext.prototype.drawArrays = function (...args) {
+      w.draws += 1;
+      drawArrays.apply(this, args);
+    };
+  });
+  await player.goto(link.replace("/sub/#", "/sub/embed.html#"));
+  await expect(player.locator("canvas")).toBeVisible();
+  const draws = () => player.evaluate(() => (window as unknown as {draws: number}).draws);
+  // Stuck on step 11 within the first second, it starts again each time it loops.
+  await player.waitForTimeout(1500);
+  const before = await draws();
+  await player.waitForTimeout(2500);
+  expect(await draws()).toBeGreaterThan(before);
+  expect(errors).toEqual([]);
+});
+
+test("Canvas2D code that never finishes starting says so, and building fixed code recovers", async ({page, context}) => {
+  const errors = await offline(context);
+  await start(page);
+  await setCode(page, "while (true) {}\nfunction draw(ctx) {}");
+  await page.getByRole("button", {name: "Build"}).click();
+  await expect(page.getByRole("status").filter({hasText: /^Running the Canvas2D code…$/})).toBeVisible({timeout: 10_000});
+  await expect(page.locator(".ss-line-error")).toHaveCount(0);
+  await page.getByRole("button", {name: "Play"}).click();
+  await page.waitForTimeout(500);
+  await expect(page.getByRole("status").filter({hasText: /^Running the Canvas2D code…$/})).toBeVisible();
+
+  await setCode(page, TOP_HALF);
+  await page.getByRole("button", {name: "Build"}).click();
+  await expectTopMagenta(page);
+  await expect(page.getByText(/^Running the Canvas2D code/)).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 

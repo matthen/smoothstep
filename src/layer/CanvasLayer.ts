@@ -27,8 +27,9 @@ export interface LayerCallbacks {
   onFrame(bitmap: ImageBitmap): void;
   // The layer's errors, on lines of its code; none once a run draws its first frame.
   onStatus(errors: LineError[]): void;
-  // The step the layer has been drawing for a while, or null once it's done.
-  onBusy?(frame: number | null): void;
+  // The step the layer has been drawing for a while, "starting" while its code's first run takes a
+  // while, or null once it's done.
+  onBusy?(frame: number | "starting" | null): void;
 }
 
 // How long a step takes before the layer says it's still drawing it.
@@ -55,6 +56,8 @@ interface Run {
   drawn: boolean;
   // The step it's drawing now.
   drawing: number;
+  // When it started, by performance.now().
+  started: number;
 }
 
 async function loadBitmap(url: string): Promise<ImageBitmap | null> {
@@ -119,10 +122,18 @@ export class CanvasLayer {
         return;
       }
       this.prepared = prepared;
-      this.current = this.spawn(prepared);
-      this.flush();
+      this.use(this.spawn(prepared));
     });
     return true;
+  }
+
+  // Makes `run` the one that draws, and watches how long it takes to start.
+  private use(run: Run) {
+    this.current = run;
+    if (!this.busyShown) {
+      this.watchBusy();
+    }
+    this.flush();
   }
 
   private async prepare(config: LayerConfig): Promise<Prepared | {errors: LineError[]}> {
@@ -164,7 +175,7 @@ export class CanvasLayer {
           this.discardStandby();
         }
       }),
-      ready: false, inFlight: null, stepped: false, drawn: false, drawing: 0,
+      ready: false, inFlight: null, stepped: false, drawn: false, drawing: 0, started: performance.now(),
     };
     run.worker.port.onmessage = (event: MessageEvent<FromWorker>) => this.receive(run, prepared, event.data);
     // Each worker gets its own copies of the fonts and images.
@@ -175,17 +186,22 @@ export class CanvasLayer {
     return run;
   }
 
-  // Slow code just plays slowly, and is stopped by the next build or restart. After a while drawing
-  // one batch, it says which step it's on.
+  // Slow code just plays slowly, and is stopped by the next build or restart. After a while starting
+  // or drawing one batch, it says so.
   private watchBusy() {
     window.clearTimeout(this.busyTimer);
     this.busyTimer = window.setTimeout(() => {
       const run = this.current;
-      if (run && run.inFlight !== null) {
+      if (run && (!run.ready || run.inFlight !== null)) {
         this.busyShown = true;
-        this.callbacks.onBusy?.(run.drawing);
+        this.callbacks.onBusy?.(run.ready ? run.drawing : "starting");
       }
     }, BUSY_MS);
+  }
+
+  // Whether the run's code has been running for a while without finishing its first run.
+  private slowToStart(run: Run): boolean {
+    return !run.ready && performance.now() - run.started >= BUSY_MS;
   }
 
   private notBusy() {
@@ -213,6 +229,7 @@ export class CanvasLayer {
         if (message.registered !== true) {
           return;  // Its code stopped with an error, which arrives on its own.
         }
+        this.notBusy();
         this.flush();
       } else if (message.registered !== true || message.hasDraw !== true) {
         this.discardStandby();
@@ -297,15 +314,18 @@ export class CanvasLayer {
     return new Error(this.errors[0]?.message ?? "The Canvas2D code has an error.");
   }
 
-  // Starts again from setup and frame 0. A run that hasn't drawn yet is already there.
+  // Starts again from setup and frame 0. A run that hasn't been sent steps is already there, unless
+  // its code is slow to start, which may never end, so it's replaced.
   restart() {
     this.waiting = [];
-    if (this.stopped || !this.prepared || !this.current?.stepped) {
+    const run = this.current;
+    if (this.stopped || !this.prepared || !run || (!run.stepped && !this.slowToStart(run))) {
       return;
     }
-    this.stopRun(this.current);
-    this.current = this.standby ?? this.spawn(this.prepared);
+    this.stopRun(run);
+    const next = this.standby ?? this.spawn(this.prepared);
     this.standby = null;
+    this.use(next);
   }
 
   // Whether to hold off pushing more steps, because the worker has fallen behind.
