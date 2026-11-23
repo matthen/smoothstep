@@ -1,0 +1,461 @@
+@use "../styles/theme" as *;
+
+// The Docs tab's contents. Where it sits on the page is in styles/_app.scss. It has the code's
+// background, to join its tab, so code and chips in it are darker.
+.referencePanel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: $dt-gray-dark;
+  color: $dt-gray-light;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.referenceHeader {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px 4px 8px;
+
+  .referenceSite {
+    margin-left: auto;
+  }
+}
+
+.referencePicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: $dt-gray-light;
+  transition: background-color 150ms;
+
+  &:hover, &[data-expanded] {
+    background: $dt-gray;
+  }
+
+  .referencePageTitle {
+    font-weight: 600;
+    font-size: 15px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  svg {
+    flex-shrink: 0;
+    color: $dt-gray-medium;
+  }
+}
+
+.referenceSearch {
+  padding: 4px 12px 8px;
+}
+
+.referenceBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 16px 24px;
+  position: relative;
+
+  // Lines a comfortable length to read, however wide the editor is.
+  > * {
+    max-width: 52rem;
+  }
+}
+
+.referenceContents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  padding: 4px 0 12px;
+  border-bottom: 1px solid $dt-gray-darker;
+
+  a {
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 2px 10px;
+    border-radius: 999px;
+    border: 1px solid $dt-gray;
+    color: $dt-gray-medium;
+    text-decoration: none;
+    transition: color 120ms, border-color 120ms, background-color 120ms;
+
+    &:hover {
+      color: $dt-gray-light;
+      border-color: $dt-gray-medium;
+    }
+  }
+}
+
+.referenceResults {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    border-bottom: 1px solid $dt-gray-darker;
+  }
+
+  button {
+    display: block;
+    width: 100%;
+    padding: 8px 4px;
+    border-radius: 4px;
+
+    &:hover {
+      background: $dt-gray-darker;
+    }
+  }
+
+  .referenceResultTitle {
+    display: block;
+    font-weight: 600;
+    color: $dt-purple;
+  }
+
+  .referenceExcerpt {
+    display: block;
+    font-size: 12.5px;
+    color: $dt-gray-medium;
+  }
+
+  mark {
+    background: rgba($dt-yellow, 0.25);
+    color: $dt-gray-light;
+  }
+
+  .referenceNone {
+    padding: 12px 0;
+    color: $dt-gray-medium;
+    border: none;
+  }
+}
+
+// Mantine's dark[1] and dark[6]: softer body text and hairlines than the foreground and the selection.
+$doc-text: #c9cad6;
+$doc-line: #343746;
+
+.referenceDoc {
+  overflow-wrap: break-word;
+  color: $doc-text;
+  line-height: 1.65;
+
+  h1, h2, h3 {
+    color: $dt-gray-light;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    position: relative;
+    scroll-margin-top: 8px;
+    transition: background-color 600ms;
+    border-radius: 3px;
+  }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+    margin: 16px 0 12px;
+  }
+
+  h2 {
+    font-size: 17px;
+    line-height: 1.3;
+    margin: 32px 0 8px;
+  }
+
+  h3 {
+    font-size: 15px;
+    line-height: 1.35;
+    margin: 24px 0 6px;
+  }
+
+  strong {
+    color: $dt-gray-light;
+    font-weight: 600;
+  }
+
+  a {
+    color: $dt-purple;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    text-decoration-color: rgba($dt-purple, 0.3);
+    transition: color 120ms, text-decoration-color 120ms;
+
+    &:hover {
+      color: var(--mantine-color-purple-2);
+      text-decoration-color: currentColor;
+    }
+  }
+
+  .referenceTarget {
+    background: rgba($dt-purple, 0.25);
+    box-shadow: 0 0 0 4px rgba($dt-purple, 0.25);
+  }
+
+  .doc-anchor {
+    margin-left: 6px;
+    color: $dt-gray-medium;
+    font-weight: 400;
+    text-decoration: none;
+    opacity: 0;
+  }
+
+  h2:hover .doc-anchor, h3:hover .doc-anchor {
+    opacity: 1;
+  }
+
+  p {
+    margin: 0 0 12px;
+  }
+
+  ul, ol {
+    margin: 0 0 12px;
+    padding-left: 20px;
+  }
+
+  li + li, li > ul, li > ol {
+    margin-top: 4px;
+  }
+
+  li::marker {
+    color: $dt-gray-medium;
+  }
+
+  // The index's contents: a card for each page, with the tutorial's lessons numbered in columns.
+  .doc-entries {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 8px;
+
+    > li {
+      position: relative;
+      margin: 0;
+      padding: 10px 14px 12px;
+      border: 1px solid $doc-line;
+      border-radius: 8px;
+      background: $dt-gray-darker;
+      transition: border-color 120ms;
+
+      &:hover {
+        border-color: $dt-gray;
+      }
+
+      &:has(ol) {
+        grid-column: 1 / -1;
+      }
+
+      > a:first-child {
+        font-weight: 600;
+        text-decoration: none;
+      }
+
+      &:not(:has(ol)) > a:first-child::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+      }
+    }
+
+    ol {
+      list-style: none;
+      counter-reset: lesson;
+      padding: 0;
+      margin: 10px 0 0;
+      columns: 3 160px;
+      column-gap: 14px;
+      font-size: 13.5px;
+    }
+
+    ol li {
+      counter-increment: lesson;
+      margin: 0 0 4px;
+      break-inside: avoid;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+
+      &::before {
+        content: counter(lesson);
+        flex: none;
+        width: 18px;
+        height: 18px;
+        line-height: 18px;
+        text-align: center;
+        border-radius: 50%;
+        font-size: 10.5px;
+        font-weight: 600;
+        color: $dt-purple;
+        background: rgba($dt-purple, 0.14);
+      }
+
+      a {
+        padding: 2px 0;
+        text-decoration: none;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
+  }
+
+  .doc-entry-note {
+    margin-top: 2px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: $dt-gray-medium;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+    border: 1px solid $doc-line;
+  }
+
+  :not(pre) > code, kbd {
+    font-family: var(--mantine-font-family-monospace);
+    font-size: 0.86em;
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    background: $dt-gray-darker;
+    color: $dt-cyan;
+  }
+
+  kbd {
+    color: $dt-gray-light;
+    border: 1px solid $dt-gray;
+    border-bottom-width: 2px;
+    white-space: nowrap;
+  }
+
+  table {
+    display: block;
+    overflow-x: auto;
+    width: max-content;
+    max-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid $doc-line;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 12px 0 16px;
+  }
+
+  th, td {
+    padding: 6px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  td {
+    border-top: 1px solid $doc-line;
+  }
+
+  th {
+    background: $dt-gray-darker;
+    color: $dt-gray-light;
+    font-weight: 600;
+    font-size: 12.5px;
+  }
+
+  .doc-code {
+    margin: 12px 0 16px;
+    border-radius: 8px;
+    background: $dt-gray-darker;
+    border: 1px solid $doc-line;
+    overflow: hidden;
+  }
+
+  .doc-code-bar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 4px;
+    padding: 6px 6px 0;
+  }
+
+  .doc-code[data-lang="glsl"] .doc-code-bar::before,
+  .doc-code[data-lang="js"] .doc-code-bar::before {
+    margin-right: auto;
+    padding-left: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: $dt-gray-medium;
+    align-self: center;
+  }
+
+  .doc-code[data-lang="glsl"] .doc-code-bar::before { content: "GLSL"; }
+  .doc-code[data-lang="js"] .doc-code-bar::before { content: "JavaScript"; }
+
+  .doc-insert-note {
+    align-self: center;
+    padding-right: 4px;
+    font-size: 11px;
+    color: $dt-gray-medium;
+  }
+
+  .doc-copy, .doc-insert {
+    min-height: 24px;
+    padding: 2px 10px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: $dt-gray-light;
+    background: $doc-line;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background-color 120ms;
+
+    &:hover:not(:disabled) {
+      background: $dt-gray;
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+  }
+
+  .doc-insert:not(:disabled) {
+    color: $dt-gray-darker;
+    background: $dt-purple;
+
+    &:hover {
+      background: mix($dt-purple, white, 85%);
+    }
+  }
+
+  pre {
+    margin: 0;
+    padding: 8px 14px 12px;
+    overflow-x: auto;
+    font-family: var(--mantine-font-family-monospace);
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
+
+  .tok-keyword { color: $dt-cyan; }
+  .tok-type { color: $dt-pink; }
+  .tok-builtin { color: $dt-green; }
+  .tok-atom, .tok-number { color: $dt-purple; }
+  .tok-comment { color: $dt-blue; }
+  .tok-string { color: $dt-yellow; }
+  .tok-operator { color: $dt-pink; }
+  .tok-property { color: $dt-orange; }
+}

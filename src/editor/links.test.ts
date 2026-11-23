@@ -14,8 +14,21 @@ describe("linksIn", () => {
     expect(linksIn(text)[0]).toMatchObject({from: 3, to: 20});
   });
 
-  it("links the Shared GLSL tab by its old name too", () => {
-    expect(linksIn("// See [Shared GLSL] or [Shared], not [Shared JS].").map(l => l.target))
-      .toEqual(["Shared GLSL", "Shared"]);
+  it("links the code tabs by their names, and by their old ones too", () => {
+    expect(linksIn("// See [shared.glsl], [Shared GLSL] or [Shared], not [Shared JS].").map(l => l.target))
+      .toEqual(["shared.glsl", "Shared GLSL", "Shared"]);
+    expect(linksIn("// [Image.glsl], [Image], [Canvas2D.js], [iBuffer2.glsl], not [iBuffer4.glsl].").map(l => l.target))
+      .toEqual(["Image.glsl", "Image", "Canvas2D.js", "iBuffer2.glsl"]);
+  });
+
+  it("finds Markdown links into the docs, by path or on the docs site, and leaves other Markdown links alone", () => {
+    const text = "// See [drawList](docs/canvas2d#drawlist), [inputs](https://smoothstep.io/app/docs/reference.html) " +
+      "and [MDN](https://developer.mozilla.org/x), not [x](docs/a b) or [y](other/page).";
+    expect(linksIn(text).map(l => [l.target, l.text])).toEqual([
+      ["docs/canvas2d#drawlist", "drawList"],
+      ["https://smoothstep.io/app/docs/reference.html", "inputs"],
+      ["https://developer.mozilla.org/x", undefined],
+    ]);
+    expect(linksIn(text)[0]).toMatchObject({from: 7, to: 7 + "[drawList](docs/canvas2d#drawlist)".length});
   });
 });

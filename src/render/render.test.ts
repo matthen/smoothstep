@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { exportSize, frameCount } from '../export/exportVideo';
 import { drawingSize, fitCanvas, SlowFrames } from './layout';
-import { buffersUsed, fragmentSource, locateErrors, parseErrors } from './Renderer';
+import { buffersUsed, fragmentSource, locateErrors, markMissingMainImage, parseErrors } from './Renderer';
 
 describe("parseErrors", () => {
   const code = "void mainImage(out vec4 c, in vec2 p) {\n  c = vec4(1.);\n  oops;\n}";
@@ -18,6 +18,22 @@ describe("parseErrors", () => {
     expect(parseErrors("ERROR: 0:999: 'x' : bad\n", code)[0]!.line).toBe(3);
     expect(parseErrors("ERROR: 0:1: '' : too early\n", code)[0]!.line).toBe(0);
     expect(parseErrors("Something odd", code)).toEqual([{line: 0, message: "Something odd"}]);
+  });
+});
+
+describe("markMissingMainImage", () => {
+  const log = [{line: 1, message: "'mainImage' : no matching overloaded function found"}];
+
+  it("says a tab without mainImage needs one, under its last line, keeping other errors", () => {
+    const code = "// Only a comment: void mainImage(\nfloat f() { return oops; }";
+    const errors = markMissingMainImage([{line: 1, message: "'oops' : undeclared identifier"}, ...log], code, "");
+    expect(errors.map(e => e.missing)).toEqual([undefined, "mainImage"]);
+    expect(errors[1]!.line).toBe(1);
+  });
+
+  it("leaves errors alone when the tab or the shared code has mainImage", () => {
+    expect(markMissingMainImage(log, "void mainImage(out vec4 c, in vec2 p) { oops; }", "")).toBe(log);
+    expect(markMissingMainImage(log, "", "void  mainImage (out vec4 c, in vec2 p) {}")).toBe(log);
   });
 });
 

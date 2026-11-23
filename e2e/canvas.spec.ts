@@ -51,8 +51,8 @@ async function start(page: Page) {
   await page.getByRole("button", {name: "Continue"}).click();
   await setCode(page, BLUE_IMAGE);
   await addTab(page, "Add the Canvas2D layer");
-  await expect(tabs(page)).toHaveText(["Canvas2D", "Image"]);
-  await expect(page.getByRole("tab", {name: "Canvas2D"})).toHaveAttribute("aria-selected", "true");
+  await expect(tabs(page)).toHaveText(["Canvas2D.js", "Image.glsl"]);
+  await expect(page.getByRole("tab", {name: "Canvas2D.js"})).toHaveAttribute("aria-selected", "true");
   // Its editor has focus, so Shift+Enter builds straight away.
   await expect(page.locator(".ss-code-editor:not([hidden]) .cm-content")).toBeFocused();
 }
@@ -61,18 +61,44 @@ test.beforeEach(async ({context}) => {
   await skipTour(context);
 });
 
-test("once the Canvas2D layer is there, ⊕ adds a buffer with no menu", async ({page, context}) => {
+test("⊕ has a menu while it can add more than one thing, adds the last one directly, then goes", async ({page, context}) => {
   const errors = await offline(context);
   await start(page);
-  await page.getByRole("button", {name: "Add a buffer", exact: true}).click();
+  const plus = page.getByRole("tablist", {name: "Code, in the order it draws"}).getByRole("button", {name: /^Add /});
+  await expect(plus).toHaveAccessibleName("Add a buffer or shared GLSL code");
+  await addTab(page, "Add shared GLSL code");
+  await expect(tabs(page)).toHaveText(["Canvas2D.js", "shared.glsl", "Image.glsl"]);
+
+  // Only buffers are left to add, so ⊕ adds one with no menu.
+  await expect(plus).toHaveAccessibleName("Add a buffer");
+  await plus.click();
   await expect(page.getByRole("menu")).toBeHidden();
-  await expect(tabs(page)).toHaveText(["Shared GLSL", "Canvas2D", "iBuffer0", "Image"]);
-  // The shaders are a chain of arrows; the Canvas2D tab, being JavaScript, sits apart behind a divider.
-  const row = await page.getByRole("tablist", {name: "Code, in the order it draws"}).evaluate(list => [...list.children].map(child =>
+  await expect(tabs(page)).toHaveText(["Canvas2D.js", "shared.glsl", "iBuffer0.glsl", "Image.glsl"]);
+  // The shaders are a chain of arrows; the Canvas2D.js tab, being JavaScript, sits apart behind a divider.
+  const row = () => page.getByRole("tablist", {name: "Code, in the order it draws"}).evaluate(list => [...list.children].map(child =>
     child.getAttribute("role") === "tab" ? child.textContent : child.classList.contains("shaderDivider") ? "|" :
       child.classList.contains("shaderThen") ? ">" : "+"));
-  expect(row).toEqual(["Shared GLSL", "|", "Canvas2D", "|", "iBuffer0", ">", "+", ">", "Image"]);
-  await expect(page.getByRole("tab", {name: "Canvas2D"}).locator(".shaderKind")).toBeVisible();
+  expect(await row()).toEqual(["Canvas2D.js", "|", "shared.glsl", "|", "iBuffer0.glsl", ">", "+", ">", "Image.glsl"]);
+  // The name says the language, with the extension set apart, so the code tabs need no icons.
+  await expect(page.getByRole("tab", {name: "Canvas2D.js"}).locator(".shaderExtension")).toHaveText(".js");
+  await expect(tabs(page).locator("svg.shaderKind")).toHaveCount(0);
+
+  // With every buffer there, there's nothing left to add.
+  for (let i = 1; i < 4; i++) {
+    await plus.click();
+  }
+  await expect(plus).toHaveCount(0);
+  expect(await row()).toEqual(
+    ["Canvas2D.js", "|", "shared.glsl", "|", "iBuffer0.glsl", ">", "iBuffer1.glsl", ">", "iBuffer2.glsl", ">", "iBuffer3.glsl", ">", "Image.glsl"]);
+
+  // Removing the starters asks nothing, and brings back the menu, with its three items in order.
+  await page.getByLabel("Remove iBuffer3.glsl").click();
+  await page.getByLabel("Remove shared.glsl").click();
+  await page.getByLabel("Remove Canvas2D.js").click();
+  await expect(tabs(page)).toHaveText(["iBuffer0.glsl", "iBuffer1.glsl", "iBuffer2.glsl", "Image.glsl"]);
+  await expect(plus).toHaveAccessibleName("Add a buffer, the Canvas2D layer or shared GLSL code");
+  await plus.click();
+  await expect(page.getByRole("menuitem")).toHaveText([/^Add a buffer/, /^Add the Canvas2D layer/, /^Add shared GLSL code/]);
   expect(errors).toEqual([]);
 });
 
@@ -89,7 +115,7 @@ test("a Canvas2D layer draws over the image, shaders read it, and it's kept when
     const [top] = await topAndBottom(page);
     expect(near(top!, BLUE)).toBe(true);
   }).toPass();
-  await openTab(page, "Image");
+  await openTab(page, "Image.glsl");
   await setCode(page, READS_CANVAS);
   await page.keyboard.press("Shift+Enter");
   await expectTopMagenta(page);
@@ -97,13 +123,13 @@ test("a Canvas2D layer draws over the image, shaders read it, and it's kept when
   await page.keyboard.press("ControlOrMeta+s");
   await expect(page).toHaveURL(/#anim\/[a-f0-9]+$/);
   await page.reload();
-  await expect(tabs(page)).toHaveText(["Canvas2D", "Image"]);
+  await expect(tabs(page)).toHaveText(["Canvas2D.js", "Image.glsl"]);
   await expectTopMagenta(page);
-  await openTab(page, "Canvas2D");
+  await openTab(page, "Canvas2D.js");
   await expect(page.getByLabel("Draw over the image")).not.toBeChecked();
   await expect(page.locator(OPEN_EDITOR)).toContainText("ctx.fillRect(0, 0, width, height / 2);");
 
-  await page.getByRole("button", {name: "Share"}).click();
+  await page.getByRole("button", {name: "Share", exact: true}).click();
   const modal = page.getByRole("dialog", {name: "Share"});
   const link = await modal.getByLabel("Link", {exact: true}).inputValue();
   const download = page.waitForEvent("download");
@@ -118,7 +144,7 @@ test("a Canvas2D layer draws over the image, shaders read it, and it's kept when
   await player.close();
   const other = await context.newPage();
   await other.goto(link);
-  await expect(tabs(other)).toHaveText(["Canvas2D", "Image"]);
+  await expect(tabs(other)).toHaveText(["Canvas2D.js", "Image.glsl"]);
   await expectTopMagenta(other);
 
   // The embedded player runs the layer too.
@@ -225,7 +251,7 @@ test("Canvas2D timers wait while the animation is paused", async ({page, context
   expect(errors).toEqual([]);
 });
 
-test("errors show under their lines, and the Canvas2D tab is marked", async ({page, context}) => {
+test("errors show under their lines, and the Canvas2D.js tab is marked", async ({page, context}) => {
   const errors = await offline(context);
   await start(page);
   const errorAfter = async () => {
@@ -238,7 +264,7 @@ test("errors show under their lines, and the Canvas2D tab is marked", async ({pa
   await setCode(page, "// Draws nothing.\nfunction draw(ctx) {\n  clear(ctx);\n  notAFunction();\n}");
   await page.getByRole("button", {name: "Build"}).click();
   expect(await errorAfter()).toBe("  notAFunction();");
-  await expect(page.getByRole("tab", {name: "Canvas2D"})).toHaveAttribute("data-error", "true");
+  await expect(page.getByRole("tab", {name: "Canvas2D.js"})).toHaveAttribute("data-error", "true");
   await expect(page.locator(".ss-line-error")).toContainText("notAFunction");
 
   // A syntax error.
@@ -268,7 +294,7 @@ test("errors show under their lines, and the Canvas2D tab is marked", async ({pa
   await page.getByRole("button", {name: "Build"}).click();
   await expectTopMagenta(page);
   await expect(page.locator(".ss-line-error")).toHaveCount(0);
-  await expect(page.getByRole("tab", {name: "Canvas2D"})).not.toHaveAttribute("data-error");
+  await expect(page.getByRole("tab", {name: "Canvas2D.js"})).not.toHaveAttribute("data-error");
   expect(errors).toEqual([]);
 });
 

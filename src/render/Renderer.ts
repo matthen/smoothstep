@@ -67,6 +67,24 @@ export function locateErrors(errors: LineError[], shared: string): {inShared: bo
   };
 }
 
+// Whether code defines mainImage, outside comments.
+function definesMainImage(code: string): boolean {
+  return /\bvoid\s+mainImage\s*\(/.test(code.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, ""));
+}
+
+// A shader's errors, with those about calling a mainImage that isn't there replaced by one that
+// says so, under the code's last line.
+export function markMissingMainImage(errors: LineError[], code: string, shared: string): LineError[] {
+  if (definesMainImage(userCode(code, shared))) {
+    return errors;
+  }
+  return [
+    ...errors.filter(e => !e.message.includes("mainImage")),
+    {line: code.split("\n").length - 1, message: "This tab needs a mainImage function, which works out " +
+      "the colour of each pixel.", missing: "mainImage"},
+  ];
+}
+
 // The buffers the image needs this frame: those it reads, and those they read in turn.
 export function buffersUsed(code: string, buffers: readonly string[]): number[] {
   const used = new Set<number>();
@@ -294,7 +312,8 @@ export class Renderer {
           return {ok: false, shader, errors: [{line: 0, message: result.log.trim() || "Couldn't link the shader."}]};
         }
         const located = locateErrors(parseErrors(result.log, userCode(source, shared)), shared);
-        return {ok: false, shader: located.inShared ? "shared" : shader, errors: located.errors};
+        return located.inShared ? {ok: false, shader: "shared", errors: located.errors} :
+          {ok: false, shader, errors: markMissingMainImage(located.errors, source, shared)};
       }
       programs.push(result.program);
     }

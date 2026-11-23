@@ -37,7 +37,7 @@ const BUSY_MS = 1_000;
 // Steps waiting to be drawn before whoever is pushing them should wait.
 const MAX_WAITING = 12;
 
-const NO_DRAW = "The Canvas2D code needs a draw function: function draw(ctx, {time}) { ... }";
+const NO_DRAW = "The Canvas2D code needs a draw function, which draws on the canvas each step.";
 const WRONG_SIZE = "The Canvas2D frame wasn't the animation's size, so it was stopped. Build to run it again.";
 
 // What every run of one configuration shares.
@@ -221,7 +221,9 @@ export class CanvasLayer {
       run.ready = true;
       if (run === this.current) {
         if (message.registered === true && message.hasDraw !== true) {
-          this.fail([{line: 0, message: NO_DRAW}]);
+          // Under the last line, where the editor's fix puts one.
+          const lastLine = (this.config?.code ?? "").split("\n").length - 1;
+          this.fail([{line: lastLine, message: NO_DRAW, missing: "draw"}]);
           return;
         }
         if (message.registered !== true) {

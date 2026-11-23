@@ -16,6 +16,8 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "noEmit": true,
+    // Vite loads its config, and the docs build it imports, as Node does, which needs extensions.
+    "allowImportingTsExtensions": true,
     "types": ["vite/client"]
   },
   "include": ["src", "e2e", "vite.config.ts", "playwright.config.ts"]

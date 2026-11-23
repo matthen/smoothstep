@@ -29,6 +29,13 @@ describe('glslCompletionSource', () => {
     expect(result?.options.map((o) => o.label)).toEqual(['rainbow']);
   });
 
+  it('offers snippets that start with the word, after the words, under their own heading', () => {
+    const labels = (doc: string) => complete(doc)?.options.map((o) => [o.label, o.type ?? 'word']);
+    expect(labels('mainIm')).toEqual([['mainImage', 'word'], ['mainImage', 'snippet']]);
+    expect(labels('ray')).toEqual([['raymarch', 'snippet']]);
+    expect(complete('iCanvas')?.options.at(-1)).toMatchObject({ label: 'iCanvas2D', section: { name: 'Snippets' } });
+  });
+
   it('stays quiet after a non-word or with nothing to offer', () => {
     expect(complete('x = (')).toBeNull();
     expect(complete('zzz')).toBeNull();

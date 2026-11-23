@@ -42,7 +42,7 @@ async function centerOf(page: Page, selector: string): Promise<[number, number, 
 }
 
 async function shareDialog(page: Page) {
-  await page.getByRole("button", {name: "Share"}).click();
+  await page.getByRole("button", {name: "Share", exact: true}).click();
   return page.getByRole("dialog", {name: "Share"});
 }
 
@@ -210,7 +210,7 @@ test("Share makes a link to an animation file put online", async ({page, context
   await expect(page.locator("#titleInput")).toHaveValue("Minimal Animation");
   const modal = await shareDialog(page);
   const download = page.waitForEvent("download");
-  await modal.getByRole("button", {name: "Download animation file"}).click();
+  await modal.getByRole("button", {name: "Export animation file"}).click();
   expect((await download).suggestedFilename()).toMatch(/\.smoothstep\.json$/);
 
   const address = modal.getByLabel("Address of the gist or file");

@@ -43,7 +43,7 @@ export interface ParsedImports {
 }
 
 const NAME = "[A-Za-z_$][\\w$]*";
-const IMPORT_LINE = /^\s*import\s+(?:(.+?)\s+from\s+)?(["'])([^"']*)\2\s*;?\s*(?:\/\/.*)?$/;
+export const IMPORT_LINE = /^\s*import\s+(?:(.+?)\s+from\s+)?(["'])([^"']*)\2\s*;?\s*(?:\/\/.*)?$/;
 const DEFAULT_CLAUSE = new RegExp(`^(${NAME})$`);
 const NAMESPACE_CLAUSE = new RegExp(`^\\*\\s*as\\s+(${NAME})$`);
 const NAMED_ONE = `${NAME}(?:\\s+as\\s+${NAME})?`;

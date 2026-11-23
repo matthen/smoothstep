@@ -2,9 +2,9 @@
 // you've done it in the editor.
 import type { ReactNode } from 'react';
 
-import { openHelpDialog, type HelpDialog } from '../app/helpDialogs';
 import { EMPTY_TEXTURE, type AspectRatio, type TextureSlot, type Variable } from '../lib/document';
-import { DOCS_URL, EXAMPLES } from '../lib/config';
+import { EXAMPLES } from '../lib/config';
+import { DOC_SECTIONS, openDocs, type DocTarget } from '../lib/docLinks';
 import { stripComments, uses } from '../lib/glslCode';
 import type { ShaderId } from '../render/Renderer';
 import * as shaders from './shaders';
@@ -13,7 +13,7 @@ import * as shaders from './shaders';
 export interface TutorialState {
   code: string;
   builtCode: string;
-  // The Shared GLSL tab's and each buffer's code, as in the editor and as last built.
+  // The shared.glsl tab's and each buffer's code, as in the editor and as last built.
   shared: string;
   buffers: string[];
   builtShared: string;
@@ -98,8 +98,9 @@ function Link({href, children}: {href: string; children: ReactNode}) {
   return <a href={href} target="_blank" rel="noreferrer">{children}</a>;
 }
 
-function HelpLink({dialog, children}: {dialog: HelpDialog; children: ReactNode}) {
-  return <button type="button" className="linkButton" onClick={() => openHelpDialog(dialog)}>{children}</button>;
+// Opens a page of the docs in the Docs tab.
+function DocsLink({to, children}: {to: DocTarget; children: ReactNode}) {
+  return <button type="button" className="linkButton" onClick={() => openDocs(to)}>{children}</button>;
 }
 
 // The lines of code a step is about, quoted in its text.
@@ -896,7 +897,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
             under a moving dot.
           </p>
           <p>
-            Build it. Nothing changes on the canvas yet, because the canvas only shows the Image tab, and the
+            Build it. Nothing changes on the canvas yet, because the canvas only shows the Image.glsl tab, and the
             image doesn't read the buffer yet.
           </p>
         </>,
@@ -946,12 +947,12 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         body: <>
           <p>
             Say you want the image to draw the dot too. Both tabs then need to know where the dot is. Rather
-            than writing the same code twice, you can put it in the Shared GLSL tab, which appears to the left
-            of the code tabs once you have a buffer. Functions, constants and <code>#define</code>s there can be
+            than writing the same code twice, you can put it in a shared.glsl tab, which sits to the left of
+            the shader tabs. The ⊕ adds one, and this step adds it for you. Functions, constants and <code>#define</code>s there can be
             used in every shader tab.
           </p>
           <p>
-            This puts the dot's path in a function called <code>dotPosition</code> in the Shared GLSL tab. The
+            This puts the dot's path in a function called <code>dotPosition</code> in the shared.glsl tab. The
             buffer uses it to heat the dot, and the image uses it to draw a ring around the dot, so the two
             always line up. This step fills in three tabs, so build it and play.
           </p>
@@ -961,7 +962,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
           {tab: 0, code: shaders.SHARED_HEAT_BUFFER},
           {tab: "image", code: shaders.HEAT_IMAGE_WITH_DOT},
         ],
-        task: "Build with dotPosition in the Shared GLSL tab, used by the image.",
+        task: "Build with dotPosition in the shared.glsl tab, used by the image.",
         check: now => now.built && uses(now.builtShared, /\bdotPosition\b/) && uses(now.builtCode, /\bdotPosition\b/),
       },
       challenges("buffers", <>
@@ -973,7 +974,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
           <code>dotPosition(iTime + 3.0)</code> is where it will be in 3 seconds: another point on the same
           path.
         </li>
-        <li><b>Something else:</b> the colours come from one line in the Image tab.</li>
+        <li><b>Something else:</b> the colours come from one line in the Image.glsl tab.</li>
       </>),
       {
         id: "explore-buffers",
@@ -981,7 +982,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         body: <>
           <p>
             Ink in water uses two buffers. <code>iBuffer0</code> moves the water, and <code>iBuffer1</code> carries
-            the ink along with it. The Shared GLSL tab has the jets that both of them use.
+            the ink along with it. The shared.glsl tab has the jets that both of them use.
           </p>
           {EXPLORE}
         </>,
@@ -1019,7 +1020,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
           <p>
             A link can't carry images you added yourself. If you used any, download the animation file, put it
             online, for example in a GitHub gist, and paste its address into Share to make a link that opens it.
-            {" "}<Link href={DOCS_URL + "/sharing.md"}>Sharing animations</Link> in the docs has the steps.
+            {" "}<DocsLink to={DOC_SECTIONS.sharing}>Sharing animations</DocsLink> in the docs has the steps.
           </p>
           <p>
             Share also gives you code to put the animation on your own web page, and a player file: a single
@@ -1068,8 +1069,8 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
             </li>
           </ul>
           <p>
-            Help → <HelpLink dialog="inputs">Shader inputs</HelpLink> lists everything your shader can use, and
-            Help → <HelpLink dialog="shortcuts">Keyboard shortcuts</HelpLink> has the shortcuts.
+            Help → <DocsLink to={DOC_SECTIONS.reference}>Shader inputs</DocsLink> lists everything your shader can use, and
+            Help → <DocsLink to={DOC_SECTIONS.shortcuts}>Keyboard shortcuts</DocsLink> has the shortcuts.
           </p>
         </>,
         examples: EXAMPLES.filter(e => e.group === "showcase").map(e => e.id),

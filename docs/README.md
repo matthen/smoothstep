@@ -11,9 +11,15 @@ on a 2D canvas over the image.
 [Start the tutorial](https://smoothstep.io/app/#tutorial), which runs in the app beside the editor, or
 [open smoothstep.io](https://smoothstep.io).
 
+These pages are also at [smoothstep.io/app/docs](https://smoothstep.io/app/docs/), and in the app
+under Help → Documentation, as a tab beside your code.
+
+![smoothstep.io, with the Pokémon type battles example: its code on the left, the battle with its legend on the right, and the animation timeline below](images/screenshot.png)
+
 ## Contents
 
-- [Tutorial](tutorial/README.md), in the app at [smoothstep.io/app/#tutorial](https://smoothstep.io/app/#tutorial)
+- [Tutorial](tutorial/README.md)\
+  Nine short lessons you follow in the app, from your first shader to sharing it
   1. [Colour from position](https://smoothstep.io/app/#tutorial/1)
   2. [Moving with time](https://smoothstep.io/app/#tutorial/2)
   3. [Shapes](https://smoothstep.io/app/#tutorial/3)
@@ -23,18 +29,30 @@ on a 2D canvas over the image.
   7. [Memory with iPrevFrame](https://smoothstep.io/app/#tutorial/7)
   8. [Buffers](https://smoothstep.io/app/#tutorial/8)
   9. [Share it](https://smoothstep.io/app/#tutorial/9)
-- [Examples](examples.md)
-- [Sharing animations](sharing.md): links, gists, and playing animations on other websites
-- [Keyboard shortcuts](keyboard-shortcuts.md), also in the app under Help → Keyboard shortcuts
-- [Coding specification](coding-specification.md), also in the app under Help → Shader inputs: the
-  inputs your shader can use, buffers and shared code
-- [The Canvas2D layer](canvas2d.md): JavaScript that draws text, shapes and physics over the image, with
-  built-in libraries
+- [Examples](examples.md)\
+  Animations to open, play and change
+- [Sharing animations](sharing.md)\
+  Links, gists, and putting animations on your own website
+- [Keyboard shortcuts](keyboard-shortcuts.md)\
+  For the code editor and playing the animation
+- [Coding specification](coding-specification.md)\
+  What your shaders can use: inputs, textures, buffers and shared code
+- [The Canvas2D layer](canvas2d.md)\
+  JavaScript that draws text, shapes and simulations over the image
+- [Reference](https://smoothstep.io/app/docs/reference.html)\
+  Every input, helper, font and library, in tables
+- [Acknowledgements](acknowledgements.md)\
+  The projects, textures and fonts smoothstep.io uses
 
 ## Help in the app
 
-The Help menu has the welcome dialog, the tour, the tutorial, and two references: Shader inputs
-lists everything your shader can use, and Keyboard shortcuts lists the shortcuts. The welcome dialog
+Help → Documentation opens these pages in a Docs tab next to your code. Code examples have an
+Insert button, which puts the code at the cursor in the tab you were editing. Links in the editor's
+popups and errors open the Docs tab at the right section.
+
+New animations start with the Docs tab. Close it with its × and they start without it.
+
+The Help menu also has the tutorial, the tour and the welcome dialog. The welcome dialog
 shows a different tip each visit. While you work, smoothstep.io shows a short tip the first time some
 things happen, such as your first compile error or your first save. Each tip shows once, and "Don't
 show tips" turns them off.
@@ -64,9 +82,9 @@ the details.
 
 ## Acknowledgements
 
-Click Acknowledgements at the bottom of the app to see the open-source projects smoothstep.io is
-built on. The built-in textures and fonts, and the libraries the Canvas2D layer can import, are
-credited, with their licences, in [CREDITS.md](../public/images/textures/CREDITS.md).
+[Acknowledgements](acknowledgements.md) lists the open-source projects smoothstep.io is built on. The
+built-in textures and fonts, and the libraries the Canvas2D layer can import, are credited, with their
+licences, in [CREDITS.md](../public/images/textures/CREDITS.md).
 
 ## Feedback
 

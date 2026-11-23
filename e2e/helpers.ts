@@ -11,17 +11,22 @@ export const TEXTURE_SHADER = `void mainImage(out vec4 fragColor, in vec2 fragCo
 
 // Blocks every request that isn't to this machine, so tests prove the app works offline, and
 // collects page errors (a failed Google Fonts request is expected offline). Also turns off the
-// one-time tips, which would otherwise pop up over the flows being tested, unless `tips` is set.
-export async function offline(context: BrowserContext, {tips = false} = {}): Promise<string[]> {
+// one-time tips, which would otherwise pop up over the flows being tested, unless `tips` is set, and
+// the Docs tab a new animation opens with, unless `docs` is set.
+export async function offline(context: BrowserContext, {tips = false, docs = false} = {}): Promise<string[]> {
   await context.route(/^https?:\/\/(?!localhost)/, route => route.abort());
-  if (!tips) {
-    // about:blank has no storage, so skip it there.
-    await context.addInitScript(() => {
-      if (window.location.protocol.startsWith("http")) {
-        window.localStorage.setItem("smoothstep.tips", "off");
-      }
-    });
-  }
+  // about:blank has no storage, so skip it there.
+  await context.addInitScript(({tips, docs}) => {
+    if (!window.location.protocol.startsWith("http")) {
+      return;
+    }
+    if (!tips) {
+      window.localStorage.setItem("smoothstep.tips", "off");
+    }
+    if (!docs) {
+      window.localStorage.setItem("smoothstep.docsTab", "closed");
+    }
+  }, {tips, docs});
   const errors: string[] = [];
   const watch = (page: Page) => {
     page.on("pageerror", error => errors.push(String(error)));
@@ -66,11 +71,12 @@ export async function setCode(page: Page, code: string) {
   await page.keyboard.insertText(code);
 }
 
-// Adds a buffer or the Canvas2D layer from the ⊕ above the code: from its menu, or straight away
-// for a buffer once the layer is there.
-export async function addTab(page: Page, item: "Add a buffer" | "Add the Canvas2D layer") {
-  const menu = page.getByRole("button", {name: /^Add (a buffer or )?the Canvas2D layer$/});
-  const direct = page.getByRole("button", {name: "Add a buffer", exact: true});
+// Adds a buffer, the Canvas2D layer or shared GLSL code from the ⊕ above the code: from its menu, or
+// straight away when it's the only thing ⊕ can add.
+export async function addTab(page: Page, item: "Add a buffer" | "Add the Canvas2D layer" | "Add shared GLSL code") {
+  const row = page.getByRole("tablist", {name: "Code, in the order it draws"});
+  const menu = row.getByRole("button", {name: /^Add .* or /});
+  const direct = row.getByRole("button", {name: item, exact: true});
   await menu.or(direct).waitFor();
   if (await direct.isVisible()) {
     await direct.click();
@@ -78,6 +84,15 @@ export async function addTab(page: Page, item: "Add a buffer" | "Add the Canvas2
     await menu.click();
     await page.getByRole("menuitem", {name: item}).click();
   }
+}
+
+// The Docs tab at the end of the code's tabs, and the docs it shows in place of the code.
+export function docsTab(page: Page) {
+  return page.getByRole("tablist", {name: "Code, in the order it draws"}).getByRole("tab", {name: /^Docs/});
+}
+
+export function docsPanel(page: Page) {
+  return page.getByRole("region", {name: "Docs"});
 }
 
 export async function editorCode(page: Page): Promise<string> {

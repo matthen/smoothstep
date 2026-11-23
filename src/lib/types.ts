@@ -2,4 +2,6 @@
 export interface LineError {
   line: number;
   message: string;
+  // Set when the code lacks the function every tab needs, so the editor can offer to add one.
+  missing?: "draw" | "mainImage";
 }

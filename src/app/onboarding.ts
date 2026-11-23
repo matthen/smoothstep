@@ -20,3 +20,26 @@ export function setTourState(state: TourState) {
     // Not stored; see above.
   }
 }
+
+// Whether the user has closed the docs, so new animations open without them.
+const DOCS_KEY = "smoothstep.docsTab";
+
+export function docsClosed(): boolean {
+  try {
+    return window.localStorage.getItem(DOCS_KEY) === "closed";
+  } catch {
+    return false;
+  }
+}
+
+export function setDocsClosed(closed: boolean) {
+  try {
+    if (closed) {
+      window.localStorage.setItem(DOCS_KEY, "closed");
+    } else {
+      window.localStorage.removeItem(DOCS_KEY);
+    }
+  } catch {
+    // Not stored, so they open again next time.
+  }
+}

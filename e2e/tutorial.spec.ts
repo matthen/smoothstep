@@ -1,7 +1,7 @@
 // The in-app tutorial: opens in a new animation, notices when a step is done, and has a Learn pane on phones.
 import { devices, expect, test } from '@playwright/test';
 
-import { addTab, canvasCenter, editorCode, near, offline, skipTour } from './helpers';
+import { addTab, canvasCenter, editorCode, near, offline, OPEN_EDITOR, skipTour } from './helpers';
 
 test.beforeEach(async ({context}) => {
   await skipTour(context);
@@ -82,14 +82,14 @@ test("the buffers lesson adds a buffer, fills several tabs, and checks every tab
   // The buffer's code goes in its tab. The image doesn't read it yet, so the canvas stays as it was.
   await next();
   await panel.getByRole("button", {name: "Put this in the editor"}).click();
-  await expect(tab("iBuffer0")).toHaveAttribute("aria-selected", "true");
+  await expect(tab("iBuffer0.glsl")).toHaveAttribute("aria-selected", "true");
   await page.getByRole("button", {name: "Build"}).click();
   await expect(status).toHaveAttribute("data-done", "true");
 
   // The image shows the heat.
   await next();
   await panel.getByRole("button", {name: "Put this in the editor"}).click();
-  await expect(tab("Image")).toHaveAttribute("aria-selected", "true");
+  await expect(tab("Image.glsl")).toHaveAttribute("aria-selected", "true");
   await page.getByRole("button", {name: "Build"}).click();
   await page.locator(".playerButtons button").nth(1).click();
   await expect(status).toHaveAttribute("data-done", "true");
@@ -99,11 +99,19 @@ test("the buffers lesson adds a buffer, fills several tabs, and checks every tab
   await page.getByRole("button", {name: "Build"}).click();
   await expect(status).toHaveAttribute("data-done", "true");
 
-  // One button fills the Shared GLSL tab, the buffer and the image.
+  // One button fills the shared.glsl tab, the buffer and the image, even a shared.glsl tab just added
+  // with its placeholder, which then shows the code and keeps it when typed in.
   await next();
-  await expect(panel.locator(".learnCodeTab")).toHaveText(["Shared GLSL", "iBuffer0", "Image"]);
+  await expect(panel.locator(".learnCodeTab")).toHaveText(["shared.glsl", "iBuffer0.glsl", "Image.glsl"]);
+  await addTab(page, "Add shared GLSL code");
+  await expect(page.locator(OPEN_EDITOR)).toContainText("can be used in every shader tab");
   await panel.getByRole("button", {name: "Put this in the editor"}).click();
-  await expect(tab("Shared GLSL")).toBeVisible();
+  await tab("shared.glsl").click();
+  await expect.poll(() => editorCode(page)).toContain("dotPosition");
+  await page.locator(OPEN_EDITOR).click();
+  await page.keyboard.press("ControlOrMeta+End");
+  await page.keyboard.type("\n// The dot's path.");
+  await expect.poll(() => editorCode(page)).not.toContain("can be used in every shader tab");
   await page.getByRole("button", {name: "Build"}).click();
   await expect(status).toHaveAttribute("data-done", "true");
   // Every tab compiled.

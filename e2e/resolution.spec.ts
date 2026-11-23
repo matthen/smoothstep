@@ -111,7 +111,7 @@ test("a slow preview drops to 1× without losing the simulation, and the next bu
   await page.getByRole("button", {name: "Continue"}).click();
   await addTab(page, "Add a buffer");
   await setCode(page, MARKS_START);
-  await page.getByRole("tab", {name: "Image", exact: true}).click();
+  await page.getByRole("tab", {name: "Image.glsl", exact: true}).click();
   await setCode(page, CHECKS_MARK);
   await page.keyboard.press("Shift+Enter");
   const size = page.locator("#canvasContainer .fps p").first();

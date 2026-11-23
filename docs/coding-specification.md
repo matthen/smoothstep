@@ -1,6 +1,6 @@
 # Coding Specification
 
-This is also in the app, under Help → Shader inputs.
+This is also in the app, under Help → Documentation. Help → Shader inputs lists the inputs in a table.
 
 Every smoothstep.io animation must define a `mainImage` function with the following signature:
 
@@ -15,6 +15,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 `fragCoord` is the pixel's position, from (0, 0) at the bottom left to `iResolution` at the top
 right. Set `fragColor` to its colour, with red, green and blue from 0 to 1. The image's alpha is
 always set to 1.
+
+If a tab's code has no `mainImage`, its error shows the one a new tab starts with, and **Insert a
+mainImage function** adds it after your code and builds.
 
 You write GLSL ES 3.00, the WebGL2 shader language. smoothstep.io adds `#version 300 es`,
 `precision highp float;` and the input uniforms below before your code, so you don't write them
@@ -58,7 +61,7 @@ a simulation runs at the same speed everywhere.
 
 ## Buffers and shared code
 
-The ⊕ above the code adds a buffer or the Canvas2D layer. A buffer is another shader, with its own `mainImage`, that draws
+The ⊕ above the code adds a buffer, the Canvas2D layer or shared GLSL code. A buffer is another shader, with its own `mainImage`, that draws
 before the image each frame. Every tab can read what a buffer drew as `iBuffer0`, `iBuffer1` and
 so on, up to `iBuffer3`. The tabs go in the order they draw, so a buffer reading an earlier buffer
 gets this frame's picture, and a buffer reading itself or a later one gets the last frame's. That's
@@ -68,8 +71,8 @@ On almost every device, buffers hold floating-point numbers, not just colours fr
 velocities or anything else, in all four channels. Reading between pixels blends them. Buffers start
 at zero and clear when `iPrevFrame` does. A buffer that nothing reads isn't drawn.
 
-Once an animation has a buffer, a **Shared GLSL** tab appears. Functions, constants and `#define`s in
-it can be used in every shader tab: the image and each buffer.
+To share code between them, choose **Add shared GLSL code** from the ⊕. Functions, constants and
+`#define`s in its tab, shared.glsl, can be used in every shader tab: the image and each buffer. Its × removes it.
 
 The [Ink in water](https://smoothstep.io/app/#example/5c81f0d3a7e2) example uses two buffers: one
 for the water's flow, and one for the ink it carries.
@@ -88,4 +91,4 @@ details.
 
 Shadertoy's other inputs, such as `iChannel0`, `iMouse` and `iDate`, don't exist in smoothstep.
 Use `iTexture0` and the other texture slots in place of `iChannel0`, and `iBuffer0` to `iBuffer3`
-for buffers. Code in the Shared GLSL tab can be used in every shader tab.
+for buffers. Code in the shared.glsl tab can be used in every shader tab.

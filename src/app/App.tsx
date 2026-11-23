@@ -7,10 +7,9 @@ import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react';
 import { flushSync } from 'react-dom';
 import {
   TbBook, TbBrandGithub, TbChevronDown, TbCopy, TbDeviceFloppy, TbDownload, TbFile, TbFileImport, TbFolderOpen, TbHammer,
-  TbCircleCheckFilled, TbCode, TbHeart, TbHelp, TbHome, TbKeyboard, TbMaximize, TbMinimize, TbRoute, TbSchool, TbShare, TbVideo,
+  TbCircleCheckFilled, TbCode, TbHelp, TbHome, TbKeyboard, TbMaximize, TbMinimize, TbRoute, TbSchool, TbShare, TbVideo,
 } from 'react-icons/tb';
 
-import Acknowledgements from '../dialogs/Acknowledgements';
 import DocumentBrowser from '../dialogs/DocumentBrowser';
 import ExportSettings from '../dialogs/ExportSettings';
 import type { ExportOptions, ExportProgress } from '../dialogs/exportTypes';
@@ -19,10 +18,12 @@ import SaveCopy from '../dialogs/SaveCopy';
 import Share from '../dialogs/Share';
 import Splash from '../dialogs/Splash';
 import Textures from '../dialogs/Textures';
-import CodeEditor from '../editor/CodeEditor';
-import ShaderTabs, { shaderName } from '../editor/ShaderTabs';
+import CodeEditor, { insertCode } from '../editor/CodeEditor';
+import type { EditorView } from '@codemirror/view';
+import { DOC_SECTIONS, onOpenDocs, type DocTarget } from '../lib/docLinks';
+import ShaderTabs, { shaderCaption, shaderName, starterFunction } from '../editor/ShaderTabs';
 import * as archive from '../lib/archive';
-import { asset, documentHref, DOCS_URL, REPO_URL, textureURL, TUTORIAL_HREF } from '../lib/config';
+import { asset, documentHref, REPO_URL, textureURL, TUTORIAL_HREF } from '../lib/config';
 import {
   bufferCodes, canvasLayer, DEFAULT_TITLE, EMPTY_TEXTURE, MAX_TITLE_LENGTH, NEW_CANVAS_CODE, newBufferCode, newDocument,
   parseDocument, sameExtras, shaderExtras, SHARED_PLACEHOLDER, variableValues, withCanvasLayer, type ShaderExtras,
@@ -46,8 +47,7 @@ import { lessonTitle, type TabCode, type TutorialState } from '../tutorial/lesso
 import { openingProgress } from '../tutorial/progress';
 import AppModal, { anyModalOpen } from './AppModal';
 import { setCrashDocument } from './crashState';
-import { onHelpDialog } from './helpDialogs';
-import { setTourState, tourState } from './onboarding';
+import { docsClosed, setDocsClosed, setTourState, tourState } from './onboarding';
 import { MOD_KEY } from './platform';
 import { chooseTip, markTipSeen, seenTips, tipContent, tipsFor, turnOffTips, type TipEvent } from './tips';
 import { hasConfirmedLeaving, openHash, parseHash, useHashLinks } from './routing';
@@ -67,12 +67,9 @@ type PanelTab = "animation" | "sliders" | "textures";
 
 // Loaded when the tutorial opens, with its lessons.
 const TutorialPanel = lazy(() => import('../tutorial/TutorialPanel'));
-// Loaded the first time they're opened.
-const KeyboardShortcuts = lazy(() => import('../dialogs/KeyboardShortcuts'));
-const ShaderInputs = lazy(() => import('../dialogs/ShaderInputs'));
-
-type Dialog =
-  "open" | "import" | "saveCopy" | "share" | "export" | "splash" | "acknowledgements" | "shortcuts" | "inputs";
+// Loaded when the Docs tab is first shown, with the pages.
+const ReferencePanel = lazy(() => import('../reference/ReferencePanel'));
+type Dialog = "open" | "import" | "saveCopy" | "share" | "export" | "splash";
 
 // Text with `code` in backticks.
 function withCode(text: string) {
@@ -107,13 +104,15 @@ export default function App() {
   const [builtExtras, setBuiltExtras] = useState<ShaderExtras>(() => shaderExtras(doc));
   const [buildId, setBuildId] = useState(0);
   const [lineErrors, setLineErrors] = useState<LineError[]>([]);
-  // The code the editor shows, and the one whose code didn't build.
+  // The code the editor shows, or showed before the Docs tab, and the one whose code didn't build.
   const [codeTab, setCodeTab] = useState<ShaderId>("image");
   const [errorShader, setErrorShader] = useState<ShaderId | null>(null);
   // The Canvas2D layer's errors, which come from running its code, so they can arrive at any time.
   const [layerErrors, setLayerErrors] = useState<LineError[]>([]);
-  // Whether the Canvas2D layer was added here, so its editor takes focus when it appears.
-  const [layerJustAdded, setLayerJustAdded] = useState(false);
+  // The Canvas2D.js or shared.glsl tab, if it was just added here, so its editor takes focus when it appears.
+  const [justAdded, setJustAdded] = useState<"canvas" | "shared" | null>(null);
+  // Whether the shared.glsl tab is new and still shows its placeholder.
+  const [sharedUntouched, setSharedUntouched] = useState(false);
   const shaders = useMemo<Shaders | null>(
     () => builtCode === null ? null : {code: builtCode, ...builtExtras}, [builtCode, builtExtras]);
   const allBuilt = builtCode === doc.code && sameExtras(builtExtras, shaderExtras(doc));
@@ -130,6 +129,22 @@ export default function App() {
   const [showFooter, setShowFooter] = useState(true);
   // The canvas side's width set with the divider, or null for a preset.
   const [previewWidth, setPreviewWidth] = useState<number | null>(storedPreviewWidth);
+  // Where the Docs tab after the code tabs is, or null without it. A new animation has the tab, with
+  // its code showing, until the tab's been closed.
+  const [docs, setDocs] = useState<DocTarget | null>(
+    () => initialRoute === null && !docsClosed() ? DOC_SECTIONS.index : null);
+  const [docsShown, setDocsShown] = useState(false);
+  const docsShownRef = useLatest(docsShown);
+  // The docs' code and pages load when the tab first shows, and then stay to keep their place.
+  const [docsLoaded, setDocsLoaded] = useState(false);
+  if (docsLoaded !== (docs !== null && (docsLoaded || docsShown))) {
+    setDocsLoaded(!docsLoaded);
+  }
+  // Shows a code tab, leaving the docs.
+  const showCodeTab = (tab: ShaderId) => {
+    setCodeTab(tab);
+    setDocsShown(false);
+  };
   const customWidth = tutorialOpen ? null : previewWidth;
   const [resizing, setResizing] = useState(false);
   const workspaceRef = useRef<HTMLElement>(null);
@@ -181,8 +196,6 @@ export default function App() {
   const [tourTaken, setTourTaken] = useState(() => tourState() === "taken");
   const [alert, setAlert] = useState<string | null>(null);
   const [dialog, setDialog] = useState<Dialog | null>(window.location.hash ? null : "splash");
-  // Help dialogs stay mounted once loaded, so they can animate closed.
-  const [helpLoaded, setHelpLoaded] = useState({shortcuts: false, inputs: false});
   const [exportOptions, setExportOptions] = useState<ExportOptions>({width: 512, fps: 30, type: "webm"});
   const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -266,9 +279,10 @@ export default function App() {
     setTitleInput(json.title);
     setBuiltCode(json.code);
     setBuiltExtras(shaderExtras(json));
-    setCodeTab("image");
+    showCodeTab("image");
     setLayerErrors([]);
-    setLayerJustAdded(false);
+    setJustAdded(null);
+    setSharedUntouched(false);
     setHeld(new Map());
     setMinRows(3);
     setBuildId(id => id + 1);
@@ -302,6 +316,9 @@ export default function App() {
       phone,
       // Applied at once, so the tour measures the pane it's about to highlight.
       showPane: pane => flushSync(() => {
+        if (pane === "code") {
+          setDocsShown(false);
+        }
         if (phone) {
           chooseMobileTab(pane);
         } else if (pane !== "code") {
@@ -332,11 +349,43 @@ export default function App() {
     }
   });
 
-  const openHelp = useCallback((which: "shortcuts" | "inputs") => {
-    setHelpLoaded(loaded => loaded[which] ? loaded : {...loaded, [which]: true});
-    setDialog(which);
-  }, []);
-  useEffect(() => onHelpDialog(openHelp), [openHelp]);
+  // Opens the Docs tab, adding it if needed, at a page and heading.
+  const openReference = useCallback((target: DocTarget) => {
+    setDocs({...target});
+    setDocsShown(true);
+    if (phone) {
+      setMobileTab("code");
+    }
+  }, [phone]);
+  useEffect(() => onOpenDocs(openReference), [openReference]);
+
+  // Help → Documentation, which also has new animations open with the Docs tab again.
+  const openDocumentation = () => {
+    setDocsClosed(false);
+    openReference(DOC_SECTIONS.index);
+  };
+
+  const closeDocs = () => {
+    setDocs(null);
+    setDocsShown(false);
+    setDocsClosed(true);
+  };
+
+  // Each tab's editor, for inserting code from the docs into the code tab open before them.
+  const editorViews = useRef(new Map<ShaderId, EditorView>());
+  const insertFromDocs = (code: string) => {
+    const view = editorViews.current.get(codeTab);
+    if (!view) {
+      return;
+    }
+    // Shown first, so the editor can scroll to the new code.
+    flushSync(() => setDocsShown(false));
+    insertCode(view, code);
+    // Phones would cover the code with the keyboard.
+    if (!phone) {
+      view.focus();
+    }
+  };
 
   // Shows a one-time tip for what just happened, unless something else has the user's attention.
   const showTip = (event: TipEvent) => {
@@ -464,6 +513,12 @@ export default function App() {
     setBuiltExtras(shaderExtras(doc));
     setBuildId(id => id + 1);
   };
+  // A build asked for along with an edit, made once the edit has reached `doc`.
+  const [buildQueued, setBuildQueued] = useState(false);
+  if (buildQueued) {
+    setBuildQueued(false);
+    build();
+  }
 
   const onCodeChange = (tab: ShaderId, code: string, isHelperChange: boolean) => {
     // Emptied shared code stays as "", so the editor doesn't jump back to the placeholder; opening
@@ -474,6 +529,9 @@ export default function App() {
         {...d, buffers: (d.buffers ?? []).map((buffer, i) => i === tab ? {code} : buffer)};
     setDoc(withCode);
     setHasUnsavedChanges(true);
+    if (tab === "shared") {
+      setSharedUntouched(false);
+    }
     if (isHelperChange) {
       // They've found the pickers, so there's no need for the tip about them.
       markTipSeen("pickers");
@@ -488,7 +546,7 @@ export default function App() {
   const addBuffer = () => {
     const buffers = doc.buffers ?? [];
     updateDoc({buffers: [...buffers, {code: newBufferCode(buffers.length)}]});
-    setCodeTab(buffers.length);
+    showCodeTab(buffers.length);
   };
 
   const removeLastBuffer = () => {
@@ -520,24 +578,54 @@ export default function App() {
   const addCanvasLayer = () => {
     setDoc(d => withCanvasLayer(d, {kind: "canvas2d", code: NEW_CANVAS_CODE, overlay: true}));
     setHasUnsavedChanges(true);
-    setCodeTab("canvas");
-    setLayerJustAdded(true);
+    showCodeTab("canvas");
+    setJustAdded("canvas");
   };
 
   const removeCanvasLayer = () => {
-    if (layer && layer.code !== NEW_CANVAS_CODE && !window.confirm("Remove the Canvas2D layer and its code?")) {
+    if (layer && layer.code !== NEW_CANVAS_CODE && !window.confirm(`Remove ${shaderName("canvas")} and its code?`)) {
       return;
     }
     setDoc(d => withCanvasLayer(d, null));
-    setLayerJustAdded(false);
+    setJustAdded(null);
     setHasUnsavedChanges(true);
     setCodeTab("image");
   };
 
+  // A new shared.glsl tab shows a placeholder, which only becomes code once it's edited, so an untouched
+  // tab isn't saved and needs no build.
+  const addShared = () => {
+    setDoc(d => ({...d, shared: ""}));
+    setSharedUntouched(true);
+    showCodeTab("shared");
+    setJustAdded("shared");
+  };
+
+  const removeShared = () => {
+    const shared = doc.shared?.trim() ?? "";
+    if (shared && shared !== SHARED_PLACEHOLDER.trim() && !window.confirm(`Remove ${shaderName("shared")} and its code?`)) {
+      return;
+    }
+    setDoc(d => {
+      const next = {...d};
+      delete next.shared;
+      return next;
+    });
+    setSharedUntouched(false);
+    setJustAdded(null);
+    setHasUnsavedChanges(true);
+    setCodeTab("image");
+    if (errorShader === "shared") {
+      setLineErrors([]);
+      setErrorShader(null);
+    }
+  };
+
   const onLayerStatus = (errors: LineError[]) => {
     setLayerErrors(errors);
-    if (errors.length > 0 && errorShader === null && canvasLayer(docRef.current)) {
-      setCodeTab("canvas");  // Show the code with the error.
+    // Show the code with the error, unless the docs are open: its tab shows the error.
+    if (errors.length > 0 && errorShader === null && canvasLayer(docRef.current) && !docsShownRef.current) {
+      setCodeTab("canvas");
     }
   };
 
@@ -545,7 +633,7 @@ export default function App() {
     const errors = result.ok ? [] : result.errors;
     setLineErrors(errors);
     setErrorShader(result.ok ? null : result.shader);
-    if (!result.ok) {
+    if (!result.ok && !docsShownRef.current) {
       setCodeTab(result.shader);  // Show the code with the error.
     }
     setCompiled({code: builtCode ?? "", ok: result.ok});
@@ -556,12 +644,11 @@ export default function App() {
     }
   };
 
-  // Shared code only helps once there's more than one shader, so the tab appears with the first buffer.
-  const showShared = (doc.buffers?.length ?? 0) > 0 || doc.shared !== undefined || codeTab === "shared";
   // Each tab has its own editor, hidden unless it's open, so it keeps its undo history and cursor.
   const codeTabs: {tab: ShaderId; code: string}[] = [
-    ...(showShared ? [{tab: "shared" as const, code: doc.shared ?? SHARED_PLACEHOLDER}] : []),
     ...(layer ? [{tab: "canvas" as const, code: layer.code}] : []),
+    ...(doc.shared !== undefined
+      ? [{tab: "shared" as const, code: sharedUntouched && doc.shared === "" ? SHARED_PLACEHOLDER : doc.shared}] : []),
     ...(doc.buffers ?? []).map((buffer, i) => ({tab: i, code: buffer.code})),
     {tab: "image", code: doc.code},
   ];
@@ -672,8 +759,11 @@ export default function App() {
       }
     };
     const showCode = (tab: ShaderId) => {
-      if (tab === "image" || tab === "shared" || (tab === "canvas" ? layer !== undefined : tab < (doc.buffers?.length ?? 0))) {
-        setCodeTab(tab);
+      if (tab === "shared" && doc.shared === undefined) {
+        addShared();  // A link to shared.glsl adds it, ready to write in.
+      } else if (tab === "image" || tab === "shared" ||
+          (tab === "canvas" ? layer !== undefined : tab < (doc.buffers?.length ?? 0))) {
+        showCodeTab(tab);
       }
     };
     const actions: Record<AppLink, () => void> = {
@@ -685,20 +775,27 @@ export default function App() {
       "Help → Welcome": () => setDialog("splash"),
       "Help → Take the tour": () => void takeTour(),
       "Help → Tutorial": () => openHash(TUTORIAL_HREF, hasUnsavedChanges),
-      "Help → Shader inputs": () => openHelp("inputs"),
-      "Help → Keyboard shortcuts": () => openHelp("shortcuts"),
-      "Help → Documentation": () => window.open(DOCS_URL, "_blank", "noopener"),
+      "Help → Shader inputs": () => openReference(DOC_SECTIONS.reference),
+      "Help → Keyboard shortcuts": () => openReference(DOC_SECTIONS.shortcuts),
+      "Help → Documentation": () => openDocumentation(),
       "Help → Source code": () => window.open(REPO_URL, "_blank", "noopener"),
-      "Help → Acknowledgements": () => setDialog("acknowledgements"),
+      "Help → Acknowledgements": () => openReference(DOC_SECTIONS.acknowledgements),
       "Timeline": () => showPanel("animation"),
       "Animation": () => showPanel("animation"),
       "Sliders": () => showPanel("sliders"),
       "Textures": () => showPanel("textures"),
+      "Image.glsl": () => showCode("image"),
       "Image": () => showCode("image"),
+      "shared.glsl": () => showCode("shared"),
       "Shared GLSL": () => showCode("shared"),
       "Shared": () => showCode("shared"),
+      "Canvas2D.js": () => showCode("canvas"),
       "Canvas2D": () => showCode("canvas"),
       "Canvas": () => showCode("canvas"),
+      "iBuffer0.glsl": () => showCode(0),
+      "iBuffer1.glsl": () => showCode(1),
+      "iBuffer2.glsl": () => showCode(2),
+      "iBuffer3.glsl": () => showCode(3),
       "iBuffer0": () => showCode(0),
       "iBuffer1": () => showCode(1),
       "iBuffer2": () => showCode(2),
@@ -785,6 +882,7 @@ export default function App() {
         change.code = text;
       } else if (tab === "shared") {
         change.shared = text;
+        setSharedUntouched(false);
       } else {
         while (buffers.length <= tab) {
           buffers.push({code: newBufferCode(buffers.length)});
@@ -794,7 +892,7 @@ export default function App() {
       }
     }
     updateDoc(change);
-    setCodeTab(code[code.length - 1]!.tab);
+    showCodeTab(code[code.length - 1]!.tab);
     if (phone) {
       chooseMobileTab("code");
     }
@@ -829,6 +927,7 @@ export default function App() {
       className="app" data-footer={showFooter ? "open" : "closed"}
       data-full-view={fullView || undefined}
       data-mobile-tab={mobileTab} data-tutorial={tutorialOpen || undefined}
+      data-side-panel={tutorialOpen || undefined}
     >
       <header className="appHeader">
         <a className="brand" href="./" aria-label="smoothstep.io home">
@@ -899,19 +998,23 @@ export default function App() {
               </Button>
             </Menu.Target>
             <Menu.Dropdown>
-              <Menu.Item leftSection={<TbHome />} onClick={() => setDialog("splash")}>Welcome</Menu.Item>
-              <Menu.Item leftSection={<TbRoute />} onClick={() => void takeTour()}>Take the tour</Menu.Item>
-              <Menu.Item component="a" href={TUTORIAL_HREF} leftSection={<TbSchool />}>Tutorial</Menu.Item>
-              <Menu.Item leftSection={<TbCode />} onClick={() => openHelp("inputs")}>Shader inputs</Menu.Item>
-              <Menu.Item leftSection={<TbKeyboard />} onClick={() => openHelp("shortcuts")}>Keyboard shortcuts</Menu.Item>
-              <Menu.Item component="a" href={DOCS_URL} target="_blank" rel="noreferrer" leftSection={<TbBook />}>
+              <Menu.Item leftSection={<TbBook />} onClick={openDocumentation}>
                 Documentation
               </Menu.Item>
+              <Menu.Item leftSection={<TbCode />} onClick={() => openReference(DOC_SECTIONS.reference)}>
+                Shader inputs
+              </Menu.Item>
+              <Menu.Item leftSection={<TbKeyboard />} onClick={() => openReference(DOC_SECTIONS.shortcuts)}>
+                Keyboard shortcuts
+              </Menu.Item>
+              <Menu.Divider />
+              <Menu.Item component="a" href={TUTORIAL_HREF} leftSection={<TbSchool />}>Tutorial</Menu.Item>
+              <Menu.Item leftSection={<TbRoute />} onClick={() => void takeTour()}>Take the tour</Menu.Item>
+              <Menu.Item leftSection={<TbHome />} onClick={() => setDialog("splash")}>Welcome</Menu.Item>
+              <Menu.Divider />
               <Menu.Item component="a" href={REPO_URL} target="_blank" rel="noreferrer" leftSection={<TbBrandGithub />}>
                 Source code
               </Menu.Item>
-              <Menu.Divider />
-              <Menu.Item leftSection={<TbHeart />} onClick={() => setDialog("acknowledgements")}>Acknowledgements</Menu.Item>
             </Menu.Dropdown>
           </Menu>
           <Tooltip label={`Save (${MOD_KEY} S)`}>
@@ -941,7 +1044,7 @@ export default function App() {
       >
         <section className="editorPane">
           {/* Before the code, so on phones it can't stick higher than the code's first line. */}
-          {buildState !== "built" &&
+          {buildState !== "built" && !docsShown &&
             <Tooltip label="Shift + Enter" position="top">
               <Button
                 className="buildButton" onClick={build} leftSection={<TbHammer />}
@@ -951,19 +1054,22 @@ export default function App() {
               </Button>
             </Tooltip>}
           <ShaderTabs
-            numBuffers={doc.buffers?.length ?? 0} showShared={showShared} hasCanvas={layer !== undefined} current={codeTab}
+            numBuffers={doc.buffers?.length ?? 0} hasShared={doc.shared !== undefined} hasCanvas={layer !== undefined}
+            current={docsShown ? "docs" : codeTab} hasDocs={docs !== null}
             errors={[...(errorShader === null ? [] : [errorShader]), ...(layerErrors.length > 0 ? ["canvas" as const] : [])]}
-            onChoose={setCodeTab} onAdd={addBuffer} onRemoveLast={removeLastBuffer}
+            onChoose={showCodeTab} onAdd={addBuffer} onRemoveLast={removeLastBuffer}
             onAddCanvas={addCanvasLayer} onRemoveCanvas={removeCanvasLayer}
+            onAddShared={addShared} onRemoveShared={removeShared}
+            onChooseDocs={() => setDocsShown(true)} onCloseDocs={closeDocs}
           />
-          {layer && codeTab === "canvas" &&
-            <div className="canvasOptions">
+          {!docsShown && <div className="codeCaption">
+            {layer && codeTab === "canvas" &&
               <Tooltip
                 label="Off: the drawing only shows where a shader reads iCanvas2D" position="bottom-start" openDelay={400}
               >
                 <div>
                   <Switch
-                    size="xs" label="Draw over the image" checked={layer.overlay}
+                    size="xs" className="overlaySwitch" label="Draw over the image" checked={layer.overlay}
                     onChange={event => {
                       const overlay = event.currentTarget.checked;
                       setDoc(d => withCanvasLayer(d, {...canvasLayer(d)!, overlay}));
@@ -971,17 +1077,33 @@ export default function App() {
                     }}
                   />
                 </div>
-              </Tooltip>
-              <Text size="xs" c="dimmed">JavaScript · shaders read it as <code>iCanvas2D</code></Text>
-            </div>}
+              </Tooltip>}
+            <Text size="xs" c="dimmed">{shaderCaption(codeTab)}</Text>
+          </div>}
           {codeTabs.map(({tab, code}) =>
             <CodeEditor
-              key={tab} value={code} hidden={tab !== codeTab} language={tab === "canvas" ? "javascript" : "glsl"}
+              key={tab} value={code} hidden={docsShown || tab !== codeTab} language={tab === "canvas" ? "javascript" : "glsl"}
               onChange={(changed, isHelperChange) => onCodeChange(tab, changed, isHelperChange)}
               onBuild={build} onSave={() => void save(false)}
               lineErrors={tab === "canvas" ? layerErrors : errorShader === tab ? lineErrors : []}
-              autoFocus={tab === "canvas" && layerJustAdded}
+              autoFocus={tab === justAdded}
+              skeleton={starterFunction(tab)} onFixed={() => setBuildQueued(true)}
+              lastFrame={typeof tab === "number" ? "iBuffer" + tab : "iPrevFrame"}
+              onView={view => {
+                if (view) {
+                  editorViews.current.set(tab, view);
+                } else {
+                  editorViews.current.delete(tab);
+                }
+              }}
             />)}
+          {docs && docsLoaded &&
+            <Suspense fallback={<div className="referencePanel" hidden={!docsShown} />}>
+              <ReferencePanel
+                target={docs} active={docsShown} tabName={shaderName(codeTab)}
+                language={codeTab === "canvas" ? "js" : "glsl"} hasCanvas={layer !== undefined} onInsert={insertFromDocs}
+              />
+            </Suspense>}
         </section>
         <section
           className="previewPane"
@@ -1154,11 +1276,6 @@ export default function App() {
         show={dialog === "splash"} onHide={() => setDialog(null)}
         onTour={() => void takeTour()} tourTaken={tourTaken}
       />
-      <Acknowledgements show={dialog === "acknowledgements"} onHide={() => setDialog(null)} />
-      <Suspense fallback={null}>
-        {helpLoaded.shortcuts && <KeyboardShortcuts show={dialog === "shortcuts"} onHide={() => setDialog(null)} />}
-        {helpLoaded.inputs && <ShaderInputs show={dialog === "inputs"} onHide={() => setDialog(null)} />}
-      </Suspense>
       <AppModal opened={alert !== null} onClose={() => setAlert(null)} withCloseButton={false} zIndex={400}>
         <p className="alertText">{alert}</p>
         <Group justify="flex-end"><Button onClick={() => setAlert(null)}>Ok</Button></Group>

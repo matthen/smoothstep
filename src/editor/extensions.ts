@@ -1,4 +1,6 @@
-import { acceptCompletion, autocompletion, closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
+import {
+  acceptCompletion, autocompletion, closeBrackets, closeBracketsKeymap, nextSnippetField, prevSnippetField,
+} from '@codemirror/autocomplete';
 import {
   defaultKeymap, history, historyKeymap, indentMore, indentSelection, toggleComment,
 } from '@codemirror/commands';
@@ -38,6 +40,8 @@ const insertTwoSpaces: Command = (view) => {
 export interface EditorCallbacks {
   onBuild(): void;
   onSave(): void;
+  // After an error's button inserts the missing draw or mainImage.
+  onFixed?(): void;
 }
 
 // What a tab's code is written in: the shader language, or JavaScript for the Canvas2D layer.
@@ -73,8 +77,8 @@ export function editorExtensions(callbacks: EditorCallbacks, language: EditorLan
       { key: 'Mod-s', run: save, preventDefault: true, stopPropagation: true },
       { key: 'Ctrl-s', run: save, preventDefault: true, stopPropagation: true },
       { key: 'Ctrl-/', run: toggleComment },
-      { key: 'Tab', run: (view) => acceptCompletion(view) || insertTwoSpaces(view) },
-      { key: 'Shift-Tab', run: indentSelection },
+      { key: 'Tab', run: (view) => acceptCompletion(view) || nextSnippetField(view) || insertTwoSpaces(view) },
+      { key: 'Shift-Tab', run: (view) => prevSnippetField(view) || indentSelection(view) },
       { key: 'Alt-g', run: gotoLine },
       { key: 'Shift-Mod-f', mac: 'Mod-Alt-f', run: openSearchPanel },
       { key: 'Shift-Mod-r', mac: 'Shift-Mod-Alt-f', run: replaceAll },
@@ -93,6 +97,7 @@ export function editorExtensions(callbacks: EditorCallbacks, language: EditorLan
       ...(language === "glsl" ? {override: [glslCompletionSource]} : {}),
       activateOnTypingDelay: 200,
       icons: false,
+      optionClass: (option) => option.type === 'snippet' ? 'ss-snippet-option' : '',
     }),
     search({ top: true }),
     keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...searchKeymap, ...historyKeymap]),
@@ -101,6 +106,6 @@ export function editorExtensions(callbacks: EditorCallbacks, language: EditorLan
     indentUnit.of('  '),
     tooltips({ parent: document.body }),
     links(),
-    lineErrors(),
+    lineErrors({ onFixed: () => callbacks.onFixed?.() }),
   ];
 }

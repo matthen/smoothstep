@@ -40,7 +40,7 @@ async function find(page: Page, line: string, text: string) {
 
 const colourOf = async (page: Page, line: string, text: string) => (await find(page, line, text)).colour;
 
-test("the Canvas2D tab colours and explains its helpers, and has pickers for a finger", async ({page, context}) => {
+test("the Canvas2D.js tab colours and explains its helpers, and has pickers for a finger", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./#new");
   await addTab(page, "Add the Canvas2D layer");
@@ -95,5 +95,33 @@ test("the Canvas2D tab colours and explains its helpers, and has pickers for a f
   // Numbers in strings don't get one.
   await tap("ctx.fillText", "Hi");
   await expect(page.locator(".ss-picker")).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test("an error about a missing draw or mainImage inserts it with a tap, and the code builds", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#new");
+  await addTab(page, "Add the Canvas2D layer");
+  await setCode(page, "// Nothing yet.\nconst size = 40;");
+  await page.getByRole("button", {name: "Build"}).tap();
+  const error = page.locator(".ss-line-error");
+  await expect(error).toContainText("needs a draw function");
+  await expect(error.locator("pre")).toContainText("function draw(ctx");
+  await error.getByRole("button", {name: "Insert a draw function"}).tap();
+  // It builds by itself, and the code from before stays.
+  await expect(error).toHaveCount(0);
+  await expect(page.getByRole("button", {name: "Build"})).toBeHidden();
+  await expect(page.getByRole("tab", {name: /^Canvas2D/})).not.toHaveAttribute("data-error");
+  expect(await editorCode(page)).toMatch(/^\/\/ Nothing yet\.\nconst size = 40;\n\nfunction draw\(ctx/);
+
+  await page.getByRole("tab", {name: /^Image/}).tap();
+  await setCode(page, "float glow(float d) {\n  return 0.01 / d;\n}");
+  await page.getByRole("button", {name: "Build"}).tap();
+  await expect(error).toContainText("needs a mainImage function");
+  await error.getByRole("button", {name: "Insert a mainImage function"}).tap();
+  await expect(error).toHaveCount(0);
+  await expect(page.getByRole("button", {name: "Build"})).toBeHidden();
+  expect(await editorCode(page)).toContain("float glow(float d)");
+  expect(await editorCode(page)).toContain("void mainImage(out vec4 fragColor, in vec2 fragCoord)");
   expect(errors).toEqual([]);
 });

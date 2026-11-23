@@ -1,15 +1,48 @@
 // The phone layout: the canvas on top, and a switch between the code, timeline and textures.
 import { devices, expect, test } from '@playwright/test';
 
-import { offline, skipTour, transitionTimes } from './helpers';
+import { docsPanel, docsTab, offline, OPEN_EDITOR, skipTour, transitionTimes } from './helpers';
 
 test.use(devices['Pixel 7']);
+
+test("on a phone, the docs are a tab beside the code's, and Insert goes back to the code", async ({page, context}) => {
+  await skipTour(context);
+  const errors = await offline(context, {docs: true});
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto("./#new");
+  // A new animation has the tab, but shows the code.
+  await expect(docsTab(page)).toBeAttached();
+  await expect(page.getByRole("tab", {name: "Image.glsl"})).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator(OPEN_EDITOR)).toBeVisible();
+  // The switch under the canvas has no tab of its own for the docs.
+  await expect(page.getByRole("radio", {name: "Docs"})).toHaveCount(0);
+
+  // Help opens the tab, from another pane too.
+  await page.locator(".mobileTabs").getByText("Timeline", {exact: true}).tap();
+  await page.getByRole("button", {name: "Help"}).tap();
+  await page.getByRole("menuitem", {name: "Documentation"}).tap();
+  const panel = docsPanel(page);
+  await expect(panel).toBeVisible();
+  await expect(page.getByRole("radio", {name: "Code"})).toBeChecked();
+  await expect(docsTab(page)).toHaveAttribute("aria-selected", "true");
+  // The tabs fit the screen, or scroll sideways inside their row.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await expect(docsTab(page)).toBeInViewport();
+
+  await panel.getByRole("button", {name: "Choose a page"}).tap();
+  await page.getByRole("menuitem", {name: "Coding Specification"}).tap();
+  await panel.locator('.doc-code[data-lang="glsl"]').first().getByRole("button", {name: "Insert this GLSL"}).tap();
+  await expect(panel).toBeHidden();
+  await expect(page.getByRole("tab", {name: "Image.glsl"})).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator(OPEN_EDITOR)).toBeVisible();
+  expect(errors).toEqual([]);
+});
 
 test("on a phone, the welcome screen has no ✕ and keeps its buttons on screen", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./");
   const welcome = page.getByRole("dialog");
-  await expect(welcome.getByRole("heading", {name: "Build animations with GLSL"})).toBeVisible();
+  await expect(welcome.getByRole("heading", {name: "Animate with shaders and JavaScript"})).toBeVisible();
   await expect(welcome.locator(".mantine-Modal-close")).toHaveCount(0);
   const viewport = page.viewportSize()!;
   for (const name of ["Learn", "Continue"]) {

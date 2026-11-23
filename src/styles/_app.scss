@@ -67,7 +67,8 @@ a {
   }
 
   @include desktop {
-    &[data-tutorial] {
+    // The tutorial's Learn panel.
+    &[data-side-panel] {
       --preview-width: min(#{$right-width}, 32vw);
       grid-template-columns: minmax(0, 1fr) $learn-width;
       grid-template-areas: "header header" "workspace learn" "panel learn";
@@ -284,7 +285,7 @@ a {
   }
 
   // Full screen has no code beside it, and the tutorial keeps its own split.
-  .app[data-full-view] &, .app[data-tutorial] & {
+  .app[data-full-view] &, .app[data-side-panel] & {
     display: none;
   }
 }
@@ -476,6 +477,22 @@ a {
       bottom: 0;
       background: $dt-gray-darker;
     }
+  }
+}
+
+// The Docs tab, in place of the code. The docs scroll inside it, so a link can move to a heading.
+.editorPane > .referencePanel {
+  flex: 1;
+  min-height: 0;
+
+  &[hidden] {
+    display: none;
+  }
+
+  // On a phone the page scrolls, so a screenful, less the code's tabs.
+  @include phone {
+    flex: none;
+    height: calc(#{$phone-pane-height} - 44px);
   }
 }
 
@@ -1033,16 +1050,7 @@ div#textures .texturesHint {
   }
 }
 
-// Prose dialogs.
-.prose {
-  font-size: 14px;
-  line-height: 1.55;
-  ul {
-    padding-left: 20px;
-  }
-}
-
-// Inline code in the help dialogs, the welcome tip and tip notifications.
+// Inline code in the welcome tip and tip notifications.
 @mixin inline-code {
   font-family: var(--mantine-font-family-monospace);
   font-size: 0.9em;
@@ -1050,124 +1058,6 @@ div#textures .texturesHint {
   border-radius: 3px;
   background: $dt-gray-darker;
   color: $dt-cyan;
-}
-
-// Help → Keyboard shortcuts and Help → Shader inputs.
-.helpReference {
-  section + section {
-    margin-top: var(--mantine-spacing-lg);
-  }
-
-  code {
-    @include inline-code;
-  }
-
-  .mantine-Table-table {
-    margin-bottom: var(--mantine-spacing-md);
-    font-size: 14px;
-  }
-
-  .mantine-Table-td {
-    vertical-align: top;
-  }
-
-  .keysCell {
-    width: 1%;
-    white-space: nowrap;
-    padding-right: var(--mantine-spacing-lg);
-    color: $dt-gray-medium;
-    font-size: 13px;
-
-    @include phone {
-      width: 40%;
-      white-space: normal;
-      padding-right: var(--mantine-spacing-xs);
-    }
-  }
-
-  .keyCombo {
-    white-space: nowrap;
-  }
-
-  .keysPlus {
-    margin: 0 3px;
-  }
-
-  .inputType {
-    width: 1%;
-    white-space: nowrap;
-
-    code {
-      background: none;
-      padding: 0;
-      color: $dt-pink;
-    }
-  }
-
-  .inputNameCell {
-    width: 1%;
-    white-space: nowrap;
-    padding-right: var(--mantine-spacing-lg);
-  }
-
-  // A Canvas2D helper's signature, or a library's import line.
-  .inputSignature {
-    width: 45%;
-    padding-right: var(--mantine-spacing-lg);
-
-    code {
-      background: none;
-      padding: 0;
-      color: $dt-green;
-      white-space: pre-wrap;
-    }
-  }
-
-  // On a phone, the type and name share a line, with the description below.
-  @include phone {
-    .inputTable .mantine-Table-tr {
-      display: grid;
-      grid-template-columns: auto 1fr;
-    }
-
-    .inputNameCell {
-      width: auto;
-    }
-
-    .inputSignature {
-      width: auto;
-      grid-column: 1 / -1;
-    }
-
-    .inputTable .mantine-Table-td:last-child {
-      grid-column: 1 / -1;
-      padding-top: 0;
-    }
-  }
-
-  .inputName {
-    white-space: nowrap;
-    border-radius: 3px;
-
-    code {
-      color: $dt-green;
-    }
-
-    &:hover code, &:focus-visible code {
-      background: $dt-gray;
-    }
-  }
-
-  .codeBlock {
-    margin: 0 0 var(--mantine-spacing-xs);
-    padding: 10px 12px;
-    border-radius: 6px;
-    background: $dt-gray-darker;
-    color: $dt-gray-light;
-    font-family: var(--mantine-font-family-monospace);
-    font-size: 13px;
-    overflow-x: auto;
-  }
 }
 
 // "Did you know?" on the welcome dialog.
@@ -1296,10 +1186,6 @@ div#textures .texturesHint {
     padding: 5px 9px;
   }
 
-  &[data-buffer] {
-    font-family: var(--mantine-font-family-monospace);
-  }
-
   &:hover {
     color: $dt-gray-light;
   }
@@ -1326,14 +1212,19 @@ div#textures .texturesHint {
   font-size: 12px;
 }
 
-// The Canvas2D tab's mark, as its code is JavaScript.
+// The docs tab's book.
 .shaderKind {
   font-size: 15px;
-  color: $dt-yellow;
+  color: $dt-purple;
   opacity: 0.8;
 }
 
-// Sets the Shared GLSL and Canvas2D tabs apart from the shaders that draw.
+// A code tab's extension, after its name and quieter.
+.shaderExtension {
+  opacity: 0.6;
+}
+
+// Sets the Canvas2D.js and shared.glsl tabs apart from the shaders that draw.
 .shaderDivider {
   align-self: center;
   width: 1px;
@@ -1342,16 +1233,47 @@ div#textures .texturesHint {
   background: $dt-gray;
 }
 
-// The Canvas2D tab's own row, between the tabs and its code.
-.canvasOptions {
+// A line between the tabs and the code saying what the open tab is, with the Canvas2D tab's switch.
+.codeCaption {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 2px 16px 6px;
+  gap: 4px 12px;
+  padding: 0 16px 4px;
+
+  > p {
+    margin-left: auto;
+    min-width: 0;
+    text-align: right;
+  }
 
   code {
     font-size: inherit;
+  }
+
+  // Too narrow for the switch and the caption side by side, so the caption wraps below, from the left.
+  @include phone {
+    flex-wrap: wrap;
+
+    > p {
+      margin-left: 0;
+      text-align: left;
+    }
+  }
+}
+
+// Sized to its label, rather than Mantine's smallest switch, which stands taller than the text.
+.codeCaption .overlaySwitch {
+  --switch-height-xs: 12px;
+  --switch-width-xs: 22px;
+  --switch-thumb-size-xs: 8px;
+
+  .mantine-Switch-body {
+    align-items: center;
+  }
+
+  .mantine-Switch-label {
+    padding-inline-start: 6px;
+    white-space: nowrap;
   }
 }
 

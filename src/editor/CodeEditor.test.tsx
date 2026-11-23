@@ -35,4 +35,26 @@ describe("CodeEditor", () => {
     rerender(<CodeEditor {...props} value="b" />);
     expect(viewIn(container).state.doc.toString()).toBe("b");
   });
+
+  it("offers to insert a missing function after the code there is, then asks to build", () => {
+    const onFixed = vi.fn();
+    const skeleton = "function draw(ctx) {\n  clear(ctx);\n}";
+    const code = 'import planck from "planck";\nlet n = 0;';
+    const errors = [{line: 1, message: "The Canvas2D code needs a draw function.", missing: "draw" as const}];
+    const {container} = render(
+      <CodeEditor {...props} value={code} lineErrors={errors} skeleton={skeleton} onFixed={onFixed} />);
+    const error = container.querySelector(".ss-line-error")!;
+    expect(error.querySelector("pre")!.textContent).toBe(skeleton);
+    error.querySelector("button")!.click();
+    expect(viewIn(container).state.doc.toString()).toBe(code + "\n\n" + skeleton + "\n");
+    expect(onFixed).toHaveBeenCalledOnce();
+    expect(container.querySelector(".ss-line-error")).toBeNull();
+  });
+
+  it("shows other errors without a button", () => {
+    const errors = [{line: 0, message: "'x' : undeclared identifier"}];
+    const {container} = render(<CodeEditor {...props} value="x;" lineErrors={errors} skeleton="void mainImage() {}" />);
+    expect(container.querySelector(".ss-line-error")!.textContent).toBe(errors[0]!.message);
+    expect(container.querySelector(".ss-line-error button")).toBeNull();
+  });
 });
