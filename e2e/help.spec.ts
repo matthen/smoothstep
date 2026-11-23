@@ -27,7 +27,8 @@ test("Help opens the keyboard shortcuts and the shader inputs", async ({page, co
   await helpMenu(page, "Shader inputs");
   const inputs = page.getByRole("dialog", {name: "Shader inputs"});
   await expect(inputs.getByRole("row", {name: /iPrevFrame/})).toContainText("sampler2D");
-  await expect(inputs.getByRole("row", {name: /iFloat0/})).toContainText("iFloat15");
+  await expect(inputs.getByRole("row", {name: /^float iFloat0/})).toContainText("iFloat15");
+  await expect(inputs.getByRole("row", {name: /^number\[\] floats/})).toContainText("iFloat0");
   await inputs.getByRole("button", {name: "Close"}).click();
   await expect(inputs).toBeHidden();
 

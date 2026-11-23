@@ -66,6 +66,20 @@ export async function setCode(page: Page, code: string) {
   await page.keyboard.insertText(code);
 }
 
+// Adds a buffer or the Canvas2D layer from the ⊕ above the code: from its menu, or straight away
+// for a buffer once the layer is there.
+export async function addTab(page: Page, item: "Add a buffer" | "Add the Canvas2D layer") {
+  const menu = page.getByRole("button", {name: /^Add (a buffer or )?the Canvas2D layer$/});
+  const direct = page.getByRole("button", {name: "Add a buffer", exact: true});
+  await menu.or(direct).waitFor();
+  if (await direct.isVisible()) {
+    await direct.click();
+  } else {
+    await menu.click();
+    await page.getByRole("menuitem", {name: item}).click();
+  }
+}
+
 export async function editorCode(page: Page): Promise<string> {
   return page.locator(OPEN_EDITOR).evaluate(el =>
     Array.from(el.querySelectorAll(".cm-line"), line => line.textContent).join("\n"));

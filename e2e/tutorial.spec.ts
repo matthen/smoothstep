@@ -1,7 +1,7 @@
 // The in-app tutorial: opens in a new animation, notices when a step is done, and has a Learn pane on phones.
 import { devices, expect, test } from '@playwright/test';
 
-import { canvasCenter, editorCode, near, offline, skipTour } from './helpers';
+import { addTab, canvasCenter, editorCode, near, offline, skipTour } from './helpers';
 
 test.beforeEach(async ({context}) => {
   await skipTour(context);
@@ -76,7 +76,7 @@ test("the buffers lesson adds a buffer, fills several tabs, and checks every tab
 
   // Add a buffer.
   await expect(panel.getByRole("heading", {name: "Add a buffer"})).toBeVisible();
-  await page.locator(".shaderTabs").getByRole("button", {name: "Add a buffer"}).click();
+  await addTab(page, "Add a buffer");
   await expect(status).toHaveAttribute("data-done", "true");
 
   // The buffer's code goes in its tab. The image doesn't read it yet, so the canvas stays as it was.
@@ -99,11 +99,11 @@ test("the buffers lesson adds a buffer, fills several tabs, and checks every tab
   await page.getByRole("button", {name: "Build"}).click();
   await expect(status).toHaveAttribute("data-done", "true");
 
-  // One button fills the Shared tab, the buffer and the image.
+  // One button fills the Shared GLSL tab, the buffer and the image.
   await next();
-  await expect(panel.locator(".learnCodeTab")).toHaveText(["Shared", "iBuffer0", "Image"]);
+  await expect(panel.locator(".learnCodeTab")).toHaveText(["Shared GLSL", "iBuffer0", "Image"]);
   await panel.getByRole("button", {name: "Put this in the editor"}).click();
-  await expect(tab("Shared")).toBeVisible();
+  await expect(tab("Shared GLSL")).toBeVisible();
   await page.getByRole("button", {name: "Build"}).click();
   await expect(status).toHaveAttribute("data-done", "true");
   // Every tab compiled.

@@ -25,7 +25,8 @@ export function linksIn(text: string): Link[] {
   return [...text.matchAll(LINK)].map((m) => ({ from: m.index, to: m.index + m[0].length, target: m[1] ?? m[0] }));
 }
 
-const inComment = (state: EditorState, pos: number) => syntaxTree(state).resolveInner(pos, 1).name === 'comment';
+// The shader language calls the node "comment"; JavaScript has "LineComment" and "BlockComment".
+const inComment = (state: EditorState, pos: number) => /comment$/i.test(syntaxTree(state).resolveInner(pos, 1).name);
 
 function open(target: string) {
   if (target.startsWith('http')) {

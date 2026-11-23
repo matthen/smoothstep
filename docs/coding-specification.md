@@ -34,6 +34,7 @@ Animations may also use any of the following input variables (*uniforms*):
 | `sampler2D iTexture0` ... `iTexture7`  | The 8 images set in the *Textures* tab. |
 | `float iFloat0` ... `iFloat15`  | The 16 numbers set on the timeline or with sliders. |
 | `sampler2D iBuffer0` ... `iBuffer3`  | What each buffer drew most recently, when the animation has buffers. |
+| `sampler2D iCanvas2D`  | What the Canvas2D layer drew this step, with premultiplied alpha. Transparent when there's no Canvas2D layer. |
 
 On a high-DPI screen, such as a phone's, the preview draws up to twice as many pixels across as it
 takes up, so it's sharp, and `iResolution` is that bigger size. If the animation can't keep up at
@@ -57,7 +58,7 @@ a simulation runs at the same speed everywhere.
 
 ## Buffers and shared code
 
-The ⊕ button above the code adds a buffer: another shader, with its own `mainImage`, that draws
+The ⊕ above the code adds a buffer or the Canvas2D layer. A buffer is another shader, with its own `mainImage`, that draws
 before the image each frame. Every tab can read what a buffer drew as `iBuffer0`, `iBuffer1` and
 so on, up to `iBuffer3`. The tabs go in the order they draw, so a buffer reading an earlier buffer
 gets this frame's picture, and a buffer reading itself or a later one gets the last frame's. That's
@@ -67,14 +68,24 @@ On almost every device, buffers hold floating-point numbers, not just colours fr
 velocities or anything else, in all four channels. Reading between pixels blends them. Buffers start
 at zero and clear when `iPrevFrame` does. A buffer that nothing reads isn't drawn.
 
-Once an animation has a buffer, a **Shared** tab appears. Functions, constants and `#define`s in it
-can be used in every tab: the image and each buffer.
+Once an animation has a buffer, a **Shared GLSL** tab appears. Functions, constants and `#define`s in
+it can be used in every shader tab: the image and each buffer.
 
 The [Ink in water](https://smoothstep.io/app/#example/5c81f0d3a7e2) example uses two buffers: one
 for the water's flow, and one for the ink it carries.
+
+## The Canvas2D layer
+
+The Canvas2D layer is JavaScript that draws on a 2D canvas each step, with text, shapes and built-in
+libraries for physics and noise. Its tab comes first, set apart from the shader tabs by a divider,
+and it draws before the buffers and the image.
+Its drawing goes over the image, and every shader can read it as `iCanvas2D`, with (0, 0) at the
+bottom left like the other textures. Its colours are premultiplied by alpha, so
+`col = col * (1.0 - c.a) + c.rgb` puts it over a colour. [The Canvas2D layer](canvas2d.md) has the
+details.
 
 ## Coming from Shadertoy
 
 Shadertoy's other inputs, such as `iChannel0`, `iMouse` and `iDate`, don't exist in smoothstep.
 Use `iTexture0` and the other texture slots in place of `iChannel0`, and `iBuffer0` to `iBuffer3`
-for buffers. Code in the Shared tab can be used in every tab.
+for buffers. Code in the Shared GLSL tab can be used in every shader tab.

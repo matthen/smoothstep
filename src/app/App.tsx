@@ -1,4 +1,6 @@
-import { ActionIcon, Badge, Button, Group, Kbd, Loader, Menu, SegmentedControl, Tabs, Text, TextInput, Tooltip } from '@mantine/core';
+import {
+  ActionIcon, Badge, Button, Group, Kbd, Loader, Menu, SegmentedControl, Switch, Tabs, Text, TextInput, Tooltip,
+} from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react';
@@ -22,8 +24,8 @@ import ShaderTabs, { shaderName } from '../editor/ShaderTabs';
 import * as archive from '../lib/archive';
 import { asset, documentHref, DOCS_URL, REPO_URL, textureURL, TUTORIAL_HREF } from '../lib/config';
 import {
-  bufferCodes, DEFAULT_TITLE, EMPTY_TEXTURE, MAX_TITLE_LENGTH, newBufferCode, newDocument, parseDocument, sameExtras, shaderExtras,
-  SHARED_PLACEHOLDER, variableValues, type ShaderExtras,
+  bufferCodes, canvasLayer, DEFAULT_TITLE, EMPTY_TEXTURE, MAX_TITLE_LENGTH, NEW_CANVAS_CODE, newBufferCode, newDocument,
+  parseDocument, sameExtras, shaderExtras, SHARED_PLACEHOLDER, variableValues, withCanvasLayer, type ShaderExtras,
   type AnimationDocument, type AspectRatio, type TextureSlot, type Variable,
 } from '../lib/document';
 import * as localStore from '../lib/localStore';
@@ -108,6 +110,10 @@ export default function App() {
   // The code the editor shows, and the one whose code didn't build.
   const [codeTab, setCodeTab] = useState<ShaderId>("image");
   const [errorShader, setErrorShader] = useState<ShaderId | null>(null);
+  // The Canvas2D layer's errors, which come from running its code, so they can arrive at any time.
+  const [layerErrors, setLayerErrors] = useState<LineError[]>([]);
+  // Whether the Canvas2D layer was added here, so its editor takes focus when it appears.
+  const [layerJustAdded, setLayerJustAdded] = useState(false);
   const shaders = useMemo<Shaders | null>(
     () => builtCode === null ? null : {code: builtCode, ...builtExtras}, [builtCode, builtExtras]);
   const allBuilt = builtCode === doc.code && sameExtras(builtExtras, shaderExtras(doc));
@@ -241,6 +247,10 @@ export default function App() {
   }, [allCode, doc.textures, minSlots]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const textureURLs = useMemo(() => doc.textures.map(textureURL), [doc.textures, imagesVersion]);
+  // The Canvas2D layer gets null for an empty slot, in place of the black image shaders read.
+  const layerTextures = useMemo(
+    () => doc.textures.map((t, i) => t.url === EMPTY_TEXTURE && !t.isUserUploaded ? null : textureURLs[i]!),
+    [doc.textures, textureURLs]);
 
   const updateDoc = useCallback((change: Partial<AnimationDocument>) => {
     setDoc(d => ({...d, ...change}));
@@ -257,6 +267,8 @@ export default function App() {
     setBuiltCode(json.code);
     setBuiltExtras(shaderExtras(json));
     setCodeTab("image");
+    setLayerErrors([]);
+    setLayerJustAdded(false);
     setHeld(new Map());
     setMinRows(3);
     setBuildId(id => id + 1);
@@ -394,7 +406,7 @@ export default function App() {
         setDocumentId(null);
         setDoc(d => ({...d, code: "// " + text}));
         setBuiltCode("// " + text);
-        setBuiltExtras({buffers: [], shared: ""});
+        setBuiltExtras({buffers: [], shared: "", canvas: null});
       } finally {
         setLoading(false);
         offerTourRef.current();
@@ -458,6 +470,7 @@ export default function App() {
     // the animation again drops it.
     const withCode = (d: AnimationDocument): AnimationDocument =>
       tab === "image" ? {...d, code} : tab === "shared" ? {...d, shared: code} :
+        tab === "canvas" ? {...d, layers: (d.layers ?? []).map(layer => ({...layer, code}))} :
         {...d, buffers: (d.buffers ?? []).map((buffer, i) => i === tab ? {code} : buffer)};
     setDoc(withCode);
     setHasUnsavedChanges(true);
@@ -502,6 +515,32 @@ export default function App() {
     }
   };
 
+  const layer = canvasLayer(doc);
+
+  const addCanvasLayer = () => {
+    setDoc(d => withCanvasLayer(d, {kind: "canvas2d", code: NEW_CANVAS_CODE, overlay: true}));
+    setHasUnsavedChanges(true);
+    setCodeTab("canvas");
+    setLayerJustAdded(true);
+  };
+
+  const removeCanvasLayer = () => {
+    if (layer && layer.code !== NEW_CANVAS_CODE && !window.confirm("Remove the Canvas2D layer and its code?")) {
+      return;
+    }
+    setDoc(d => withCanvasLayer(d, null));
+    setLayerJustAdded(false);
+    setHasUnsavedChanges(true);
+    setCodeTab("image");
+  };
+
+  const onLayerStatus = (errors: LineError[]) => {
+    setLayerErrors(errors);
+    if (errors.length > 0 && errorShader === null && canvasLayer(docRef.current)) {
+      setCodeTab("canvas");  // Show the code with the error.
+    }
+  };
+
   const onBuilt = (result: CompileResult) => {
     const errors = result.ok ? [] : result.errors;
     setLineErrors(errors);
@@ -522,6 +561,7 @@ export default function App() {
   // Each tab has its own editor, hidden unless it's open, so it keeps its undo history and cursor.
   const codeTabs: {tab: ShaderId; code: string}[] = [
     ...(showShared ? [{tab: "shared" as const, code: doc.shared ?? SHARED_PLACEHOLDER}] : []),
+    ...(layer ? [{tab: "canvas" as const, code: layer.code}] : []),
     ...(doc.buffers ?? []).map((buffer, i) => ({tab: i, code: buffer.code})),
     {tab: "image", code: doc.code},
   ];
@@ -632,7 +672,7 @@ export default function App() {
       }
     };
     const showCode = (tab: ShaderId) => {
-      if (tab === "image" || tab === "shared" || tab < (doc.buffers?.length ?? 0)) {
+      if (tab === "image" || tab === "shared" || (tab === "canvas" ? layer !== undefined : tab < (doc.buffers?.length ?? 0))) {
         setCodeTab(tab);
       }
     };
@@ -655,7 +695,10 @@ export default function App() {
       "Sliders": () => showPanel("sliders"),
       "Textures": () => showPanel("textures"),
       "Image": () => showCode("image"),
+      "Shared GLSL": () => showCode("shared"),
       "Shared": () => showCode("shared"),
+      "Canvas2D": () => showCode("canvas"),
+      "Canvas": () => showCode("canvas"),
       "iBuffer0": () => showCode(0),
       "iBuffer1": () => showCode(1),
       "iBuffer2": () => showCode(2),
@@ -723,7 +766,7 @@ export default function App() {
   };
 
 
-  const buildState = lineErrors.length > 0 ? "error" : allBuilt ? "built" : "changed";
+  const buildState = lineErrors.length > 0 || layerErrors.length > 0 ? "error" : allBuilt ? "built" : "changed";
 
   const tutorialState: TutorialState = {
     code: doc.code, builtCode: builtCode ?? "",
@@ -908,15 +951,36 @@ export default function App() {
               </Button>
             </Tooltip>}
           <ShaderTabs
-            numBuffers={doc.buffers?.length ?? 0} showShared={showShared} current={codeTab} error={errorShader}
+            numBuffers={doc.buffers?.length ?? 0} showShared={showShared} hasCanvas={layer !== undefined} current={codeTab}
+            errors={[...(errorShader === null ? [] : [errorShader]), ...(layerErrors.length > 0 ? ["canvas" as const] : [])]}
             onChoose={setCodeTab} onAdd={addBuffer} onRemoveLast={removeLastBuffer}
+            onAddCanvas={addCanvasLayer} onRemoveCanvas={removeCanvasLayer}
           />
+          {layer && codeTab === "canvas" &&
+            <div className="canvasOptions">
+              <Tooltip
+                label="Off: the drawing only shows where a shader reads iCanvas2D" position="bottom-start" openDelay={400}
+              >
+                <div>
+                  <Switch
+                    size="xs" label="Draw over the image" checked={layer.overlay}
+                    onChange={event => {
+                      const overlay = event.currentTarget.checked;
+                      setDoc(d => withCanvasLayer(d, {...canvasLayer(d)!, overlay}));
+                      setHasUnsavedChanges(true);
+                    }}
+                  />
+                </div>
+              </Tooltip>
+              <Text size="xs" c="dimmed">JavaScript · shaders read it as <code>iCanvas2D</code></Text>
+            </div>}
           {codeTabs.map(({tab, code}) =>
             <CodeEditor
-              key={tab} value={code} hidden={tab !== codeTab}
+              key={tab} value={code} hidden={tab !== codeTab} language={tab === "canvas" ? "javascript" : "glsl"}
               onChange={(changed, isHelperChange) => onCodeChange(tab, changed, isHelperChange)}
               onBuild={build} onSave={() => void save(false)}
-              lineErrors={errorShader === tab ? lineErrors : []}
+              lineErrors={tab === "canvas" ? layerErrors : errorShader === tab ? lineErrors : []}
+              autoFocus={tab === "canvas" && layerJustAdded}
             />)}
         </section>
         <section
@@ -941,6 +1005,7 @@ export default function App() {
           <Canvas
             ref={canvasRef}
             shaders={shaders} buildId={buildId} textureURLs={textureURLs}
+            layerTextures={layerTextures} layerOverlay={layer?.overlay ?? true} onLayerStatus={onLayerStatus}
             time={time} duration={doc.duration} stepClock={stepClock} variableValues={values}
             aspectRatio={doc.aspectRatio}
             onBuilt={onBuilt}

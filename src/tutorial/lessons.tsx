@@ -13,7 +13,7 @@ import * as shaders from './shaders';
 export interface TutorialState {
   code: string;
   builtCode: string;
-  // The Shared tab's and each buffer's code, as in the editor and as last built.
+  // The Shared GLSL tab's and each buffer's code, as in the editor and as last built.
   shared: string;
   buffers: string[];
   builtShared: string;
@@ -51,8 +51,11 @@ export interface Lesson {
   steps: Step[];
 }
 
+// The tabs the tutorial fills: the shaders', not the Canvas2D layer's.
+type ShaderTab = Exclude<ShaderId, "canvas">;
+
 export interface TabCode {
-  tab: ShaderId;
+  tab: ShaderTab;
   code: string;
 }
 
@@ -62,12 +65,12 @@ export function stepCode(step: Step): TabCode[] {
 }
 
 // A tab's code in the editor.
-export function codeIn(state: TutorialState, tab: ShaderId): string | undefined {
+export function codeIn(state: TutorialState, tab: ShaderTab): string | undefined {
   return tab === "image" ? state.code : tab === "shared" ? state.shared : state.buffers[tab];
 }
 
 // A tab's code as last built.
-function builtIn(state: TutorialState, tab: ShaderId): string {
+function builtIn(state: TutorialState, tab: ShaderTab): string {
   return (tab === "image" ? state.builtCode : tab === "shared" ? state.builtShared : state.builtBuffers[tab]) ?? "";
 }
 
@@ -870,11 +873,11 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
           </p>
           <p>
             A buffer is an extra shader with its own tab. Each frame it runs before the image, and what it draws
-            is kept for the other tabs to read. Add one with the <span aria-label="add">⊕</span> button above
-            the code. Its tab is called <code>iBuffer0</code>.
+            is kept for the other tabs to read. Click the <span aria-label="add">⊕</span> above the code and
+            choose Add a buffer. Its tab is called <code>iBuffer0</code>.
           </p>
         </>,
-        task: "Add a buffer with the ⊕ above the code.",
+        task: "Click the ⊕ above the code and choose Add a buffer.",
         check: now => now.buffers.length > 0,
       },
       {
@@ -943,12 +946,12 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         body: <>
           <p>
             Say you want the image to draw the dot too. Both tabs then need to know where the dot is. Rather
-            than writing the same code twice, you can put it in the Shared tab, which appears to the left of the
-            code tabs once you have a buffer. Functions, constants and <code>#define</code>s there can be used
-            in every tab.
+            than writing the same code twice, you can put it in the Shared GLSL tab, which appears to the left
+            of the code tabs once you have a buffer. Functions, constants and <code>#define</code>s there can be
+            used in every shader tab.
           </p>
           <p>
-            This puts the dot's path in a function called <code>dotPosition</code> in the Shared tab. The
+            This puts the dot's path in a function called <code>dotPosition</code> in the Shared GLSL tab. The
             buffer uses it to heat the dot, and the image uses it to draw a ring around the dot, so the two
             always line up. This step fills in three tabs, so build it and play.
           </p>
@@ -958,7 +961,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
           {tab: 0, code: shaders.SHARED_HEAT_BUFFER},
           {tab: "image", code: shaders.HEAT_IMAGE_WITH_DOT},
         ],
-        task: "Build with dotPosition in the Shared tab, used by the image.",
+        task: "Build with dotPosition in the Shared GLSL tab, used by the image.",
         check: now => now.built && uses(now.builtShared, /\bdotPosition\b/) && uses(now.builtCode, /\bdotPosition\b/),
       },
       challenges("buffers", <>
@@ -978,7 +981,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         body: <>
           <p>
             Ink in water uses two buffers. <code>iBuffer0</code> moves the water, and <code>iBuffer1</code> carries
-            the ink along with it. The Shared tab has the jets that both of them use.
+            the ink along with it. The Shared GLSL tab has the jets that both of them use.
           </p>
           {EXPLORE}
         </>,

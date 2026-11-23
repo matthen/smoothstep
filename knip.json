@@ -1,5 +1,10 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": ["src/player/standalone.ts"],
-  "ignore": ["tools/**"]
+  "ignore": ["tools/**", "public/libs/**"],
+  "ignoreDependencies": [
+    "planck", "matter-js", "simplex-noise", "d3-delaunay",
+    "@fontsource-variable/inter", "@fontsource-variable/arimo", "@fontsource-variable/exo-2",
+    "@fontsource/tinos", "@fontsource/courier-prime"
+  ]
 }

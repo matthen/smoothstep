@@ -10,9 +10,10 @@ import {
 import { exportSize, frameCount, type ExportOptions, type ExportProgress } from '../dialogs/exportTypes';
 import { safeFilename, type DownloadableFile } from '../lib/archive';
 import { textureURL } from '../lib/config';
-import { bufferCodes, variableValues, type AnimationDocument } from '../lib/document';
-import { Renderer } from '../render/Renderer';
-import { renderSteps, RESTART } from '../render/steps';
+import type { CanvasLayer } from '../layer/CanvasLayer';
+import { bufferCodes, canvasLayer, EMPTY_TEXTURE, variableValues, type AnimationDocument } from '../lib/document';
+import { Renderer, type FrameInputs } from '../render/Renderer';
+import { renderSteps, RESTART, type StepRenderer } from '../render/steps';
 import { noVideoReason } from './videoSupport';
 
 export { exportSize, frameCount };
@@ -107,6 +108,7 @@ export async function exportVideo(
   frameCanvas.height = height;
   const frameContext = frameCanvas.getContext("2d", {willReadFrequently: options.type === "gif"})!;
   let encoder: Encoder | null = null;
+  let layer: CanvasLayer | null = null;
   try {
     const compiled = renderer.setCode(doc.code, bufferCodes(doc), doc.shared);
     if (!compiled.ok) {
@@ -115,19 +117,49 @@ export async function exportVideo(
     renderer.setSize(width, height);
     renderer.setTextures(doc.textures.map(textureURL));
     await renderer.texturesReady();
+    const layerDoc = canvasLayer(doc);
+    if (layerDoc) {
+      const {CanvasLayer, bundledAssets} = await import('../layer/bundled');
+      layer = new CanvasLayer(bundledAssets, {onFrame: bitmap => bitmap.close(), onStatus: () => {}}, false);
+      renderer.setLayer(true);
+      renderer.layerOverlay = layerDoc.overlay;
+      layer.configure({
+        code: layerDoc.code, width, height, duration: doc.duration,
+        textures: doc.textures.map(t => t.url === EMPTY_TEXTURE && !t.isUserUploaded ? null : textureURL(t)),
+      });
+    }
     encoder = options.type === "gif" ? gifEncoder(frameCanvas, fps) :
       options.type === "png" ? pngEncoder(frameCanvas) :
       await videoEncoder(frameCanvas, options.type, fps, width, height);
     let steps = RESTART;
+    // The steps a frame takes are listed first, as each waits for the Canvas2D layer to draw it.
+    const due: FrameInputs[] = [];
+    const lister: StepRenderer = {
+      get hasState() {
+        return renderer.hasState;
+      },
+      render: inputs => {
+        due.push(inputs);
+      },
+    };
     for (let i = 0; i < frames; i++) {
       if (signal.aborted) {
         throw new ExportCancelled();
       }
       const time = i / fps;
       const before = steps;
-      steps = renderSteps(renderer, steps, time, time, (t, frameIndex) => ({
+      steps = renderSteps(lister, steps, time, time, (t, frameIndex) => ({
         time: t, duration: doc.duration, frameIndex, variableValues: variableValues(doc.variables, t),
       }));
+      for (const inputs of due.splice(0)) {
+        if (layer) {
+          const drawn = layer.draw({time: inputs.time, frame: inputs.frameIndex, floats: inputs.variableValues});
+          renderer.setLayerFrame(await drawn.catch((error: unknown) => {
+            throw new Error("The Canvas2D code has an error: " + (error instanceof Error ? error.message : String(error)));
+          }));
+        }
+        renderer.render(inputs);
+      }
       // Above 60fps, frames between a simulation's steps repeat the one before.
       if (!renderer.hasState || steps.rendered !== before.rendered) {
         frameContext.drawImage(glCanvas, 0, 0);
@@ -148,6 +180,7 @@ export async function exportVideo(
     await encoder?.cancel().catch(() => {});
     throw error;
   } finally {
+    layer?.dispose();
     renderer.dispose();
   }
 }

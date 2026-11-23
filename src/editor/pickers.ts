@@ -68,7 +68,10 @@ function onDrag(el: HTMLElement, handlers: DragHandlers) {
 }
 
 // A ruler that scrolls under a fixed needle: drag sideways to change the value, up and down to zoom.
-export function createFloatPicker(initial: number, onChange: (value: number) => void): PickerWidget {
+// `onChange` also gets the ruler's width, the range of values it shows.
+export function createFloatPicker(
+  initial: number, onChange: (value: number, scale: number) => void, initialScale = 2,
+): PickerWidget {
   const width = 256;
   const height = 96;
   const dom = makeModal('ss-float-picker', width, height);
@@ -76,7 +79,7 @@ export function createFloatPicker(initial: number, onChange: (value: number) => 
   dom.appendChild(canvas);
   let value = initial;
   let zoom = 0;
-  let scale = 2;
+  let scale = initialScale;
   let prev: [number, number] = [0, 0];
 
   const draw = () => {
@@ -147,11 +150,10 @@ export function createFloatPicker(initial: number, onChange: (value: number) => 
       }
       if (axis !== 'y') value -= ((x - prev[0]) * scale) / width;
       if (axis !== 'x') zoom -= y - prev[1];
-      const newScale = 2 * Math.exp(0.04 * zoom);
-      scale = newScale;
+      scale = initialScale * Math.exp(0.04 * zoom);
       prev = [x, y];
       draw();
-      onChange(value);
+      onChange(value, scale);
     },
   });
   draw();
@@ -326,7 +328,7 @@ export function createDirectionPicker(initial: number[], onChange: (values: numb
 export function createColorPicker(
   initial: number[],
   onChange: (rgb: number[]) => void,
-  onLink: (rgb: number[]) => void,
+  onLink?: (rgb: number[]) => void,
 ): PickerWidget {
   const width = 250;
   const disc = 200;
@@ -418,8 +420,12 @@ export function createColorPicker(
     },
   });
   const link = q('.ss-color-link');
-  link.addEventListener('pointerdown', (e) => e.preventDefault());
-  link.addEventListener('click', () => onLink(rgb()));
+  if (onLink) {
+    link.addEventListener('pointerdown', (e) => e.preventDefault());
+    link.addEventListener('click', () => onLink(rgb()));
+  } else {
+    link.remove();
+  }
   barEl.style.width = `${bar}px`;
   draw();
   return { dom, width };

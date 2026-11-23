@@ -1098,6 +1098,19 @@ div#textures .texturesHint {
     padding-right: var(--mantine-spacing-lg);
   }
 
+  // A Canvas2D helper's signature, or a library's import line.
+  .inputSignature {
+    width: 45%;
+    padding-right: var(--mantine-spacing-lg);
+
+    code {
+      background: none;
+      padding: 0;
+      color: $dt-green;
+      white-space: pre-wrap;
+    }
+  }
+
   // On a phone, the type and name share a line, with the description below.
   @include phone {
     .inputTable .mantine-Table-tr {
@@ -1107,6 +1120,11 @@ div#textures .texturesHint {
 
     .inputNameCell {
       width: auto;
+    }
+
+    .inputSignature {
+      width: auto;
+      grid-column: 1 / -1;
     }
 
     .inputTable .mantine-Table-td:last-child {
@@ -1296,13 +1314,33 @@ div#textures .texturesHint {
   font-size: 12px;
 }
 
-// Sets the Shared tab apart from the shaders that draw.
+// The Canvas2D tab's mark, as its code is JavaScript.
+.shaderKind {
+  font-size: 15px;
+  color: $dt-yellow;
+  opacity: 0.8;
+}
+
+// Sets the Shared GLSL and Canvas2D tabs apart from the shaders that draw.
 .shaderDivider {
   align-self: center;
   width: 1px;
   height: 18px;
   margin: 0 6px;
   background: $dt-gray;
+}
+
+// The Canvas2D tab's own row, between the tabs and its code.
+.canvasOptions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 16px 6px;
+
+  code {
+    font-size: inherit;
+  }
 }
 
 // The Sliders tab: a row for each iFloat the code uses.

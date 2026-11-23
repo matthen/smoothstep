@@ -52,7 +52,8 @@ export default defineConfig({
         codeSplitting: {
           groups: [
             {name: 'react', test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/, priority: 3},
-            {name: 'codemirror', test: /[\\/]node_modules[\\/](@codemirror|@lezer|crelt|style-mod|w3c-keyname)[\\/]/, priority: 2},
+            // JavaScript support stays out, to load with the first Canvas2D tab.
+            {name: 'codemirror', test: /[\\/]node_modules[\\/](@codemirror[\\/](?!lang-javascript)|@lezer[\\/](?!javascript)|crelt[\\/]|style-mod[\\/]|w3c-keyname[\\/])/, priority: 2},
             {name: 'mantine', test: /[\\/]node_modules[\\/](@mantine|@floating-ui|react-remove-scroll[^\\/]*|react-style-singleton|use-callback-ref|use-sidecar|tslib|get-nonce|aria-hidden|detect-node-es|clsx)[\\/]/, priority: 1},
           ],
         },

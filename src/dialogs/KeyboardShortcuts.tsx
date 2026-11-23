@@ -48,8 +48,8 @@ export default function KeyboardShortcuts({show, onHide}: KeyboardShortcutsProps
         </section>,
       )}
       <Text size="sm" c="dimmed">
-        Click a number, colour or vector in the code for a picker, and a built-in function or input for its
-        definition.
+        Click a number, colour or vector in the code for a picker, and a built-in function, input or Canvas2D
+        helper for its definition.
       </Text>
       <Group justify="flex-end" mt="lg"><Button variant="default" onClick={onHide}>Close</Button></Group>
     </AppModal>

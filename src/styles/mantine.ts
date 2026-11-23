@@ -32,6 +32,8 @@ import '@mantine/core/styles/NumberInput.css';
 import '@mantine/core/styles/Progress.css';
 import '@mantine/core/styles/SegmentedControl.css';
 import '@mantine/core/styles/Slider.css';
+import '@mantine/core/styles/InlineInput.css';
+import '@mantine/core/styles/Switch.css';
 import '@mantine/core/styles/Table.css';
 import '@mantine/core/styles/Tabs.css';
 import '@mantine/core/styles/Tooltip.css';

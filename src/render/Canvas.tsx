@@ -1,8 +1,11 @@
 import { Alert } from '@mantine/core';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type PointerEvent } from 'react';
 
-import type { AspectRatio } from '../lib/document';
+import type { CanvasLayer } from '../layer/CanvasLayer';
+import type { AspectRatio, ShaderExtras } from '../lib/document';
+import type { LineError } from '../lib/types';
 import { useLatest } from '../lib/useLatest';
+import { LayerSteps } from './layerSteps';
 import { drawingSize, fitCanvas, SlowFrames } from './layout';
 import { Renderer, type CompileResult } from './Renderer';
 import { renderSteps, RESTART } from './steps';
@@ -19,17 +22,24 @@ export interface CanvasHandle {
   captureFrame(): string | null;
 }
 
-// The image's code, each buffer's and the code they share, as last built.
-export interface Shaders {
+// The image's code, each buffer's, the code they share and the Canvas2D layer's, as last built.
+export interface Shaders extends ShaderExtras {
   code: string;
-  buffers: string[];
-  shared: string;
 }
+
+// How long a change of size or length is left to settle before the Canvas2D layer starts again with it.
+const LAYER_SETTLE_MS = 80;
 
 interface CanvasProps {
   shaders: Shaders | null;
   buildId: number;      // bumps on every build, so building the same code again restarts iPrevFrame
   textureURLs: string[];
+  // For the Canvas2D layer: each slot's image, or null for an empty slot.
+  layerTextures: readonly (string | null)[];
+  // Whether the Canvas2D layer is drawn over the image.
+  layerOverlay: boolean;
+  // The Canvas2D layer's errors; none once it draws.
+  onLayerStatus(errors: LineError[]): void;
   time: number;
   duration: number;
   stepClock: number;  // seconds played since the simulation restarted
@@ -70,27 +80,44 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
   const marginSide = Math.max(0, (container[0] - width) / 2);
 
   const steps = useRef(RESTART);
+  // The animation's Canvas2D layer, once it has loaded, and the stepping that keeps it with the shaders.
+  const layerRef = useRef<{layer: CanvasLayer; steps: LayerSteps} | null>(null);
+  const layerBuildId = useRef(-1);
+  // The layer sent a frame, to show even when nothing else changed.
+  const needsPresent = useRef(false);
   const restart = useCallback(() => {
     steps.current = RESTART;
+    layerRef.current?.steps.restart();
     propsRef.current.onRestart();
   }, [propsRef]);
 
   const renderFrame = useCallback(() => {
     const p = propsRef.current;
     const renderer = rendererRef.current;
-    if (renderer) {
-      steps.current = renderSteps(renderer, steps.current, p.stepClock, p.time,
-        (time, frameIndex) => ({time, duration: p.duration, frameIndex, variableValues: p.variableValues}), 4);
+    const layerSteps = layerRef.current?.steps;
+    if (!renderer) {
+      return;
     }
+    if (layerSteps?.busy) {
+      needsRender.current = true;  // Try again next frame, when the layer may have caught up.
+      return;
+    }
+    steps.current = renderSteps(layerSteps ?? renderer, steps.current, p.stepClock, p.time,
+      (time, frameIndex) => ({time, duration: p.duration, frameIndex, variableValues: p.variableValues}), 4);
   }, [propsRef]);
 
   useImperativeHandle(ref, () => ({
     captureFrame() {
       const canvas = canvasRef.current;
-      if (!rendererRef.current || !canvas) {
+      const renderer = rendererRef.current;
+      if (!renderer || !canvas) {
         return null;
       }
-      renderFrame();
+      if (layerRef.current) {
+        renderer.refresh();  // Drawing a step would also step the layer, whose frame comes later.
+      } else {
+        renderFrame();
+      }
       // In the same task as the draw, so the buffer is still there. Thumbnails stay at the CSS size.
       if (canvas.width === width && canvas.height === height) {
         return canvas.toDataURL("image/png");
@@ -151,6 +178,68 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     needsRender.current = true;
   }, [props.shaders, props.buildId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The Canvas2D layer: started when a build has one, and again when what it runs with changes.
+  const layerCode = props.shaders === null ? undefined : props.shaders.canvas;
+  useEffect(() => {
+    const renderer = rendererRef.current;
+    if (!renderer || layerCode === undefined) {
+      return undefined;
+    }
+    renderer.setLayer(layerCode !== null);
+    needsRender.current = true;
+    if (layerCode === null) {
+      layerRef.current?.layer.dispose();
+      layerRef.current = null;
+      propsRef.current.onLayerStatus([]);
+      return undefined;
+    }
+    if (width === 0 || height === 0) {
+      return undefined;
+    }
+    const force = layerBuildId.current !== props.buildId;
+    const config = {
+      code: layerCode, width: pixelWidth, height: pixelHeight, duration: props.duration, textures: props.layerTextures,
+    };
+    const timer = window.setTimeout(() => {
+      void import('../layer/bundled').then(({CanvasLayer, bundledAssets}) => {
+        if (rendererRef.current !== renderer || propsRef.current.shaders?.canvas !== layerCode) {
+          return;
+        }
+        if (!layerRef.current) {
+          const layer = new CanvasLayer(bundledAssets, {
+            onFrame: bitmap => {
+              renderer.setLayerFrame(bitmap);
+              needsPresent.current = true;
+            },
+            onStatus: errors => propsRef.current.onLayerStatus(errors),
+          });
+          layerRef.current = {layer, steps: new LayerSteps(renderer, layer)};
+        }
+        layerBuildId.current = props.buildId;
+        if (layerRef.current.layer.configure(config, force)) {
+          restart();
+          needsRender.current = true;
+        }
+      }).catch((error: unknown) => {
+        console.error(error);
+        propsRef.current.onLayerStatus([{line: 0, message: "Couldn't load the Canvas2D layer. Check your connection and build again."}]);
+      });
+    }, force || !layerRef.current ? 0 : LAYER_SETTLE_MS);
+    return () => window.clearTimeout(timer);
+  }, [layerCode, props.buildId, width, height, pixelWidth, pixelHeight, props.duration, props.layerTextures, propsRef, restart]);
+
+  useEffect(() => () => {
+    layerRef.current?.layer.dispose();
+    layerRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    if (rendererRef.current) {
+      rendererRef.current.layerOverlay = props.layerOverlay;
+      needsPresent.current = true;
+    }
+  }, [props.layerOverlay]);
+
   useEffect(() => {
     rendererRef.current?.setTextures(props.textureURLs);
     rendererRef.current?.clearTargets();
@@ -169,6 +258,10 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     let updates = 0;
     const frames = new SlowFrames();
     const loop = (now: number) => {
+      if (!needsRender.current && needsPresent.current) {
+        rendererRef.current?.refresh();
+      }
+      needsPresent.current = false;
       if (needsRender.current) {
         needsRender.current = false;
         renderFrame();

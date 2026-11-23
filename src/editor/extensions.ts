@@ -4,7 +4,7 @@ import {
 } from '@codemirror/commands';
 import { bracketMatching, indentOnInput, indentUnit, syntaxHighlighting } from '@codemirror/language';
 import { gotoLine, openSearchPanel, replaceAll, search, searchKeymap } from '@codemirror/search';
-import { EditorState, Prec, type Extension } from '@codemirror/state';
+import { Compartment, EditorState, Prec, type Extension } from '@codemirror/state';
 import {
   EditorView, drawSelection, highlightSpecialChars, keymap, lineNumbers, tooltips, type Command,
 } from '@codemirror/view';
@@ -40,7 +40,22 @@ export interface EditorCallbacks {
   onSave(): void;
 }
 
-export function editorExtensions(callbacks: EditorCallbacks): Extension {
+// What a tab's code is written in: the shader language, or JavaScript for the Canvas2D layer.
+export type EditorLanguage = "glsl" | "javascript";
+
+// JavaScript support loads when a Canvas2D tab opens, then goes into each of its editor's states.
+const javascriptCompartment = new Compartment();
+let javascriptSupport: Extension | null = null;
+
+export async function loadJavaScript(view: EditorView) {
+  javascriptSupport ??= (await import('./javascript')).javascriptExtensions();
+  // The editor may have closed while it loaded.
+  if (view.dom.isConnected && javascriptCompartment.get(view.state) !== javascriptSupport) {
+    view.dispatch({effects: javascriptCompartment.reconfigure(javascriptSupport)});
+  }
+}
+
+export function editorExtensions(callbacks: EditorCallbacks, language: EditorLanguage = "glsl"): Extension {
   const build: Command = () => {
     callbacks.onBuild();
     return true;
@@ -69,12 +84,13 @@ export function editorExtensions(callbacks: EditorCallbacks): Extension {
     history(),
     drawSelection(),
     indentOnInput(),
-    glslLanguage,
-    syntaxHighlighting(highlighter),
+    // JavaScript brings its own highlighting and click helpers.
+    language === "glsl" ? [glslLanguage, syntaxHighlighting(highlighter), clickHelpers()] :
+      javascriptCompartment.of(javascriptSupport ?? []),
     bracketMatching(),
     closeBrackets(),
     autocompletion({
-      override: [glslCompletionSource],
+      ...(language === "glsl" ? {override: [glslCompletionSource]} : {}),
       activateOnTypingDelay: 200,
       icons: false,
     }),
@@ -84,7 +100,6 @@ export function editorExtensions(callbacks: EditorCallbacks): Extension {
     EditorState.tabSize.of(2),
     indentUnit.of('  '),
     tooltips({ parent: document.body }),
-    clickHelpers(),
     links(),
     lineErrors(),
   ];

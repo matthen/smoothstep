@@ -1,5 +1,52 @@
 import { describe, expect, it } from 'vitest';
-import { findPickerMatch, formatFloat, formatVec, hsvToRgb, isColor, parseVec, rgbToHsv } from './pickerValues';
+import {
+  findJsPickerMatch, findPickerMatch, formatCssColor, formatFloat, formatJsNumber, formatVec, hsvToRgb, isColor,
+  jsNumberScale, parseCssColor, parseVec, rgbToHsv,
+} from './pickerValues';
+
+describe('findJsPickerMatch', () => {
+  const line = 'Set({fillStyle: "#bbeafe", strokeStyle: "rgba(0, 0, 0, 0.05)"}), Disk({radius: -0.25}), x1, a-2, 1e5';
+  const at = (text: string) => line.indexOf(text) + 1;
+
+  it('finds colour strings whole, and numbers', () => {
+    expect(findJsPickerMatch(line, at('#bbeafe'))).toMatchObject({ kind: 'cssColor', text: '#bbeafe' });
+    expect(findJsPickerMatch(line, at('0.05)'))).toMatchObject({ kind: 'cssColor', text: 'rgba(0, 0, 0, 0.05)' });
+    expect(findJsPickerMatch(line, at('-0.25'))).toMatchObject({ kind: 'number', text: '-0.25' });
+    expect(findJsPickerMatch('ctx.fillText("Hi", 60, 110);', 20)).toMatchObject({ kind: 'number', text: '60' });
+  });
+
+  it('leaves out identifiers, subtraction signs and exponents', () => {
+    expect(findJsPickerMatch(line, at('1, a'))).toBeNull();
+    expect(findJsPickerMatch(line, at('-2'))).toMatchObject({ text: '2' });
+    expect(findJsPickerMatch(line, line.indexOf('1e5'))).toBeNull();
+    expect(findJsPickerMatch('"#12345"', 3)?.kind).not.toBe('cssColor');
+  });
+});
+
+describe('CSS colours', () => {
+  it('round-trip every format they were written in', () => {
+    for (const text of ['#bbeafe', '#fff', '#ffffff16', '#FFCC00', '#f0c8', 'rgb(255, 0, 0)', 'rgb(10,20,30)',
+      'rgba(0, 0, 0, 0.05)', 'rgb(255 128 0 / 50%)']) {
+      expect(formatCssColor(parseCssColor(text)!, text)).toBe(text);
+    }
+  });
+
+  it('write a new colour in the old format, keeping alpha', () => {
+    expect(formatCssColor([1, 0, 0], '#bbeafe')).toBe('#ff0000');
+    expect(formatCssColor([1, 0, 0], '#ABC')).toBe('#F00');
+    expect(formatCssColor([0, 1, 0], '#ffffff16')).toBe('#00ff0016');
+    expect(formatCssColor([0, 0, 1], 'rgba(0, 0, 0, 0.05)')).toBe('rgba(0, 0, 255, 0.05)');
+    expect(parseCssColor('#ff8000')).toEqual([1, 128 / 255, 0]);
+  });
+});
+
+describe('JavaScript numbers', () => {
+  it('stay whole if they were, and otherwise keep places to suit the ruler', () => {
+    expect(formatJsNumber(61.6, '60', jsNumberScale(60))).toBe('62');
+    expect(formatJsNumber(0.31234, '0.3', jsNumberScale(0.3))).toBe('0.312');
+    expect(jsNumberScale(1080)).toBeGreaterThan(jsNumberScale(0.5));
+  });
+});
 
 describe('findPickerMatch', () => {
   const line = 'vec3 col = vec3(0.8, 0.3, 0.1) + vec3(4.071, -0.630, 0.356) * vec2(0.3, -0.4).x + 2.5 - -1.25;';

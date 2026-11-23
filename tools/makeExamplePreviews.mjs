@@ -24,6 +24,7 @@ const START = {
   "5c81f0d3a7e2": 7,  // The ink takes a few seconds to swirl.
   "db5ea9765f9f": 4,  // The snowflake starts from one hexagon.
   "be71615e6614": 5,  // The camera moves in to the cut after a few seconds.
+  "7852e2820a47": 12,  // The balls take a while to pile up.
 };
 const posters = process.argv.includes("--posters");
 const args = process.argv.slice(2).filter(a => a !== "--posters");

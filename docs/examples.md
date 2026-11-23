@@ -19,7 +19,11 @@ If you change an example, save it to keep it as one of your own animations.
 * [Glowing trails](https://smoothstep.io/app/#example/3156da0acaeb): dots that leave fading trails,
   drawn on top of the previous frame.
 * [Pokémon type battles](https://smoothstep.io/app/#example/65ca463c0318): cells of the 18 Pokémon
-  types fight their neighbours, and the type chart decides who wins.
+  types fight their neighbours, and the type chart decides who wins. The Canvas2D layer draws the legend.
+* [Hypocycloids](https://smoothstep.io/app/#example/96abdd1ee3d3): circles rolling inside and outside a
+  circle, tracing curves with the Canvas2D layer's drawing helpers.
+* [Bean machine](https://smoothstep.io/app/#example/7852e2820a47): balls bounce down through pegs and
+  pile up in a bell curve, simulated with planck.js in the Canvas2D layer.
 * [Hexagonal growth](https://smoothstep.io/app/#example/db5ea9765f9f): one hexagon grows into a
   snowflake, as each empty cell with exactly one living neighbour comes alive.
 * [Truchet tiles](https://smoothstep.io/app/#example/bd2cdbfe233d): tiles that turn smoothly, rejoining
@@ -40,3 +44,5 @@ If you change an example, save it to keep it as one of your own animations.
 * [Stateful animations - iPrevFrame](https://smoothstep.io/app/#example/26d46785c1f6)
 * [Ink in water](https://smoothstep.io/app/#example/5c81f0d3a7e2): one buffer simulates flowing water,
   and a second carries ink along in it
+* [Drawing with the Canvas2D layer](https://smoothstep.io/app/#example/9087790c091c): JavaScript draws
+  text, shapes, a picture, trails and a little physics over a shader, which reads the drawing to make it glow

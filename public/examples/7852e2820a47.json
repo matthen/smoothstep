@@ -1,0 +1,108 @@
+{
+  "title": "Bean machine",
+  "code": "// IMAGE: a dark background, with a soft glow around everything the [Canvas2D] tab draws. The canvas\n// layer is a texture, iCanvas2D, that every shader can read.\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  vec2 uv = fragCoord / iResolution.xy;\n  vec3 color = mix(vec3(0.02, 0.02, 0.06), vec3(0.06, 0.04, 0.12), uv.y);\n  // A blur of the Canvas2D layer, from samples in rings around this pixel.\n  vec3 glow = vec3(0.);\n  for (int ring = 1; ring <= 3; ring++) {\n    for (int i = 0; i < 8; i++) {\n      float angle = 6.2832 * (float(i) + 0.5 * float(ring)) / 8.;\n      vec2 offset = vec2(cos(angle), sin(angle)) * float(ring) * 6. / iResolution;\n      glow += texture(iCanvas2D, uv + offset).rgb;\n    }\n  }\n  fragColor = vec4(color + 0.35 * glow / 24., 1.);\n}\n",
+  "layers": [
+    {
+      "kind": "canvas2d",
+      "code": "// CANVAS2D: a bean machine, simulated with the planck.js physics library. Balls fall through rows\n// of pegs, bouncing left or right at each, and pile up in a bell curve.\nimport planck from \"planck\";\n\nconst WIDTH = 9, HEIGHT = 16;  // The board, in metres; the view below fits it to the canvas.\nconst BINS = 15;\nconst BIN_HEIGHT = 5.5;\nconst BALL_RADIUS = 0.12, PEG_RADIUS = 0.1;\nconst MAX_BALLS = 220;\nconst FUNNEL_TOP = 14.4, FUNNEL_GAP = 0.4;\n\n// Runs once after each build: puts the pegs, walls and bins in a new world. What it returns is\n// `data` in draw.\nfunction setup() {\n  const world = new planck.World({gravity: planck.Vec2(0, -10)});\n  const ground = world.createBody();\n  const wall = (x1, y1, x2, y2) => ground.createFixture(planck.Edge(planck.Vec2(x1, y1), planck.Vec2(x2, y2)));\n  wall(0, 0, WIDTH, 0);\n  wall(0, 0, 0, HEIGHT);\n  wall(WIDTH, 0, WIDTH, HEIGHT);\n  // A funnel drops the balls in the middle.\n  wall(0.5, FUNNEL_TOP, WIDTH / 2 - FUNNEL_GAP, 13.2);\n  wall(WIDTH - 0.5, FUNNEL_TOP, WIDTH / 2 + FUNNEL_GAP, 13.2);\n  const binWidth = WIDTH / BINS;\n  for (let i = 1; i < BINS; i++) {\n    wall(i * binWidth, 0, i * binWidth, BIN_HEIGHT);\n  }\n  const pegs = [];\n  // Rows of pegs, each row offset by half a bin from the one above.\n  for (let row = 0; row < 10; row++) {\n    const y = 12.6 - row * 0.7;\n    for (let x = (row % 2 ? binWidth : binWidth / 2); x < WIDTH; x += binWidth) {\n      ground.createFixture(planck.Circle(planck.Vec2(x, y), PEG_RADIUS));\n      pegs.push([x, y]);\n    }\n  }\n  return {world, pegs, balls: [], binWidth};\n}\n\nfunction dropBall({world, balls}) {\n  const ball = world.createDynamicBody({\n    position: planck.Vec2(WIDTH / 2 + (Math.random() - 0.5) * 0.6, 15.5),\n    linearDamping: 1,  // Like air resistance, so balls don't fly off the pegs.\n  });\n  ball.createFixture(planck.Circle(BALL_RADIUS), {density: 1, friction: 0.1, restitution: 0.3});\n  balls.push(ball);\n}\n\n// Runs once a step, 60 times a second, so the simulation moves on 1/60 s each time.\nfunction draw(ctx, {frame, width, data}) {\n  if (frame % 5 === 0 && data.balls.length < MAX_BALLS) {\n    dropBall(data);\n  }\n  data.world.step(1 / 60);\n\n  clear(ctx);\n  const hue = i => `hsl(${200 + 140 * i / MAX_BALLS}, 90%, 65%)`;\n  drawList(ctx, [\n    Set({strokeStyle: \"#ffffff80\"}),\n    AbsoluteLineWidth(3),\n    Line({pts: [[0.5, FUNNEL_TOP], [WIDTH / 2 - FUNNEL_GAP, 13.2]]}),\n    Line({pts: [[WIDTH - 0.5, FUNNEL_TOP], [WIDTH / 2 + FUNNEL_GAP, 13.2]]}),\n    Array.from({length: BINS - 1}, (_, i) => Line({pts: [[(i + 1) * data.binWidth, 0], [(i + 1) * data.binWidth, BIN_HEIGHT]]})),\n    Set({fillStyle: \"#ffffffc0\"}),\n    data.pegs.map(center => Disk({center, radius: PEG_RADIUS})),\n    data.balls.map((ball, i) => [\n      Set({fillStyle: hue(i)}),\n      Disk({center: [ball.getPosition().x, ball.getPosition().y], radius: BALL_RADIUS}),\n    ]),\n  ], {xmin: 0, xmax: WIDTH, ymin: 0, ymax: HEIGHT});\n\n  ctx.font = \"600 40px Inter\";\n  ctx.textAlign = \"center\";\n  ctx.fillStyle = \"white\";\n  ctx.fillText(data.balls.length + \" balls\", width / 2, 64);\n}\n\n",
+      "overlay": true
+    }
+  ],
+  "duration": 24,
+  "aspectRatio": [
+    9,
+    16
+  ],
+  "textures": [
+    {
+      "id": "iTexture0",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture1",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture2",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture3",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture4",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture5",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture6",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    },
+    {
+      "id": "iTexture7",
+      "url": "special/black.png",
+      "isUserUploaded": false
+    }
+  ],
+  "variables": [
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    },
+    {
+      "transitions": []
+    }
+  ]
+}

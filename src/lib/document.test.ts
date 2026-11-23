@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  canonicalJSON, MAX_BUFFERS, newDocument, parseDocument, InvalidDocumentError, sliderRange, variableValue,
-  variableValues,
+  canonicalJSON, canvasLayer, MAX_BUFFERS, newDocument, parseDocument, InvalidDocumentError, sameExtras, shaderExtras,
+  sliderRange, variableValue, variableValues, withCanvasLayer,
   type Transition,
 } from './document';
 
@@ -30,6 +30,30 @@ describe("parseDocument", () => {
     expect(() => parseDocument({...newDocument(), buffers: fiveBuffers})).toThrow(InvalidDocumentError);
     expect(() => parseDocument({...newDocument(), buffers: [{code: 1}]})).toThrow(InvalidDocumentError);
     expect(() => parseDocument({...newDocument(), shared: 1})).toThrow(InvalidDocumentError);
+  });
+
+  it("keeps a Canvas2D layer, drawn over the image unless it says not, and leaves out an empty list", () => {
+    const layer = {kind: "canvas2d", code: "function draw(ctx) {}", overlay: false, extra: 1};
+    expect(parseDocument({...newDocument(), layers: [layer]}).layers).toEqual(
+      [{kind: "canvas2d", code: "function draw(ctx) {}", overlay: false}]);
+    expect(parseDocument({...newDocument(), layers: [{kind: "canvas2d", code: ""}]}).layers![0]!.overlay).toBe(true);
+    expect("layers" in parseDocument({...newDocument(), layers: []})).toBe(false);
+  });
+
+  it("refuses layers of unknown kinds, more than one layer, and layer code that isn't text", () => {
+    const layer = {kind: "canvas2d", code: "", overlay: true};
+    for (const layers of [[layer, layer], [{...layer, kind: "webgl"}], [{...layer, code: 1}], layer]) {
+      expect(() => parseDocument({...newDocument(), layers})).toThrow(InvalidDocumentError);
+    }
+  });
+
+  it("adds and removes the Canvas2D layer, and builds again when its code changes", () => {
+    const layer = {kind: "canvas2d" as const, code: "a", overlay: true};
+    const doc = withCanvasLayer(newDocument(), layer);
+    expect(canvasLayer(doc)).toEqual(layer);
+    expect("layers" in withCanvasLayer(doc, null)).toBe(false);
+    expect(sameExtras(shaderExtras(doc), shaderExtras(withCanvasLayer(doc, {...layer, code: "b"})))).toBe(false);
+    expect(sameExtras(shaderExtras(doc), shaderExtras(withCanvasLayer(doc, {...layer, overlay: false})))).toBe(true);
   });
 
   it("drops unknown fields, like the old editor's transition state", () => {
