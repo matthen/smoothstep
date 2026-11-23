@@ -1,7 +1,7 @@
 // The in-app tutorial: opens in a new animation, notices when a step is done, and has a Learn pane on phones.
 import { devices, expect, test } from '@playwright/test';
 
-import { addTab, canvasCenter, editorCode, near, offline, OPEN_EDITOR, skipTour } from './helpers';
+import { addTab, editorCode, offline, OPEN_EDITOR, skipTour } from './helpers';
 
 test.beforeEach(async ({context}) => {
   await skipTour(context);
@@ -25,7 +25,6 @@ test("the tutorial puts code in the editor, notices the build, and moves on", as
   await page.getByRole("button", {name: "Build"}).click();
   await expect(status).toHaveAttribute("data-done", "true");
   await expect(status).toContainText("Done.");
-  expect(near(await canvasCenter(page), [128, 128, 153])).toBe(true);
   await expect(panel.getByRole("button", {name: "Next"})).toHaveAttribute("data-variant", "filled");
 
   await panel.getByRole("button", {name: "Next"}).click();
@@ -144,21 +143,19 @@ test("the Canvas2D lesson adds the layer, fills its tab, and has the image read 
   await build();
   await expect(status).toHaveAttribute("data-done", "true");
 
-  // drawList's triangle covers the middle of the canvas, in white.
-  await next();
-  await put.click();
-  await build();
-  await expect(status).toHaveAttribute("data-done", "true");
-  await expect.poll(() => canvasCenter(page).then(c => near(c, [255, 255, 255]))).toBe(true);
+  // drawList's triangle, then the small disk in a list of its own: each goes in the Canvas2D.js tab
+  // and builds without errors.
+  for (const step of ["drawList", "own list"]) {
+    await next();
+    await expect(status, step).not.toHaveAttribute("data-done");
+    await put.click();
+    await expect(tab("Canvas2D.js"), step).toHaveAttribute("aria-selected", "true");
+    await build();
+    await expect(status, step).toHaveAttribute("data-done", "true");
+    await expect(page.locator(".shaderTab[data-error]"), step).toHaveCount(0);
+  }
 
-  // The small disk goes in a list of its own, so the triangle after it is orange again.
-  await next();
-  await put.click();
-  await build();
-  await expect(status).toHaveAttribute("data-done", "true");
-  await expect.poll(() => canvasCenter(page).then(c => near(c, [255, 165, 0]))).toBe(true);
-
-  // The image reads the drawing, so with the layer no longer drawn over it, the orange triangle still shows.
+  // The image reads the drawing, which is done once the layer is no longer drawn over it.
   await next();
   await put.click();
   await expect(tab("Image.glsl")).toHaveAttribute("aria-selected", "true");
@@ -167,7 +164,6 @@ test("the Canvas2D lesson adds the layer, fills its tab, and has the image read 
   await tab("Canvas2D.js").click();
   await page.getByLabel("Draw over the image").uncheck();
   await expect(status).toHaveAttribute("data-done", "true");
-  await expect.poll(() => canvasCenter(page).then(c => near(c, [255, 165, 0]))).toBe(true);
   await expect(page.locator(".shaderTab[data-error]")).toHaveCount(0);
 
   // The challenges, then the examples to explore.

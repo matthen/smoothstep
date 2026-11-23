@@ -10,9 +10,8 @@ export const TEXTURE_SHADER = `void mainImage(out vec4 fragColor, in vec2 fragCo
 `;
 
 // Blocks every request that isn't to this machine, so tests prove the app works offline, and
-// collects page errors (a failed Google Fonts request is expected offline). Also turns off the
-// one-time tips, which would otherwise pop up over the flows being tested, unless `tips` is set, and
-// the Docs tab a new animation opens with, unless `docs` is set.
+// collects page errors. Also turns off the one-time tips, which would otherwise pop up over the flows
+// being tested, unless `tips` is set, and the Docs tab a new animation opens with, unless `docs` is set.
 export async function offline(context: BrowserContext, {tips = false, docs = false} = {}): Promise<string[]> {
   await context.route(/^https?:\/\/(?!localhost)/, route => route.abort());
   // about:blank has no storage, so skip it there.
@@ -114,15 +113,24 @@ export async function dismissAlert(page: Page): Promise<string> {
   return text;
 }
 
-export async function canvasCenter(page: Page): Promise<[number, number, number]> {
+// The colour in the middle of the canvas, or of `selector`.
+export async function canvasCenter(page: Page, selector = "#canvas"): Promise<[number, number, number]> {
   await page.waitForTimeout(800);
-  const png = PNG.sync.read(await page.locator("#canvas").screenshot());
+  const png = PNG.sync.read(await page.locator(selector).screenshot());
   const i = (Math.floor(png.height / 2) * png.width + Math.floor(png.width / 2)) * 4;
   return [png.data[i]!, png.data[i + 1]!, png.data[i + 2]!];
 }
 
 export function near(color: number[], target: number[], tolerance = 40): boolean {
   return color.every((c, i) => Math.abs(c - target[i]!) <= tolerance);
+}
+
+// How long checks of the canvas's pixels wait: CI's software WebGL can take seconds to draw.
+export const PIXEL_WAIT = {timeout: 30_000};
+
+// Waits until the middle of the canvas, or of `selector`, is near `color`; with `not`, until it isn't.
+export async function expectCenter(page: Page, color: number[], {tolerance = 40, selector = "#canvas", not = false} = {}) {
+  await expect.poll(async () => near(await canvasCenter(page, selector), color, tolerance), PIXEL_WAIT).toBe(!not);
 }
 
 // The selected transition's start and end times, from their boxes, like "1 — 4.1".

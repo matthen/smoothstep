@@ -73,6 +73,22 @@ animation from a link.
 Your browser is the only place your work is kept, so download anything you want to back up or move
 to another computer.
 
+## Working offline
+
+After your first visit, smoothstep.io keeps a copy of itself in your browser, so it opens and works
+with no internet connection: the editor, these docs, the Canvas2D layer, Render and the embedded
+player. Built-in textures and examples are kept the first time you use them, so ones you haven't used
+yet need a connection. Gists and links to other websites always do.
+
+New versions download in the background. When one is ready, a notice says so, and its Reload button
+switches to it. If the animation you have open has unsaved changes, it asks first.
+
+Some browsers, such as Chrome and Edge on a computer, can install smoothstep.io as an app that opens in
+a window of its own. When yours offers it, Help → Install as an app installs it, as does the install
+button in the address bar. The app keeps the same saved animations as the website in that browser.
+Installed in Chrome or Edge, it can also open `.smoothstep.json` files from your computer: choose
+smoothstep.io from the file's "Open with" menu.
+
 ## Sharing
 
 Share gives you a link with the whole animation in it, a QR code of that link, code to show the

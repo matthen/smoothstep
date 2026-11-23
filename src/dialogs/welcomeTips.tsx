@@ -25,6 +25,7 @@ export const WELCOME_TIPS: ReactNode[] = [
   <>In the Canvas2D.js tab, click a helper like <code>Disk</code> or a <code>ctx</code> method like <code>fillText</code> to see what it does, and a colour string like <code>"#ffcc00"</code> for a colour picker.</>,
   <>Type <code>raymarch</code> or <code>feedback</code> in a shader, or <code>drawList</code> in the Canvas2D.js tab, and pick it from Snippets at the end of the completions for code to start from. <Kbd>Tab</Kbd> moves between its blanks.</>,
   <><Kbd>Space</Kbd> plays and pauses, and the number keys jump through the animation: <Kbd>5</Kbd> goes halfway.</>,
+  <>smoothstep.io works offline once you've visited it. Chrome and Edge can also install it as an app, with its own window, from Help → Install as an app or the address bar.</>,
   <>Help → Shader inputs lists everything your shader can use, and Help → Keyboard shortcuts lists the shortcuts.</>,
 ];
 

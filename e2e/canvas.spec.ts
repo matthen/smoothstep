@@ -4,7 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 import * as net from 'node:net';
 import { PNG } from 'pngjs';
 
-import { addTab, MAGENTA, near, offline, OPEN_EDITOR, setCode, skipTour } from './helpers';
+import { addTab, MAGENTA, near, offline, OPEN_EDITOR, PIXEL_WAIT, setCode, skipTour } from './helpers';
 
 const BLUE: [number, number, number] = [0, 0, 255];
 
@@ -43,7 +43,7 @@ async function expectTopMagenta(page: Page, selector?: string) {
     const [top, bottom] = await topAndBottom(page, selector);
     expect(near(top!, MAGENTA)).toBe(true);
     expect(near(bottom!, BLUE)).toBe(true);
-  }).toPass({timeout: 15_000});
+  }).toPass(PIXEL_WAIT);
 }
 
 async function start(page: Page) {
@@ -114,7 +114,7 @@ test("a Canvas2D layer draws over the image, shaders read it, and it's kept when
   await expect(async () => {
     const [top] = await topAndBottom(page);
     expect(near(top!, BLUE)).toBe(true);
-  }).toPass();
+  }).toPass(PIXEL_WAIT);
   await openTab(page, "Image.glsl");
   await setCode(page, READS_CANVAS);
   await page.keyboard.press("Shift+Enter");

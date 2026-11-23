@@ -1,7 +1,7 @@
 // The pickers that open on values in the code, dragged with a finger on a phone.
 import { devices, expect, test, type CDPSession, type Page } from '@playwright/test';
 
-import { canvasCenter, editorCode, near, offline, setCode } from './helpers';
+import { editorCode, expectCenter, offline, setCode } from './helpers';
 
 test.use(devices['Pixel 7']);
 
@@ -95,13 +95,13 @@ test("on a phone, each picker opens without the keyboard and follows a finger", 
   expect(await line(1)).toMatch(/^vec2 p = vec2\(-0\.\d+, 0\.\d+\);$/);
 
   // The code was built, so the canvas follows the colour as it's dragged.
-  expect(near(await canvasCenter(page), [230, 102, 26])).toBe(true);
+  await expectCenter(page, [230, 102, 26]);
   await open("vec3(0.9");
   const disc = await box(".ss-color-disc-cover");
   await touchDrag(cdp, {x: disc.x + disc.width * 0.8, y: disc.y + disc.height / 2}, -100, 0);
   await expect(picker).toBeVisible();
   expect(await line(2)).not.toBe("vec3 c = vec3(0.9, 0.4, 0.1);");
-  expect(near(await canvasCenter(page), [230, 102, 26])).toBe(false);
+  await expectCenter(page, [230, 102, 26], {not: true});
 
   // Drag the tip of the arrow, drawn at (x, -y) * 50 from the middle of the 200px view.
   await open("vec3(0.0");

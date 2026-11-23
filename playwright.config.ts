@@ -15,6 +15,9 @@ export default defineConfig({
     viewport: {width: 1440, height: 900},
     acceptDownloads: true,
     trace: 'retain-on-failure',
+    // The app's service worker would answer requests before page.route sees them. Tests of offline
+    // use opt in.
+    serviceWorkers: 'block',
     // Software WebGL, so tests run on machines without a GPU.
     launchOptions: {args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader']},
   },

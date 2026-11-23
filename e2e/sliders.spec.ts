@@ -2,7 +2,7 @@
 // animated one until the animation plays. And the timeline's rows, which grow as they're needed.
 import { expect, test } from '@playwright/test';
 
-import { canvasCenter, near, offline, setCode, skipTour } from './helpers';
+import { expectCenter, offline, setCode, skipTour } from './helpers';
 
 const GREY = "#define brightness iFloat0\n#define unused iFloat5\n" +
   "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  fragColor = vec4(vec3(brightness), 1.);\n}";
@@ -19,13 +19,13 @@ test("a slider sets an iFloat, with a range of its own, and both are saved", asy
   await page.keyboard.press("Shift+Enter");
   await page.getByRole("tab", {name: "Sliders"}).click();
   await expect(page.locator(".sliderRow")).toHaveCount(1);
-  expect(near(await canvasCenter(page), [0, 0, 0])).toBe(true);
+  await expectCenter(page, [0, 0, 0]);
 
   await page.getByLabel("brightness maximum").fill("2");
   await page.getByLabel("brightness maximum").press("Enter");
   await page.getByLabel("brightness value").fill("1");
   await page.getByLabel("brightness value").press("Enter");
-  expect(near(await canvasCenter(page), [255, 255, 255])).toBe(true);
+  await expectCenter(page, [255, 255, 255]);
   const thumb = page.locator(".sliderRow .mantine-Slider-thumb");
   await expect(thumb).toHaveAttribute("aria-valuemax", "2");
   await expect(thumb).toHaveAttribute("aria-valuenow", "1");
@@ -38,7 +38,7 @@ test("a slider sets an iFloat, with a range of its own, and both are saved", asy
   await page.getByRole("tab", {name: "Sliders"}).click();
   await expect(page.getByLabel("brightness value")).toHaveValue("1.000");
   await expect(page.getByLabel("brightness maximum")).toHaveValue("2");
-  expect(near(await canvasCenter(page), [255, 255, 255])).toBe(true);
+  await expectCenter(page, [255, 255, 255]);
   expect(errors).toEqual([]);
 });
 
