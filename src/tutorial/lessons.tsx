@@ -1020,9 +1020,10 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
             move up and down over the shader.
           </p>
           <p>
-            The code has a function called <code>draw</code>, which runs 60 times a second while the animation
-            plays. <code>ctx</code> is what it draws with, and <code>clear(ctx)</code> rubs out the last
-            drawing first.
+            The code has two functions. <code>setup</code> runs once when you build, and is empty for now; it's
+            for working things out before the drawing starts. <code>draw</code> runs 60 times a second while the
+            animation plays. <code>ctx</code> is what it draws with, and <code>clear(ctx)</code> rubs out the
+            last drawing first.
           </p>
         </>,
         task: "Click the ⊕ above the code and choose Add the Canvas2D layer.",
