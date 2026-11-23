@@ -14,7 +14,7 @@ on a 2D canvas over the image.
 These pages are also at [smoothstep.io/app/docs](https://smoothstep.io/app/docs/), and in the app
 under Help → Documentation, as a tab beside your code.
 
-![smoothstep.io, with GLSL code on the left, the rendered scene on the right, and the animation timeline below](images/screenshot.png)
+![smoothstep.io, with the Pokémon type battles example: its code on the left, the battle with its legend on the right, and the animation timeline below](images/screenshot.png)
 
 ## Contents
 

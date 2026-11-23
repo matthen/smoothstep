@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://smoothstep.io"><img src="docs/images/screenshot.png" alt="smoothstep.io, with the 3D ray marching example: GLSL code on the left, the rendered scene on the right, and the animation timeline below"></a>
+  <a href="https://smoothstep.io"><img src="docs/images/screenshot.png" alt="smoothstep.io, with the Pokémon type battles example: its Canvas2D.js code on the left, the battle with its legend on the right, and the animation timeline below"></a>
 </p>
 
 smoothstep.io is a toolkit for making animations in the WebGL shader language. You write a
@@ -26,10 +26,10 @@ animations from the old site with "Download my data", add that zip with File →
 
 You can use it at **[smoothstep.io](https://smoothstep.io)**, or run your own copy. To learn, start
 the [tutorial](https://smoothstep.io/app/#tutorial): it runs in the app, beside the editor, and each step
-notices when you've done it. The Help menu lists the shader inputs and the keyboard shortcuts, and the
-[documentation](https://smoothstep.io/app/docs/) has those and the examples. The app shows the
-documentation in a Docs tab beside your code too, under Help → Documentation. It's written in
-Markdown in [docs/](docs/), which reads fine here on GitHub.
+notices when you've done it. The [documentation](https://smoothstep.io/app/docs/) covers the shader
+inputs, the Canvas2D layer, the keyboard shortcuts and the examples. The app shows it in a Docs tab
+beside your code, under Help → Documentation. It's written in Markdown in [docs/](docs/), which reads
+fine here on GitHub.
 
 <p align="center">
   <img src="docs/images/examples.png" alt="Renders from four of the built-in examples">

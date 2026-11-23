@@ -42,7 +42,7 @@ test("on a phone, the welcome screen has no ✕ and keeps its buttons on screen"
   const errors = await offline(context);
   await page.goto("./");
   const welcome = page.getByRole("dialog");
-  await expect(welcome.getByRole("heading", {name: "Build animations with GLSL"})).toBeVisible();
+  await expect(welcome.getByRole("heading", {name: "Animate with shaders and JavaScript"})).toBeVisible();
   await expect(welcome.locator(".mantine-Modal-close")).toHaveCount(0);
   const viewport = page.viewportSize()!;
   for (const name of ["Learn", "Continue"]) {

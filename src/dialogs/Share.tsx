@@ -147,14 +147,14 @@ export default function Share({show, doc, source, onHide, onMessage, onDownload}
             <Text size="sm">
               A link can also open the animation file from somewhere online, such as a GitHub gist. The file keeps
               the images you added, and a link to a gist opens its latest version, so you can edit the gist
-              without changing the link. Download the animation file, put it online, and paste its address here
+              without changing the link. Export the animation file, put it online, and paste its address here
               to make the link.
               {" "}<a href={docsSiteHref(DOC_SECTIONS.sharingFile)} target="_blank" rel="noreferrer">Sharing</a> in the docs has
               the steps for a gist.
             </Text>
             <Group>
               <Button variant="default" leftSection={<TbDownload />} onClick={onDownload}>
-                Download animation file
+                Export animation file
               </Button>
             </Group>
             <TextInput
