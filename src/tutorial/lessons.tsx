@@ -7,6 +7,7 @@ import { EXAMPLES } from '../lib/config';
 import { DOC_SECTIONS, openDocs, type DocTarget } from '../lib/docLinks';
 import { stripComments, uses } from '../lib/glslCode';
 import type { ShaderId } from '../render/Renderer';
+import HighlightedCode from './HighlightedCode';
 import * as shaders from './shaders';
 
 // What a step's check can see of the editor.
@@ -109,8 +110,9 @@ function DocsLink({to, children}: {to: DocTarget; children: ReactNode}) {
 }
 
 // The lines of code a step is about, quoted in its text.
-function Lines({children}: {children: string}) {
-  return <pre className="learnLine">{children}</pre>;
+// A few lines of code quoted in a step's text, in GLSL unless `js`.
+function Lines({children, js = false}: {children: string; js?: boolean}) {
+  return <HighlightedCode code={children} javascript={js} className="learnLine" />;
 }
 
 
@@ -1034,7 +1036,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         title: "Label something",
         body: <>
           <p>This step changes the line that writes the text:</p>
-          <Lines>{`ctx.fillText("Time: " + time.toFixed(1), 80, 160);`}</Lines>
+          <Lines js>{`ctx.fillText("Time: " + time.toFixed(1), 80, 160);`}</Lines>
           <p>
             <code>fillText(text, x, y)</code> writes text with its left end at <code>x</code> and its bottom
             at <code>y</code>. The text is now the time: <code>time</code> is the number of seconds since the
@@ -1063,7 +1065,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         title: "Shapes in shader coordinates",
         body: <>
           <p>This step adds a list of shapes after the text:</p>
-          <Lines>{`drawList(ctx, [
+          <Lines js>{`drawList(ctx, [
   Rotate({angle: time}),
   Set({fillStyle: "orange"}),
   Disk({center: [0, 0], radius: 0.5}),
@@ -1098,13 +1100,17 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         title: "Lists inside lists",
         body: <>
           <p>This step moves the small disk into a list of its own, inside the big list:</p>
-          <Lines>{`[
-  Rotate({angle: time}),
-  Translate({offset: [0.75, 0]}),
-  Set({fillStyle: "white"}),
-  Disk({center: [0, 0], radius: 0.1}),
-  ...
-],`}</Lines>
+          <Lines js>{`drawList(ctx, [
+  Set({fillStyle: "orange"}),
+  [
+    Rotate({angle: time}),
+    Translate({offset: [0.75, 0]}),
+    Set({fillStyle: "white"}),
+    Disk({center: [0, 0], radius: 0.1}),
+    ...
+  ],
+  Polygon(...),
+]);`}</Lines>
           <p>
             A <code>Rotate</code>, <code>Translate</code> or <code>Set</code> only lasts until the end of the
             list it's in. So now only the small disk turns. The triangle comes after the inner list, so it

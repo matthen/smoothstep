@@ -1,18 +1,15 @@
 // The Learn panel: the tutorial's steps beside the editor, with checks that notice when you've
 // done each one.
-import { javascriptLanguage } from '@codemirror/lang-javascript';
-import { highlightCode } from '@lezer/highlight';
 import { Button, CloseButton, Menu, UnstyledButton } from '@mantine/core';
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import {
   TbArrowLeft, TbArrowRight, TbBulb, TbCheck, TbChevronDown, TbCircleCheckFilled, TbCircleDashed, TbFileImport,
 } from 'react-icons/tb';
 
-import { tokenizeGlsl, type GlslToken } from '../editor/glslLanguage';
-import { jsHighlighter } from '../editor/jsHighlighter';
 import { EXAMPLES, exampleHref, exampleThumbnail } from '../lib/config';
 import { shaderName } from '../editor/ShaderTabs';
 import { codeIn, LESSONS, stepCode, type Step, type TabCode, type TutorialState } from './lessons';
+import HighlightedCode from './HighlightedCode';
 import { saveProgress, type TutorialProgress } from './progress';
 import './tutorial.scss';
 
@@ -24,45 +21,6 @@ export interface TutorialPanelProps {
   onClose(): void;
   // Told whether the current step is done, so the phone's Learn tab can show a tick.
   onStepDoneChange?(done: boolean): void;
-}
-
-const TOKEN_CLASSES: Record<GlslToken, string> = {
-  "keyword": "tok-keyword", "typeName": "tok-type", "variableName.standard": "tok-builtin",
-  "variableName": "tok-variable", "atom": "tok-atom", "number": "tok-number", "comment": "tok-comment",
-  "string": "tok-string", "meta": "tok-meta", "operator": "tok-operator",
-};
-
-interface Span {
-  text: string;
-  className: string;
-}
-
-// The code's lines, as runs of text with the editor's highlighting classes.
-function highlighted(code: string, javascript: boolean): Span[][] {
-  const text = code.replace(/\n$/, "");
-  if (!javascript) {
-    return tokenizeGlsl(text).map(line => line.map(t => ({text: t.text, className: t.type ? TOKEN_CLASSES[t.type] : ""})));
-  }
-  const lines: Span[][] = [[]];
-  highlightCode(text, javascriptLanguage.parser.parse(text), jsHighlighter,
-    (run, className) => lines[lines.length - 1]!.push({text: run, className}), () => lines.push([]));
-  return lines;
-}
-
-function HighlightedCode({code, javascript}: {code: string; javascript: boolean}) {
-  const lines = useMemo(() => highlighted(code, javascript), [code, javascript]);
-  return (
-    <pre className="learnCodeText">
-      {lines.map((spans, i) =>
-        <Fragment key={i}>
-          {spans.map((span, j) => span.className
-            ? <span key={j} className={span.className}>{span.text}</span>
-            : span.text)}
-          {"\n"}
-        </Fragment>,
-      )}
-    </pre>
-  );
 }
 
 // Hidden until asked for, and hidden again on each new step, since the step's body is keyed by it.

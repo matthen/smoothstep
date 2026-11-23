@@ -169,7 +169,7 @@
     padding: 6px 10px;
     border-radius: 6px;
     background: $dt-gray-dark;
-    color: $dt-cyan;
+    color: $dt-gray-light;
     font-family: var(--mantine-font-family-monospace);
     font-size: 12.5px;
     white-space: pre-wrap;
@@ -226,6 +226,10 @@
     tab-size: 2;
   }
 
+}
+
+// The editor's colours, in code blocks and in lines quoted in the text.
+.learnCode, .learnProse {
   .tok-keyword { color: $dt-cyan; }
   .tok-type { color: $dt-pink; }
   .tok-builtin { color: $dt-green; }
