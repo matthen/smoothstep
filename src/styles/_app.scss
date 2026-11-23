@@ -43,22 +43,17 @@ a {
 // Phone: header, canvas, a Code/Timeline/Textures (and Learn) switch, then whichever pane it picks,
 // with the page scrolling and the switch sticking to the top.
 .app {
-  --preview-width: min(#{$right-width}, 45vw);
+  // The canvas side grows with wide screens, so the code doesn't take all the extra room.
+  --preview-width: min(max(#{$right-width}, 36vw), 45vw);
   --panel-height: #{$footer-height};
   height: 100%;
   min-height: 520px;
-  max-width: $max-width;
-  margin: 0 auto;
   display: grid;
   grid-template-rows: $header-height minmax(0, 1fr) auto;
   // A wide timeline scrolls inside its pane rather than widening the page.
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas: "header" "workspace" "panel";
   background: $dt-gray-dark;
-
-  @media (min-width: $max-width) {
-    box-shadow: 0 0 16px black;
-  }
 
   @include short {
     height: auto;
@@ -69,7 +64,7 @@ a {
   @include desktop {
     // The tutorial's Learn panel.
     &[data-side-panel] {
-      --preview-width: min(#{$right-width}, 32vw);
+      --preview-width: min(max(#{$right-width}, 28vw), 32vw);
       grid-template-columns: minmax(0, 1fr) $learn-width;
       grid-template-areas: "header header" "workspace learn" "panel learn";
     }

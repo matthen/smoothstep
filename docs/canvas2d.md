@@ -14,7 +14,7 @@ Click the ⊕ above the code and choose **Add the Canvas2D layer**. A **Canvas2D
 first in the code tabs, set apart from the GLSL tabs by a divider: Canvas2D.js | shared.glsl |
 iBuffer0.glsl › … › Image.glsl. It draws first too, so every shader reads this step's drawing.
 
-The new layer starts with an empty `setup` and a `draw` that writes "Hello, canvas", bobbing up and down. Build with
+The new layer starts with a `setup` that returns a message, and a `draw` that reads it as `data.message` and writes it, bobbing up and down. Build with
 <kbd>Shift</kbd> + <kbd>Enter</kbd> after a change, as you would for a shader.
 
 The editor helps as it does for shaders. Click a drawing helper like `Disk`, an input like `time`, or

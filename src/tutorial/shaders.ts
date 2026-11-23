@@ -322,7 +322,7 @@ export const HEAT_IMAGE_WITH_DOT = HEAT_IMAGE.replace(
 
 // 9. Draw with JavaScript: the Canvas2D layer's code, then an image shader that reads its drawing.
 
-const HELLO = `ctx.fillText("Hello, canvas", 80, 540 + 40 * Math.sin(time));`;
+const HELLO = `ctx.fillText(data.message, 80, 540 + 40 * Math.sin(time));`;
 const TIME_LABEL = `ctx.fillText("Time: " + time.toFixed(1), 80, 160);`;
 
 export const CANVAS_LABEL = NEW_CANVAS_CODE.replace(HELLO, TIME_LABEL);
