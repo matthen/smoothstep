@@ -1,5 +1,6 @@
-// The tutorial's shaders. Each lesson builds one animation, so each step's code is the one before
-// it plus one idea.
+// The tutorial's shaders and Canvas2D code. Each lesson builds one animation, so each step's code is
+// the one before it plus one idea.
+import { NEW_CANVAS_CODE } from '../lib/document';
 
 // 1. Colour from position.
 
@@ -318,3 +319,36 @@ export const HEAT_IMAGE_WITH_DOT = HEAT_IMAGE.replace(
   colour = mix(colour, vec3(0.3, 0.8, 1.0), ring);
 
   fragColor =`);
+
+// 9. Draw with JavaScript: the Canvas2D layer's code, then an image shader that reads its drawing.
+
+const HELLO = `ctx.fillText("Hello, canvas", 80, 540 + 40 * Math.sin(time));`;
+const TIME_LABEL = `ctx.fillText("Time: " + time.toFixed(1), 80, 160);`;
+
+export const CANVAS_LABEL = NEW_CANVAS_CODE.replace(HELLO, TIME_LABEL);
+
+export const CANVAS_SHAPES = CANVAS_LABEL.replace(TIME_LABEL, `${TIME_LABEL}
+
+  // Shapes in the shader's coordinates: (0, 0) in the middle, and y from -1 at the bottom to 1 at the top.
+  drawList(ctx, [
+    Rotate({angle: time}),
+    Set({fillStyle: "orange"}),
+    Disk({center: [0, 0], radius: 0.5}),
+    Set({fillStyle: "white"}),
+    Disk({center: [0.75, 0], radius: 0.1}),
+    Polygon({pts: [[0, 0.3], [-0.25, -0.2], [0.25, -0.2]]}),
+  ]);`);
+
+export const CANVAS_WOBBLE = `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 uv = fragCoord / iResolution.xy;
+
+  // Read the drawing from a little to the left or right, by a wave that moves up the canvas.
+  uv.x += 0.01 * sin(30.0 * uv.y - 4.0 * iTime);
+  vec4 drawing = texture(iCanvas2D, uv);
+
+  // A dark background, with the drawing over it.
+  vec3 colour = vec3(0.1, 0.1, 0.2);
+  colour = colour * (1.0 - drawing.a) + drawing.rgb;
+  fragColor = vec4(colour, 1.0);
+}
+`;

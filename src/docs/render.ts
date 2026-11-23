@@ -1,11 +1,12 @@
 // Turns the Markdown in docs/ into pages for the docs site and the app's Docs tab, at build
 // time. Links between the Markdown files become links between pages, other files in the repository
 // link to GitHub, and code blocks are highlighted with the editor's colours.
-import { highlightCode, tagHighlighter, tags as t } from '@lezer/highlight';
+import { highlightCode } from '@lezer/highlight';
 import { parser as jsParser } from '@lezer/javascript';
 import { Marked, type Tokens } from 'marked';
 
 import { tokenizeGlsl, type GlslToken } from '../editor/glslLanguage.ts';
+import { jsHighlighter } from '../editor/jsHighlighter.ts';
 
 export interface DocFile {
   // Its path in docs/, like "canvas2d.md" or "tutorial/README.md".
@@ -63,19 +64,6 @@ const GLSL_CLASSES: Record<GlslToken, string> = {
   atom: 'tok-atom', number: 'tok-number', comment: 'tok-comment', string: 'tok-string', meta: 'tok-meta',
   operator: 'tok-operator',
 };
-
-// As the Canvas2D tab colours JavaScript.
-const jsHighlighter = tagHighlighter([
-  { tag: [t.keyword, t.self], class: 'tok-keyword' },
-  { tag: t.typeName, class: 'tok-type' },
-  { tag: t.propertyName, class: 'tok-property' },
-  { tag: t.variableName, class: 'tok-variable' },
-  { tag: [t.atom, t.bool, t.null], class: 'tok-atom' },
-  { tag: t.number, class: 'tok-number' },
-  { tag: t.comment, class: 'tok-comment' },
-  { tag: [t.string, t.regexp], class: 'tok-string' },
-  { tag: t.operator, class: 'tok-operator' },
-]);
 
 const span = (text: string, cls: string) => cls ? `<span class="${cls}">${escapeHtml(text)}</span>` : escapeHtml(text);
 

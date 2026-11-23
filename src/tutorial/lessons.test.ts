@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { parseHash } from '../app/routing';
 import { EXAMPLES } from '../lib/config';
-import { DEFAULT_CODE, newDocument, type Transition } from '../lib/document';
+import { DEFAULT_CODE, NEW_CANVAS_CODE, newDocument, type Transition } from '../lib/document';
 import { uses } from '../lib/glslCode';
 import { floatsUsed, LESSONS, stepCode, type Step, type TutorialState } from './lessons';
 import * as shaders from './shaders';
@@ -12,7 +12,7 @@ function state(change: Partial<TutorialState> = {}): TutorialState {
   const doc = newDocument();
   return {
     code: DEFAULT_CODE, builtCode: DEFAULT_CODE, built: true, isPlaying: false, time: 0,
-    shared: "", buffers: [], builtShared: "", builtBuffers: [],
+    shared: "", buffers: [], builtShared: "", builtBuffers: [], canvas: null, builtCanvas: null, canvasOverlay: true,
     variables: doc.variables, textures: doc.textures, duration: doc.duration, aspectRatio: doc.aspectRatio,
     ...change,
   };
@@ -26,6 +26,8 @@ function builtWithStep(s: Step, change: Partial<TutorialState> = {}): TutorialSt
       now.code = now.builtCode = code;
     } else if (tab === "shared") {
       now.shared = now.builtShared = code;
+    } else if (tab === "canvas") {
+      now.canvas = now.builtCanvas = code;
     } else {
       now.buffers = [...now.buffers];
       now.buffers[tab] = code;
@@ -97,6 +99,7 @@ describe("shaders", () => {
       [shaders.TILES, shaders.ROTATED_TILES], [shaders.ROTATED_TILES, shaders.POLAR_TILES],
       [shaders.TEXTURE, shaders.WARPED_TEXTURE], [shaders.WARPED_TEXTURE, shaders.FOLDED_TEXTURE],
       [shaders.FADE, shaders.TRAIL], [shaders.TRAIL, shaders.FIRST_FRAME],
+      [NEW_CANVAS_CODE, shaders.CANVAS_LABEL], [shaders.CANVAS_LABEL, shaders.CANVAS_SHAPES],
     ];
     const lines = (code: string) => new Set(code.split("\n").map(l => l.trim()).filter(Boolean));
     for (const [before, after] of pairs) {
@@ -120,7 +123,8 @@ describe("shaders", () => {
       if (stepCode(s).length === 0 || !s.check || s.id === "pick-colour") {
         continue;
       }
-      expect(s.check(builtWithStep(s, {isPlaying: true, textures, variables}), state()), s.id).toBe(true);
+      const setUp = {isPlaying: true, textures, variables, canvas: NEW_CANVAS_CODE, canvasOverlay: false};
+      expect(s.check(builtWithStep(s, setUp), state()), s.id).toBe(true);
     }
   });
 });
@@ -326,5 +330,43 @@ describe("lesson 8: buffers", () => {
     expect(check("shared", builtWithStep(step("shared")))).toBe(true);
     expect(check("shared", builtWithStep(step("shared"), {built: false}))).toBe(false);
     expect(check("shared", withBuffer(shaders.SHARED_HEAT_BUFFER, {builtShared: shaders.DOT_SHARED}))).toBe(false);
+  });
+});
+
+describe("lesson 9: draw with JavaScript", () => {
+  // The editor with the Canvas2D layer's code built, and the image's.
+  const withCanvas = (code: string, change: Partial<TutorialState> = {}) =>
+    state({canvas: code, builtCanvas: code, ...change});
+
+  it("add the layer: done once there is one", () => {
+    expect(check("add-canvas", state())).toBe(false);
+    expect(check("add-canvas", withCanvas(NEW_CANVAS_CODE))).toBe(true);
+  });
+
+  it("label something: the text shows the time, once built", () => {
+    const atStart = withCanvas(NEW_CANVAS_CODE);
+    expect(check("canvas-label", builtWithStep(step("canvas-label")), atStart)).toBe(true);
+    // The starter code, which moves its text with the time but doesn't show it.
+    expect(check("canvas-label", atStart, atStart)).toBe(false);
+    expect(check("canvas-label", withCanvas(NEW_CANVAS_CODE.replace("Hello", "Hi")), atStart)).toBe(false);
+    // Typed but not built.
+    expect(check("canvas-label", state({canvas: shaders.CANVAS_LABEL, builtCanvas: NEW_CANVAS_CODE}), atStart))
+      .toBe(false);
+  });
+
+  it("shapes: drawList, built", () => {
+    const atStart = withCanvas(shaders.CANVAS_LABEL);
+    expect(check("canvas-shapes", builtWithStep(step("canvas-shapes")), atStart)).toBe(true);
+    expect(check("canvas-shapes", withCanvas(shaders.CANVAS_LABEL), withCanvas(NEW_CANVAS_CODE))).toBe(false);
+  });
+
+  it("shaders read the drawing: the image reads iCanvas2D, with Draw over the image off", () => {
+    const atStart = withCanvas(shaders.CANVAS_SHAPES);
+    const filled = builtWithStep(step("canvas-shader"), {canvas: shaders.CANVAS_SHAPES, builtCanvas: shaders.CANVAS_SHAPES});
+    expect(check("canvas-shader", {...filled, canvasOverlay: false}, atStart)).toBe(true);
+    expect(check("canvas-shader", filled, atStart)).toBe(false);
+    // The last step's image, which doesn't read the drawing.
+    expect(check("canvas-shader", withCanvas(shaders.CANVAS_SHAPES, {builtCode: "changed", canvasOverlay: false}), atStart))
+      .toBe(false);
   });
 });

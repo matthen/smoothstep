@@ -1,5 +1,7 @@
 // The Learn panel: the tutorial's steps beside the editor, with checks that notice when you've
 // done each one.
+import { javascriptLanguage } from '@codemirror/lang-javascript';
+import { highlightCode } from '@lezer/highlight';
 import { Button, CloseButton, Menu, UnstyledButton } from '@mantine/core';
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
@@ -7,6 +9,7 @@ import {
 } from 'react-icons/tb';
 
 import { tokenizeGlsl, type GlslToken } from '../editor/glslLanguage';
+import { jsHighlighter } from '../editor/jsHighlighter';
 import { EXAMPLES, exampleHref, exampleThumbnail } from '../lib/config';
 import { shaderName } from '../editor/ShaderTabs';
 import { codeIn, LESSONS, stepCode, type Step, type TabCode, type TutorialState } from './lessons';
@@ -29,15 +32,32 @@ const TOKEN_CLASSES: Record<GlslToken, string> = {
   "string": "tok-string", "meta": "tok-meta", "operator": "tok-operator",
 };
 
-function HighlightedCode({code}: {code: string}) {
-  const lines = useMemo(() => tokenizeGlsl(code.replace(/\n$/, "")), [code]);
+interface Span {
+  text: string;
+  className: string;
+}
+
+// The code's lines, as runs of text with the editor's highlighting classes.
+function highlighted(code: string, javascript: boolean): Span[][] {
+  const text = code.replace(/\n$/, "");
+  if (!javascript) {
+    return tokenizeGlsl(text).map(line => line.map(t => ({text: t.text, className: t.type ? TOKEN_CLASSES[t.type] : ""})));
+  }
+  const lines: Span[][] = [[]];
+  highlightCode(text, javascriptLanguage.parser.parse(text), jsHighlighter,
+    (run, className) => lines[lines.length - 1]!.push({text: run, className}), () => lines.push([]));
+  return lines;
+}
+
+function HighlightedCode({code, javascript}: {code: string; javascript: boolean}) {
+  const lines = useMemo(() => highlighted(code, javascript), [code, javascript]);
   return (
     <pre className="learnCodeText">
-      {lines.map((tokens, i) =>
+      {lines.map((spans, i) =>
         <Fragment key={i}>
-          {tokens.map((token, j) => token.type
-            ? <span key={j} className={TOKEN_CLASSES[token.type]}>{token.text}</span>
-            : token.text)}
+          {spans.map((span, j) => span.className
+            ? <span key={j} className={span.className}>{span.text}</span>
+            : span.text)}
           {"\n"}
         </Fragment>,
       )}
@@ -171,7 +191,7 @@ export default function TutorialPanel({initial, state, onPutCode, onLessonChange
             {code.map(c =>
               <Fragment key={String(c.tab)}>
                 {code.length > 1 && <div className="learnCodeTab">{shaderName(c.tab)}</div>}
-                <HighlightedCode code={c.code} />
+                <HighlightedCode code={c.code} javascript={c.tab === "canvas"} />
               </Fragment>,
             )}
           </div>}

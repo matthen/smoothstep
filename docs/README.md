@@ -19,7 +19,7 @@ under Help → Documentation, as a tab beside your code.
 ## Contents
 
 - [Tutorial](tutorial/README.md)\
-  Nine short lessons you follow in the app, from your first shader to sharing it
+  Ten short lessons you follow in the app, from your first shader to sharing it
   1. [Colour from position](https://smoothstep.io/app/#tutorial/1)
   2. [Moving with time](https://smoothstep.io/app/#tutorial/2)
   3. [Shapes](https://smoothstep.io/app/#tutorial/3)
@@ -28,7 +28,8 @@ under Help → Documentation, as a tab beside your code.
   6. [Textures](https://smoothstep.io/app/#tutorial/6)
   7. [Memory with iPrevFrame](https://smoothstep.io/app/#tutorial/7)
   8. [Buffers](https://smoothstep.io/app/#tutorial/8)
-  9. [Share it](https://smoothstep.io/app/#tutorial/9)
+  9. [Draw with JavaScript](https://smoothstep.io/app/#tutorial/9)
+  10. [Share it](https://smoothstep.io/app/#tutorial/10)
 - [Examples](examples.md)\
   Animations to open, play and change
 - [Sharing animations](sharing.md)\

@@ -18,6 +18,11 @@ export interface TutorialState {
   buffers: string[];
   builtShared: string;
   builtBuffers: string[];
+  // The Canvas2D layer's code, as in the editor and as last built, or null without a layer.
+  canvas: string | null;
+  builtCanvas: string | null;
+  // The Canvas2D tab's "Draw over the image" switch.
+  canvasOverlay: boolean;
   // Compiled without errors, and the editor hasn't changed since.
   built: boolean;
   isPlaying: boolean;
@@ -51,11 +56,9 @@ export interface Lesson {
   steps: Step[];
 }
 
-// The tabs the tutorial fills: the shaders', not the Canvas2D layer's.
-type ShaderTab = Exclude<ShaderId, "canvas">;
-
+// The tabs the tutorial fills: the shaders' and the Canvas2D layer's, which it adds if needed.
 export interface TabCode {
-  tab: ShaderTab;
+  tab: ShaderId;
   code: string;
 }
 
@@ -65,18 +68,20 @@ export function stepCode(step: Step): TabCode[] {
 }
 
 // A tab's code in the editor.
-export function codeIn(state: TutorialState, tab: ShaderTab): string | undefined {
-  return tab === "image" ? state.code : tab === "shared" ? state.shared : state.buffers[tab];
+export function codeIn(state: TutorialState, tab: ShaderId): string | undefined {
+  return tab === "image" ? state.code : tab === "shared" ? state.shared : tab === "canvas" ? state.canvas ?? undefined :
+    state.buffers[tab];
 }
 
 // A tab's code as last built.
-function builtIn(state: TutorialState, tab: ShaderTab): string {
-  return (tab === "image" ? state.builtCode : tab === "shared" ? state.builtShared : state.builtBuffers[tab]) ?? "";
+function builtIn(state: TutorialState, tab: ShaderId): string {
+  return (tab === "image" ? state.builtCode : tab === "shared" ? state.builtShared :
+    tab === "canvas" ? state.builtCanvas : state.builtBuffers[tab]) ?? "";
 }
 
 // Built again with a change in any tab.
 function rebuilt(now: TutorialState, atStart: TutorialState): boolean {
-  const all = (s: TutorialState) => [s.builtCode, s.builtShared, ...s.builtBuffers].join("\0");
+  const all = (s: TutorialState) => [s.builtCode, s.builtShared, s.builtCanvas ?? "", ...s.builtBuffers].join("\0");
   return now.built && all(now) !== all(atStart);
 }
 
@@ -113,6 +118,11 @@ function Lines({children}: {children: string}) {
 function animatedFloats(now: TutorialState): number[] {
   return [...new Set(floatsUsed(now.builtCode))].filter(i =>
     now.variables[i]?.transitions.some(t => t.startValue !== t.endValue));
+}
+
+// Canvas2D code whose fillText writes text made from the time.
+function writesTime(code: string): boolean {
+  return uses(code, /\bfillText\s*\([^,]*\btime\b/);
 }
 
 // A texture slot the code reads has an image in it.
@@ -987,6 +997,167 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
           {EXPLORE}
         </>,
         examples: ["5c81f0d3a7e2"],
+      },
+    ],
+  },
+  {
+    title: "Draw with JavaScript",
+    steps: [
+      {
+        id: "add-canvas",
+        title: "Add the layer",
+        body: <>
+          <p>
+            A shader is good at working out a colour for every pixel, but it's hard to write words or draw a
+            few shapes in one. The Canvas2D layer is for that. It's code in JavaScript, the language of web
+            pages, that draws on a canvas of its own, over the shader.
+          </p>
+          <p>
+            Click the <span aria-label="add">⊕</span> above the code and choose Add the Canvas2D layer. A{" "}
+            <code>Canvas2D.js</code> tab appears, first in the row of tabs, because it draws before the
+            shaders. Build it with <kbd>Shift</kbd> + <kbd>Enter</kbd> and press play: the words "Hello, canvas"
+            move up and down over the shader.
+          </p>
+          <p>
+            The code has a function called <code>draw</code>, which runs 60 times a second while the animation
+            plays. <code>ctx</code> is what it draws with, and <code>clear(ctx)</code> rubs out the last
+            drawing first.
+          </p>
+        </>,
+        task: "Click the ⊕ above the code and choose Add the Canvas2D layer.",
+        check: now => now.canvas !== null,
+      },
+      {
+        id: "canvas-label",
+        title: "Label something",
+        body: <>
+          <p>This step changes the line that writes the text:</p>
+          <Lines>{`ctx.fillText("Time: " + time.toFixed(1), 80, 160);`}</Lines>
+          <p>
+            <code>fillText(text, x, y)</code> writes text with its left end at <code>x</code> and its bottom
+            at <code>y</code>. The text is now the time: <code>time</code> is the number of seconds since the
+            animation started, like <code>iTime</code> in a shader. <code>time.toFixed(1)</code> turns it
+            into text with one digit after the decimal point, like 2.4, and <code>+</code> joins that onto{" "}
+            <code>"Time: "</code>.
+          </p>
+          <p>
+            <code>x</code> and <code>y</code> are in canvas units. The canvas is always 1080 units tall, with{" "}
+            <code>y</code> = 0 at the top, going down, so 160 is near the top. How wide it is depends on its
+            shape: 1080 for a square canvas, and 1920 for a 16:9 one. The <code>80px</code> in{" "}
+            <code>ctx.font</code> is in the same units, so the text is the same size in the preview and in a
+            video.
+          </p>
+          <p>
+            Put this in the editor, build it and play. Then try other numbers: <code>80</code> moves the text
+            left and right, <code>160</code> moves it up and down, and <code>80px</code> sets how big it is.
+          </p>
+        </>,
+        tabs: [{tab: "canvas", code: shaders.CANVAS_LABEL}],
+        task: "Build Canvas2D code that writes the time with fillText.",
+        check: (now, atStart) => rebuilt(now, atStart) && writesTime(builtIn(now, "canvas")),
+      },
+      {
+        id: "canvas-shapes",
+        title: "Shapes in shader coordinates",
+        body: <>
+          <p>This step adds a list of shapes after the text:</p>
+          <Lines>{`drawList(ctx, [
+  Rotate({angle: time}),
+  Set({fillStyle: "orange"}),
+  Disk({center: [0, 0], radius: 0.5}),
+  ...
+]);`}</Lines>
+          <p>
+            <code>drawList</code> draws each thing in the list in turn. Its coordinates aren't canvas units:
+            they're the same as the centred <code>uv</code> from the Shapes lesson. (0, 0) is the middle of the
+            canvas, y goes up from -1 at the bottom to 1 at the top, and x uses the same scale. So{" "}
+            <code>{`Disk({center: [0, 0], radius: 0.5})`}</code> is a circle reaching halfway to the top, just
+            where a shader would draw one with <code>length(uv) - 0.5</code>.
+          </p>
+          <p>
+            <code>Set</code> picks the colour for what comes after it, and <code>Polygon</code> fills the shape
+            through a list of points, here a triangle. <code>{`Rotate({angle: time})`}</code> turns everything
+            after it around the middle by <code>time</code> radians, so one whole turn takes about 6.3
+            seconds. The orange disk is in the middle, so it looks the same however it's turned, but the
+            small white disk goes round it and the triangle spins.
+          </p>
+          <p>
+            Build it and play. Then try other numbers: the <code>0.75</code> in <code>[0.75, 0]</code> sets how
+            far out the small disk goes round, and <code>2 * time</code> in place of <code>time</code> spins
+            twice as fast.
+          </p>
+        </>,
+        tabs: [{tab: "canvas", code: shaders.CANVAS_SHAPES}],
+        task: "Build Canvas2D code that draws with drawList.",
+        check: (now, atStart) => rebuilt(now, atStart) && uses(builtIn(now, "canvas"), /\bdrawList\s*\(/),
+      },
+      {
+        id: "canvas-shader",
+        title: "Shaders read the drawing",
+        body: <>
+          <p>
+            Every shader can read the layer's drawing as a texture called <code>iCanvas2D</code>. This step's
+            image shader reads it from a spot that wobbles:
+          </p>
+          <Lines>{`uv.x += 0.01 * sin(30.0 * uv.y - 4.0 * iTime);
+vec4 drawing = texture(iCanvas2D, uv);`}</Lines>
+          <p>
+            As in the Warp it step of the Textures lesson, each row reads the drawing from a little to the left
+            or right, by a wave that moves up the canvas as time goes on. Then{" "}
+            <code>colour * (1.0 - drawing.a) + drawing.rgb</code> puts the drawing over a dark blue background:{" "}
+            <code>drawing.a</code> is how solid the drawing is at that pixel. Bending a drawing pixel by pixel
+            like this is easy in a shader, and hard with <code>ctx</code>.
+          </p>
+          <p>
+            Put this in the editor, build it and play. The sharp drawing still shows on top, because the layer
+            draws over the image. Open the <code>Canvas2D.js</code> tab and turn off Draw over the image, so
+            only the shader's wobbly copy shows. Then try other numbers: <code>0.01</code> sets how far the
+            wobble reaches, and <code>30.0</code> how close together the waves are.
+          </p>
+        </>,
+        tabs: [{tab: "image", code: shaders.CANVAS_WOBBLE}],
+        task: "Build an image that reads iCanvas2D, and turn off Draw over the image.",
+        check: (now, atStart) => rebuilt(now, atStart) && uses(now.builtCode, /\biCanvas2D\b/) &&
+          now.canvas !== null && !now.canvasOverlay,
+      },
+      challenges("canvas", <>
+        <li><b>A clock.</b> Draw a clock face with a hand that goes round once a minute.</li>
+        <li><b>A glowing name.</b> Write your name in big letters, and make it glow in the shader.</li>
+        <li><b>A starfield.</b> Fill the canvas with stars that twinkle.</li>
+        <li><b>Your own.</b> Mix text, shapes and a shader effect into something you like.</li>
+      </>, <>
+        <li>
+          <b>A clock:</b> a <code>Line</code> from <code>[0, 0]</code> is a hand, and <code>Rotate</code> turns
+          it. One whole turn is 6.28 radians, and <code>Rotate</code> turns anticlockwise, so think about the
+          sign of the angle.
+        </li>
+        <li>
+          <b>A glowing name:</b> read <code>iCanvas2D</code> at a few spots around each pixel and add them up,
+          so the drawing spreads out softly. <code>ctx.textAlign = "center"</code> centres text on its{" "}
+          <code>x</code>.
+        </li>
+        <li>
+          <b>A starfield:</b> a <code>for</code> loop can draw many shapes. <code>seededRandom(7)</code> gives a
+          function whose numbers come out the same every step, so each star stays in its place.
+        </li>
+      </>),
+      {
+        id: "explore-canvas",
+        title: "Explore",
+        body: <>
+          <p>
+            Hypocycloids draws circles rolling inside circles with <code>drawList</code>. Bean machine drops balls
+            through pegs with planck.js, a physics library: a line at the top of the Canvas2D code,{" "}
+            <code>import planck from "planck";</code>, loads it. Its image shader reads the drawing as{" "}
+            <code>iCanvas2D</code>.
+          </p>
+          <p>
+            <DocsLink to={DOC_SECTIONS.canvas2d}>The Canvas2D layer</DocsLink> in the docs has everything the layer
+            can do.
+          </p>
+          {EXPLORE}
+        </>,
+        examples: ["96abdd1ee3d3", "7852e2820a47"],
       },
     ],
   },

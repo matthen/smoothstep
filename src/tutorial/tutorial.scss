@@ -143,8 +143,10 @@
   align-items: flex-start;
   gap: 12px;
 
+  // Kept at full height, so a long step scrolls rather than squashing its code out of sight.
   > * {
     max-width: 100%;
+    flex-shrink: 0;
   }
 }
 
@@ -231,6 +233,7 @@
   .tok-comment { color: $dt-blue; }
   .tok-string { color: $dt-yellow; }
   .tok-operator { color: $dt-pink; }
+  .tok-property { color: $dt-orange; }
 }
 
 .learnHints {
