@@ -108,3 +108,33 @@ test("a part of the app that's gone after an update reloads the page, then expla
   await expect(page.getByText(/a new version came out while this page was open/)).toBeVisible();
   expect(loads).toBe(2);
 });
+
+test("Help → Install as an app shows once the browser offers to install the app, and asks it to", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#new");
+  const install = page.getByRole("menuitem", {name: "Install as an app"});
+  await page.getByRole("button", {name: "Help"}).click();
+  await expect(page.getByRole("menuitem", {name: "Documentation"})).toBeVisible();
+  await expect(install).toHaveCount(0);
+  await page.keyboard.press("Escape");
+
+  // The offer Chromium makes when the app can be installed.
+  const shown = await page.evaluate(() => {
+    const offer = Object.assign(new Event("beforeinstallprompt", {cancelable: true}), {
+      prompt: () => {
+        (window as {prompted?: boolean}).prompted = true;
+        return Promise.resolve();
+      },
+    });
+    // Cancelled, so the browser shows no banner of its own.
+    return window.dispatchEvent(offer);
+  });
+  expect(shown).toBe(false);
+  await helpMenu(page, "Install as an app");
+  expect(await page.evaluate(() => (window as {prompted?: boolean}).prompted)).toBe(true);
+  // Each offer can be used once.
+  await page.getByRole("button", {name: "Help"}).click();
+  await expect(page.getByRole("menuitem", {name: "Documentation"})).toBeVisible();
+  await expect(install).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

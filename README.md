@@ -75,7 +75,14 @@ npm run test:e2e   # end-to-end tests in Chromium, against the build
 ```
 
 `npm run build` makes a plain static site in `dist/`. You can put it on any static host,
-such as GitHub Pages or Netlify, at any path. It works fully offline, including video export.
+such as GitHub Pages or Netlify, at any path. It needs no server code or network access to run,
+including video export.
+
+The build includes a service worker, `sw.js`, which lets the app load with no network after the first
+visit and installs new versions in the background. It only handles the directory it's served from, so
+keep `sw.js` beside `index.html`, and serve it without long cache headers (`Cache-Control: no-cache`
+is right), so browsers notice new versions. Browsers only run service workers over HTTPS or on
+localhost. `npm run dev` doesn't register it, so development always shows your latest changes.
 The build also turns the Markdown in `docs/` into a small docs site in `dist/docs/`, served at
 `docs/` beside the app (`npm run dev` serves it too), and into the pages the editor's Docs tab shows.
 Saved animations open at `#anim/<id>`, the bundled examples at `#example/<id>`, and the tutorial at
@@ -116,6 +123,9 @@ Sass for the app's own styles, CodeMirror 6 for the code editor, and WebGL 2 for
   `reference.ts` writes the Reference page from the lists the editor's popups use: the shader inputs
   (`src/lib/shaderInputs.ts`), the Canvas2D layer's names (`src/editor/canvas2dReference.json`), its
   fonts and its libraries.
+- `src/pwa/` makes the app work offline and installable: `worker.ts` is the service worker,
+  `plugin.ts` builds it with the list of files to keep (`cachePlan.ts`), and `updates.ts` registers it
+  and offers to reload into a new version.
 - `src/export/` renders an animation frame by frame and encodes it in the browser. WebM and
   MP4 use the browser's WebCodecs encoder through [Mediabunny](https://mediabunny.dev), GIF
   uses [gifenc](https://github.com/mattdesl/gifenc), and PNG frames download as a zip.

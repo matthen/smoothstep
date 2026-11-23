@@ -13,13 +13,21 @@ export function hasConfirmedLeaving(): boolean {
   return confirmedLeaving;
 }
 
-// Opens what `hash` names with a fresh page load, after asking before unsaved changes are lost.
-// pushState doesn't fire hashchange, so the reload happens once. Returns false if the user stays.
-export function openHash(hash: string, hasUnsavedChanges: boolean): boolean {
+// Asks before unsaved changes are lost to a page load. Returns false if the user stays.
+export function confirmLeaving(hasUnsavedChanges: boolean): boolean {
   if (hasUnsavedChanges && !window.confirm("This animation has unsaved changes. Discard them?")) {
     return false;
   }
   confirmedLeaving = true;
+  return true;
+}
+
+// Opens what `hash` names with a fresh page load, after asking before unsaved changes are lost.
+// pushState doesn't fire hashchange, so the reload happens once. Returns false if the user stays.
+export function openHash(hash: string, hasUnsavedChanges: boolean): boolean {
+  if (!confirmLeaving(hasUnsavedChanges)) {
+    return false;
+  }
   window.history.pushState({}, "", hash);
   window.location.reload();
   return true;

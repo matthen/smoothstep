@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import { build, defineConfig, type Plugin } from 'vite';
 
 import { docsPlugin } from './src/docs/plugin.ts';
+import { serviceWorkerPlugin } from './src/pwa/plugin.ts';
 
 // `import script from 'virtual:player-script'` gives the standalone player (src/player/standalone.ts)
 // bundled into one script, for the player files the app makes.
@@ -35,7 +36,7 @@ function playerScript(): Plugin {
 export default defineConfig({
   // Relative asset URLs, so the build works from any path on any static host.
   base: './',
-  plugins: [react(), playerScript(), docsPlugin()],
+  plugins: [react(), playerScript(), docsPlugin(), serviceWorkerPlugin()],
   css: {
     preprocessorOptions: {
       // Bootstrap 5.3's Sass still uses @import and global functions.

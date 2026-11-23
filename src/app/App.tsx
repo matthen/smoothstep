@@ -6,8 +6,9 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react';
 import { flushSync } from 'react-dom';
 import {
-  TbBook, TbBrandGithub, TbChevronDown, TbCopy, TbDeviceFloppy, TbDownload, TbFile, TbFileImport, TbFolderOpen, TbHammer,
-  TbCircleCheckFilled, TbCode, TbHelp, TbHome, TbKeyboard, TbMaximize, TbMinimize, TbRoute, TbSchool, TbShare, TbVideo,
+  TbBook, TbBrandGithub, TbChevronDown, TbCopy, TbDeviceDesktopDown, TbDeviceFloppy, TbDownload, TbFile, TbFileImport,
+  TbFolderOpen, TbHammer, TbCircleCheckFilled, TbCode, TbHelp, TbHome, TbKeyboard, TbMaximize, TbMinimize, TbRoute, TbSchool,
+  TbShare, TbVideo,
 } from 'react-icons/tb';
 
 import DocumentBrowser from '../dialogs/DocumentBrowser';
@@ -50,7 +51,9 @@ import { setCrashDocument } from './crashState';
 import { docsClosed, setDocsClosed, setTourState, tourState } from './onboarding';
 import { MOD_KEY } from './platform';
 import { chooseTip, markTipSeen, seenTips, tipContent, tipsFor, turnOffTips, type TipEvent } from './tips';
-import { hasConfirmedLeaving, openHash, parseHash, useHashLinks } from './routing';
+import { confirmLeaving, hasConfirmedLeaving, openHash, parseHash, useHashLinks } from './routing';
+import { install, onLaunchFiles, useCanInstall } from '../pwa/install';
+import { appUpdates } from '../pwa/updates';
 import { useKeyboardInset } from './useKeyboardInset';
 import { usePhone, useTouch } from './usePhone';
 
@@ -98,6 +101,7 @@ export default function App() {
   const [documentId, setDocumentId] = useState<string | null>(initialRoute?.kind === "anim" ? initialRoute.id : null);
   const [loading, setLoading] = useState(initialRoute !== null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const canInstall = useCanInstall();
   const [titleInput, setTitleInput] = useState(doc.title);
   const [builtCode, setBuiltCode] = useState<string | null>(initialRoute ? null : doc.code);
   // The buffers' code and the shared code, as last built.
@@ -464,6 +468,24 @@ export default function App() {
     return unsubscribe;
   }, [initialRoute, loadDocument, offerTourRef, tutorialStart]);
 
+  // A new version installed in the background. Reloading into it asks first, as leaving the page does.
+  const unsavedRef = useLatest(hasUnsavedChanges);
+  useEffect(() => appUpdates()?.onReady(() => {
+    notifications.show({
+      id: "update", autoClose: false, title: "A new version of smoothstep.io is ready",
+      message: (
+        <Group gap="xs" mt={4}>
+          <Text size="sm">Reload to start using it.</Text>
+          <Button size="compact-sm" onClick={() => {
+            if (confirmLeaving(unsavedRef.current)) {
+              appUpdates()?.apply();
+            }
+          }}>Reload</Button>
+        </Group>
+      ),
+    });
+  }), [unsavedRef]);
+
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       if (hasUnsavedChanges && !hasConfirmedLeaving()) {
@@ -707,7 +729,7 @@ export default function App() {
 
   // Adds animation files from the computer to the browser's animations, and opens the one a single
   // file holds.
-  const openFiles = async (files: FileList | null) => {
+  const openFiles = async (files: FileList | File[] | null) => {
     if (!files || files.length === 0) {
       return;
     }
@@ -733,6 +755,10 @@ export default function App() {
       }
     }
   };
+
+  // Files opened with the installed app, as File → Import opens them.
+  const openFilesRef = useLatest(openFiles);
+  useEffect(() => onLaunchFiles(files => void openFilesRef.current(files)), [openFilesRef]);
 
   // Adds the animation at a link to this browser's animations, and opens it.
   const importLink = async (route: Route) => {
@@ -1019,6 +1045,11 @@ export default function App() {
               <Menu.Item component="a" href={REPO_URL} target="_blank" rel="noreferrer" leftSection={<TbBrandGithub />}>
                 Source code
               </Menu.Item>
+              {canInstall &&
+                <Menu.Item leftSection={<TbDeviceDesktopDown />} onClick={() => void install()}>
+                  Install as an app
+                  <Text size="xs" c="dimmed">Opens in a window of its own</Text>
+                </Menu.Item>}
             </Menu.Dropdown>
           </Menu>
           <Tooltip label={`Save (${MOD_KEY} S)`}>

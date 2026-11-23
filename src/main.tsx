@@ -11,8 +11,12 @@ import App from './app/App';
 import ErrorBoundary from './app/CrashScreen';
 import { reloadOnMissedUpdate } from './app/crashState';
 import { theme } from './app/theme';
+import { listenForInstallOffer } from './pwa/install';
+import { startServiceWorker } from './pwa/updates';
 
 reloadOnMissedUpdate();
+listenForInstallOffer();
+startServiceWorker();
 
 createRoot(document.getElementById("appRoot")!).render(
   <StrictMode>
