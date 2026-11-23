@@ -351,7 +351,7 @@ test("the embedded player keeps looping when a draw never finishes", async ({pag
   await setCode(page, "function draw(ctx, {frame}) {\n  if (frame > 10) {\n    while (true) {}\n  }\n}");
   await page.locator(".durationInput").fill("1");
   await page.getByRole("button", {name: "Build"}).click();
-  await page.getByRole("button", {name: "Share"}).click();
+  await page.getByRole("button", {name: "Share", exact: true}).click();
   const link = await page.getByRole("dialog", {name: "Share"}).getByLabel("Link", {exact: true}).inputValue();
 
   const player = await context.newPage();
