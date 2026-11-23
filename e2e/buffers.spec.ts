@@ -101,6 +101,30 @@ test("an error opens the tab it's in, and the last buffer can be removed", async
   expect(errors).toEqual([]);
 });
 
+test("each tab has a caption under the tabs, but a lone Image.glsl tab has none", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./");
+  await page.getByRole("button", {name: "Continue"}).click();
+  const caption = page.locator(".codeCaption");
+  const editorTop = async () => (await page.locator(".ss-code-editor:not([hidden])").boundingBox())!.y;
+  await expect(caption).toHaveCount(0);
+  const alone = await editorTop();
+
+  await addTab(page, "Add a buffer");
+  await expect(caption).toContainText("iBuffer0");
+  await openTab(page, "Image.glsl");
+  await expect(caption).toBeVisible();
+  const withCaption = await editorTop();
+  expect(withCaption).toBeGreaterThan(alone);
+
+  // Removed, the row goes and the code moves up to where it was.
+  await page.getByLabel("Remove iBuffer0.glsl").click();
+  await expect(tabs(page)).toHaveText(["Image.glsl"]);
+  await expect(caption).toHaveCount(0);
+  expect(await editorTop()).toBe(alone);
+  expect(errors).toEqual([]);
+});
+
 test("a link to shared.glsl in a comment adds the tab, which isn't code until it's written in", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./");

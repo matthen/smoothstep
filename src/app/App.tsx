@@ -868,12 +868,14 @@ export default function App() {
   const tutorialState: TutorialState = {
     code: doc.code, builtCode: builtCode ?? "",
     shared: doc.shared ?? "", buffers: bufferCodes(doc), builtShared: builtExtras.shared, builtBuffers: builtExtras.buffers,
+    canvas: layer?.code ?? null, builtCanvas: builtExtras.canvas, canvasOverlay: layer?.overlay ?? true,
     built: buildState === "built" && compiled?.ok === true && compiled.code === builtCode,
     isPlaying, time, variables: doc.variables, textures: doc.textures, duration: doc.duration,
     aspectRatio: doc.aspectRatio,
   };
 
-  // Puts a step's code in each of its tabs, adding buffers up to the highest it fills, and opens the last.
+  // Puts a step's code in each of its tabs, adding buffers up to the highest it fills and the Canvas2D layer
+  // if it fills that, and opens the last.
   const putTutorialCode = (code: TabCode[]) => {
     const change: Partial<AnimationDocument> = {};
     const buffers = [...doc.buffers ?? []];
@@ -883,6 +885,8 @@ export default function App() {
       } else if (tab === "shared") {
         change.shared = text;
         setSharedUntouched(false);
+      } else if (tab === "canvas") {
+        change.layers = [{...layer ?? {kind: "canvas2d", overlay: true}, code: text}];
       } else {
         while (buffers.length <= tab) {
           buffers.push({code: newBufferCode(buffers.length)});
@@ -1062,7 +1066,8 @@ export default function App() {
             onAddShared={addShared} onRemoveShared={removeShared}
             onChooseDocs={() => setDocsShown(true)} onCloseDocs={closeDocs}
           />
-          {!docsShown && <div className="codeCaption">
+          {/* Captions say how the tabs relate, so a lone Image.glsl tab has none. */}
+          {!docsShown && codeTabs.length > 1 && <div className="codeCaption">
             {layer && codeTab === "canvas" &&
               <Tooltip
                 label="Off: the drawing only shows where a shader reads iCanvas2D" position="bottom-start" openDelay={400}

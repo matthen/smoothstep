@@ -5,26 +5,13 @@ import { javascript, javascriptLanguage, localCompletionSource } from '@codemirr
 import { syntaxHighlighting, syntaxTree } from '@codemirror/language';
 import type { EditorState, Extension } from '@codemirror/state';
 import { Decoration, ViewPlugin, type DecorationSet, type EditorView, type ViewUpdate } from '@codemirror/view';
-import { tagHighlighter, tags as t } from '@lezer/highlight';
 
 import { DOC_SECTIONS, type DocTarget } from '../lib/docLinks';
 import { CANVAS2D_REFERENCE, type Canvas2DEntry } from './canvas2dReference';
+import { jsHighlighter } from './jsHighlighter';
 import { clickHelpers, type ClickConfig, type Definition } from './popups';
 import { findJsPickerMatch } from './pickerValues';
 import { canvas2dSnippetCompletions } from './snippets';
-
-// Classes styled in editor.scss, as for the shader language, with property names set apart.
-const highlighter = tagHighlighter([
-  { tag: [t.keyword, t.self], class: 'tok-keyword' },
-  { tag: t.typeName, class: 'tok-type' },
-  { tag: t.propertyName, class: 'tok-property' },
-  { tag: t.variableName, class: 'tok-variable' },
-  { tag: [t.atom, t.bool, t.null], class: 'tok-atom' },
-  { tag: t.number, class: 'tok-number' },
-  { tag: t.comment, class: 'tok-comment' },
-  { tag: [t.string, t.regexp], class: 'tok-string' },
-  { tag: t.operator, class: 'tok-operator' },
-]);
 
 const MDN = 'https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/';
 // The section of the docs about each of the layer's own names; the context's members have MDN's.
@@ -129,7 +116,7 @@ export function javascriptExtensions(): Extension {
     javascriptLanguage.data.of({ autocomplete: localCompletionSource }),
     javascriptLanguage.data.of({ autocomplete: hints }),
     javascriptLanguage.data.of({ autocomplete: snippets }),
-    syntaxHighlighting(highlighter),
+    syntaxHighlighting(jsHighlighter),
     namesPlugin,
     clickHelpers(javascriptClicks),
   ];

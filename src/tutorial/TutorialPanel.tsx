@@ -1,15 +1,15 @@
 // The Learn panel: the tutorial's steps beside the editor, with checks that notice when you've
 // done each one.
 import { Button, CloseButton, Menu, UnstyledButton } from '@mantine/core';
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import {
   TbArrowLeft, TbArrowRight, TbBulb, TbCheck, TbChevronDown, TbCircleCheckFilled, TbCircleDashed, TbFileImport,
 } from 'react-icons/tb';
 
-import { tokenizeGlsl, type GlslToken } from '../editor/glslLanguage';
 import { EXAMPLES, exampleHref, exampleThumbnail } from '../lib/config';
 import { shaderName } from '../editor/ShaderTabs';
 import { codeIn, LESSONS, stepCode, type Step, type TabCode, type TutorialState } from './lessons';
+import HighlightedCode from './HighlightedCode';
 import { saveProgress, type TutorialProgress } from './progress';
 import './tutorial.scss';
 
@@ -21,28 +21,6 @@ export interface TutorialPanelProps {
   onClose(): void;
   // Told whether the current step is done, so the phone's Learn tab can show a tick.
   onStepDoneChange?(done: boolean): void;
-}
-
-const TOKEN_CLASSES: Record<GlslToken, string> = {
-  "keyword": "tok-keyword", "typeName": "tok-type", "variableName.standard": "tok-builtin",
-  "variableName": "tok-variable", "atom": "tok-atom", "number": "tok-number", "comment": "tok-comment",
-  "string": "tok-string", "meta": "tok-meta", "operator": "tok-operator",
-};
-
-function HighlightedCode({code}: {code: string}) {
-  const lines = useMemo(() => tokenizeGlsl(code.replace(/\n$/, "")), [code]);
-  return (
-    <pre className="learnCodeText">
-      {lines.map((tokens, i) =>
-        <Fragment key={i}>
-          {tokens.map((token, j) => token.type
-            ? <span key={j} className={TOKEN_CLASSES[token.type]}>{token.text}</span>
-            : token.text)}
-          {"\n"}
-        </Fragment>,
-      )}
-    </pre>
-  );
 }
 
 // Hidden until asked for, and hidden again on each new step, since the step's body is keyed by it.
@@ -171,7 +149,7 @@ export default function TutorialPanel({initial, state, onPutCode, onLessonChange
             {code.map(c =>
               <Fragment key={String(c.tab)}>
                 {code.length > 1 && <div className="learnCodeTab">{shaderName(c.tab)}</div>}
-                <HighlightedCode code={c.code} />
+                <HighlightedCode code={c.code} javascript={c.tab === "canvas"} />
               </Fragment>,
             )}
           </div>}

@@ -42,7 +42,7 @@ function shaderNameParts(shader: ShaderId): [string, string] {
 export function shaderCaption(shader: ShaderId): ReactNode {
   return shader === "canvas" ? <>Draws first; shaders read it as <code>iCanvas2D</code></> :
     shader === "shared" ? <>Goes at the top of every shader tab</> :
-    shader === "image" ? <>Draws what you see; its last frame is <code>iPrevFrame</code></> :
+    shader === "image" ? <>Draws last; it's what you see</> :
     <>Draws before the image; shaders read it as <code>iBuffer{shader}</code></>;
 }
 

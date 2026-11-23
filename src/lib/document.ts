@@ -125,6 +125,12 @@ export const NEW_CANVAS_DRAW = `function draw(ctx, {time}) {
 }`;
 
 export const NEW_CANVAS_CODE = `// Draws over the image each frame; shaders read it as iCanvas2D. See [the Canvas2D layer](docs/canvas2d).
+
+// Runs at the start, before the first draw: after each build and when the animation starts again.
+// Whatever it returns is data in draw.
+function setup({width, height}) {
+}
+
 ${NEW_CANVAS_DRAW}
 `;
 

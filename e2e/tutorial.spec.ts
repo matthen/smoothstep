@@ -33,9 +33,9 @@ test("the tutorial puts code in the editor, notices the build, and moves on", as
   await expect(panel.getByRole("heading", {name: "Pick a colour"})).toBeVisible();
   await expect(status).not.toHaveAttribute("data-done");
 
-  // The lesson picker lists all nine lessons.
+  // The lesson picker lists all ten lessons.
   await panel.getByRole("button", {name: "Choose a lesson"}).click();
-  await expect(page.getByRole("menuitem")).toHaveCount(9);
+  await expect(page.getByRole("menuitem")).toHaveCount(10);
   await page.keyboard.press("Escape");
 
   // The lesson is remembered, and starts again from its first step in the new animation; a lesson
@@ -116,6 +116,65 @@ test("the buffers lesson adds a buffer, fills several tabs, and checks every tab
   await expect(status).toHaveAttribute("data-done", "true");
   // Every tab compiled.
   await expect(page.locator(".shaderTab[data-error]")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("the Canvas2D lesson adds the layer, fills its tab, and has the image read iCanvas2D", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#tutorial/9");
+  const panel = page.getByRole("complementary", {name: "Tutorial"});
+  const status = panel.getByRole("status");
+  const next = () => panel.getByRole("button", {name: "Next"}).click();
+  const tab = (name: string) => page.getByRole("tab", {name: new RegExp("^" + name)});
+  const put = panel.getByRole("button", {name: "Put this in the editor"});
+  const build = () => page.getByRole("button", {name: "Build"}).click();
+
+  await expect(panel.getByRole("heading", {name: "Add the layer"})).toBeVisible();
+  await expect(status).not.toHaveAttribute("data-done");
+  await addTab(page, "Add the Canvas2D layer");
+  await expect(status).toHaveAttribute("data-done", "true");
+
+  // The code goes in the Canvas2D.js tab, and is done once built.
+  await next();
+  await expect(panel.locator(".learnCodeBar")).toContainText("Canvas2D.js");
+  await put.click();
+  await expect(tab("Canvas2D.js")).toHaveAttribute("aria-selected", "true");
+  await expect(panel.getByRole("button", {name: "In the editor"})).toBeDisabled();
+  await expect(status).not.toHaveAttribute("data-done");
+  await build();
+  await expect(status).toHaveAttribute("data-done", "true");
+
+  // drawList's triangle covers the middle of the canvas, in white.
+  await next();
+  await put.click();
+  await build();
+  await expect(status).toHaveAttribute("data-done", "true");
+  await expect.poll(() => canvasCenter(page).then(c => near(c, [255, 255, 255]))).toBe(true);
+
+  // The small disk goes in a list of its own, so the triangle after it is orange again.
+  await next();
+  await put.click();
+  await build();
+  await expect(status).toHaveAttribute("data-done", "true");
+  await expect.poll(() => canvasCenter(page).then(c => near(c, [255, 165, 0]))).toBe(true);
+
+  // The image reads the drawing, so with the layer no longer drawn over it, the orange triangle still shows.
+  await next();
+  await put.click();
+  await expect(tab("Image.glsl")).toHaveAttribute("aria-selected", "true");
+  await build();
+  await expect(status).not.toHaveAttribute("data-done");
+  await tab("Canvas2D.js").click();
+  await page.getByLabel("Draw over the image").uncheck();
+  await expect(status).toHaveAttribute("data-done", "true");
+  await expect.poll(() => canvasCenter(page).then(c => near(c, [255, 165, 0]))).toBe(true);
+  await expect(page.locator(".shaderTab[data-error]")).toHaveCount(0);
+
+  // The challenges, then the examples to explore.
+  await next();
+  await expect(panel.getByRole("heading", {name: "Challenges"})).toBeVisible();
+  await next();
+  await expect(panel.locator(".learnExamples a")).toHaveCount(2);
   expect(errors).toEqual([]);
 });
 

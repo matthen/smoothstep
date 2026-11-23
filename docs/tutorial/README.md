@@ -12,7 +12,8 @@ notices when you've done it.
 6. [Textures](https://smoothstep.io/app/#tutorial/6): showing, warping and folding an image.
 7. [Memory with iPrevFrame](https://smoothstep.io/app/#tutorial/7): trails that fade, and setting up the first frame with `iFrame`.
 8. [Buffers](https://smoothstep.io/app/#tutorial/8): a heat map that a moving dot paints into a buffer, spreading it out, and the shared.glsl tab.
-9. [Share it](https://smoothstep.io/app/#tutorial/9): saving, sharing a link, downloading and exporting video, and where to learn more.
+9. [Draw with JavaScript](https://smoothstep.io/app/#tutorial/9): the Canvas2D layer, writing the time, shapes with `drawList`, lists inside lists that turn only part of the drawing, and a shader that reads the drawing as `iCanvas2D`.
+10. [Share it](https://smoothstep.io/app/#tutorial/10): saving, sharing a link, downloading and exporting video, and where to learn more.
 
 Each lesson builds one animation a step at a time. Most end with challenges to try on your own,
 with hints but no answers, and a related example to explore.
