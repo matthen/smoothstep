@@ -132,7 +132,8 @@ test("File → Import adds a gist to your animations and opens it, once", async 
   await expect(await importLink("not a link")).toContainText("That isn't a link to an animation.");
   await page.keyboard.press("Escape");
   await importLink("https://gist.github.com/someone/abc123");
-  await expect(page).toHaveURL(/#anim\/[a-f0-9]+$/);
+  // Opening it reloads the app, which can take a while on a busy machine.
+  await expect(page).toHaveURL(/#anim\/[a-f0-9]+$/, {timeout: 20_000});
   const url = page.url();
   await expect(page.locator("#titleInput")).toHaveValue("Magenta file");
   expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
