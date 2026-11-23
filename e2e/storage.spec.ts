@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { PNG } from 'pngjs';
 
 import {
-  canvasCenter, dismissAlert, editorCode, fileMenu, MAGENTA, near, offline, setCode, solidPNG, TEXTURE_SHADER,
+  dismissAlert, editorCode, expectCenter, fileMenu, MAGENTA, offline, setCode, solidPNG, TEXTURE_SHADER,
 } from './helpers';
 
 test.describe.configure({mode: "serial"});
@@ -101,7 +101,7 @@ test("first visit: make and save an animation with an uploaded texture", async (
   await fileMenu(page, "Save");
   await expect(page).toHaveURL(/#anim\/[a-f0-9]{12}$/);
   docId = page.url().split("/").pop()!;
-  expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
+  await expectCenter(page, MAGENTA);
   expect(errors).toEqual([]);
   await context.close();
 });
@@ -113,7 +113,7 @@ test("after a browser restart the animation and texture are still there", async 
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.getByRole("tab", {name: "Textures"}).click();
   expect(await page.locator("div#textures .texture img").first().getAttribute("src")).toMatch(/^blob:/);
-  expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
+  await expectCenter(page, MAGENTA);
 
   const modal = await openDialog(page);
   await expect(modal.locator("tbody tr")).toHaveCount(1);
@@ -156,7 +156,7 @@ test("a fresh browser opens the zip of its one animation, then finds the single 
   await page.goto("./#new");
   expect(await openFile(page, zipPath)).toBe(docId);
   expect(await openFile(page, onePath)).toBe(docId);
-  expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
+  await expectCenter(page, MAGENTA);
   expect(await savedCount(page)).toBe(1);
   expect(errors).toEqual([]);
   await context.close();
@@ -166,7 +166,7 @@ test("another fresh browser imports the single file, recognises bare JSON, and k
   const {context, page, errors} = await browser("c", baseURL!);
   await page.goto("./#new");
   expect(await openFile(page, onePath)).toBe(docId);
-  expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
+  await expectCenter(page, MAGENTA);
 
   // The same document as bare JSON, keys in another order, is recognised.
   const one = JSON.parse(readFileSync(onePath, "utf8")) as AnimationFile;

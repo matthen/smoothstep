@@ -1,9 +1,8 @@
 // Sharing without a server: share links, files opened from a URL or gist, the embedded player,
 // player files, and the timeline's #define names.
 import { expect, test, type Page } from '@playwright/test';
-import { PNG } from 'pngjs';
 
-import { canvasCenter, dismissAlert, editorCode, fileMenu, MAGENTA, near, offline, setCode, skipTour, solidPNG, TEXTURE_SHADER } from './helpers';
+import { dismissAlert, editorCode, expectCenter, fileMenu, MAGENTA, offline, setCode, skipTour, solidPNG, TEXTURE_SHADER } from './helpers';
 
 const FILE_URL = "https://example.com/anims/magenta.smoothstep.json";
 
@@ -32,13 +31,6 @@ async function serve(page: Page, url: string, body: unknown, status = 200) {
     status, contentType: "application/json", headers: {"Access-Control-Allow-Origin": "*"},
     body: JSON.stringify(body),
   }));
-}
-
-async function centerOf(page: Page, selector: string): Promise<[number, number, number]> {
-  await page.waitForTimeout(800);
-  const png = PNG.sync.read(await page.locator(selector).screenshot());
-  const i = (Math.floor(png.height / 2) * png.width + Math.floor(png.width / 2)) * 4;
-  return [png.data[i]!, png.data[i + 1]!, png.data[i + 2]!];
 }
 
 async function shareDialog(page: Page) {
@@ -74,7 +66,7 @@ test("a share link carries the animation", async ({page, context}) => {
   await other.goto(link);
   await expect(other.locator("#titleInput")).toHaveValue("Minimal Animation");
   expect(await editorCode(other)).toBe(code);
-  expect(near(await canvasCenter(other), MAGENTA)).toBe(true);
+  await expectCenter(other, MAGENTA);
   expect(errors).toEqual([]);
 });
 
@@ -83,7 +75,7 @@ test("opens an animation file from a URL with its images, and keeps them once sa
   await serve(page, FILE_URL, animationFile());
   await page.goto("./#url/" + FILE_URL);
   await expect(page.locator("#titleInput")).toHaveValue("Magenta file");
-  expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
+  await expectCenter(page, MAGENTA);
   // Not saved yet, so the image isn't among the user's images.
   const modal = await shareDialog(page);
   await expect(modal.getByLabel("Link", {exact: true})).toHaveValue(/#url\/https:\/\/example\.com\//);
@@ -100,14 +92,14 @@ test("opens an animation file from a URL with its images, and keeps them once sa
   const player = await context.newPage();
   await player.goto("file://" + path);
   await expect(player).toHaveTitle("Magenta file");
-  expect(near(await centerOf(player, "canvas"), MAGENTA)).toBe(true);
+  await expectCenter(player, MAGENTA, {selector: "canvas"});
   await player.close();
 
   await page.getByRole("button", {name: "Save"}).click();
   await expect(page).toHaveURL(/#anim\/[a-f0-9]+$/);
   await page.reload();
   await expect(page.locator("#titleInput")).toHaveValue("Magenta file");
-  expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
+  await expectCenter(page, MAGENTA);
   // Edited and saved, it now shares a link that leaves the image out.
   const saved = await shareDialog(page);
   await expect(saved.getByLabel("Link", {exact: true})).toHaveValue(/#share\//);
@@ -136,10 +128,10 @@ test("File → Import adds a gist to your animations and opens it, once", async 
   await expect(page).toHaveURL(/#anim\/[a-f0-9]+$/, {timeout: 20_000});
   const url = page.url();
   await expect(page.locator("#titleInput")).toHaveValue("Magenta file", {timeout: 20_000});
-  expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
+  await expectCenter(page, MAGENTA);
   // Saved with its image, so it shows after a reload, and importing it again adds no copy.
   await page.reload();
-  expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
+  await expectCenter(page, MAGENTA);
   await page.goto("about:blank");
   await page.goto("./#new");
   await importLink("https://gist.github.com/someone/abc123");
@@ -165,7 +157,7 @@ test("the embedded player plays a shared animation", async ({page, context}) => 
   await serve(page, FILE_URL, animationFile());
   await page.goto("./embed.html#url/" + FILE_URL);
   await expect(page).toHaveTitle("Magenta file - smoothstep.io");
-  expect(near(await centerOf(page, "canvas"), MAGENTA)).toBe(true);
+  await expectCenter(page, MAGENTA, {selector: "canvas"});
   await expect(page.getByRole("link", {name: "Open in smoothstep.io"})).toHaveAttribute(
     "href", /\/sub\/#url\/https:\/\/example\.com\//);
   await page.locator("canvas").click();

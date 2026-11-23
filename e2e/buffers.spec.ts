@@ -2,7 +2,7 @@
 // any tab, and keeping them when saved.
 import { expect, test, type Page } from '@playwright/test';
 
-import { addTab, canvasCenter, MAGENTA, near, offline, OPEN_EDITOR, setCode, skipTour } from './helpers';
+import { addTab, expectCenter, MAGENTA, offline, OPEN_EDITOR, setCode, skipTour } from './helpers';
 
 const MAGENTA_BUFFER = "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  fragColor = magenta();\n}";
 const SHARED = "vec4 magenta() {\n  return vec4(0.86, 0.08, 0.78, 1.);\n}";
@@ -45,7 +45,7 @@ test("a buffer draws before the image, using shared code, and is kept when saved
   await openTab(page, "Image.glsl");
   await setCode(page, READS_BUFFER);
   await page.keyboard.press("Shift+Enter");
-  expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
+  await expectCenter(page, MAGENTA);
 
   await page.keyboard.press("ControlOrMeta+s");
   await expect(page).toHaveURL(/#anim\/[a-f0-9]+$/);
@@ -54,7 +54,7 @@ test("a buffer draws before the image, using shared code, and is kept when saved
   await page.goto(saved);
   await expect(tabs(page)).toHaveText(["shared.glsl", "iBuffer0.glsl", "Image.glsl"]);
   await expect(page.getByRole("tab", {name: "Image.glsl"})).toHaveAttribute("aria-selected", "true");
-  expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
+  await expectCenter(page, MAGENTA);
   await openTab(page, "shared.glsl");
   await expect(page.locator(OPEN_EDITOR)).toContainText("vec4 magenta()");
   expect(errors).toEqual([]);

@@ -3,7 +3,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { PNG } from 'pngjs';
 
-import { addTab, MAGENTA, near, offline, OPEN_EDITOR, setCode, skipTour } from './helpers';
+import { addTab, MAGENTA, near, offline, OPEN_EDITOR, PIXEL_WAIT, setCode, skipTour } from './helpers';
 
 test.use({deviceScaleFactor: 2});
 
@@ -36,9 +36,6 @@ async function colourAt(page: Page, x: number, y: number) {
   return (await coloursAt(page, [[x, y]]))[0]!;
 }
 
-// Software WebGL on a busy CI machine can take seconds to draw a frame at 2×, and a screenshot waits for one.
-const SLOW_FRAMES = {timeout: 30_000};
-
 test.beforeEach(async ({context}) => {
   await skipTour(context);
 });
@@ -61,7 +58,7 @@ test("the preview draws at twice its size on a 2× screen, and the shaders and l
     const [bottomRight, bottomLeft, topLeft, topRight] =
       await coloursAt(page, [[0.75, 0.75], [0.25, 0.75], [0.25, 0.25], [0.75, 0.25]]);
     return [bottomRight, bottomLeft, near(topLeft!, MAGENTA), near(topRight!, MAGENTA)];
-  }, SLOW_FRAMES).toEqual([[255, 255, 255], [0, 0, 0], true, true]);
+  }, PIXEL_WAIT).toEqual([[255, 255, 255], [0, 0, 0], true, true]);
   expect(errors).toEqual([]);
 });
 
@@ -121,7 +118,7 @@ test("a slow preview drops to 1× without losing the simulation, and the next bu
   };
   await expect(size).toHaveText(await sizeAt(2));
   await page.getByRole("button", {name: "Play"}).click();
-  await expect.poll(() => colourAt(page, 0.5, 0.5), SLOW_FRAMES).toEqual([0, 255, 0]);
+  await expect.poll(() => colourAt(page, 0.5, 0.5), PIXEL_WAIT).toEqual([0, 255, 0]);
 
   await page.evaluate(() => {(window as unknown as {slowFrames: number}).slowFrames = 10_000;});
   await expect(size).toHaveText(await sizeAt(1), {timeout: 10_000});
