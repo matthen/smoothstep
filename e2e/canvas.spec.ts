@@ -309,6 +309,55 @@ test("a draw that never finishes doesn't freeze the page, and building fixed cod
   expect(errors).toEqual([]);
 });
 
+test("the embedded player keeps looping when a draw never finishes", async ({page, context}) => {
+  const errors = await offline(context);
+  await start(page);
+  await setCode(page, "function draw(ctx, {frame}) {\n  if (frame > 10) {\n    while (true) {}\n  }\n}");
+  await page.locator(".durationInput").fill("1");
+  await page.getByRole("button", {name: "Build"}).click();
+  await page.getByRole("button", {name: "Share"}).click();
+  const link = await page.getByRole("dialog", {name: "Share"}).getByLabel("Link", {exact: true}).inputValue();
+
+  const player = await context.newPage();
+  // Counts the frames the player draws.
+  await player.addInitScript(() => {
+    const w = window as unknown as {draws: number};
+    w.draws = 0;
+    const drawArrays = WebGL2RenderingContext.prototype.drawArrays;
+    WebGL2RenderingContext.prototype.drawArrays = function (...args) {
+      w.draws += 1;
+      drawArrays.apply(this, args);
+    };
+  });
+  await player.goto(link.replace("/sub/#", "/sub/embed.html#"));
+  await expect(player.locator("canvas")).toBeVisible();
+  const draws = () => player.evaluate(() => (window as unknown as {draws: number}).draws);
+  // Stuck on step 11 within the first second, it starts again each time it loops.
+  await player.waitForTimeout(1500);
+  const before = await draws();
+  await player.waitForTimeout(2500);
+  expect(await draws()).toBeGreaterThan(before);
+  expect(errors).toEqual([]);
+});
+
+test("Canvas2D code that never finishes starting says so, and building fixed code recovers", async ({page, context}) => {
+  const errors = await offline(context);
+  await start(page);
+  await setCode(page, "while (true) {}\nfunction draw(ctx) {}");
+  await page.getByRole("button", {name: "Build"}).click();
+  await expect(page.getByRole("status").filter({hasText: /^Running the Canvas2D code…$/})).toBeVisible({timeout: 10_000});
+  await expect(page.locator(".ss-line-error")).toHaveCount(0);
+  await page.getByRole("button", {name: "Play"}).click();
+  await page.waitForTimeout(500);
+  await expect(page.getByRole("status").filter({hasText: /^Running the Canvas2D code…$/})).toBeVisible();
+
+  await setCode(page, TOP_HALF);
+  await page.getByRole("button", {name: "Build"}).click();
+  await expectTopMagenta(page);
+  await expect(page.getByText(/^Running the Canvas2D code/)).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
 test("the Canvas2D layer examples open and run without errors", async ({page, context}) => {
   const errors = await offline(context);
   for (const id of ["9087790c091c", "7852e2820a47", "96abdd1ee3d3", "65ca463c0318"]) {

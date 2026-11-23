@@ -156,10 +156,12 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link, lay
           time = 0;
           stepClock = 0;
           steps = RESTART;
+          // Also stops a layer stuck on a step, which the wait below would otherwise wait on for good.
+          layer?.steps.restart();
         }
       }
       // A layer that has fallen behind is waited for, which slows the animation rather than the page.
-      if (!layer?.steps.busy || restarts(steps, stepClock)) {
+      if (!layer?.steps.busy || steps.rendered < 0 || restarts(steps, stepClock)) {
         steps = renderSteps(layer?.steps ?? renderer, steps, stepClock, time, (t, frameIndex) => ({
           time: t, duration: doc.duration, frameIndex, variableValues: variableValues(doc.variables, t),
         }), 4);

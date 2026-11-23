@@ -289,8 +289,10 @@ keeps the last frame that drew without one.
 
 Slow code is fine: the animation plays more slowly while each step draws, and a render waits for
 every step. Once a step has taken more than a second, "Drawing step 42…" shows over the canvas until
-it's done. The page keeps working while the code runs, even a loop that never ends, and building
-again stops it straight away.
+it's done. Code outside the two functions runs first, before any step, and if that takes more than a
+second, "Running the Canvas2D code…" shows. The page keeps working while the code runs, even a loop
+that never ends. Building again stops it straight away, and going back to the start or looping
+starts it afresh.
 
 The canvas is always the animation's size, so setting `ctx.canvas.width` or `height` is an error.
 

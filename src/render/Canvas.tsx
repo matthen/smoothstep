@@ -61,8 +61,8 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
   // The container's width, height and offset within the pane, where the play bar is placed.
   const [container, setContainer] = useState<[number, number, number]>([0, 0, 0]);
   const [fps, setFps] = useState<number | null>(null);
-  // The step the Canvas2D layer has been drawing for a while.
-  const [layerBusy, setLayerBusy] = useState<number | null>(null);
+  // The step the Canvas2D layer has been drawing for a while, or "starting" while its code first runs.
+  const [layerBusy, setLayerBusy] = useState<number | "starting" | null>(null);
   // Touch screens can't hover, so a tap shows the size and frame rate for a few seconds.
   const [overlays, setOverlays] = useState(false);
   const overlayTimer = useRef<number | undefined>(undefined);
@@ -310,7 +310,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
           </div>
           {layerBusy !== null ? (
             <p className="layerBusy" role="status" style={{top: marginTop + 8, left: marginSide + 8}}>
-              Drawing step {layerBusy}…
+              {layerBusy === "starting" ? "Running the Canvas2D code…" : `Drawing step ${layerBusy}…`}
             </p>
           ) : null}
         </>
