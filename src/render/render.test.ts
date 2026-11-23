@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { exportSize, frameCount } from '../export/exportVideo';
-import { fitCanvas } from './layout';
+import { drawingSize, fitCanvas, SlowFrames } from './layout';
 import { buffersUsed, fragmentSource, locateErrors, parseErrors } from './Renderer';
 
 describe("parseErrors", () => {
@@ -26,6 +26,33 @@ describe("sizes", () => {
     expect(fitCanvas(500, 400, [1, 1])).toEqual([400, 400]);
     expect(fitCanvas(480, 800, [16, 9])).toEqual([480, 270]);
     expect(fitCanvas(4000, 4000, [3, 4])).toEqual([960, 1280]);
+  });
+
+  it("draws the preview at the screen's pixel ratio, up to 2× and 2048 pixels, or 1× when asked", () => {
+    expect(drawingSize(400, 300, 2)).toEqual([800, 600]);
+    expect(drawingSize(400, 300, 3)).toEqual([800, 600]);
+    expect(drawingSize(400, 300, 1.5)).toEqual([600, 450]);
+    expect(drawingSize(1280, 720, 2)).toEqual([2048, 1152]);
+    expect(drawingSize(400, 300, 1)).toEqual([400, 300]);
+    expect(drawingSize(400, 300, 0.5)).toEqual([400, 300]);
+    expect(drawingSize(400, 300, 2, true)).toEqual([400, 300]);
+  });
+
+  it("calls the frame rate slow only once it has stayed slow for a few seconds", () => {
+    const watch = (frameMs: number, seconds: number, frames = new SlowFrames(), start = 0) => {
+      for (let t = start; t <= start + seconds * 1000; t += frameMs) frames.frame(t);
+      return frames;
+    };
+    expect(watch(1000 / 60, 10).slow).toBe(false);
+    expect(watch(1000 / 20, 1).slow).toBe(false);
+    expect(watch(1000 / 20, 4).slow).toBe(true);
+    // A pause between frames isn't slowness, and starts the count again.
+    const paused = watch(1000 / 20, 2);
+    paused.idle();
+    expect(watch(1000 / 20, 2, paused, 60_000).slow).toBe(false);
+    // Nor is a quick patch after a slow one.
+    const recovered = watch(1000 / 60, 3, watch(1000 / 20, 2), 2050);
+    expect(recovered.slow).toBe(false);
   });
 
   it("gives exports even dimensions", () => {

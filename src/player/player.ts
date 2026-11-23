@@ -1,7 +1,7 @@
 // A bare player for one animation, without React or the editor: used by the embedded player
 // (embed.html) and the standalone player file. It loops the animation, and a click pauses it.
 import { bufferCodes, variableValues, type AnimationDocument } from '../lib/document';
-import { fitCanvas } from '../render/layout';
+import { drawingSize, fitCanvas, SlowFrames } from '../render/layout';
 import { Renderer } from '../render/Renderer';
 import { renderSteps, RESTART } from '../render/steps';
 
@@ -83,16 +83,20 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link}: Pl
     renderer.clearTargets();
   };
 
-  const resize = () => {
+  // Sharp on high-DPI screens, unless that proves too slow.
+  const frames = new SlowFrames();
+  let lowRes = false;
+  // Dropping to 1× keeps the simulation going; a new size starts it again.
+  const resize = (resample = false) => {
     const [width, height] = fitCanvas(container.clientWidth, container.clientHeight, doc.aspectRatio);
     canvas.style.width = width + "px";
     canvas.style.height = height + "px";
-    if (renderer.setSize(width, height)) {
+    if (renderer.setSize(...drawingSize(width, height, window.devicePixelRatio, lowRes), resample)) {
       stepClock = 0;
       steps = RESTART;
     }
   };
-  new ResizeObserver(resize).observe(container);
+  new ResizeObserver(() => resize()).observe(container);
   resize();
 
   // Rest when scrolled out of sight, so an embedded animation doesn't use the GPU for nothing.
@@ -121,8 +125,14 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link}: Pl
         time: t, duration: doc.duration, frameIndex, variableValues: variableValues(doc.variables, t),
       }), 4);
       last = now;
+      frames.frame(now);
+      if (frames.slow && !lowRes) {
+        lowRes = true;
+        resize(true);
+      }
     } else {
       last = null;
+      frames.idle();
     }
     requestAnimationFrame(frame);
   };

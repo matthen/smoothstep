@@ -35,6 +35,11 @@ Animations may also use any of the following input variables (*uniforms*):
 | `float iFloat0` ... `iFloat15`  | The 16 numbers set on the timeline or with sliders. |
 | `sampler2D iBuffer0` ... `iBuffer3`  | What each buffer drew most recently, when the animation has buffers. |
 
+On a high-DPI screen, such as a phone's, the preview draws up to twice as many pixels across as it
+takes up, so it's sharp, and `iResolution` is that bigger size. If the animation can't keep up at
+that size, the preview drops back to one pixel per screen pixel until the next build. Hover over
+or tap the preview to see its size. A render draws at the size you choose.
+
 ## Textures
 
 `texture(iTexture0, uv)` reads a texture's colour at `uv`, which runs from 0 to 1 across the
