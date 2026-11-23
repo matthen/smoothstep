@@ -10,11 +10,11 @@ read it as a texture, `iCanvas2D`.
 
 ## Adding one
 
-Click the ⊕ above the code and choose **Add the Canvas2D layer**. A **Canvas2D** tab, marked JS,
-appears first in the code tabs, set apart from the shader tabs by a divider: Canvas2D | iBuffer0 › …
-› Image. It draws first too, so every shader reads this step's drawing.
+Click the ⊕ above the code and choose **Add the Canvas2D layer**. A **Canvas2D.js** tab appears
+first in the code tabs, set apart from the GLSL tabs by a divider: Canvas2D.js | shared.glsl |
+iBuffer0.glsl › … › Image.glsl. It draws first too, so every shader reads this step's drawing.
 
-The new layer has some starter code that writes "Hello, canvas" and turns a pentagon. Build with
+The new layer has a few lines of starter code that write "Hello, canvas", bobbing up and down. Build with
 <kbd>Shift</kbd> + <kbd>Enter</kbd> after a change, as you would for a shader.
 
 The editor helps as it does for shaders. Click a drawing helper like `Disk`, an input like `time`, or
@@ -38,6 +38,9 @@ function draw(ctx, {time, frame, duration, width, height, floats, textures, data
   ctx.fillText("Time: " + time.toFixed(1), 60, 110);
 }
 ```
+
+Type `draw` or `setup` and pick it from **Snippets** in the completions to write either one for you.
+The snippets also include `drawList`, `planck`, `textures` and `trail`, from the sections below.
 
 `setup` runs again whenever the layer restarts. Whatever it returns is passed to `draw` as `data`.
 
@@ -203,7 +206,7 @@ lists of shapes.
 
 ## iCanvas2D and "Draw over the image"
 
-The **Draw over the image** switch on the Canvas2D tab is on for a new layer. The canvas's drawing
+The **Draw over the image** switch on the Canvas2D.js tab is on for a new layer. The canvas's drawing
 then goes over the image, wherever it isn't transparent.
 
 Either way, every shader can read the drawing as `iCanvas2D`, like a texture:
@@ -286,6 +289,9 @@ The physics world uses the same coordinates as `drawList`, so drawing it is easy
 
 Errors show under the line they're on, the way shader errors do. While there's an error, the layer
 keeps the last frame that drew without one.
+
+If the code has no `draw` function, the error shows a short one to start from, and **Insert a draw
+function** adds it after the rest of your code and builds.
 
 If a step takes more than a second, for example because a loop never ends, the code is stopped with
 "The Canvas2D code took too long". Fix it and build to run it again.

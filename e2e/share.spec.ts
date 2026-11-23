@@ -42,7 +42,7 @@ async function centerOf(page: Page, selector: string): Promise<[number, number, 
 }
 
 async function shareDialog(page: Page) {
-  await page.getByRole("button", {name: "Share"}).click();
+  await page.getByRole("button", {name: "Share", exact: true}).click();
   return page.getByRole("dialog", {name: "Share"});
 }
 

@@ -2,6 +2,8 @@
 import { syntaxTree } from '@codemirror/language';
 import { Annotation, StateEffect, StateField, type EditorState, type Extension, type Line } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, showTooltip, type DecorationSet, type Tooltip } from '@codemirror/view';
+import { DOC_SECTIONS, docLinkElement, type DocTarget } from '../lib/docLinks';
+import { eachShaderInput } from '../lib/shaderInputs';
 import glslFunctions from './glslFunctions.json';
 import {
   createColorPicker, createDirectionPicker, createFloatPicker, createVec2Picker, type PickerWidget,
@@ -19,6 +21,18 @@ export interface Definition {
   oneLiner: string;
   signatures: string[];
   helpUrl?: string;
+  // The section of smoothstep.io's own docs about it.
+  docs?: DocTarget;
+}
+
+// Where the docs explain the shader inputs.
+function glslDocs(name: string): DocTarget | undefined {
+  if (name === 'mainImage') return DOC_SECTIONS.shaders;
+  if (name === 'iPrevFrame' || name === 'iFrame') return DOC_SECTIONS.prevFrame;
+  if (/^iTexture\d$/.test(name)) return DOC_SECTIONS.textures;
+  if (/^iBuffer\d$/.test(name)) return DOC_SECTIONS.buffers;
+  if (name === 'iCanvas2D') return DOC_SECTIONS.iCanvas2D;
+  return /^i[A-Z]/.test(name) ? DOC_SECTIONS.inputs : undefined;
 }
 
 // What a click finds, in one language.
@@ -31,7 +45,13 @@ export interface ClickConfig {
   illuminates(state: EditorState, from: number): boolean;
 }
 
-const glslDefinitions = new Map((glslFunctions as Definition[]).map((d) => [d.functionName, d]));
+// Built-in functions from the GLSL reference, and the inputs as the docs' Reference page has them.
+const glslDefinitions = new Map([
+  ...(glslFunctions as Definition[]).map((d): [string, Definition] => [d.functionName, { ...d, docs: glslDocs(d.functionName) }]),
+  ...eachShaderInput().map(({ name, input }): [string, Definition] => [name, {
+    functionName: name, oneLiner: input.description, signatures: [`${input.type} ${name}`], docs: glslDocs(name),
+  }]),
+]);
 
 const glslClicks: ClickConfig = {
   pickerAt(state, line, ch) {
@@ -144,6 +164,9 @@ function definitionDom(def: Definition) {
     a.title = `Help for ${def.functionName}`;
     a.textContent = 'More';
     p.append(' ', a, '.');
+  }
+  if (def.docs) {
+    p.append(' ', docLinkElement('In the docs', def.docs), '.');
   }
   const code = dom.appendChild(document.createElement('code'));
   def.signatures.forEach((sig, i) => {

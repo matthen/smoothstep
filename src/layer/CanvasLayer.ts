@@ -36,7 +36,7 @@ const STEP_TIMEOUT_MS = 1_000;
 const MAX_WAITING = 12;
 
 export const TOO_SLOW = "The Canvas2D code took too long, so it was stopped. Build to run it again.";
-const NO_DRAW = "The Canvas2D code needs a draw function: function draw(ctx, {time}) { ... }";
+const NO_DRAW = "The Canvas2D code needs a draw function, which draws on the canvas each step.";
 
 // What every run of one configuration shares.
 interface Prepared {
@@ -197,7 +197,9 @@ export class CanvasLayer {
       window.clearTimeout(run.timer);
       if (run === this.current) {
         if (message.registered === true && message.hasDraw !== true) {
-          this.fail([{line: 0, message: NO_DRAW}]);
+          // Under the last line, where the editor's fix puts one.
+          const lastLine = (this.config?.code ?? "").split("\n").length - 1;
+          this.fail([{line: lastLine, message: NO_DRAW, missing: "draw"}]);
           return;
         }
         if (message.registered !== true) {

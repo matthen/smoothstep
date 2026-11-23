@@ -82,14 +82,14 @@ test("the buffers lesson adds a buffer, fills several tabs, and checks every tab
   // The buffer's code goes in its tab. The image doesn't read it yet, so the canvas stays as it was.
   await next();
   await panel.getByRole("button", {name: "Put this in the editor"}).click();
-  await expect(tab("iBuffer0")).toHaveAttribute("aria-selected", "true");
+  await expect(tab("iBuffer0.glsl")).toHaveAttribute("aria-selected", "true");
   await page.getByRole("button", {name: "Build"}).click();
   await expect(status).toHaveAttribute("data-done", "true");
 
   // The image shows the heat.
   await next();
   await panel.getByRole("button", {name: "Put this in the editor"}).click();
-  await expect(tab("Image")).toHaveAttribute("aria-selected", "true");
+  await expect(tab("Image.glsl")).toHaveAttribute("aria-selected", "true");
   await page.getByRole("button", {name: "Build"}).click();
   await page.locator(".playerButtons button").nth(1).click();
   await expect(status).toHaveAttribute("data-done", "true");
@@ -99,11 +99,11 @@ test("the buffers lesson adds a buffer, fills several tabs, and checks every tab
   await page.getByRole("button", {name: "Build"}).click();
   await expect(status).toHaveAttribute("data-done", "true");
 
-  // One button fills the Shared GLSL tab, the buffer and the image.
+  // One button fills the shared.glsl tab, the buffer and the image.
   await next();
-  await expect(panel.locator(".learnCodeTab")).toHaveText(["Shared GLSL", "iBuffer0", "Image"]);
+  await expect(panel.locator(".learnCodeTab")).toHaveText(["shared.glsl", "iBuffer0.glsl", "Image.glsl"]);
   await panel.getByRole("button", {name: "Put this in the editor"}).click();
-  await expect(tab("Shared GLSL")).toBeVisible();
+  await expect(tab("shared.glsl")).toBeVisible();
   await page.getByRole("button", {name: "Build"}).click();
   await expect(status).toHaveAttribute("data-done", "true");
   // Every tab compiled.

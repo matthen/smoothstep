@@ -1,8 +1,7 @@
 import type { TextureSlot } from './document';
 import { imageURL } from './localStore';
 
-export const REPO_URL = "https://github.com/matthen/smoothstep";
-export const DOCS_URL = REPO_URL + "/tree/main/docs";
+export { REPO_URL } from './urls';
 // Opens a new animation with the tutorial beside it; add "/<n>" for lesson n.
 export const TUTORIAL_HREF = "#tutorial";
 

@@ -6,7 +6,7 @@ import { encode, renderSVG } from 'uqr';
 import AppModal from '../app/AppModal';
 import CopyText from '../app/CopyText';
 import { download } from '../lib/archive';
-import { DOCS_URL } from '../lib/config';
+import { DOC_SECTIONS, docsSiteHref } from '../lib/docLinks';
 import type { AnimationDocument } from '../lib/document';
 import { routeFromLink, routeHash } from '../lib/routes';
 import { appLink, encodeDocument, userImageSlots } from '../lib/share';
@@ -149,7 +149,7 @@ export default function Share({show, doc, source, onHide, onMessage, onDownload}
               the images you added, and a link to a gist opens its latest version, so you can edit the gist
               without changing the link. Download the animation file, put it online, and paste its address here
               to make the link.
-              {" "}<a href={DOCS_URL + "/sharing.md"} target="_blank" rel="noreferrer">Sharing</a> in the docs has
+              {" "}<a href={docsSiteHref(DOC_SECTIONS.sharingFile)} target="_blank" rel="noreferrer">Sharing</a> in the docs has
               the steps for a gist.
             </Text>
             <Group>

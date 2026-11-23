@@ -155,6 +155,36 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
     border-radius: 2px;
   }
 
+  // The function a missing draw or mainImage error offers to insert.
+  .ss-line-error-code {
+    margin: 6px 0;
+    padding: 6px 8px;
+    font-family: var(--mantine-font-family-monospace);
+    font-size: 12px;
+    line-height: 1.45;
+    color: $dt-gray-light;
+    background: rgba($dt-gray-darker, 0.6);
+    border-radius: 3px;
+    white-space: pre-wrap;
+  }
+
+  .ss-line-error-fix {
+    min-height: 32px;
+    padding: 4px 12px;
+    font: inherit;
+    font-weight: 600;
+    color: $dt-gray-darker;
+    background: $dt-purple;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    touch-action: manipulation;
+
+    &:hover {
+      background: mix($dt-purple, white, 85%);
+    }
+  }
+
   // Syntax colours: CodeMirror 5's Dracula theme with smoothstep.io's overrides.
   .tok-keyword { color: $dt-cyan; }
   .tok-type { color: $dt-pink; }
@@ -218,6 +248,48 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
   .cm-completionMatchedText {
     text-decoration: none;
   }
+
+  .cm-completionDetail {
+    margin-left: 1em;
+    font-style: normal;
+    color: $dt-gray-medium;
+  }
+
+  // Snippets come last, under their own heading, marked with a ⋯ before the label.
+  > ul > completion-section {
+    display: list-item;
+    padding: 4px 4px 2px;
+    font-family: var(--mantine-font-family);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: $dt-purple;
+    border-top: 1px solid $dt-gray;
+    border-bottom: none;
+    opacity: 1;
+  }
+
+  .ss-snippet-option .cm-completionLabel::before {
+    content: "⋯ ";
+    color: $dt-purple;
+  }
+}
+
+// A snippet's code, beside the completion list.
+.cm-tooltip.cm-completionInfo {
+  background: $dt-gray-dark;
+  border: none;
+  box-shadow: 1px 1px 5px $dt-gray-darker;
+}
+
+.ss-snippet-preview {
+  margin: 0;
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: $dt-gray-light;
+  white-space: pre;
 }
 
 .cm-tooltip.ss-popup {

@@ -1,6 +1,6 @@
 # Keyboard Shortcuts
 
-These are also in the app, under Help → Keyboard shortcuts, with your computer's own key names.
+These are also in the app, under Help → Keyboard shortcuts.
 `Mod` is `Cmd` on a Mac and `Ctrl` elsewhere, and `Alt` is `Option` on a Mac.
 
 ## In the code editor
@@ -16,8 +16,8 @@ These are also in the app, under Help → Keyboard shortcuts, with your computer
 | `Shift + Ctrl + R` (Mac: `Shift + Cmd + Alt + F`) | replace all |
 | `Alt + G` | go to a line |
 | `Mod + /` | comment or uncomment |
-| `Tab` | indent the selection, or insert two spaces |
-| `Shift + Tab` | re-indent the line or selection |
+| `Tab` | indent the selection, or insert two spaces; in a snippet, go to its next blank |
+| `Shift + Tab` | re-indent the line or selection; in a snippet, go back a blank |
 | `Mod + Z` | undo |
 | `Ctrl + Y` (Mac: `Shift + Cmd + Z`) | redo |
 | `Ctrl + Space` | show completions (`Tab` or `Enter` picks one) |
@@ -46,7 +46,14 @@ zoom in or out. A `vec2` value brings up a 2D picker. A `vec3` brings up a colou
 values are between 0 and 1, and a 3D direction picker otherwise. Click a built-in function, like `smoothstep`, or an input, like
 `iTime`, to see its definition. The editor also suggests completions as you type.
 
-In the Canvas2D tab, click a number for the same slider, or a colour string like `"#ffcc00"` or
+Under **Snippets** at the end of the completions are starting points for common code, marked ⋯.
+In a shader tab: `mainImage`, `feedback` (a shader that builds on its own last frame), `raymarch`
+(a ray-marching loop) and `iCanvas2D` (puts the Canvas2D drawing over `col`). In the Canvas2D.js tab:
+`draw`, `setup`, `drawList`, `planck` (a ball falling under gravity, with its import line),
+`textures` and `trail` (fading trails). Type the start of a name and pick it, then press `Tab` to
+move from one blank in it to the next.
+
+In the Canvas2D.js tab, click a number for the same slider, or a colour string like `"#ffcc00"` or
 `"rgba(255, 0, 0, 0.5)"` for a colour picker that writes the colour back in the same form. Click a
 drawing helper, like `Disk`, an input, like `time`, or a `ctx` method or property, like `fillRect`, to
 see what it does.
@@ -54,5 +61,12 @@ see what it does.
 Links in comments are underlined, and you can click them. A web address opens in a new tab. A menu
 item or tab named in square brackets, like `[Help → Tutorial]` or `the [Sliders] tab`, opens that
 menu item or tab. The names that work are the File and Help menu items, `[Timeline]`, `[Sliders]`,
-`[Textures]`, and the code tabs `[Image]`, `[Shared GLSL]`, `[Canvas2D]` and `[iBuffer0]` to
-`[iBuffer3]`.
+`[Textures]`, and the code tabs `[Image.glsl]`, `[shared.glsl]`, `[Canvas2D.js]` and `[iBuffer0.glsl]`
+to `[iBuffer3.glsl]`, with or without the extension. A link to `[shared.glsl]` adds that tab if the
+animation doesn't have it yet.
+
+A Markdown link into these docs opens them in the Docs tab, at that page and heading:
+`// See [drawList](docs/canvas2d#drawlist).` In the parentheses, `canvas2d` is the page's file in
+`docs/` without `.md`, and `drawlist` is the heading, as in the docs site's addresses. A link to the
+docs site itself, like `https://smoothstep.io/app/docs/canvas2d.html#drawlist`, opens the Docs tab
+too.

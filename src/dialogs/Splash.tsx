@@ -4,7 +4,8 @@ import { TbBulb, TbRoute, TbSchool } from 'react-icons/tb';
 
 import AppModal from '../app/AppModal';
 import { usePhone } from '../app/usePhone';
-import { asset, documentHref, DOCS_URL, REPO_URL, TUTORIAL_HREF } from '../lib/config';
+import { asset, documentHref, REPO_URL, TUTORIAL_HREF } from '../lib/config';
+import { DOC_SECTIONS, docsSiteHref, openDocs } from '../lib/docLinks';
 import { listDocuments, type DocumentSummary } from '../lib/localStore';
 import ExampleGallery from './ExampleGallery';
 import ImageWithFallback from './ImageWithFallback';
@@ -105,7 +106,12 @@ export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
       <Title order={2} size="h5" mt="xl" mb="sm">Examples</Title>
       <ExampleGallery onOpen={onHide} />
       <Text size="sm" c="dimmed" mt="lg" className="splashFooter">
-        <a href={DOCS_URL} target="_blank" rel="noreferrer">Documentation</a>
+        <a
+          href={docsSiteHref()} target="_blank" rel="noreferrer"
+          onClick={event => {event.preventDefault(); onHide(); openDocs(DOC_SECTIONS.index);}}
+        >
+          Documentation
+        </a>
         {" · "}
         <a href={REPO_URL} target="_blank" rel="noreferrer">Source code</a>
       </Text>

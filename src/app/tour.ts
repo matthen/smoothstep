@@ -26,8 +26,8 @@ function finish(): DriveStep {
   return {popover: {
     title: "Over to you",
     description: "Try changing a number in the code and building it. Help → Tutorial teaches you step by " +
-      "step, and Help also has the shader inputs, the keyboard shortcuts and this tour. File → Open has " +
-      "examples for ideas.",
+      "step. Help → Documentation opens the docs in a tab beside your code, and Help also has the shader " +
+      "inputs, the keyboard shortcuts and this tour. File → Open has examples for ideas.",
   }};
 }
 
@@ -41,8 +41,9 @@ function desktopSteps({showPane}: TourOptions): DriveStep[] {
         title: "Your shader",
         description: "This is GLSL code. <code>mainImage</code> works out the colour of each pixel. " +
           "Press <kbd>Shift</kbd> + <kbd>Enter</kbd> to build your changes. Click a number, colour or " +
-          "<code>vec2</code> in the code for a picker. The ⊕ above it adds a buffer, a shader that draws " +
-          "before the image, or the Canvas2D layer, JavaScript that draws text and shapes over the image.",
+          "<code>vec2</code> in the code for a picker. The ⊕ above it adds a buffer (a shader that draws " +
+          "before the image), the Canvas2D layer (JavaScript that draws text and shapes over the image) " +
+          "or shared GLSL code (functions that every shader can use).",
         side: "right", align: "start",
       },
     },
@@ -103,8 +104,8 @@ function desktopSteps({showPane}: TourOptions): DriveStep[] {
         title: "Save, share, render and help",
         description: `File saves your animation in this browser (<kbd>${MOD_KEY}</kbd> + <kbd>S</kbd>), and ` +
           "imports and exports animation files. Share gives you a link with the whole animation in it. " +
-          "Render makes a WebM, MP4, GIF or PNG frames. Help has the tutorial, the shader inputs and " +
-          "the keyboard shortcuts.",
+          "Render makes a WebM, MP4, GIF or PNG frames. Help has the tutorial, the docs, the shader " +
+          "inputs and the keyboard shortcuts.",
         side: "bottom", align: "start",
       },
     },
@@ -141,8 +142,8 @@ function phoneSteps({showPane}: TourOptions): DriveStep[] {
         title: "Your shader",
         description: "This is GLSL code. <code>mainImage</code> works out the colour of each pixel. " +
           "Tap Build after a change to see it. Tap a number or colour in the code for a picker. The ⊕ above " +
-          "it adds a buffer, a shader that draws before the image, or the Canvas2D layer, JavaScript that " +
-          "draws text and shapes over the image.",
+          "it adds a buffer (a shader that draws before the image), the Canvas2D layer (JavaScript that " +
+          "draws text and shapes over the image) or shared GLSL code (functions that every shader can use).",
         side: "top",
       },
     },

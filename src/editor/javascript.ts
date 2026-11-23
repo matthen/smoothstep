@@ -1,15 +1,17 @@
 // JavaScript for the Canvas2D tab's editor: highlighting, hints, definitions and pickers for the
 // layer's helpers and inputs. Loaded when a Canvas2D tab first opens.
-import { completeFromList } from '@codemirror/autocomplete';
+import { completeFromList, ifNotIn } from '@codemirror/autocomplete';
 import { javascript, javascriptLanguage, localCompletionSource } from '@codemirror/lang-javascript';
 import { syntaxHighlighting, syntaxTree } from '@codemirror/language';
 import type { EditorState, Extension } from '@codemirror/state';
 import { Decoration, ViewPlugin, type DecorationSet, type EditorView, type ViewUpdate } from '@codemirror/view';
 import { tagHighlighter, tags as t } from '@lezer/highlight';
 
+import { DOC_SECTIONS, type DocTarget } from '../lib/docLinks';
 import { CANVAS2D_REFERENCE, type Canvas2DEntry } from './canvas2dReference';
 import { clickHelpers, type ClickConfig, type Definition } from './popups';
 import { findJsPickerMatch } from './pickerValues';
+import { canvas2dSnippetCompletions } from './snippets';
 
 // Classes styled in editor.scss, as for the shader language, with property names set apart.
 const highlighter = tagHighlighter([
@@ -25,11 +27,19 @@ const highlighter = tagHighlighter([
 ]);
 
 const MDN = 'https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/';
+// The section of the docs about each of the layer's own names; the context's members have MDN's.
+const NAMED_DOCS: Record<string, DocTarget> = {
+  ctx: DOC_SECTIONS.canvasUnits, drawList: DOC_SECTIONS.drawList, clear: DOC_SECTIONS.clearing,
+  seededRandom: DOC_SECTIONS.otherHelpers,
+};
+const docsFor = (e: Canvas2DEntry): DocTarget | undefined => NAMED_DOCS[e.name] ??
+  (e.kind === 'helper' ? DOC_SECTIONS.commands : e.kind === 'ctx' ? undefined : DOC_SECTIONS.setupAndDraw);
 const definition = (e: Canvas2DEntry): Definition => ({
   functionName: e.name,
   oneLiner: e.oneLiner,
   signatures: e.signatures,
   helpUrl: e.helpUrl ?? (e.kind === 'ctx' ? MDN + e.name : undefined),
+  docs: docsFor(e),
 });
 // The layer's own names, and the members of `ctx`, which only count after `ctx.` or in Set({...}).
 const named = new Map(CANVAS2D_REFERENCE.filter((e) => e.kind !== 'ctx').map((e) => [e.name, definition(e)]));
@@ -110,11 +120,15 @@ const hints = completeFromList(CANVAS2D_REFERENCE.filter((e) => e.kind !== 'ctx'
   detail: e.kind === 'helper' ? e.signatures[0]!.slice(e.name.length) : e.type,
 })));
 
+const NOT_IN = ['String', 'TemplateString', 'LineComment', 'BlockComment'];
+const snippets = ifNotIn(NOT_IN, completeFromList(canvas2dSnippetCompletions()));
+
 export function javascriptExtensions(): Extension {
   return [
     javascript(),
     javascriptLanguage.data.of({ autocomplete: localCompletionSource }),
     javascriptLanguage.data.of({ autocomplete: hints }),
+    javascriptLanguage.data.of({ autocomplete: snippets }),
     syntaxHighlighting(highlighter),
     namesPlugin,
     clickHelpers(javascriptClicks),

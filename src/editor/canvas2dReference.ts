@@ -1,5 +1,5 @@
-// What the Canvas2D layer's code can use, for the editor's popups and Help → Shader inputs.
-import reference from './canvas2dReference.json';
+// What the Canvas2D layer's code can use, for the editor's popups and the docs' Reference page.
+import reference from './canvas2dReference.json' with { type: 'json' };
 
 export interface Canvas2DEntry {
   name: string;

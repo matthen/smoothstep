@@ -1,7 +1,7 @@
 // The guided tour: offered on a first visit, steps through the screen, and remembered afterwards.
 import { expect, test, type Page } from '@playwright/test';
 
-import { offline } from './helpers';
+import { docsTab, offline, OPEN_EDITOR } from './helpers';
 
 async function stepThrough(page: Page): Promise<string[]> {
   const titles: string[] = [];
@@ -17,8 +17,10 @@ async function stepThrough(page: Page): Promise<string[]> {
 }
 
 test("the welcome dialog offers the tour, which steps through the screen", async ({page, context}) => {
-  const errors = await offline(context);
+  // As on a first visit, the new animation has the Docs tab; the tour shows the code.
+  const errors = await offline(context, {docs: true});
   await page.goto("./");
+  await expect(docsTab(page)).toBeAttached();
   await page.getByRole("button", {name: "Take the tour"}).click();
   const titles = await stepThrough(page);
   expect(titles).toEqual([
@@ -32,9 +34,14 @@ test("the welcome dialog offers the tour, which steps through the screen", async
   await page.goto("./");
   await expect(page.getByRole("button", {name: "Continue"})).toHaveAttribute("data-variant", "filled");
   await page.getByRole("button", {name: "Continue"}).click();
+  // Taken from the Docs tab, it shows the code when it gets there.
+  await docsTab(page).click();
   await page.getByRole("button", {name: "Help"}).click();
   await page.getByRole("menuitem", {name: "Take the tour"}).click();
   await expect(page.locator(".driver-popover-title")).toHaveText("Welcome to smoothstep.io");
+  await page.locator(".driver-popover-next-btn").click();
+  await expect(page.locator(".driver-popover-title")).toHaveText("Your shader");
+  await expect(page.locator(OPEN_EDITOR)).toBeVisible();
   expect(errors).toEqual([]);
 });
 

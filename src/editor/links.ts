@@ -1,14 +1,18 @@
-// Links in code comments: web addresses, and places in the app named in square brackets, like
-// "[Help → Tutorial]" or "the [Sliders] tab". Underlined, and opened with a click.
+// Links in code comments: web addresses, Markdown links into the docs, like "[drawList](docs/canvas2d#drawlist)",
+// and places in the app named in square brackets, like "[Help → Tutorial]". Underlined, and opened with a click.
 import { syntaxTree } from '@codemirror/language';
 import type { EditorState, Extension } from '@codemirror/state';
 import { Decoration, EditorView, MatchDecorator, ViewPlugin, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 
 import { APP_LINKS, openAppLink, type AppLink } from '../lib/appLinks';
+import { docTargetOf, openDocs } from '../lib/docLinks';
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-// A URL stops before closing punctuation. Only the app's own places count in brackets.
+// A URL stops before closing punctuation. Only the app's own places count in brackets, and only the
+// docs in a Markdown link's parentheses.
+const DOCS_HREF = String.raw`docs/[\w-]+|https://smoothstep\.io/app/docs/[\w-]+\.html`;
 const LINK = new RegExp(
+  String.raw`\[([^\]\n]+)\]\(((?:${DOCS_HREF})(?:#[\w-]+)?)\)|` +
   `https?://[^\\s"'<>()\\[\\]]*[^\\s"'<>()\\[\\].,;:!?]|\\[(${APP_LINKS.map(escape).join('|')})\\]`,
   'g',
 );
@@ -16,20 +20,27 @@ const LINK = new RegExp(
 export interface Link {
   from: number;  // the whole match, brackets included
   to: number;
-  // A web address, or a place in the app.
+  // A web address, a place in the docs, or a place in the app.
   target: string;
+  // A Markdown link's text.
+  text?: string;
 }
 
 // The links in a line of text, with offsets into it.
 export function linksIn(text: string): Link[] {
-  return [...text.matchAll(LINK)].map((m) => ({ from: m.index, to: m.index + m[0].length, target: m[1] ?? m[0] }));
+  return [...text.matchAll(LINK)].map((m) => ({
+    from: m.index, to: m.index + m[0].length, target: m[2] ?? m[3] ?? m[0], ...(m[1] ? { text: m[1] } : {}),
+  }));
 }
 
 // The shader language calls the node "comment"; JavaScript has "LineComment" and "BlockComment".
 const inComment = (state: EditorState, pos: number) => /comment$/i.test(syntaxTree(state).resolveInner(pos, 1).name);
 
 function open(target: string) {
-  if (target.startsWith('http')) {
+  const docs = docTargetOf(target);
+  if (docs) {
+    openDocs(docs);
+  } else if (target.startsWith('http')) {
     window.open(target, '_blank', 'noopener');
   } else {
     openAppLink(target as AppLink);
@@ -42,12 +53,16 @@ const decorator = new MatchDecorator({
   regexp: LINK,
   decorate: (add, from, to, match, view) => {
     if (!inComment(view.state, from)) return;
-    const name = match[1];
+    const [, text, , name] = match;
     const mark = Decoration.mark({
       class: 'cm-link',
-      attributes: { title: name ? 'Open ' + name : 'Open in a new tab' },
+      attributes: { title: name ? 'Open ' + name : text || docTargetOf(match[0]) ? 'Open in the docs' : 'Open in a new tab' },
     });
-    if (name) {
+    if (text) {
+      add(from, from + 1, bracket);
+      add(from + 1, from + 1 + text.length, mark);
+      add(from + 1 + text.length, to, bracket);
+    } else if (name) {
       add(from, from + 1, bracket);
       add(from + 1, to - 1, mark);
       add(to - 1, to, bracket);

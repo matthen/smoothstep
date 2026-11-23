@@ -7,7 +7,7 @@
   Make animations with WebGL shaders and a little JavaScript, right in your browser.<br>
   <b><a href="https://smoothstep.io">Open smoothstep.io</a></b> ·
   <a href="https://smoothstep.io/app/#tutorial">Tutorial</a> ·
-  <a href="docs/">Documentation</a>
+  <a href="https://smoothstep.io/app/docs/">Documentation</a>
 </p>
 
 <p align="center">
@@ -27,7 +27,9 @@ animations from the old site with "Download my data", add that zip with File →
 You can use it at **[smoothstep.io](https://smoothstep.io)**, or run your own copy. To learn, start
 the [tutorial](https://smoothstep.io/app/#tutorial): it runs in the app, beside the editor, and each step
 notices when you've done it. The Help menu lists the shader inputs and the keyboard shortcuts, and the
-[documentation](docs/) has those and the examples.
+[documentation](https://smoothstep.io/app/docs/) has those and the examples. The app shows the
+documentation in a Docs tab beside your code too, under Help → Documentation. It's written in
+Markdown in [docs/](docs/), which reads fine here on GitHub.
 
 <p align="center">
   <img src="docs/images/examples.png" alt="Renders from four of the built-in examples">
@@ -74,6 +76,8 @@ npm run test:e2e   # end-to-end tests in Chromium, against the build
 
 `npm run build` makes a plain static site in `dist/`. You can put it on any static host,
 such as GitHub Pages or Netlify, at any path. It works fully offline, including video export.
+The build also turns the Markdown in `docs/` into a small docs site in `dist/docs/`, served at
+`docs/` beside the app (`npm run dev` serves it too), and into the pages the editor's Docs tab shows.
 Saved animations open at `#anim/<id>`, the bundled examples at `#example/<id>`, and the tutorial at
 `#tutorial` (or `#tutorial/<lesson>`), in a new animation. Shared animations open at
 `#share/<data>`, `#gist/<id>` and `#url/<address>`, and `embed.html` takes the same addresses to
@@ -103,9 +107,15 @@ Sass for the app's own styles, CodeMirror 6 for the code editor, and WebGL 2 for
   tabs for the image, buffers and shared code.
   The pickers are adapted from [glslEditor](https://github.com/patriciogonzalezvivo/glslEditor).
 - `src/timeline/` is the timeline and the play and seek bar.
-- `src/dialogs/` has the welcome, Open, texture, export, help and other dialogs.
+- `src/dialogs/` has the welcome, Open, texture, export, share and other dialogs.
 - `src/tutorial/` is the tutorial: its lessons and their checks (`lessons.tsx`), and the Learn panel
   that shows them beside the editor.
+- `src/docs/` builds the docs: `render.ts` turns `docs/*.md` into pages with
+  [marked](https://marked.js.org), colouring code as the editor does, and `plugin.ts` makes the docs
+  site and the pages for `src/reference/`, which shows them in the editor's Docs tab.
+  `reference.ts` writes the Reference page from the lists the editor's popups use: the shader inputs
+  (`src/lib/shaderInputs.ts`), the Canvas2D layer's names (`src/editor/canvas2dReference.json`), its
+  fonts and its libraries.
 - `src/export/` renders an animation frame by frame and encodes it in the browser. WebM and
   MP4 use the browser's WebCodecs encoder through [Mediabunny](https://mediabunny.dev), GIF
   uses [gifenc](https://github.com/mattdesl/gifenc), and PNG frames download as a zip.

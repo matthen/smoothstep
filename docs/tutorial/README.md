@@ -11,7 +11,7 @@ notices when you've done it.
 5. [Patterns](https://smoothstep.io/app/#tutorial/5): tiling with `fract`, rotation, and polar coordinates.
 6. [Textures](https://smoothstep.io/app/#tutorial/6): showing, warping and folding an image.
 7. [Memory with iPrevFrame](https://smoothstep.io/app/#tutorial/7): trails that fade, and setting up the first frame with `iFrame`.
-8. [Buffers](https://smoothstep.io/app/#tutorial/8): a heat map that a moving dot paints into a buffer, spreading it out, and the Shared GLSL tab.
+8. [Buffers](https://smoothstep.io/app/#tutorial/8): a heat map that a moving dot paints into a buffer, spreading it out, and the shared.glsl tab.
 9. [Share it](https://smoothstep.io/app/#tutorial/9): saving, sharing a link, downloading and exporting video, and where to learn more.
 
 Each lesson builds one animation a step at a time. Most end with challenges to try on your own,

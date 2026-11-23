@@ -1,7 +1,7 @@
 // Help → Keyboard shortcuts and Help → Shader inputs, and the one-time tips shown while you work.
 import { expect, test, type Page } from '@playwright/test';
 
-import { offline, setCode, skipTour } from './helpers';
+import { docsPanel, offline, setCode, skipTour } from './helpers';
 
 test.beforeEach(async ({context}) => {
   await skipTour(context);
@@ -12,25 +12,37 @@ async function helpMenu(page: Page, item: string) {
   await page.getByRole("menuitem", {name: item}).click();
 }
 
-test("Help opens the keyboard shortcuts and the shader inputs", async ({page, context}) => {
+test("Help opens the docs, the shader inputs and the keyboard shortcuts in the Docs tab", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./");
   await page.getByRole("button", {name: "Continue"}).click();
-
-  await helpMenu(page, "Keyboard shortcuts");
-  const shortcuts = page.getByRole("dialog", {name: "Keyboard shortcuts"});
-  await expect(shortcuts.getByRole("row", {name: /Build the code/})).toContainText("Shift+Enter");
-  await expect(shortcuts.getByRole("row", {name: /Play or pause/})).toContainText("Space");
+  await page.getByRole("button", {name: "Help"}).click();
+  await expect(page.getByRole("menu")).toContainText(
+    "DocumentationShader inputsKeyboard shortcutsTutorialTake the tourWelcomeSource code");
   await page.keyboard.press("Escape");
-  await expect(shortcuts).toBeHidden();
+
+  const reference = docsPanel(page);
+  await helpMenu(page, "Keyboard shortcuts");
+  await expect(reference.getByRole("row", {name: /build the code/})).toContainText("Shift + Enter");
+  await expect(reference.getByRole("row", {name: /play or pause/})).toContainText("Space");
 
   await helpMenu(page, "Shader inputs");
-  const inputs = page.getByRole("dialog", {name: "Shader inputs"});
-  await expect(inputs.getByRole("row", {name: /iPrevFrame/})).toContainText("sampler2D");
-  await expect(inputs.getByRole("row", {name: /^float iFloat0/})).toContainText("iFloat15");
-  await expect(inputs.getByRole("row", {name: /^number\[\] floats/})).toContainText("iFloat0");
-  await inputs.getByRole("button", {name: "Close"}).click();
-  await expect(inputs).toBeHidden();
+  await expect(reference.getByRole("heading", {name: "Reference", level: 1})).toBeVisible();
+  await expect(reference.getByRole("row", {name: /^sampler2D iPrevFrame/})).toContainText("drawn just before");
+  await expect(reference.getByRole("row", {name: /^float iFloat0/})).toContainText("iFloat15");
+  await expect(reference.getByRole("row", {name: /^number\[\] floats/})).toContainText("iFloat0");
+  await expect(reference.getByRole("row", {name: /^sampler2D iCanvas2D/})).toBeVisible();
+
+  // Links in code comments to what used to be dialogs open their pages.
+  await page.getByRole("tab", {name: "Image.glsl"}).click();
+  await setCode(page, "// [Help → Acknowledgements] and [Help → Shader inputs]\n");
+  await page.locator(".cm-link", {hasText: "Help → Acknowledgements"}).click();
+  await expect(reference.getByRole("heading", {name: "Acknowledgements", level: 1})).toBeVisible();
+  await expect(reference).toContainText("planck.js (MIT licence)");
+  await page.getByRole("tab", {name: "Image.glsl"}).click();
+  await page.locator(".cm-link", {hasText: "Help → Shader inputs"}).click();
+  await expect(reference.getByRole("heading", {name: "Reference", level: 1})).toBeVisible();
+  await page.getByLabel("Close the docs").click();
 
   // The tutorial's last step links to both.
   await page.goto("./#tutorial/9");
@@ -39,7 +51,7 @@ test("Help opens the keyboard shortcuts and the shader inputs", async ({page, co
     await panel.getByRole("button", {name: "Next"}).click();
   }
   await panel.getByRole("button", {name: "Shader inputs"}).click();
-  await expect(inputs).toBeVisible();
+  await expect(reference.getByRole("heading", {name: "Reference", level: 1})).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -80,7 +92,7 @@ test("a compile error shows a tip once, which can turn tips off", async ({page, 
 test("a part of the app that's gone after an update reloads the page, then explains", async ({page, context}) => {
   await offline(context);
   // An older page asking for a file the new version doesn't have gets the app's HTML instead.
-  await page.route(/\/assets\/KeyboardShortcuts-.*\.js$/, route =>
+  await page.route(/\/assets\/ReferencePanel-.*\.js$/, route =>
     route.fulfill({contentType: "text/html", body: "<!doctype html>"}));
   let loads = 0;
   page.on("load", () => loads++);

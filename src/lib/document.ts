@@ -80,9 +80,8 @@ export interface AnimationDocument {
   variables: Variable[];
 }
 
-export const DEFAULT_CODE = `// Getting started? Try the tutorial in [Help → Tutorial].
-
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+// The image's starter mainImage, also what a missing one's error offers to insert.
+export const DEFAULT_MAIN_IMAGE = `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // Compute coordinates that range from x = 0 to 1 and y = 0 to 1.
   vec2 uv = fragCoord / iResolution.xy;
 
@@ -93,14 +92,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   fragColor = vec4(col, 1.0);
 }`;
 
+export const DEFAULT_CODE = `// Getting started? Try the tutorial in [Help → Tutorial].
+
+` + DEFAULT_MAIN_IMAGE;
+
 // The built-in image an empty texture slot holds.
 export const EMPTY_TEXTURE = "special/black.png";
 
-// A new buffer's code, which draws what it drew last frame, so the image can read it.
-export function newBufferCode(index: number): string {
-  return `// iBuffer${index} draws before the image each frame, and any shader can read what it drew:
-// try texture(iBuffer${index}, uv) in the [Image] tab. Reading itself gives what it drew last frame.
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+// A new buffer's mainImage, which draws what it drew last frame, so the image can read it.
+export function bufferMainImage(index: number): string {
+  return `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   vec2 uv = fragCoord / iResolution.xy;
   vec4 last = texture(iBuffer${index}, uv);
   vec4 now = vec4(uv, 0.5 + 0.5 * sin(iTime), 1.);
@@ -108,35 +109,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 }`;
 }
 
-// A new Canvas2D layer's code, which draws a label and a turning shape over the image.
-export const NEW_CANVAS_CODE = `// The Canvas2D layer: JavaScript that draws over the image, 60 times a second.
-// [Help → Shader inputs] lists what it can use. Shaders can read the drawing as iCanvas2D.
-
-// Runs once after each build. Whatever it returns is \`data\` in draw.
-function setup({width, height}) {
-  return {sides: 5};
+// A new buffer's code.
+export function newBufferCode(index: number): string {
+  return `// iBuffer${index} draws before the image each frame, and any shader can read what it drew:
+// try texture(iBuffer${index}, uv) in the [Image.glsl] tab. Reading itself gives what it drew last frame.
+` + bufferMainImage(index);
 }
 
-// Runs once per step. Sizes are in units of a canvas 1080 tall, whatever its real size.
-function draw(ctx, {time, width, height, data}) {
-  clear(ctx);  // The canvas keeps the last frame unless you clear it.
-
+// A new Canvas2D layer's draw: a line of text, bobbing gently.
+export const NEW_CANVAS_DRAW = `function draw(ctx, {time}) {
+  clear(ctx);
   ctx.fillStyle = "white";
-  ctx.font = "600 64px Inter";
-  ctx.fillText("Hello, canvas", 60, 110);
+  ctx.font = "600 80px Inter";
+  ctx.fillText("Hello, canvas", 80, 540 + 40 * Math.sin(time));
+}`;
 
-  // drawList draws nested lists of shapes, with y up and from -1 to 1 like a shader's uv.
-  const corners = [];
-  for (let i = 0; i < data.sides; i++) {
-    const angle = 2 * Math.PI * i / data.sides;
-    corners.push([0.4 * Math.cos(angle), 0.4 * Math.sin(angle)]);
-  }
-  drawList(ctx, [
-    Set({strokeStyle: "white", fillStyle: "#ffffff30"}),
-    [Rotate({angle: time}), Polygon({pts: corners, edge: true})],
-    Disk({center: [0, 0], radius: 0.02}),
-  ]);
-}
+export const NEW_CANVAS_CODE = `// Draws over the image each frame; shaders read it as iCanvas2D. See [the Canvas2D layer](docs/canvas2d).
+${NEW_CANVAS_DRAW}
 `;
 
 export function bufferCodes(doc: AnimationDocument): string[] {
@@ -174,7 +163,7 @@ export function sameExtras(a: ShaderExtras, b: ShaderExtras): boolean {
     a.buffers.length === b.buffers.length && a.buffers.every((c, i) => c === b.buffers[i]);
 }
 
-// What the Shared GLSL tab shows before anything's written in it.
+// What the shared.glsl tab shows before anything's written in it.
 export const SHARED_PLACEHOLDER = `// Functions, constants and #defines here can be used in every shader tab: the image and each buffer.
 `;
 
