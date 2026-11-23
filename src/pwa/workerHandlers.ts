@@ -8,6 +8,8 @@ export interface WorkerContext {
   plan: CachePlan;
   openCache: () => Promise<Pick<Cache, "match" | "put" | "keys" | "delete">>;
   fetch: (input: string | Request, init?: RequestInit) => Promise<Response>;
+  // Whether a newer version is installing now, whose files activating mustn't delete.
+  newerInstalling?: () => boolean;
 }
 
 // Fetches every precached file this version doesn't have yet, and fails if any isn't the file the
@@ -31,13 +33,15 @@ export async function install({scope, plan, openCache, fetch}: WorkerContext): P
 
 // Drops files that neither this version nor the one before uses: pages still open from the last
 // version may yet load one of its chunks.
-export async function activate({scope, plan, openCache}: WorkerContext): Promise<void> {
+export async function activate({scope, plan, openCache, newerInstalling}: WorkerContext): Promise<void> {
   const cache = await openCache();
-  const previous = await cache.match(planKey(scope)).then(r => r?.json() as Promise<CachePlan> | undefined);
-  const keep = new Set([...planKeys(scope, plan), ...(previous ? planKeys(scope, previous) : [])]);
-  const keys = await cache.keys();
-  await Promise.all(keys.filter(request => !keep.has(request.url) && request.url !== planKey(scope))
-    .map(request => cache.delete(request)));
+  if (!newerInstalling?.()) {
+    const previous = await cache.match(planKey(scope)).then(r => r?.json() as Promise<CachePlan> | undefined);
+    const keep = new Set([...planKeys(scope, plan), ...(previous ? planKeys(scope, previous) : [])]);
+    const keys = await cache.keys();
+    await Promise.all(keys.filter(request => !keep.has(request.url) && request.url !== planKey(scope))
+      .map(request => cache.delete(request)));
+  }
   await cache.put(planKey(scope), new Response(JSON.stringify(plan)));
 }
 

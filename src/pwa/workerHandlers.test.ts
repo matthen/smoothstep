@@ -132,6 +132,20 @@ describe("activate", () => {
     await activate(v3.context);
     expect(paths()).toEqual(["__cache-plan.json", "assets/lazy-b.js", "assets/lazy-c.js", "assets/main-a.js", "index.html", "index.html"]);
   });
+
+  it("leaves a newer version's files alone while that version is still installing", async () => {
+    const v1 = setUp(planFor(V1), V1);
+    await install(v1.context);
+    await activate(v1.context);
+    const v2 = setUp(planFor(V2), V2, v1.cache);
+    await install(v2.context);
+    // v3 installs while v2 is still waiting, then v2 activates.
+    const v3 = setUp(planFor(V3), V3, v1.cache);
+    await install(v3.context);
+    await activate({...v2.context, newerInstalling: () => true});
+    const paths = v1.cache.paths().map(path => path.split("?")[0]);
+    expect(paths).toContain("assets/lazy-c.js");
+  });
 });
 
 describe("respond", () => {

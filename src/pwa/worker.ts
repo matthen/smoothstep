@@ -17,6 +17,7 @@ interface FetchEvent extends ExtendableEvent {
 interface WorkerScope {
   location: Location;
   clients: {claim(): Promise<void>};
+  registration: {installing: unknown};
   skipWaiting(): Promise<void>;
   addEventListener(type: "install" | "activate", listener: (event: ExtendableEvent) => void): void;
   addEventListener(type: "fetch", listener: (event: FetchEvent) => void): void;
@@ -27,6 +28,7 @@ const worker = self as unknown as WorkerScope;
 const scope = scopeOf(worker.location.href);
 const context: WorkerContext = {
   scope, plan: CACHE_PLAN, openCache: () => caches.open(cacheName(scope)), fetch: (input, init) => fetch(input, init),
+  newerInstalling: () => worker.registration.installing !== null,
 };
 
 // The new version waits until the app asks it to take over.

@@ -50,8 +50,9 @@ export function serviceWorkerPlugin(): Plugin {
     // Once written, when every file, the docs site's pages among them, is as it will be served.
     async writeBundle(options, bundle) {
       const revisions = publicDir ? publicFiles(publicDir) : new Map<string, string>();
-      for (const [fileName, file] of Object.entries(bundle)) {
-        revisions.set(fileName, hash(file.type === 'chunk' ? file.code : file.source));
+      // Hashed as written to disk, so the plan matches the bytes that will be served.
+      for (const fileName of Object.keys(bundle)) {
+        revisions.set(fileName, hash(readFileSync(join(options.dir!, fileName))));
       }
       writeFileSync(join(options.dir!, WORKER_FILE), await workerScript(cachePlan(revisions, hash)));
     },
