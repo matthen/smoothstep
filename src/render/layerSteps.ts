@@ -21,6 +21,10 @@ export class LayerSteps implements StepRenderer {
 
   render(inputs: FrameInputs) {
     this.renderer.render(inputs);
+    // Drawn again at the same step, as when scrubbing while paused: the layer keeps the frame it drew.
+    if (inputs.frameIndex === this.lastFrame) {
+      return;
+    }
     if (inputs.frameIndex === 0 && this.lastFrame > 0) {
       this.layer.restart();
     }

@@ -109,6 +109,10 @@ export async function exportVideo(
   const frameContext = frameCanvas.getContext("2d", {willReadFrequently: options.type === "gif"})!;
   let encoder: Encoder | null = null;
   let layer: CanvasLayer | null = null;
+  const cancelled = new Promise<never>((_, reject) => {
+    signal.addEventListener("abort", () => reject(new ExportCancelled()), {once: true});
+  });
+  cancelled.catch(() => {});
   try {
     const compiled = renderer.setCode(doc.code, bufferCodes(doc), doc.shared);
     if (!compiled.ok) {
@@ -154,9 +158,10 @@ export async function exportVideo(
       for (const inputs of due.splice(0)) {
         if (layer) {
           const drawn = layer.draw({time: inputs.time, frame: inputs.frameIndex, floats: inputs.variableValues});
-          renderer.setLayerFrame(await drawn.catch((error: unknown) => {
+          // However long a step takes, cancelling still stops the export.
+          renderer.setLayerFrame(await Promise.race([drawn.catch((error: unknown) => {
             throw new Error("The Canvas2D code has an error: " + (error instanceof Error ? error.message : String(error)));
-          }));
+          }), cancelled]));
         }
         renderer.render(inputs);
       }

@@ -18,6 +18,7 @@ export type ToWorker =
 // From the worker. Its code is the user's, so the app checks everything it sends.
 export type FromWorker =
   | {type: "ready"; registered: boolean; hasDraw: boolean}
+  | {type: "drawing"; frame: number}
   | {type: "frame"; id: number; bitmap: ImageBitmap}
   | {type: "error"; message: string; stack: string; line: number | null};
 
@@ -25,10 +26,18 @@ type UserSetup = (inputs: Record<string, unknown>) => unknown;
 type UserDraw = (ctx: OffscreenCanvasRenderingContext2D, inputs: Record<string, unknown>) => void;
 type ModuleFactory = (module: {exports: unknown}, exports: unknown) => void;
 
+interface WorkerEvent {
+  data?: {port?: MessagePort};
+  reason?: unknown;
+  stopImmediatePropagation(): void;
+}
+
 interface WorkerScope {
-  addEventListener(type: string, listener: (event: {data?: {port?: MessagePort}; reason?: unknown}) => void): void;
+  addEventListener(type: string, listener: (event: WorkerEvent) => void, options?: {capture: boolean}): void;
   fonts: {add(font: FontFace): void};
 }
+
+type Callback = (...args: unknown[]) => void;
 
 export function workerRuntime(helpersFor: (env: HelperEnv) => Helpers) {
   const scope = self as unknown as WorkerScope;
@@ -36,6 +45,76 @@ export function workerRuntime(helpersFor: (env: HelperEnv) => Helpers) {
   const UNITS_TALL = 1080;
   const env: HelperEnv = {scale: 1, width: UNITS_TALL, height: UNITS_TALL};
   const helpers = helpersFor(env);
+
+  // The layer's code can't start workers of its own, or loop on frames or messages outside its steps.
+  const global = self as unknown as Record<string, unknown>;
+  const remove = (name: string) => {
+    for (let o: object | null = global; o; o = Object.getPrototypeOf(o) as object | null) {
+      Reflect.deleteProperty(o, name);
+    }
+  };
+  ["Worker", "SharedWorker", "requestAnimationFrame", "cancelAnimationFrame", "MessageChannel",
+    "BroadcastChannel"].forEach(remove);
+
+  // Timers run only while steps are being drawn, or soon after: a timer that comes due while the
+  // animation is paused waits for the next step, so a loop of them doesn't keep the worker busy.
+  const realNow = performance.now.bind(performance);
+  const [nativeSetTimeout, nativeSetInterval, nativeClear] = [setTimeout, setInterval, clearTimeout];
+  ["setTimeout", "setInterval", "clearTimeout", "clearInterval"].forEach(remove);
+  const IDLE_MS = 1000;
+  let lastActive = -Infinity;
+  let drawing = false;
+  let nextTimer = 1;
+  const timers = new Map<number, ReturnType<typeof setTimeout>>();
+  const parked = new Map<number, () => void>();
+  const awake = () => drawing || realNow() - lastActive < IDLE_MS;
+  const call = (callback: unknown, args: unknown[]) => {
+    if (typeof callback === "function") {
+      (callback as Callback)(...args);
+    }
+  };
+  const clear = (id: unknown) => {
+    nativeClear(timers.get(id as number));
+    timers.delete(id as number);
+    parked.delete(id as number);
+  };
+  global.setTimeout = (callback: unknown, ms?: number, ...args: unknown[]) => {
+    const id = nextTimer++;
+    timers.set(id, nativeSetTimeout(() => {
+      timers.delete(id);
+      if (awake()) {
+        call(callback, args);
+      } else {
+        parked.set(id, () => call(callback, args));
+      }
+    }, ms));
+    return id;
+  };
+  global.setInterval = (callback: unknown, ms?: number, ...args: unknown[]) => {
+    const id = nextTimer++;
+    const start = () => timers.set(id, nativeSetInterval(() => {
+      if (awake()) {
+        call(callback, args);
+      } else {
+        nativeClear(timers.get(id));
+        timers.delete(id);
+        parked.set(id, () => {
+          start();
+          call(callback, args);
+        });
+      }
+    }, ms));
+    start();
+    return id;
+  };
+  global.clearTimeout = clear;
+  global.clearInterval = clear;
+  const wake = () => {
+    drawing = true;
+    const due = [...parked.values()];
+    parked.clear();
+    due.forEach(resume => resume());
+  };
 
   // Math.random repeats from one run to the next, and clocks give the animation's time.
   let seed = 0x2F6E2B1;
@@ -107,6 +186,13 @@ export function workerRuntime(helpersFor: (env: HelperEnv) => Helpers) {
         }
       }));
       canvas = new OffscreenCanvas(message.width, message.height);
+      // The animation sets the size, and every frame must have it.
+      for (const side of ["width", "height"] as const) {
+        const value = canvas[side];
+        Object.defineProperty(canvas, side, {get: () => value, set: () => {
+          throw new Error(`The canvas's ${side} is set by the animation's size, so it can't be changed.`);
+        }});
+      }
       ctx = canvas.getContext("2d");
       env.scale = message.height / UNITS_TALL;
       env.height = UNITS_TALL;
@@ -125,7 +211,21 @@ export function workerRuntime(helpersFor: (env: HelperEnv) => Helpers) {
     if (failed || !ctx || !canvas || !userDraw) {
       return;
     }
+    wake();
+    try {
+      await drawSteps(message);
+    } finally {
+      drawing = false;
+      lastActive = realNow();
+    }
+  };
+
+  const drawSteps = async (message: Extract<ToWorker, {type: "steps"}>) => {
+    if (!ctx || !canvas || !userDraw) {
+      return;
+    }
     for (const step of message.steps) {
+      send({type: "drawing", frame: step.frame});
       stepTime = step.time;
       const floats = [...step.floats];
       const size = {width: env.width, height: env.height, duration};
@@ -151,15 +251,17 @@ export function workerRuntime(helpersFor: (env: HelperEnv) => Helpers) {
     send({type: "frame", id: message.id, bitmap}, [bitmap]);
   };
 
+  // Registered first, as a capturing listener, so no listener of the layer's code sees the port.
   let queue = Promise.resolve();
   scope.addEventListener("message", event => {
+    event.stopImmediatePropagation();
     if (!port && event.data?.port) {
       port = event.data.port;
       port.onmessage = (e: MessageEvent<ToWorker>) => {
         queue = queue.then(() => handle(e.data)).catch(fail);
       };
     }
-  });
+  }, {capture: true});
   scope.addEventListener("unhandledrejection", event => fail(event.reason));
 
   return {helpers, define, lib, start};

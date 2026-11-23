@@ -293,14 +293,19 @@ keeps the last frame that drew without one.
 If the code has no `draw` function, the error shows a short one to start from, and **Insert a draw
 function** adds it after the rest of your code and builds.
 
-If a step takes more than a second, for example because a loop never ends, the code is stopped with
-"The Canvas2D code took too long". Fix it and build to run it again.
+Slow code is fine: the animation plays more slowly while each step draws, and a render waits for
+every step. Once a step has taken more than a second, "Drawing step 42…" shows over the canvas until
+it's done. The page keeps working while the code runs, even a loop that never ends, and building
+again stops it straight away.
+
+The canvas is always the animation's size, so setting `ctx.canvas.width` or `height` is an error.
 
 ## Safety
 
 The Canvas2D code runs in a sandbox, apart from the rest of the page. It can't see the page, your
-saved animations or anything else in your browser, and it can't use the network. So it's safe to
-open an animation someone else made.
+saved animations or anything else in your browser, and it can't use the network or start workers of
+its own. Timers (`setTimeout` and `setInterval`) only run while the animation plays, so they don't
+keep working when it's paused. So it's safe to open an animation someone else made.
 
 ## Sharing
 
