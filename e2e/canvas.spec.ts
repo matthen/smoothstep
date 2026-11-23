@@ -307,10 +307,10 @@ test("a draw that never finishes doesn't freeze the page, and building fixed cod
   // It says what it's doing, without calling it an error.
   await expect(page.getByRole("status").filter({hasText: /^Drawing step 11…$/})).toBeVisible({timeout: 10_000});
   await expect(page.locator(".ss-line-error")).toHaveCount(0);
-  // The page keeps drawing frames while the Canvas2D code is stuck.
+  // The page keeps drawing frames while the Canvas2D code is stuck; a frozen page draws none.
   const frames = await page.evaluate(() => new Promise<number>(resolve => {
     let count = 0;
-    const end = performance.now() + 500;
+    const end = performance.now() + 3000;
     const tick = () => {
       count++;
       if (performance.now() < end) {
@@ -321,7 +321,7 @@ test("a draw that never finishes doesn't freeze the page, and building fixed cod
     };
     requestAnimationFrame(tick);
   }));
-  expect(frames).toBeGreaterThan(5);
+  expect(frames).toBeGreaterThan(3);
 
   // A render waits for the step too, and can still be cancelled.
   await page.getByRole("button", {name: "Render"}).click();

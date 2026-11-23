@@ -135,7 +135,7 @@ test("File → Import adds a gist to your animations and opens it, once", async 
   // Opening it reloads the app, which can take a while on a busy machine.
   await expect(page).toHaveURL(/#anim\/[a-f0-9]+$/, {timeout: 20_000});
   const url = page.url();
-  await expect(page.locator("#titleInput")).toHaveValue("Magenta file");
+  await expect(page.locator("#titleInput")).toHaveValue("Magenta file", {timeout: 20_000});
   expect(near(await canvasCenter(page), MAGENTA)).toBe(true);
   // Saved with its image, so it shows after a reload, and importing it again adds no copy.
   await page.reload();
