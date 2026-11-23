@@ -1094,6 +1094,42 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         check: (now, atStart) => rebuilt(now, atStart) && uses(builtIn(now, "canvas"), /\bdrawList\s*\(/),
       },
       {
+        id: "canvas-nested",
+        title: "Lists inside lists",
+        body: <>
+          <p>This step moves the small disk into a list of its own, inside the big list:</p>
+          <Lines>{`[
+  Rotate({angle: time}),
+  Translate({offset: [0.75, 0]}),
+  Set({fillStyle: "white"}),
+  Disk({center: [0, 0], radius: 0.1}),
+  ...
+],`}</Lines>
+          <p>
+            A <code>Rotate</code>, <code>Translate</code> or <code>Set</code> only lasts until the end of the
+            list it's in. So now only the small disk turns. The triangle comes after the inner list, so it
+            stands still, and it's orange, because the white was set inside the brackets. (This step leaves out
+            the big orange disk, so you can see the triangle.)
+          </p>
+          <p>
+            <code>{`Translate({offset: [0.75, 0]})`}</code> moves the starting point 0.75 to the right, so a disk at{" "}
+            <code>[0, 0]</code> is drawn there. Because the <code>Rotate</code> comes first, that starting point
+            goes round the middle. Inside it is one more list, with a tiny moon. Its{" "}
+            <code>{`Rotate({angle: 4 * time})`}</code> turns around the small disk, because that's where the
+            starting point is by then, so the moon circles the small disk four times as fast while the small
+            disk circles the middle.
+          </p>
+          <p>
+            Build it and play. Then try other numbers: <code>0.2</code> in the moon's{" "}
+            <code>[0.2, 0]</code> sets how far it is from the small disk, and the <code>4</code> how fast it
+            goes round. Move <code>Polygon</code> into the inner list and watch it follow the small disk.
+          </p>
+        </>,
+        tabs: [{tab: "canvas", code: shaders.CANVAS_ORBIT}],
+        task: "Build Canvas2D code with a list inside the drawList.",
+        check: (now, atStart) => rebuilt(now, atStart) && uses(builtIn(now, "canvas"), /\[\s*(Rotate|Translate|Scale|Set)\s*\(/),
+      },
+      {
         id: "canvas-shader",
         title: "Shaders read the drawing",
         body: <>

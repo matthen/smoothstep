@@ -99,7 +99,7 @@ describe("shaders", () => {
       [shaders.TILES, shaders.ROTATED_TILES], [shaders.ROTATED_TILES, shaders.POLAR_TILES],
       [shaders.TEXTURE, shaders.WARPED_TEXTURE], [shaders.WARPED_TEXTURE, shaders.FOLDED_TEXTURE],
       [shaders.FADE, shaders.TRAIL], [shaders.TRAIL, shaders.FIRST_FRAME],
-      [NEW_CANVAS_CODE, shaders.CANVAS_LABEL], [shaders.CANVAS_LABEL, shaders.CANVAS_SHAPES],
+      [NEW_CANVAS_CODE, shaders.CANVAS_LABEL], [shaders.CANVAS_LABEL, shaders.CANVAS_SHAPES], [shaders.CANVAS_SHAPES, shaders.CANVAS_ORBIT],
     ];
     const lines = (code: string) => new Set(code.split("\n").map(l => l.trim()).filter(Boolean));
     for (const [before, after] of pairs) {
@@ -358,6 +358,12 @@ describe("lesson 9: draw with JavaScript", () => {
     const atStart = withCanvas(shaders.CANVAS_LABEL);
     expect(check("canvas-shapes", builtWithStep(step("canvas-shapes")), atStart)).toBe(true);
     expect(check("canvas-shapes", withCanvas(shaders.CANVAS_LABEL), withCanvas(NEW_CANVAS_CODE))).toBe(false);
+  });
+
+  it("lists inside lists: a nested list, built", () => {
+    const atStart = withCanvas(shaders.CANVAS_SHAPES);
+    expect(check("canvas-nested", builtWithStep(step("canvas-nested")), atStart)).toBe(true);
+    expect(check("canvas-nested", withCanvas(shaders.CANVAS_SHAPES, {builtCanvas: shaders.CANVAS_SHAPES}), atStart)).toBe(false);
   });
 
   it("shaders read the drawing: the image reads iCanvas2D, with Draw over the image off", () => {

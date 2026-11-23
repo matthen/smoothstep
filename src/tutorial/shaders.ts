@@ -339,6 +339,29 @@ export const CANVAS_SHAPES = CANVAS_LABEL.replace(TIME_LABEL, `${TIME_LABEL}
     Polygon({pts: [[0, 0.3], [-0.25, -0.2], [0.25, -0.2]]}),
   ]);`);
 
+// The shapes again, with the moving ones in a list of their own so only they turn.
+export const CANVAS_ORBIT = CANVAS_SHAPES.replace(`  drawList(ctx, [
+    Rotate({angle: time}),
+    Set({fillStyle: "orange"}),
+    Disk({center: [0, 0], radius: 0.5}),
+    Set({fillStyle: "white"}),
+    Disk({center: [0.75, 0], radius: 0.1}),
+    Polygon({pts: [[0, 0.3], [-0.25, -0.2], [0.25, -0.2]]}),
+  ]);`, `  drawList(ctx, [
+    Set({fillStyle: "orange"}),
+    [
+      Rotate({angle: time}),
+      Translate({offset: [0.75, 0]}),
+      Set({fillStyle: "white"}),
+      Disk({center: [0, 0], radius: 0.1}),
+      [
+        Rotate({angle: 4 * time}),
+        Disk({center: [0.2, 0], radius: 0.04}),
+      ],
+    ],
+    Polygon({pts: [[0, 0.3], [-0.25, -0.2], [0.25, -0.2]]}),
+  ]);`);
+
 export const CANVAS_WOBBLE = `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   vec2 uv = fragCoord / iResolution.xy;
 

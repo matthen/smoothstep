@@ -151,7 +151,14 @@ test("the Canvas2D lesson adds the layer, fills its tab, and has the image read 
   await expect(status).toHaveAttribute("data-done", "true");
   await expect.poll(() => canvasCenter(page).then(c => near(c, [255, 255, 255]))).toBe(true);
 
-  // The image reads the drawing, so with the layer no longer drawn over it, the triangle still shows.
+  // The small disk goes in a list of its own, so the triangle after it is orange again.
+  await next();
+  await put.click();
+  await build();
+  await expect(status).toHaveAttribute("data-done", "true");
+  await expect.poll(() => canvasCenter(page).then(c => near(c, [255, 165, 0]))).toBe(true);
+
+  // The image reads the drawing, so with the layer no longer drawn over it, the orange triangle still shows.
   await next();
   await put.click();
   await expect(tab("Image.glsl")).toHaveAttribute("aria-selected", "true");
@@ -160,7 +167,7 @@ test("the Canvas2D lesson adds the layer, fills its tab, and has the image read 
   await tab("Canvas2D.js").click();
   await page.getByLabel("Draw over the image").uncheck();
   await expect(status).toHaveAttribute("data-done", "true");
-  await expect.poll(() => canvasCenter(page).then(c => near(c, [255, 255, 255]))).toBe(true);
+  await expect.poll(() => canvasCenter(page).then(c => near(c, [255, 165, 0]))).toBe(true);
   await expect(page.locator(".shaderTab[data-error]")).toHaveCount(0);
 
   // The challenges, then the examples to explore.
