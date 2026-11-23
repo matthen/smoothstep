@@ -129,9 +129,15 @@ export const NEW_CANVAS_CODE = `// Draws over the image each frame; shaders read
 // Runs at the start, before the first draw: after each build and when the animation starts again.
 // Whatever it returns is data in draw.
 function setup({width, height}) {
+  return {message: "Hello, canvas"};
 }
 
-${NEW_CANVAS_DRAW}
+function draw(ctx, {time, data}) {
+  clear(ctx);
+  ctx.fillStyle = "white";
+  ctx.font = "600 80px Inter";
+  ctx.fillText(data.message, 80, 540 + 40 * Math.sin(time));
+}
 `;
 
 export function bufferCodes(doc: AnimationDocument): string[] {
