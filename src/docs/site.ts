@@ -166,10 +166,11 @@ document.addEventListener("click", function (event) {
   var button = event.target.closest && event.target.closest(".doc-copy");
   if (!button) return;
   var code = button.parentElement.querySelector("pre").innerText;
-  navigator.clipboard.writeText(code).then(function () {
+  // The clipboard is missing outside secure pages.
+  Promise.resolve().then(function () { return navigator.clipboard.writeText(code); }).then(function () {
     button.textContent = "Copied";
     setTimeout(function () { button.textContent = "Copy"; }, 1200);
-  });
+  }, function () {});
 });`;
 
 export function sitePage(page: DocPage, pages: readonly DocPage[]): string {

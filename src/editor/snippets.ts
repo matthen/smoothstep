@@ -4,6 +4,8 @@
 import { snippet, type Completion } from '@codemirror/autocomplete';
 import type { EditorView } from '@codemirror/view';
 
+import { IMPORT_LINE } from '../layer/libraries';
+
 interface SnippetSpec {
   label: string;
   // What it is, shown beside the label.
@@ -30,10 +32,9 @@ function preview(template: string) {
 
 // Adds the import line at the top, unless the code already imports that library.
 function addImport(view: EditorView, line: string) {
-  const library = /from\s+(["'][^"']+["'])/.exec(line)![1]!;
-  const imported = new RegExp(`^\\s*import\\b.*\\bfrom\\s+${library}`, 'm');
+  const library = IMPORT_LINE.exec(line)?.[3];
   const text = view.state.doc.toString();
-  if (imported.test(text)) return;
+  if (text.split('\n').some((l) => IMPORT_LINE.exec(l)?.[3] === library)) return;
   view.dispatch({ changes: { from: 0, insert: line + (text.startsWith('import') ? '\n' : '\n\n') } });
 }
 

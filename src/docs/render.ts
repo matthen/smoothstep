@@ -119,6 +119,10 @@ export function renderDocs(files: readonly DocFile[], options: RenderOptions): D
     const headings: DocPage['headings'] = [];
     const used = new Map<string, number>();
 
+    // A page of the docs. In the app it's the docs site's copy, so the link also works in a new tab.
+    const pageHref = (page: string, anchor?: string) => (app ? 'docs/' : '') + page + (anchor ? '#' + anchor : '');
+    const ownPage = `${slugs.get(file.path)}.html`;
+
     // A link in this file, made right for where the page is shown.
     const resolve = (href: string, isImage: boolean): { href: string; external: boolean } => {
       if (href.startsWith(APP_URL + '#')) {
@@ -126,16 +130,20 @@ export function renderDocs(files: readonly DocFile[], options: RenderOptions): D
       }
       // A page of the published docs is a page of these.
       if (href.startsWith(APP_URL + 'docs/')) {
-        return { href: href.slice(APP_URL.length + 'docs/'.length) || 'index.html', external: false };
+        const [page, anchor] = href.slice(APP_URL.length + 'docs/'.length).split('#');
+        return { href: pageHref(page || 'index.html', anchor), external: false };
       }
-      if (/^[a-z]+:/i.test(href) || href.startsWith('#')) {
-        return href.startsWith('#') ? { href, external: false } : { href, external: true };
+      if (href.startsWith('#')) {
+        return { href: app ? pageHref(ownPage, href.slice(1)) : href, external: false };
+      }
+      if (/^[a-z]+:/i.test(href)) {
+        return { href, external: true };
       }
       const [path = '', anchor] = href.split('#');
       const target = posixJoin(dir, decodeURI(path));
       const slug = slugs.get(target) ?? slugs.get(posixJoin(target, 'README.md'));
       if (slug) {
-        return { href: `${slug}.html${anchor ? '#' + anchor : ''}`, external: false };
+        return { href: pageHref(`${slug}.html`, anchor), external: false };
       }
       if (isImage && target.startsWith('images/')) {
         return { href: (app ? 'docs/' : '') + target, external: false };
@@ -157,7 +165,8 @@ export function renderDocs(files: readonly DocFile[], options: RenderOptions): D
           if (seen) id += '-' + seen;
           const inner = this.parser.parseInline(tokens);
           headings.push({ id, text: plainText(inner), level: depth });
-          const anchor = depth > 1 ? `<a class="doc-anchor" href="#${id}" aria-hidden="true" tabindex="-1">#</a>` : '';
+          const anchor = depth > 1
+            ? `<a class="doc-anchor" href="${app ? pageHref(ownPage, id) : '#' + id}" aria-hidden="true" tabindex="-1">#</a>` : '';
           return `<h${depth} id="${idPrefix}${id}">${inner}${anchor}</h${depth}>\n`;
         },
         code({ text, lang }: Tokens.Code) {

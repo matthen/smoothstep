@@ -101,14 +101,22 @@ test("an error opens the tab it's in, and the last buffer can be removed", async
   expect(errors).toEqual([]);
 });
 
-test("a link to shared.glsl in a comment adds the tab", async ({page, context}) => {
+test("a link to shared.glsl in a comment adds the tab, which isn't code until it's written in", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./");
   await page.getByRole("button", {name: "Continue"}).click();
   await setCode(page, "// See [shared.glsl].\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  fragColor = vec4(1.);\n}");
+  await page.keyboard.press("Shift+Enter");
   await page.locator(".cm-link", {hasText: "shared.glsl"}).click();
   await expect(tabs(page)).toHaveText(["shared.glsl", "Image.glsl"]);
   await expect(page.getByRole("tab", {name: "shared.glsl"})).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator(OPEN_EDITOR)).toContainText("can be used in every shader tab");
+  // Nothing to build, and nothing of it saved.
+  await expect(page.getByRole("button", {name: "Build"})).toHaveCount(0);
+  await page.keyboard.press("ControlOrMeta+s");
+  await expect(page).toHaveURL(/#anim\/[a-f0-9]+$/);
+  await page.reload();
+  await expect(tabs(page)).toHaveText(["Image.glsl"]);
   expect(errors).toEqual([]);
 });
 

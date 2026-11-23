@@ -16,6 +16,7 @@ import { SHADER_INPUTS } from '../lib/shaderInputs';
 import { searchDocs } from '../reference/search';
 import * as tutorialShaders from '../tutorial/shaders';
 import { readDocs, siteFiles } from './plugin';
+import { renderDocs } from './render';
 
 const site = siteFiles('docs');
 const html = (file: string) => String(site.get(file));
@@ -134,11 +135,32 @@ describe("the docs in the app", () => {
     expect(attributes(index, "src").some(src => src.includes("screenshot"))).toBe(false);
   });
 
-  it("show images from the copies next to the docs site", () => {
-    const src = pages.flatMap(p => attributes(p.html, "src"));
-    for (const path of src) {
-      expect(path.startsWith("docs/") && site.has(path.slice("docs/".length)), path).toBe(true);
+  it("link to the docs site's pages and headings, so a link opened in a new tab works", () => {
+    let checked = 0;
+    for (const page of pages) {
+      for (const href of attributes(page.html, "href").filter(h => h.startsWith("docs/"))) {
+        const [path, anchor] = href.slice("docs/".length).split("#");
+        expect(site.has(path!), `${page.slug} links to ${href}`).toBe(true);
+        if (anchor) {
+          expect(ids(html(path!)).has(anchor), `${page.slug} links to ${href}`).toBe(true);
+        }
+        checked++;
+      }
     }
+    expect(checked).toBeGreaterThan(20);
+  });
+
+  it("show images from the copies next to the docs site, and make in-page links whole", () => {
+    const files = [
+      {path: "guide.md", text: "# Guide\n\n## Part\n\n![A diagram](images/diagram.png)\n\n[More](more.md#x) and [above](#part)\n"},
+      {path: "more.md", text: "# More\n\n## X\n"},
+    ];
+    const [app] = renderDocs(files, {target: "app", repoUrl: "https://example.com/repo"});
+    expect(attributes(app!.html, "src")).toEqual(["docs/images/diagram.png"]);
+    expect(attributes(app!.html, "href")).toEqual(expect.arrayContaining(["docs/more.html#x", "docs/guide.html#part"]));
+    const [onSite] = renderDocs(files, {target: "site", repoUrl: "https://example.com/repo"});
+    expect(attributes(onSite!.html, "src")).toEqual(["images/diagram.png"]);
+    expect(attributes(onSite!.html, "href")).toEqual(expect.arrayContaining(["more.html#x", "#part"]));
   });
 
   it("colour code blocks and give them Copy, and Insert when they're GLSL or JavaScript", () => {

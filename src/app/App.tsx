@@ -111,6 +111,8 @@ export default function App() {
   const [layerErrors, setLayerErrors] = useState<LineError[]>([]);
   // The Canvas2D.js or shared.glsl tab, if it was just added here, so its editor takes focus when it appears.
   const [justAdded, setJustAdded] = useState<"canvas" | "shared" | null>(null);
+  // Whether the shared.glsl tab is new and still shows its placeholder.
+  const [sharedUntouched, setSharedUntouched] = useState(false);
   const shaders = useMemo<Shaders | null>(
     () => builtCode === null ? null : {code: builtCode, ...builtExtras}, [builtCode, builtExtras]);
   const allBuilt = builtCode === doc.code && sameExtras(builtExtras, shaderExtras(doc));
@@ -280,6 +282,7 @@ export default function App() {
     showCodeTab("image");
     setLayerErrors([]);
     setJustAdded(null);
+    setSharedUntouched(false);
     setHeld(new Map());
     setMinRows(3);
     setBuildId(id => id + 1);
@@ -526,6 +529,9 @@ export default function App() {
         {...d, buffers: (d.buffers ?? []).map((buffer, i) => i === tab ? {code} : buffer)};
     setDoc(withCode);
     setHasUnsavedChanges(true);
+    if (tab === "shared") {
+      setSharedUntouched(false);
+    }
     if (isHelperChange) {
       // They've found the pickers, so there's no need for the tip about them.
       markTipSeen("pickers");
@@ -586,8 +592,11 @@ export default function App() {
     setCodeTab("image");
   };
 
+  // A new shared.glsl tab shows a placeholder, which only becomes code once it's edited, so an untouched
+  // tab isn't saved and needs no build.
   const addShared = () => {
-    updateDoc({shared: SHARED_PLACEHOLDER});
+    setDoc(d => ({...d, shared: ""}));
+    setSharedUntouched(true);
     showCodeTab("shared");
     setJustAdded("shared");
   };
@@ -637,7 +646,7 @@ export default function App() {
   // Each tab has its own editor, hidden unless it's open, so it keeps its undo history and cursor.
   const codeTabs: {tab: ShaderId; code: string}[] = [
     ...(layer ? [{tab: "canvas" as const, code: layer.code}] : []),
-    ...(doc.shared !== undefined ? [{tab: "shared" as const, code: doc.shared}] : []),
+    ...(doc.shared !== undefined ? [{tab: "shared" as const, code: sharedUntouched ? SHARED_PLACEHOLDER : doc.shared}] : []),
     ...(doc.buffers ?? []).map((buffer, i) => ({tab: i, code: buffer.code})),
     {tab: "image", code: doc.code},
   ];

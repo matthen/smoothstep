@@ -129,6 +129,13 @@ test("a new animation has the Docs tab, until it's closed", async ({page, contex
   await docsTab(page).click();
   await expect(docsPanel(page).getByRole("heading", {name: "smoothstep.io documentation"})).toBeVisible();
   expect(docsLoaded).toBe(true);
+  // Its links are the docs site's pages, so one opened in a new tab works too; clicked, it opens here.
+  const link = docsPanel(page).locator(".referenceBody").getByRole("link", {name: "Canvas2D layer"}).first();
+  const href = (await link.getAttribute("href"))!;
+  expect(href).toMatch(/^docs\/canvas2d\.html/);
+  expect((await page.request.get(new URL(href, page.url()).href)).ok()).toBe(true);
+  await link.click();
+  await expect(docsPanel(page).getByRole("heading", {name: "drawList"})).toBeVisible();
 
   // Not with an example, or anything else that isn't new.
   await page.goto("./#example/534226b1d5ed");

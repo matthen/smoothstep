@@ -63,8 +63,12 @@ export default function ReferencePanel({target, active, tabName, language, hasCa
     const heading = place.anchor ? body.querySelector<HTMLElement>(`[id="doc-${place.anchor}"]`) : null;
     body.scrollTop = heading ? heading.offsetTop - 8 : 0;
     heading?.classList.add("referenceTarget");
-    const timer = window.setTimeout(() => heading?.classList.remove("referenceTarget"), 1600);
-    return () => window.clearTimeout(timer);
+    const unmark = () => heading?.classList.remove("referenceTarget");
+    const timer = window.setTimeout(unmark, 1600);
+    return () => {
+      window.clearTimeout(timer);
+      unmark();
+    };
   }, [place, query, active]);
 
   // Insert only puts code in a tab of its own language.
@@ -103,14 +107,11 @@ export default function ReferencePanel({target, active, tabName, language, hasCa
       }
       return;
     }
+    // Links to the docs site's pages open here; a middle-click or a new tab gets the site.
     const link = element.closest("a");
     const href = link?.getAttribute("href") ?? "";
-    const inPage = /^#(.+)$/.exec(href);
-    const toPage = /^([\w-]+)\.html(?:#(.+))?$/.exec(href);
-    if (inPage) {
-      event.preventDefault();
-      go({page: page.slug, anchor: inPage[1]!});
-    } else if (toPage && byName.has(toPage[1]!)) {
+    const toPage = /^docs\/([\w-]+)\.html(?:#(.+))?$/.exec(href);
+    if (toPage && byName.has(toPage[1]!) && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
       event.preventDefault();
       go({page: toPage[1]!, anchor: toPage[2]});
     }

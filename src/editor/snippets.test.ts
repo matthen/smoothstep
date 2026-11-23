@@ -63,6 +63,15 @@ describe('snippets', () => {
     expect(v.state.doc.toString().match(/import planck/g)).toHaveLength(1);
   });
 
+  it('see an import in single quotes, or importing by another name', () => {
+    for (const line of ["import planck from 'planck';", 'import * as pl from "planck"']) {
+      const v = editor(line + '\n\npla');
+      pick(v, named(canvas2dSnippetCompletions(), 'planck'), 'pla');
+      expect(v.state.doc.toString().match(/^import/gm)).toHaveLength(1);
+      v.destroy();
+    }
+  });
+
   it('leave the cursor after a snippet without fields', () => {
     const v = editor('    iCan');
     pick(v, named(glslSnippetCompletions('iPrevFrame'), 'iCanvas2D'), 'iCan');
