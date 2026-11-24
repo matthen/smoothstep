@@ -76,7 +76,8 @@ npm run test:e2e   # end-to-end tests in Chromium, against the build
 
 `npm run build` makes a plain static site in `dist/`. You can put it on any static host,
 such as GitHub Pages or Netlify, at any path. It needs no server code or network access to run,
-including video export.
+including video export. smoothstep.io is published on GitHub Pages by the "Deploy to smoothstep.io"
+workflow, which you run by hand from the Actions tab with the branch, tag or commit to deploy.
 
 The build includes a service worker, `sw.js`, which lets the app load with no network after the first
 visit and installs new versions in the background. It only handles the directory it's served from, so

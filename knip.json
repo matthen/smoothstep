@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["src/player/standalone.ts", "src/pwa/worker.ts"],
+  "entry": ["src/player/standalone.ts", "src/pwa/worker.ts", ".github/pages/app/sw.js"],
   "ignore": ["tools/**", "public/libs/**"],
   "ignoreDependencies": [
     "planck", "matter-js", "simplex-noise", "d3-delaunay",
