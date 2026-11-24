@@ -10,7 +10,7 @@ import { docTargetOf, openDocs } from '../lib/docLinks';
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // A URL stops before closing punctuation. Only the app's own places count in brackets, and only the
 // docs in a Markdown link's parentheses.
-const DOCS_HREF = String.raw`docs/[\w-]+|https://smoothstep\.io/app/docs/[\w-]+\.html`;
+const DOCS_HREF = String.raw`docs/[\w-]+|https://smoothstep\.io/(?:app/)?docs/[\w-]+\.html`;
 const LINK = new RegExp(
   String.raw`\[([^\]\n]+)\]\(((?:${DOCS_HREF})(?:#[\w-]+)?)\)|` +
   `https?://[^\\s"'<>()\\[\\]]*[^\\s"'<>()\\[\\].,;:!?]|\\[(${APP_LINKS.map(escape).join('|')})\\]`,

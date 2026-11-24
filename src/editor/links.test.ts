@@ -22,13 +22,15 @@ describe("linksIn", () => {
   });
 
   it("finds Markdown links into the docs, by path or on the docs site, and leaves other Markdown links alone", () => {
-    const text = "// See [drawList](docs/canvas2d#drawlist), [inputs](https://smoothstep.io/app/docs/reference.html) " +
+    const text = "// See [drawList](docs/canvas2d#drawlist), [inputs](https://smoothstep.io/docs/reference.html) " +
       "and [MDN](https://developer.mozilla.org/x), not [x](docs/a b) or [y](other/page).";
     expect(linksIn(text).map(l => [l.target, l.text])).toEqual([
       ["docs/canvas2d#drawlist", "drawList"],
-      ["https://smoothstep.io/app/docs/reference.html", "inputs"],
+      ["https://smoothstep.io/docs/reference.html", "inputs"],
       ["https://developer.mozilla.org/x", undefined],
     ]);
     expect(linksIn(text)[0]).toMatchObject({from: 7, to: 7 + "[drawList](docs/canvas2d#drawlist)".length});
+    const old = "[inputs](https://smoothstep.io/app/docs/reference.html#textures)";
+    expect(linksIn(old)).toMatchObject([{from: 0, to: old.length, text: "inputs"}]);
   });
 });

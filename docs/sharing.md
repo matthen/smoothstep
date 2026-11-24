@@ -25,13 +25,13 @@ link opens the new version.
 - **A GitHub gist.** Make a gist at [gist.github.com](https://gist.github.com): drag the animation file
   onto the page, or paste in its contents and name it with `.smoothstep.json` on the end, then click
   "Create secret gist" or "Create public gist". Paste the gist's address into Share. The link is
-  `https://smoothstep.io/app/#gist/<id>`, where `<id>` is the gist's id, and it always opens the gist's
+  `https://smoothstep.io/#gist/<id>`, where `<id>` is the gist's id, and it always opens the gist's
   latest version, so you can edit the gist without changing the link. GitHub lets each visitor open up
   to 60 gists an hour this way.
 - **Any other address,** such as a file in a GitHub repository or on your own website. Paste the file's
   `https` address into Share, or its page on github.com. A link to a file on a branch opens the latest
   version after a few minutes, and a link to a particular commit always opens that version. The link is
-  `https://smoothstep.io/app/#url/<address of the file>`. The site has to allow other websites to read
+  `https://smoothstep.io/#url/<address of the file>`. The site has to allow other websites to read
   the file (it must send an `Access-Control-Allow-Origin` header). GitHub, GitHub Pages and most
   static hosting do.
 
