@@ -21,6 +21,9 @@ test("the welcome dialog offers the tour, which steps through the screen", async
   const errors = await offline(context, {docs: true});
   await page.goto("./");
   await expect(docsTab(page)).toBeAttached();
+  // The examples run past the bottom of the screen, but the buttons stay in sight.
+  const actions = (await page.locator(".splashActions").boundingBox())!;
+  expect(actions.y + actions.height).toBeLessThanOrEqual(page.viewportSize()!.height);
   await page.getByRole("button", {name: "Take the tour"}).click();
   const titles = await stepThrough(page);
   expect(titles).toEqual([
