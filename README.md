@@ -6,8 +6,8 @@
 <p align="center">
   Make animations with WebGL shaders and a little JavaScript, right in your browser.<br>
   <b><a href="https://smoothstep.io">Open smoothstep.io</a></b> ·
-  <a href="https://smoothstep.io/app/#tutorial">Tutorial</a> ·
-  <a href="https://smoothstep.io/app/docs/">Documentation</a>
+  <a href="https://smoothstep.io/#tutorial">Tutorial</a> ·
+  <a href="https://smoothstep.io/docs/">Documentation</a>
 </p>
 
 <p align="center">
@@ -25,8 +25,8 @@ server or accounts, and released it here as open source under the MIT licence. I
 animations from the old site with "Download my data", add that zip with File → Import.
 
 You can use it at **[smoothstep.io](https://smoothstep.io)**, or run your own copy. To learn, start
-the [tutorial](https://smoothstep.io/app/#tutorial): it runs in the app, beside the editor, and each step
-notices when you've done it. The [documentation](https://smoothstep.io/app/docs/) covers the shader
+the [tutorial](https://smoothstep.io/#tutorial): it runs in the app, beside the editor, and each step
+notices when you've done it. The [documentation](https://smoothstep.io/docs/) covers the shader
 inputs, the Canvas2D layer, the keyboard shortcuts and the examples. The app shows it in a Docs tab
 beside your code, under Help → Documentation. It's written in Markdown in [docs/](docs/), which reads
 fine here on GitHub.

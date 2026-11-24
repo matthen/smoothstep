@@ -38,7 +38,7 @@ export interface RenderOptions {
 }
 
 // Where the app is published; links to it in the docs work wherever this copy is served.
-const APP_URL = 'https://smoothstep.io/app/';
+const APP_URL = 'https://smoothstep.io/';
 
 // docs/README.md is the index, a folder's README.md is named after the folder.
 function pageSlug(path: string): string {

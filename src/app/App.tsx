@@ -7,7 +7,7 @@ import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react';
 import { flushSync } from 'react-dom';
 import {
   TbBook, TbBrandGithub, TbChevronDown, TbCopy, TbDeviceDesktopDown, TbDeviceFloppy, TbDownload, TbFile, TbFileImport,
-  TbFolderOpen, TbHammer, TbCircleCheckFilled, TbCode, TbHelp, TbHome, TbKeyboard, TbMaximize, TbMinimize, TbRoute, TbSchool,
+  TbFolderOpen, TbHammer, TbCircleCheckFilled, TbCode, TbHelp, TbHistory, TbHome, TbKeyboard, TbMaximize, TbMinimize, TbRoute, TbSchool,
   TbShare, TbVideo,
 } from 'react-icons/tb';
 
@@ -1049,6 +1049,13 @@ export default function App() {
               <Menu.Divider />
               <Menu.Item component="a" href={REPO_URL} target="_blank" rel="noreferrer" leftSection={<TbBrandGithub />}>
                 Source code
+              </Menu.Item>
+              <Menu.Item
+                component="a" href="https://classic.smoothstep.io/" target="_blank" rel="noreferrer"
+                leftSection={<TbHistory />}
+              >
+                Classic smoothstep.io
+                <Text size="xs" c="dimmed">Download your data until 19 December</Text>
               </Menu.Item>
               {canInstall &&
                 <Menu.Item leftSection={<TbDeviceDesktopDown />} onClick={() => void install()}>

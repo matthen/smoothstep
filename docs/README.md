@@ -8,10 +8,10 @@ frame rate and resolution. It all runs in your browser at [smoothstep.io](https:
 To draw text, shapes or physics simulations, add a [Canvas2D layer](canvas2d.md): JavaScript that draws
 on a 2D canvas over the image.
 
-[Start the tutorial](https://smoothstep.io/app/#tutorial), which runs in the app beside the editor, or
+[Start the tutorial](https://smoothstep.io/#tutorial), which runs in the app beside the editor, or
 [open smoothstep.io](https://smoothstep.io).
 
-These pages are also at [smoothstep.io/app/docs](https://smoothstep.io/app/docs/), and in the app
+These pages are also at [smoothstep.io/docs](https://smoothstep.io/docs/), and in the app
 under Help → Documentation, as a tab beside your code.
 
 ![smoothstep.io, with the Pokémon type battles example: its code on the left, the battle with its legend on the right, and the animation timeline below](images/screenshot.png)
@@ -20,16 +20,16 @@ under Help → Documentation, as a tab beside your code.
 
 - [Tutorial](tutorial/README.md)\
   Ten short lessons you follow in the app, from your first shader to sharing it
-  1. [Colour from position](https://smoothstep.io/app/#tutorial/1)
-  2. [Moving with time](https://smoothstep.io/app/#tutorial/2)
-  3. [Shapes](https://smoothstep.io/app/#tutorial/3)
-  4. [The timeline](https://smoothstep.io/app/#tutorial/4)
-  5. [Patterns](https://smoothstep.io/app/#tutorial/5)
-  6. [Textures](https://smoothstep.io/app/#tutorial/6)
-  7. [Memory with iPrevFrame](https://smoothstep.io/app/#tutorial/7)
-  8. [Buffers](https://smoothstep.io/app/#tutorial/8)
-  9. [Draw with JavaScript](https://smoothstep.io/app/#tutorial/9)
-  10. [Share it](https://smoothstep.io/app/#tutorial/10)
+  1. [Colour from position](https://smoothstep.io/#tutorial/1)
+  2. [Moving with time](https://smoothstep.io/#tutorial/2)
+  3. [Shapes](https://smoothstep.io/#tutorial/3)
+  4. [The timeline](https://smoothstep.io/#tutorial/4)
+  5. [Patterns](https://smoothstep.io/#tutorial/5)
+  6. [Textures](https://smoothstep.io/#tutorial/6)
+  7. [Memory with iPrevFrame](https://smoothstep.io/#tutorial/7)
+  8. [Buffers](https://smoothstep.io/#tutorial/8)
+  9. [Draw with JavaScript](https://smoothstep.io/#tutorial/9)
+  10. [Share it](https://smoothstep.io/#tutorial/10)
 - [Examples](examples.md)\
   Animations to open, play and change
 - [Sharing animations](sharing.md)\
@@ -40,7 +40,7 @@ under Help → Documentation, as a tab beside your code.
   What your shaders can use: inputs, textures, buffers and shared code
 - [The Canvas2D layer](canvas2d.md)\
   JavaScript that draws text, shapes and simulations over the image
-- [Reference](https://smoothstep.io/app/docs/reference.html)\
+- [Reference](https://smoothstep.io/docs/reference.html)\
   Every input, helper, font and library, in tables
 - [Acknowledgements](acknowledgements.md)\
   The projects, textures and fonts smoothstep.io uses

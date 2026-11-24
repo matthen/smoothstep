@@ -44,7 +44,7 @@ export function onOpenDocs(listener: (target: DocTarget) => void): () => void {
 
 // Where a link in a code comment goes in the docs: "docs/canvas2d#drawlist", as for docs/canvas2d.md,
 // or the same page on the docs site. Null for anything else.
-const DOCS_HREF = /^(?:docs\/([\w-]+)|https:\/\/smoothstep\.io\/app\/docs\/([\w-]+)\.html)(?:#([\w-]+))?$/;
+const DOCS_HREF = /^(?:docs\/([\w-]+)|https:\/\/smoothstep\.io\/(?:app\/)?docs\/([\w-]+)\.html)(?:#([\w-]+))?$/;
 
 export function docTargetOf(href: string): DocTarget | null {
   const m = DOCS_HREF.exec(href);

@@ -46,7 +46,7 @@ test("a link in a comment opens a menu item, a tab or a web address", async ({pa
 test("a Markdown link into the docs opens the Docs tab at its heading", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./#new");
-  await setCode(page, "// See [drawList](docs/canvas2d#drawlist), or the [inputs](https://smoothstep.io/app/docs/reference.html#textures).\n" +
+  await setCode(page, "// See [drawList](docs/canvas2d#drawlist), or the [inputs](https://smoothstep.io/docs/reference.html#textures).\n" +
     "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  fragColor = vec4(1.);\n}");
   const reference = docsPanel(page);
   await page.locator(".cm-link", {hasText: "drawList"}).click();

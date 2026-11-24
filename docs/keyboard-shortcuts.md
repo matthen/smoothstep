@@ -68,5 +68,5 @@ animation doesn't have it yet.
 A Markdown link into these docs opens them in the Docs tab, at that page and heading:
 `// See [drawList](docs/canvas2d#drawlist).` In the parentheses, `canvas2d` is the page's file in
 `docs/` without `.md`, and `drawlist` is the heading, as in the docs site's addresses. A link to the
-docs site itself, like `https://smoothstep.io/app/docs/canvas2d.html#drawlist`, opens the Docs tab
+docs site itself, like `https://smoothstep.io/docs/canvas2d.html#drawlist`, opens the Docs tab
 too.

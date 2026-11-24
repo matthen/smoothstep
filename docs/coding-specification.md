@@ -74,7 +74,7 @@ at zero and clear when `iPrevFrame` does. A buffer that nothing reads isn't draw
 To share code between them, choose **Add shared GLSL code** from the ⊕. Functions, constants and
 `#define`s in its tab, shared.glsl, can be used in every shader tab: the image and each buffer. Its × removes it.
 
-The [Ink in water](https://smoothstep.io/app/#example/5c81f0d3a7e2) example uses two buffers: one
+The [Ink in water](https://smoothstep.io/#example/5c81f0d3a7e2) example uses two buffers: one
 for the water's flow, and one for the ink it carries.
 
 ## The Canvas2D layer
