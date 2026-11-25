@@ -37,7 +37,7 @@ under Help → Documentation, as a tab beside your code.
 - [Keyboard shortcuts](keyboard-shortcuts.md)\
   For the code editor and playing the animation
 - [Coding specification](coding-specification.md)\
-  What your shaders can use: inputs, textures, buffers and shared code
+  What your shaders can use: inputs, textures, buffers and shared code, and how to check values
 - [The Canvas2D layer](canvas2d.md)\
   JavaScript that draws text, shapes and simulations over the image
 - [Reference](https://smoothstep.io/docs/reference.html)\

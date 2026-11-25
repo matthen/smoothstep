@@ -24,6 +24,8 @@ import CodeEditor, { insertCode } from '../editor/CodeEditor';
 import { describe, topLevel } from '../editor/glslDefinitions';
 import { GlslCode } from '../editor/InlineCode';
 import { analysisOf, selectDefinition } from '../editor/goToDefinition';
+import type { Range } from '../editor/glslDefinitions';
+import { setShownExpression, shownExpression } from '../editor/showExpression';
 import { EditorView } from '@codemirror/view';
 import { DOC_SECTIONS, onOpenDocs, type DocTarget } from '../lib/docLinks';
 import ShaderTabs, { shaderCaption, shaderName, starterFunction } from '../editor/ShaderTabs';
@@ -42,7 +44,7 @@ import type { LineError } from '../lib/types';
 import { useLatest } from '../lib/useLatest';
 import AspectRatioPicker from '../dialogs/AspectRatioPicker';
 import Canvas, { type CanvasHandle, type CanvasLayout, type Shaders } from '../render/Canvas';
-import type { CompileResult, ShaderId } from '../render/Renderer';
+import type { CompileResult, ProbeRequest, ProbeResult, ShaderId } from '../render/Renderer';
 import { floatNames } from '../timeline/names';
 import PaneDivider, { previewWidthCSS, storedPreviewWidth, storePreviewWidth } from './PaneDivider';
 import PlayerControls, { PLAYER_ONE_ROW_WIDTH, PLAYER_SECOND_ROW_WIDTH } from '../timeline/PlayerControls';
@@ -63,6 +65,9 @@ import { usePhone, useTouch } from './usePhone';
 
 const STORAGE_BLOCKED = "This browser isn't letting smoothstep.io store data, so animations can't be saved here. " +
   "Private browsing can cause this.";
+
+// How long after a picker's last change the canvas shows the expression again.
+const PROBE_HOLD_MS = 250;
 
 function windowTitle(title: string) {
   document.title = title === DEFAULT_TITLE ? "smoothstep.io" : title + " - smoothstep.io";
@@ -110,6 +115,12 @@ export default function App() {
   const [builtCode, setBuiltCode] = useState<string | null>(initialRoute ? null : doc.code);
   // The buffers' code and the shared code, as last built.
   const [builtExtras, setBuiltExtras] = useState<ShaderExtras>(() => shaderExtras(doc));
+  // An expression the canvas shows in place of the image, and whether pointing at it shows values.
+  const [probe, setProbe] = useState<ProbeRequest | null>(null);
+  const [probeHeld, setProbeHeld] = useState(false);
+  const probeHoldTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(probeHoldTimer.current), []);
+  const [inspect, setInspect] = useState(false);
   const [buildId, setBuildId] = useState(0);
   const [lineErrors, setLineErrors] = useState<LineError[]>([]);
   // The code the editor shows, or showed before the Docs tab, and the one whose code didn't build.
@@ -303,6 +314,7 @@ export default function App() {
     setTitleInput(json.title);
     setBuiltCode(json.code);
     setBuiltExtras(shaderExtras(json));
+    setProbe(null);
     showCodeTab("image");
     setLayerErrors([]);
     setJustAdded(null);
@@ -582,7 +594,52 @@ export default function App() {
     setBuiltCode(doc.code);
     setBuiltExtras(shaderExtras(doc));
     setBuildId(id => id + 1);
+    setProbe(probeAgain);
   };
+
+  // The expression shown on the canvas, where it is now in its tab's code; null if it's gone.
+  const probeAgain = (p: ProbeRequest | null): ProbeRequest | null => {
+    const view = p && editorViews.current.get(p.tab);
+    const range = view?.state.field(shownExpression, false);
+    return p && view && range ? {...p, code: view.state.doc.toString(), from: range.from, to: range.to} : null;
+  };
+
+  // Marks the expression shown in its tab's editor, and clears the mark from the others.
+  const markShown = (tab: ShaderId | null, range: Range | null) => {
+    editorViews.current.forEach((view, t) => {
+      const mark = t === tab ? range : null;
+      const current = view.state.field(shownExpression, false);
+      if (current !== undefined && (current?.from !== mark?.from || current?.to !== mark?.to)) {
+        view.dispatch({effects: setShownExpression.of(mark)});
+      }
+    });
+  };
+
+  // Shows an expression selected in a tab on the canvas, building the code first if it's changed.
+  const showExpression = (tab: ShaderId, view: EditorView, range: Range | null) => {
+    if (!range) {
+      setProbe(null);
+      return;
+    }
+    if (!allBuilt) {
+      build();
+    }
+    setProbe({tab, code: view.state.doc.toString(), from: range.from, to: range.to});
+  };
+
+  const onProbe = (result: ProbeResult) => {
+    if (result.ok) {
+      markShown(probe?.tab ?? null, {from: result.from, to: result.to});
+      return;
+    }
+    setProbe(null);
+    notifications.show({id: "probe", color: "red", autoClose: 5000, title: "Can't show that on the canvas", message: result.message});
+  };
+  useEffect(() => {
+    if (!probe) {
+      markShown(null, null);
+    }
+  }, [probe]);
   // A build asked for along with an edit, made once the edit has reached `doc`.
   const [buildQueued, setBuildQueued] = useState(false);
   if (buildQueued) {
@@ -610,6 +667,15 @@ export default function App() {
     if (isHelperChange && allBuilt) {
       setBuiltCode(withCode(doc).code);
       setBuiltExtras(shaderExtras(withCode(doc)));
+      if (probe) {
+        // The canvas shows the image while a picker drags, as building the expression each time would slow it.
+        setProbeHeld(true);
+        window.clearTimeout(probeHoldTimer.current);
+        probeHoldTimer.current = window.setTimeout(() => {
+          setProbeHeld(false);
+          setProbe(probeAgain);
+        }, PROBE_HOLD_MS);
+      }
     }
   };
 
@@ -1187,11 +1253,13 @@ export default function App() {
               skeleton={starterFunction(tab)} onFixed={() => setBuildQueued(true)}
               lastFrame={typeof tab === "number" ? "iBuffer" + tab : "iPrevFrame"}
               definitionElsewhere={tab === "shared" || tab === "canvas" ? undefined : sharedDefinition}
+              onShowExpression={tab === "canvas" ? undefined : (view, range) => showExpression(tab, view, range)}
               onView={view => {
                 if (view) {
                   editorViews.current.set(tab, view);
                 } else {
                   editorViews.current.delete(tab);
+                  setProbe(p => p?.tab === tab ? null : p);
                 }
               }}
             />)}
@@ -1231,6 +1299,8 @@ export default function App() {
             aspectRatio={doc.aspectRatio}
             onBuilt={onBuilt}
             onRestart={restartFrames} onLayout={setLayout}
+            probe={probeHeld ? null : probe} onProbe={onProbe} onProbeOff={() => setProbe(null)}
+            inspect={inspect} onInspectChange={setInspect}
           />
           <PlayerControls
             duration={doc.duration} currentTime={time} isPlaying={isPlaying}

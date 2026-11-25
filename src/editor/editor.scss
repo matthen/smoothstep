@@ -95,6 +95,11 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
     cursor: pointer;
   }
 
+  // The expression the canvas is showing in place of the image.
+  .cm-shown-expression {
+    border-bottom: 1px dashed rgba($dt-gray-light, 0.7);
+  }
+
   // Search, replace and go-to-line panels.
   .cm-panels {
     background-color: $dt-gray-dark;
@@ -287,6 +292,68 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
   line-height: 1.45;
   color: $dt-gray-light;
   white-space: pre;
+}
+
+// The button under a selection that shows it on the canvas.
+.ss-show-expression, .cm-tooltip.ss-show-expression {
+  z-index: 150;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 8px 0 7px;
+  border: 1px solid rgba($dt-gray-light, 0.08);
+  border-radius: 4px;
+  background-color: $dt-gray;
+  color: $dt-gray-light;
+  font: 500 12px/1 var(--mantine-font-family);
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: background-color 100ms;
+
+  svg {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: $dt-gray-medium;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  kbd {
+    margin-left: 2px;
+    color: $dt-gray-medium;
+    font: inherit;
+    font-weight: 400;
+    font-size: 11px;
+  }
+
+  &:hover {
+    background-color: #52556b;
+
+    svg {
+      stroke: $dt-gray-light;
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($dt-gray-light, 0.7);
+    outline-offset: 1px;
+  }
+
+  // No keyboard to press the shortcut with, and a finger needs a bigger target.
+  @media (pointer: coarse) {
+    height: 36px;
+    padding: 0 14px 0 12px;
+    font-size: 14px;
+
+    kbd {
+      display: none;
+    }
+  }
 }
 
 .cm-tooltip.ss-popup {

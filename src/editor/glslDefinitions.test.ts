@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyse, describe as describeDefinition, findDefinition, nameAt, topLevel } from './glslDefinitions';
+import { analyse, describe as describeDefinition, findDefinition, nameAt, topLevel, valueAt } from './glslDefinitions';
 
 // The line with the definition of the first `name` from `marker` on, with the name in brackets.
 function definitionOf(code: string, name: string, marker = '') {
@@ -135,5 +135,56 @@ describe('describe', () => {
     expect(describeName(code, 'Ray')).toEqual({ signature: 'struct Ray', comment: 'A ray.' });
     expect(describeName(code, 'a')).toBeNull();
     expect(describeName(code, 'b')).toBeNull();
+  });
+});
+
+describe('valueAt', () => {
+  const code = `#define R 0.5
+struct Ray { vec3 o; vec3 d; };
+float f(vec2 p) {
+  Ray rays[2];
+  int i = 1;
+  vec2 uv = p.xy * R;
+  return uv.x + rays[i].d.z + length(p) + iTime + f(p).x;
+}`;
+  // The value with the cursor `offset` characters into the first `text` after `marker`.
+  const valueText = (text: string, offset = 0, marker = 'vec2 uv') => {
+    const pos = code.indexOf(text, code.indexOf(marker)) + offset;
+    const range = valueAt(analyse(code), pos);
+    return range && code.slice(range.from, range.to);
+  };
+
+  it('takes a name with its fields and swizzles, wherever the cursor is in them', () => {
+    expect(valueText('uv', 1)).toBe('uv');
+    expect(valueText('p.xy', 0)).toBe('p.xy');
+    expect(valueText('p.xy', 3)).toBe('p.xy');
+    expect(valueText('uv.x', 0, 'return')).toBe('uv.x');
+    expect(valueText('uv.x', 3, 'return')).toBe('uv.x');
+  });
+
+  it('counts the end of a name as in it', () => {
+    expect(valueText('uv.x', 4, 'return')).toBe('uv.x');
+    expect(valueText('p.xy', 4)).toBe('p.xy');
+  });
+
+  it('takes indexes along with fields, and an index on its own', () => {
+    expect(valueText('rays', 2, 'return')).toBe('rays[i].d.z');
+    expect(valueText('d.z', 0, 'return')).toBe('rays[i].d.z');
+    expect(valueText('i]', 0, 'return')).toBe('i');
+  });
+
+  it('takes macros that are values', () => {
+    expect(valueText('R;', 0)).toBe('R');
+  });
+
+  it("doesn't take keywords, types, functions, built-ins or fields of a call", () => {
+    expect(valueText('return', 2)).toBeNull();
+    expect(valueText('vec2', 2)).toBeNull();
+    expect(valueText('Ray', 1, 'Ray rays')).toBeNull();
+    expect(valueText('length', 2, 'return')).toBeNull();
+    expect(valueText('f(p)', 0, 'return')).toBeNull();
+    expect(valueText('iTime', 2, 'return')).toBeNull();
+    expect(valueText('.x;', 1, 'return')).toBeNull();
+    expect(valueText(' + ', 1, 'return')).toBeNull();
   });
 });

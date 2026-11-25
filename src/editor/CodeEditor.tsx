@@ -7,6 +7,7 @@ import { editorExtensions, loadJavaScript, type EditorLanguage } from './extensi
 import type { DefinitionElsewhere } from './goToDefinition';
 import { errorLinePos, missingSkeleton, setLineErrors } from './lineErrors';
 import { pickerEdit } from './popups';
+import type { ShowExpression } from './showExpression';
 import './editor.scss';
 
 export interface CodeEditorProps {
@@ -31,6 +32,8 @@ export interface CodeEditorProps {
   onView?(view: EditorView | null): void;
   // Finds a name declared in another tab, for going to its definition.
   definitionElsewhere?: DefinitionElsewhere;
+  // Shows a selected expression on the canvas, in a shader tab.
+  onShowExpression?: ShowExpression;
 }
 
 // Puts `code` at the cursor, on lines of its own, and shows it.
@@ -51,12 +54,12 @@ export function insertCode(view: EditorView, code: string) {
 
 export default function CodeEditor({
   value, onChange, onBuild, onSave, lineErrors, hidden, language = "glsl", autoFocus, skeleton, onFixed, lastFrame,
-  onView, definitionElsewhere,
+  onView, definitionElsewhere, onShowExpression,
 }: CodeEditorProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const extensionsRef = useRef<Extension | null>(null);
-  const callbacksRef = useRef({ onChange, onBuild, onSave, onFixed, definitionElsewhere });
+  const callbacksRef = useRef({ onChange, onBuild, onSave, onFixed, definitionElsewhere, onShowExpression });
   const lineErrorsRef = useRef(lineErrors);
   // The code the editor last reported or was given, so our own edits coming back as `value` are ignored.
   const knownValueRef = useRef(value);
@@ -65,7 +68,7 @@ export default function CodeEditor({
   const reportedRef = useRef<string[]>([]);
 
   useLayoutEffect(() => {
-    callbacksRef.current = { onChange, onBuild, onSave, onFixed, definitionElsewhere };
+    callbacksRef.current = { onChange, onBuild, onSave, onFixed, definitionElsewhere, onShowExpression };
     lineErrorsRef.current = lineErrors;
   });
 
@@ -76,6 +79,7 @@ export default function CodeEditor({
         onSave: () => callbacksRef.current.onSave(),
         onFixed: () => callbacksRef.current.onFixed?.(),
         definitionElsewhere: (name) => callbacksRef.current.definitionElsewhere?.(name) ?? null,
+        ...(onShowExpression ? { onShowExpression: (view, range) => callbacksRef.current.onShowExpression?.(view, range) } : {}),
       }, language),
       skeleton ? missingSkeleton.of(skeleton) : [],
       lastFrame ? lastFrameName.of(lastFrame) : [],
