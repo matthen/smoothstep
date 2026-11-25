@@ -104,12 +104,13 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     if (!renderer) {
       return;
     }
-    // A restart goes ahead, which also stops a layer stuck on a step.
-    if (layerSteps?.busy && !restarts(steps.current, p.stepClock)) {
+    renderer.followVideos(p.time, p.playing);
+    // A restart goes ahead, which also stops a layer stuck on a step. Videos the layer reads are
+    // waited for, so it gets the same frames as the shaders.
+    if (layerSteps?.waitingForVideos || (layerSteps?.busy && !restarts(steps.current, p.stepClock))) {
       needsRender.current = true;  // Try again next frame, when the layer may have caught up.
       return;
     }
-    renderer.followVideos(p.time, p.playing);
     steps.current = renderSteps(layerSteps ?? renderer, steps.current, p.stepClock, p.time,
       (time, frameIndex) => ({time, duration: p.duration, frameIndex, variableValues: p.variableValues}), 4);
   }, [propsRef]);

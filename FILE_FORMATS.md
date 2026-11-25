@@ -89,7 +89,7 @@ images/<image id>.<ext>   uploaded images: PNG, JPEG, WebP or GIF (.png/.jpg/.we
                   "file": "animations/2fc97bf7c5d3.json",
                   "thumbnail": "thumbnails/2fc97bf7c5d3.png"}],
   "images": [{"id": "9a3c61e0b2d4", "filename": "photo.jpg", "width": 2048, "height": 1536,
-              "created": "...", "file": "images/9a3c61e0b2d4.jpg"}]
+              "created": "...", "file": "images/9a3c61e0b2d4.jpg", "type": "image/jpeg"}]
 }
 ```
 
@@ -101,8 +101,10 @@ the importer finds `manifest.json` and reads the other paths relative to it. Tim
 ## Importing
 
 - Uploaded images are at most 4096px (or the GPU's texture limit, if lower). Uploaded videos are
-  stored as they are, and are at most 32 MB and 4096px. An image's or video's type is read from its
-  bytes, whatever its file name or data URL says.
+  stored as they are, and are at most 32 MB and 4096px. Importing a file or opening one from a link
+  refuses a bigger video, saying why. An image's or video's type is read from its bytes, whatever its
+  file name or data URL says. Bytes it doesn't recognise keep the type in the data URL, or the
+  zip's `type` or file extension.
 - Importing the same file twice changes nothing: an animation is skipped when one with the
   same id has the same document (comparing the JSON, ignoring key order), or, for a bare
   document or an older copy of an edited animation, when any stored animation has it.

@@ -2,7 +2,9 @@
 import { createStore, del, get, set, values, type UseStore } from 'idb-keyval';
 
 import type { AnimationDocument } from './document';
-import { isVideoType, mediaObjectURL, mediaType, revokeMediaURL } from './media';
+import { isVideoType, MAX_VIDEO_MB, mediaExtension, mediaObjectURL, mediaType, revokeMediaURL, videoLoaded, videoProblem } from './media';
+
+export { MAX_VIDEO_MB };
 
 export interface StoredDocument {
   id: string;
@@ -25,8 +27,6 @@ export interface StoredImage {
 export type DocumentSummary = Omit<StoredDocument, "json">;
 
 export const MAX_IMAGE_DIM = 4096;
-// Videos are stored as they are, so they're kept small enough to embed in an animation file.
-export const MAX_VIDEO_MB = 32;
 // Uploads in these formats are stored unchanged when they don't need shrinking. JPEG and WebP
 // are always redrawn, which strips EXIF data (such as a photo's location) and applies its rotation.
 const KEPT_TYPES = ["image/png", "image/gif"];
@@ -126,13 +126,13 @@ async function storeTemporaryImages(json: AnimationDocument) {
     if (blob) {
       let image: {width: number; height: number};
       try {
-        image = isVideoType(blob.type) ? await loadVideo(blob) : await loadImage(blob);
+        image = isVideoType(blob.type) ? await checkedVideo(blob) : await loadImage(blob);
       } catch (error) {
         console.warn(error);  // It never showed, so save the animation without it.
         continue;
       }
       await putImage({
-        id: slot.url, filename: slot.url + "." + (blob.type.split("/")[1] ?? "png"),
+        id: slot.url, filename: slot.url + "." + mediaExtension(blob.type),
         width: image.width, height: image.height, created: Date.now(), blob,
       });
       temporaryImages.delete(slot.url);
@@ -225,7 +225,7 @@ function textureSizeLimit(): number {
 // Stores an image or video file the user picked: a small PNG or GIF as is, any other image redrawn
 // (and shrunk to fit if needed) as JPEG for a JPEG and PNG otherwise, and a video as it is.
 export async function addUploadedImage(file: File): Promise<StoredImage> {
-  const type = file.type || mediaType(new Uint8Array(await file.slice(0, 16).arrayBuffer()));
+  const type = mediaType(new Uint8Array(await file.slice(0, 16).arrayBuffer()), file.type);
   if (isVideoType(type)) {
     return addUploadedVideo(file, type);
   }
@@ -246,21 +246,8 @@ export async function addUploadedImage(file: File): Promise<StoredImage> {
 }
 
 async function addUploadedVideo(file: File, type: string): Promise<StoredImage> {
-  const megabytes = file.size / 1024 / 1024;
-  if (megabytes > MAX_VIDEO_MB) {
-    throw new UploadError(`Videos can be up to ${MAX_VIDEO_MB} MB, and that one is ${Math.ceil(megabytes)} MB.`);
-  }
   const blob = file.type === type ? file : new Blob([file], {type});
-  let video: {width: number; height: number};
-  try {
-    video = await loadVideo(blob);
-  } catch {
-    throw new UploadError("This browser can't play that video.");
-  }
-  const limit = textureSizeLimit();
-  if (video.width > limit || video.height > limit) {
-    throw new UploadError(`Videos can be up to ${limit} px wide and tall, and that one is ${video.width} × ${video.height}.`);
-  }
+  const video = await checkedVideo(blob);
   const record: StoredImage = {
     id: newId(), filename: file.name || "video", width: video.width, height: video.height, created: Date.now(), blob,
   };
@@ -268,30 +255,45 @@ async function addUploadedVideo(file: File, type: string): Promise<StoredImage> 
   return record;
 }
 
+// Throws an UploadError saying why, if a video is too big to be a texture.
+export function checkVideo(bytes: number, width = 0, height = 0, maxDim = MAX_IMAGE_DIM) {
+  const problem = videoProblem(bytes, width, height, maxDim);
+  if (problem) {
+    throw new UploadError(problem);
+  }
+}
+
+// A video's size, if it plays and isn't too big to be a texture.
+async function checkedVideo(blob: Blob): Promise<{width: number; height: number}> {
+  checkVideo(blob.size);
+  const video = await loadVideo(blob);
+  checkVideo(blob.size, video.width, video.height, textureSizeLimit());
+  return video;
+}
+
 // A video's size, once the browser has decoded its first frame.
-function loadVideo(blob: Blob): Promise<{width: number; height: number}> {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(blob);
-    const video = document.createElement("video");
-    video.muted = true;
-    video.preload = "auto";
-    const done = () => {
-      video.removeAttribute("src");
-      video.load();
-      URL.revokeObjectURL(url);
-    };
-    video.onloadeddata = () => {
-      const size = {width: video.videoWidth, height: video.videoHeight};
-      done();
-      if (size.width > 0 && size.height > 0) {
-        resolve(size);
-      } else {
-        reject(new Error("Not a video with pictures"));
-      }
-    };
-    video.onerror = () => {done(); reject(new Error("Not a playable video"));};
-    video.src = url;
-  });
+async function loadVideo(blob: Blob): Promise<{width: number; height: number}> {
+  const url = URL.createObjectURL(blob);
+  const video = document.createElement("video");
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = "auto";
+  video.src = url;
+  let size: {width: number; height: number};
+  try {
+    await videoLoaded(video);
+    size = {width: video.videoWidth, height: video.videoHeight};
+  } catch (error) {
+    throw new UploadError(error instanceof Error ? error.message : String(error));
+  } finally {
+    video.removeAttribute("src");
+    video.load();
+    URL.revokeObjectURL(url);
+  }
+  if (!size.width || !size.height) {
+    throw new UploadError("That video has no picture.");
+  }
+  return size;
 }
 
 function loadImage(src: Blob | string): Promise<HTMLImageElement> {

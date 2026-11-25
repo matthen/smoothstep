@@ -166,8 +166,10 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link, lay
         }
       }
       // A layer that has fallen behind is waited for, which slows the animation rather than the page.
-      if (!layer?.steps.busy || steps.rendered < 0 || restarts(steps, stepClock)) {
-        renderer.followVideos(time, true);
+      // So are videos it reads, so it gets the same frames as the shaders.
+      renderer.followVideos(time, true);
+      if (!layer?.steps.waitingForVideos &&
+        (!layer?.steps.busy || steps.rendered < 0 || restarts(steps, stepClock))) {
         steps = renderSteps(layer?.steps ?? renderer, steps, stepClock, time, (t, frameIndex) => ({
           time: t, duration: doc.duration, frameIndex, variableValues: variableValues(doc.variables, t),
         }), 4);
@@ -182,12 +184,20 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link, lay
       last = null;
       frames.idle();
       renderer.followVideos(time, false);
-      if (layerFrame || videoFrame) {
+      if (videoFrame && !layer?.steps.waitingForVideos) {
+        // Drawn again at the same step, which gives the layer the videos' exact frames.
+        steps = renderSteps(layer?.steps ?? renderer, steps, stepClock, time, (t, frameIndex) => ({
+          time: t, duration: doc.duration, frameIndex, variableValues: variableValues(doc.variables, t),
+        }), 4);
+        videoFrame = false;
+      } else if (layerFrame) {
         renderer.refresh();
       }
     }
     layerFrame = false;
-    videoFrame = false;
+    if (playing && visible) {
+      videoFrame = false;
+    }
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);

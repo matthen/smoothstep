@@ -5,7 +5,7 @@ import { strFromU8, strToU8, unzip, zip, type Unzipped } from 'fflate';
 import { canonicalJSON, parseDocument, type AnimationDocument } from './document';
 import * as localStore from './localStore';
 import type { StoredDocument } from './localStore';
-import { MEDIA_EXTENSIONS, mediaType } from './media';
+import { extensionType, isVideoType, mediaExtension, mediaType } from './media';
 
 export const ANIMATION_FORMAT = "smoothstep-animation";
 const EXPORT_FORMAT = "smoothstep-export";
@@ -17,6 +17,8 @@ export interface ImportSummary {
   images: number;
   unchanged: number;
   failed: number;
+  // Why each refused image or video was refused.
+  refused: string[];
   // Every animation in the files, added or already here, so one can be opened.
   ids: string[];
 }
@@ -69,12 +71,13 @@ function dataURLBytes(dataURL: string): Uint8Array {
   return base64ToBytes(dataURL.split(",")[1] ?? "");
 }
 
-// An embedded image's or video's bytes.
-export function mediaDataURLBytes(dataURL: unknown): Uint8Array {
-  if (typeof dataURL !== "string" || !/^data:(image|video)\/[\w+.-]+;base64,/.test(dataURL)) {
+// An embedded image's or video's bytes, and the type its data URL gives.
+export function readMediaDataURL(dataURL: unknown): {bytes: Uint8Array; type: string} {
+  const match = typeof dataURL === "string" ? /^data:((image|video)\/[\w+.-]+);base64,/.exec(dataURL) : null;
+  if (!match) {
     throw new Error("Bad image data");
   }
-  return dataURLBytes(dataURL);
+  return {bytes: dataURLBytes(dataURL as string), type: match[1]!};
 }
 
 function pngDataURL(bytes: Uint8Array): string {
@@ -146,11 +149,11 @@ export async function exportAll(): Promise<DownloadableFile & {count: number}> {
     manifest.animations.push(entry);
   }
   for (const image of images) {
-    const file = "images/" + image.id + "." + (MEDIA_EXTENSIONS[image.blob.type] ?? "png");
+    const file = "images/" + image.id + "." + mediaExtension(image.blob.type);
     files[file] = new Uint8Array(await image.blob.arrayBuffer());
     manifest.images.push({
       id: image.id, filename: image.filename, width: image.width, height: image.height,
-      created: iso(image.created), file,
+      created: iso(image.created), file, type: image.blob.type,
     });
   }
   files["manifest.json"] = strToU8(JSON.stringify(manifest, null, 1));
@@ -237,9 +240,14 @@ interface ImageEntry {
   created?: unknown;
 }
 
-async function importImage(entry: ImageEntry, bytes: Uint8Array, summary: ImportSummary) {
+// `storedType` is the type it was exported with, kept if its bytes aren't recognised.
+async function importImage(entry: ImageEntry, bytes: Uint8Array, summary: ImportSummary, storedType: unknown) {
   if (typeof entry.id !== "string" || !ID_PATTERN.test(entry.id)) {
     throw new Error("Bad image id");
+  }
+  const type = mediaType(bytes, storedType);
+  if (isVideoType(type)) {
+    localStore.checkVideo(bytes.length, Number(entry.width) || 0, Number(entry.height) || 0);
   }
   if (await localStore.getImage(entry.id)) {
     return;  // Uploaded images never change, so a copy with the same id is the same image.
@@ -250,7 +258,7 @@ async function importImage(entry: ImageEntry, bytes: Uint8Array, summary: Import
     width: typeof entry.width === "number" ? entry.width : 0,
     height: typeof entry.height === "number" ? entry.height : 0,
     created: parseTime(entry.created, Date.now()),
-    blob: new Blob([bytes as Uint8Array<ArrayBuffer>], {type: mediaType(bytes)}),
+    blob: new Blob([bytes as Uint8Array<ArrayBuffer>], {type}),
   });
   summary.images += 1;
 }
@@ -260,7 +268,8 @@ async function importAnimationFile(obj: unknown, summary: ImportSummary, known: 
   if (file && file.format === ANIMATION_FORMAT) {
     const images = (file.images ?? {}) as Record<string, ImageEntry & {data?: unknown}>;
     for (const [id, image] of Object.entries(images)) {
-      await importImage({...image, id}, mediaDataURLBytes(image.data), summary);
+      const {bytes, type} = readMediaDataURL(image.data);
+      await importImage({...image, id}, bytes, summary, type);
     }
     await importAnimation({...file, json: file.document}, summary, known);
   } else {
@@ -282,14 +291,13 @@ async function importZip(bytes: Uint8Array, summary: ImportSummary, known: Known
     throw new Error("Not a smoothstep.io export");
   }
   const file = (name: unknown) => typeof name === "string" ? files[prefix + name] : undefined;
-  for (const image of (manifest.images ?? []) as (ImageEntry & {file?: unknown})[]) {
+  for (const image of (manifest.images ?? []) as (ImageEntry & {file?: unknown; type?: unknown})[]) {
     try {
       const data = file(image.file);
       if (!data) {throw new Error("missing " + String(image.file));}
-      await importImage(image, data, summary);
+      await importImage(image, data, summary, image.type ?? extensionType(image.file));
     } catch (error) {
-      console.warn(error);
-      summary.failed += 1;
+      failed(summary, error);
     }
   }
   for (const anim of (manifest.animations ?? []) as (ImportEntry & {file?: unknown})[]) {
@@ -302,14 +310,21 @@ async function importZip(bytes: Uint8Array, summary: ImportSummary, known: Known
         thumbnail: thumb ? pngDataURL(thumb) : null,
       }, summary, known);
     } catch (error) {
-      console.warn(error);
-      summary.failed += 1;
+      failed(summary, error);
     }
   }
 }
 
+function failed(summary: ImportSummary, error: unknown) {
+  console.warn(error);
+  summary.failed += 1;
+  if (error instanceof localStore.UploadError && !summary.refused.includes(error.message)) {
+    summary.refused.push(error.message);
+  }
+}
+
 export async function importFiles(files: Iterable<File>): Promise<ImportSummary> {
-  const summary: ImportSummary = {animations: 0, images: 0, unchanged: 0, failed: 0, ids: []};
+  const summary: ImportSummary = {animations: 0, images: 0, unchanged: 0, failed: 0, refused: [], ids: []};
   const known = await knownDocuments();
   for (const file of files) {
     try {
@@ -320,8 +335,7 @@ export async function importFiles(files: Iterable<File>): Promise<ImportSummary>
         await importAnimationFile(JSON.parse(strFromU8(bytes)), summary, known);
       }
     } catch (error) {
-      console.warn(error);
-      summary.failed += 1;
+      failed(summary, error);
     }
   }
   return summary;
@@ -338,7 +352,7 @@ export async function importDocument(json: AnimationDocument, images: Map<string
   return localStore.saveDocument(null, json, null);
 }
 
-export function importMessage({animations, images, unchanged, failed}: ImportSummary): string {
+export function importMessage({animations, images, unchanged, failed, refused}: ImportSummary): string {
   const plural = (n: number, word: string) => n + " " + word + (n === 1 ? "" : "s");
   const parts: string[] = [];
   if (animations || images || !(unchanged || failed)) {
@@ -350,5 +364,5 @@ export function importMessage({animations, images, unchanged, failed}: ImportSum
   if (failed) {
     parts.push(plural(failed, "item") + " couldn't be read.");
   }
-  return parts.join(" ");
+  return [...parts, ...refused].join(" ");
 }

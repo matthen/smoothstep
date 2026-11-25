@@ -7,6 +7,8 @@ import type { StepRenderer } from './steps';
 export class LayerSteps implements StepRenderer {
   // The last frame number queued, or -1 for none since the layer restarted.
   private lastFrame = -1;
+  // Whether that step's video frames were exactly those at its time, as they are while paused.
+  private exact = true;
 
   constructor(private renderer: Renderer, private layer: CanvasLayer) {}
 
@@ -19,24 +21,33 @@ export class LayerSteps implements StepRenderer {
     return this.layer.busy;
   }
 
+  // Whether to wait before drawing, until the videos the layer reads have loaded or moved to their time.
+  get waitingForVideos(): boolean {
+    return this.layer.needsVideoFrames && !this.renderer.videosSettled;
+  }
+
   render(inputs: FrameInputs) {
     this.renderer.render(inputs);
-    // Drawn again at the same step, as when scrubbing while paused: the layer keeps the frame it drew.
-    if (inputs.frameIndex === this.lastFrame) {
+    // Drawn again at the same step, as when scrubbing while paused: the layer keeps the frame it drew,
+    // unless its videos have since moved to exactly their frames, as after pausing.
+    const videos = this.layer.needsVideoFrames;
+    if (inputs.frameIndex === this.lastFrame && (!videos || this.exact || !this.renderer.videosAt(inputs.time))) {
       return;
     }
     if (inputs.frameIndex === 0 && this.lastFrame > 0) {
       this.layer.restart();
     }
     this.lastFrame = inputs.frameIndex;
+    this.exact = !videos || this.renderer.videosAt(inputs.time);
     this.layer.push({
       time: inputs.time, frame: inputs.frameIndex, floats: inputs.variableValues,
-      videoFrames: this.layer.needsVideoFrames ? this.renderer.videoFrames() : undefined,
+      videoFrames: videos ? this.renderer.videoFrames() : undefined,
     });
   }
 
   restart() {
     this.lastFrame = -1;
+    this.exact = true;
     this.layer.restart();
   }
 }

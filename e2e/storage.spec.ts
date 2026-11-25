@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { PNG } from 'pngjs';
 
 import {
-  dismissAlert, editorCode, expectCenter, fileMenu, MAGENTA, offline, setCode, solidPNG, TEXTURE_SHADER,
+  dismissAlert, editorCode, expectCenter, fileMenu, MAGENTA, offline, PIXEL_WAIT, setCode, solidPNG, TEXTURE_SHADER,
 } from './helpers';
 
 test.describe.configure({mode: "serial"});
@@ -196,11 +196,11 @@ test("another fresh browser imports the single file, recognises bare JSON, and k
   await fileMenu(page, "New");
   await expect(page).toHaveURL(/#new$/);
   // The URL changes before the reload, so wait for the new page's code.
-  await expect.poll(() => editorCode(page)).toContain("Getting started");
+  await expect.poll(() => editorCode(page), PIXEL_WAIT).toContain("Getting started");
   await setCode(page, "// unsaved again");
   page.once("dialog", dialog => void dialog.accept());
   await fileMenu(page, "New");
-  await expect.poll(() => editorCode(page)).toContain("Getting started");
+  await expect.poll(() => editorCode(page), PIXEL_WAIT).toContain("Getting started");
   expect(errors).toEqual([]);
   await context.close();
 });

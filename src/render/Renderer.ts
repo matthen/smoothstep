@@ -494,12 +494,19 @@ export class Renderer {
     await Promise.all([...new Set(this.slotVideos)].map(video => video ? video.seek(time) : Promise.resolve()));
   }
 
+  // Whether every video has loaded, or failed to, and none is moving to another time.
+  get videosSettled(): boolean {
+    return this.slotVideos.every(video => !video || video.settled);
+  }
+
+  // Whether every paused video shows exactly its frame at `time`.
+  videosAt(time: number): boolean {
+    return this.slotVideos.every(video => !video || video.isAt(time));
+  }
+
   // The frame each video slot shows now, for the Canvas2D layer.
   videoFrames(): {slot: number; bitmap: ImageBitmap}[] {
-    return this.slotVideos.flatMap((video, slot) => {
-      const bitmap = video?.frame();
-      return bitmap ? [{slot, bitmap}] : [];
-    });
+    return this.slotVideos.flatMap((video, slot) => video ? [{slot, bitmap: video.frame()}] : []);
   }
 
   // Gives each video slot its video's current frame.

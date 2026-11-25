@@ -2,10 +2,11 @@
 // that anyone can download (a GitHub gist, or any URL that lets other websites read it).
 import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
 
-import { ANIMATION_FORMAT, mediaDataURLBytes } from './archive';
+import { ANIMATION_FORMAT, readMediaDataURL } from './archive';
 import { asset } from './config';
 import { EMPTY_TEXTURE, InvalidDocumentError, parseDocument, type AnimationDocument } from './document';
-import { mediaType } from './media';
+import { MAX_IMAGE_DIM } from './localStore';
+import { isVideoType, mediaType, videoProblem } from './media';
 import type { Route } from './routes';
 
 // A message to show the person who opened the link.
@@ -100,16 +101,24 @@ export function readAnimationFile(text: string): LoadedAnimation {
   }
   const doc = parseShared(file.document);
   const images = new Map<string, Blob>();
-  const embedded = (file.images ?? {}) as Record<string, {data?: unknown}>;
+  const embedded = (file.images ?? {}) as Record<string, {data?: unknown; width?: unknown; height?: unknown}>;
   for (const slot of doc.textures) {
     const image = slot.isUserUploaded ? embedded[slot.url] : undefined;
     if (image && !images.has(slot.url)) {
+      let blob: Blob;
       try {
-        const bytes = mediaDataURLBytes(image.data);
-        images.set(slot.url, new Blob([bytes as Uint8Array<ArrayBuffer>], {type: mediaType(bytes)}));
+        const {bytes, type} = readMediaDataURL(image.data);
+        blob = new Blob([bytes as Uint8Array<ArrayBuffer>], {type: mediaType(bytes, type)});
       } catch (error) {
         console.warn(error);  // That slot shows as black, as for any missing image.
+        continue;
       }
+      const problem = isVideoType(blob.type) &&
+        videoProblem(blob.size, Number(image.width) || 0, Number(image.height) || 0, MAX_IMAGE_DIM);
+      if (problem) {
+        throw new ShareError(problem);
+      }
+      images.set(slot.url, blob);
     }
   }
   return {doc, images};

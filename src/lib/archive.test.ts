@@ -186,11 +186,41 @@ describe("importFiles", () => {
     }
   });
 
-  it("refuses a video too big to embed in an animation file, saying how big it can be", async () => {
-    const big = new File([new Uint8Array((localStore.MAX_VIDEO_MB + 1) * 1024 * 1024)], "long.mp4", {type: "video/mp4"});
-    await expect(localStore.addUploadedImage(big)).rejects.toThrow(
-      new localStore.UploadError(`Videos can be up to ${localStore.MAX_VIDEO_MB} MB, and that one is ${localStore.MAX_VIDEO_MB + 1} MB.`));
+  it("refuses a video too big to embed, whether uploaded or imported, saying why the same way", async () => {
+    const bytes = new Uint8Array(40 * 1024 * 1024);
+    bytes.set(strToU8("\0\0\0\x20ftypisom"));
+    const upload = localStore.addUploadedImage(new File([bytes], "long.mp4", {type: "video/mp4"}));
+    await expect(upload).rejects.toBeInstanceOf(localStore.UploadError);
+    const reason = await upload.catch((error: unknown) => (error as Error).message);
     expect(await localStore.listImages()).toEqual([]);
+
+    const file = {
+      format: "smoothstep-animation", version: 1, id: "eeee0000d002", title: "Long",
+      document: docWithTexture("Long", "eeee00000002"),
+      images: {eeee00000002: {filename: "long.mp4", width: 64, height: 32,
+        data: "data:video/mp4;base64," + Buffer.from(bytes).toString("base64")}},
+    };
+    const summary = await importFiles([new File([JSON.stringify(file)], "long.smoothstep.json")]);
+    expect(summary).toMatchObject({images: 0, failed: 1, refused: [reason]});
+    expect(importMessage(summary)).toContain(reason);
+    expect(await localStore.listImages()).toEqual([]);
+  });
+
+  it("keeps the type of a video whose bytes it doesn't recognise, and names it after that type", async () => {
+    const M4V = strToU8("not a known header");
+    const file = {
+      format: "smoothstep-animation", version: 1, id: "eeee0000d003", title: "M4V",
+      document: docWithTexture("M4V", "eeee00000003"),
+      images: {eeee00000003: {filename: "clip.m4v", width: 64, height: 32,
+        data: "data:video/x-m4v;base64," + Buffer.from(M4V).toString("base64")}},
+    };
+    expect((await importFiles([new File([JSON.stringify(file)], "m4v.smoothstep.json")])).images).toBe(1);
+    expect((await localStore.getImage("eeee00000003"))!.blob.type).toBe("video/x-m4v");
+    const zip = await zipFile();
+    expect(Object.keys(unzipSync(new Uint8Array(await zip.arrayBuffer())))).toContain("images/eeee00000003.m4v");
+    await clearStore();
+    expect((await importFiles([zip])).images).toBe(1);
+    expect((await localStore.getImage("eeee00000003"))!.blob.type).toBe("video/x-m4v");
   });
 
   it("counts unreadable files and invalid animations as failed", async () => {
@@ -198,7 +228,7 @@ describe("importFiles", () => {
     const summary = await importFiles([
       new File(["not json"], "a.json"), new File([JSON.stringify(bad)], "b.json"),
     ]);
-    expect(summary).toEqual({animations: 0, images: 0, unchanged: 0, failed: 2, ids: []});
+    expect(summary).toEqual({animations: 0, images: 0, unchanged: 0, failed: 2, refused: [], ids: []});
     expect(importMessage(summary)).toBe("2 items couldn't be read.");
   });
 

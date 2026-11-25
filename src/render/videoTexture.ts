@@ -1,8 +1,15 @@
 // A texture slot's video, kept on the animation's clock: at animation time t it shows the video's
 // frame at t, starting again from its first frame each time it ends.
+import { videoLoaded } from '../lib/media';
 
 // How far a playing video may drift from the animation before it's moved back into step.
 const MAX_DRIFT = 0.15;
+// Seeks land this far into a frame, so rounded frame times can't give the frame before.
+const SEEK_NUDGE = 0.002;
+// Seek targets this close are the same frame.
+const SAME_TIME = 1e-4;
+const SEEK_TIMEOUT_MS = 10_000;
+const HAVE_CURRENT_DATA = 2;
 
 // Where in a video of `duration` seconds the animation's time `t` falls.
 export function videoTime(t: number, duration: number): number {
@@ -12,6 +19,11 @@ export function videoTime(t: number, duration: number): number {
   return ((t % duration) + duration) % duration;
 }
 
+// Where to seek a video of `duration` seconds to show its frame at animation time `t`.
+function seekTime(t: number, duration: number): number {
+  return videoTime(t + SEEK_NUDGE, duration);
+}
+
 // How far apart two times in a looping video are, the short way round.
 function apart(a: number, b: number, duration: number): number {
   const d = Math.abs(a - b);
@@ -19,35 +31,38 @@ function apart(a: number, b: number, duration: number): number {
 }
 
 export class VideoTexture {
-  readonly video = document.createElement("video");
+  readonly video: HTMLVideoElement;
   private loaded: Promise<void>;
+  private failed = false;
+  // Where the video was last sent while paused, or null while it plays.
+  private sought: number | null = null;
+  private seekStarted = 0;
   // A frame for the Canvas2D layer, drawn on this canvas and taken off it.
   private canvas: OffscreenCanvas | null = null;
 
   // `onFrame` is called when the video has a new frame to show while it isn't playing.
-  constructor(url: string, onFrame: () => void) {
-    const video = this.video;
+  constructor(url: string, onFrame: () => void, video = document.createElement("video")) {
+    this.video = video;
     video.crossOrigin = "anonymous";
     video.muted = true;
     video.playsInline = true;
     video.loop = true;
     video.preload = "auto";
-    this.loaded = new Promise(resolve => {
-      video.addEventListener("loadeddata", () => resolve(), {once: true});
-      video.addEventListener("error", () => resolve(), {once: true});
-    });
-    video.addEventListener("loadeddata", onFrame);
     video.addEventListener("seeked", () => {
       if (video.paused) {
         onFrame();
       }
     });
     video.src = url;
+    this.loaded = videoLoaded(video).catch((error: unknown) => {
+      console.warn(error);
+      this.failed = true;
+    }).then(onFrame);
   }
 
   // Whether there's a frame to draw.
   get ready(): boolean {
-    return this.video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && this.video.videoWidth > 0;
+    return !this.failed && this.video.readyState >= HAVE_CURRENT_DATA && this.video.videoWidth > 0;
   }
 
   get width(): number {
@@ -63,6 +78,20 @@ export class VideoTexture {
     return this.loaded;
   }
 
+  // Whether the video has loaded or failed, and isn't moving to another time. A seek that takes
+  // too long counts as done, so nothing waits for it for good.
+  get settled(): boolean {
+    return this.failed || (this.ready &&
+      (!this.video.seeking || performance.now() - this.seekStarted > SEEK_TIMEOUT_MS));
+  }
+
+  // Whether the paused video shows exactly its frame at animation time `t`, or has failed.
+  isAt(t: number): boolean {
+    const video = this.video;
+    return this.failed || (this.ready && video.paused && !video.seeking && this.sought !== null &&
+      apart(this.sought, seekTime(t, video.duration), video.duration) <= SAME_TIME);
+  }
+
   // Keeps the video near animation time `t` for the preview: playing along with it while it plays,
   // which is smooth, and showing exactly the frame at `t` while it's paused.
   follow(t: number, playing: boolean) {
@@ -70,22 +99,31 @@ export class VideoTexture {
     if (!this.ready) {
       return;
     }
-    const target = videoTime(t, video.duration);
     if (playing) {
+      this.sought = null;
+      const target = videoTime(t, video.duration);
       if (video.paused) {
-        video.currentTime = target;
+        this.moveTo(target);
         video.play().catch(() => {});
       } else if (!video.seeking && apart(video.currentTime, target, video.duration) > MAX_DRIFT) {
-        video.currentTime = target;
+        this.moveTo(target);
       }
     } else {
       if (!video.paused) {
         video.pause();
       }
-      if (video.currentTime !== target) {
-        video.currentTime = target;
+      // Compared with the last target rather than currentTime, which a browser may round.
+      const target = seekTime(t, video.duration);
+      if (this.sought === null || apart(this.sought, target, video.duration) > SAME_TIME) {
+        this.sought = target;
+        this.moveTo(target);
       }
     }
+  }
+
+  private moveTo(time: number) {
+    this.seekStarted = performance.now();
+    this.video.currentTime = time;
   }
 
   // Moves to exactly the frame at animation time `t`, and resolves once that frame can be drawn.
@@ -93,38 +131,51 @@ export class VideoTexture {
     await this.loaded;
     const video = this.video;
     if (!this.ready) {
-      return;
+      throw new Error("A video texture couldn't be loaded.");
     }
     video.pause();
-    const target = videoTime(t, video.duration);
-    if (video.currentTime === target && !video.seeking) {
+    const target = seekTime(t, video.duration);
+    if (this.isAt(t)) {
       return;
     }
-    await new Promise<void>(resolve => {
-      const done = () => {
-        video.removeEventListener("seeked", done);
-        video.removeEventListener("error", done);
-        resolve();
+    this.sought = target;
+    await new Promise<void>((resolve, reject) => {
+      const done = (error?: Error) => {
+        window.clearTimeout(timer);
+        video.removeEventListener("seeked", seeked);
+        video.removeEventListener("error", failed);
+        if (error) {
+          this.sought = null;
+          reject(error);
+        } else {
+          resolve();
+        }
       };
-      video.addEventListener("seeked", done);
-      video.addEventListener("error", done);
-      video.currentTime = target;
+      const seeked = () => done();
+      const failed = () => done(new Error("A video texture stopped playing."));
+      const timer = window.setTimeout(() => done(new Error(
+        `A video texture took too long to show its frame at ${t.toFixed(2)} s.`)), SEEK_TIMEOUT_MS);
+      video.addEventListener("seeked", seeked);
+      video.addEventListener("error", failed);
+      this.moveTo(target);
     });
   }
 
-  // The frame the video shows now, as a bitmap the Canvas2D layer's worker can take.
-  frame(): ImageBitmap | null {
-    if (!this.ready) {
-      return null;
+  // The frame the video shows now, as a bitmap the Canvas2D layer's worker can take: black if it
+  // hasn't loaded.
+  frame(): ImageBitmap {
+    const ready = this.ready;
+    const [width, height] = ready ? [this.width, this.height] : [Math.max(1, this.width), Math.max(1, this.height)];
+    if (this.canvas?.width !== width || this.canvas.height !== height) {
+      this.canvas = new OffscreenCanvas(width, height);
     }
-    if (this.canvas?.width !== this.width || this.canvas.height !== this.height) {
-      this.canvas = new OffscreenCanvas(this.width, this.height);
+    const context = this.canvas.getContext("2d")!;
+    if (ready) {
+      context.drawImage(this.video, 0, 0);
+    } else {
+      context.fillStyle = "black";
+      context.fillRect(0, 0, width, height);
     }
-    const context = this.canvas.getContext("2d");
-    if (!context) {
-      return null;
-    }
-    context.drawImage(this.video, 0, 0);
     return this.canvas.transferToImageBitmap();
   }
 
