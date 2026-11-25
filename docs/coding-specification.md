@@ -103,13 +103,18 @@ The canvas then shows that value at every pixel, at the current time, in place o
 
 Values below 0 show as 0, and values above 1 as 1. Choose **-1 to 1** in the bar above the canvas
 to show -1 as black and 1 as full colour instead. A value in a buffer's tab shows that buffer's
-value, and one in shared.glsl shows in the image, or in the first buffer that calls its function.
-Pixels where the code never runs, such as inside an `if` that's false there, are striped. If it runs
-more than once for a pixel, as in a loop, the canvas shows the last value.
+value, and one in shared.glsl shows in the image, or in the first buffer that calls its function,
+directly or through other functions there. Showing a buffer that the image doesn't read starts the
+simulation again from frame 0, so the buffer is set up as usual. The value is the one from just before its line runs, so
+in `p = abs(p) - 0.5;`, `abs(p)` uses `p` from before the line. A variable that the line declares or
+sets shows its new value. Pixels where the code never runs, such as inside an `if` that's false
+there, are striped. If it runs more than once for a pixel, as in a loop, the canvas shows the last
+value.
 
 The selected code is marked with a dashed line. It stays on the canvas as you edit and build, until
-you click the × in the bar above the canvas, or press `Alt + Enter` on it again. Your code, your saved
-animation and anything you render stay as they are.
+you click the × in the bar above the canvas, or press `Alt + Enter` on it again. While you drag a
+picker, the canvas shows the image until you let go. Your code, your saved animation and anything
+you render stay as they are.
 
 The pixel inspector shows the numbers. Click its button at the top left of the canvas, then point
 at the canvas, or touch it on a touch screen. It shows the pixel's colour from 0 to 1 and as a hex

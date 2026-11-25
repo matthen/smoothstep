@@ -6,7 +6,8 @@ import { MAX_BUFFERS, NUM_TEXTURES, NUM_VARIABLES } from '../lib/document';
 import type { LineError } from '../lib/types';
 import { uses } from '../lib/glslCode';
 import {
-  PROBE_DECLARATIONS, PROBE_MAIN, planProbe, probeComponents, UNREACHED, withProbe, type ProbeType,
+  PROBE_DECLARATIONS, PROBE_MAIN, planProbe, probeComponents, sharedCallers, typeFromError, UNREACHED, withProbe,
+  type ProbeType, type Site,
 } from './probe';
 
 const VERTEX_SHADER = `#version 300 es
@@ -33,10 +34,12 @@ precision highp float;
 uniform sampler2D iTexture;
 uniform int iCount;
 uniform bool iSigned;
+uniform bool iBytes;
 out vec4 fragColor;
 void main() {
   vec4 v = texelFetch(iTexture, ivec2(gl_FragCoord.xy), 0);
-  if (all(equal(v, vec4(${UNREACHED}.)))) {
+  // Bytes clip the marker to 0, so only a value with an alpha of 1 can be told from it.
+  if (iBytes ? iCount < 4 && v.a == 0. : all(equal(v, vec4(${UNREACHED}.)))) {
     float stripe = mod(floor((gl_FragCoord.x + gl_FragCoord.y) / 8.), 2.);
     fragColor = vec4(mix(vec3(0.16, 0.16, 0.21), vec3(0.27, 0.28, 0.35), stripe), 1.);
     return;
@@ -186,6 +189,8 @@ export type ProbeResult = {
   shader: "image" | number;
   from: number;
   to: number;
+  // Where values are bytes, pixels a vec4 never ran for can't be told apart.
+  unmarked: boolean;
 } | {ok: false; message: string};
 
 // What the inspector reads at a pixel: its colour, and the probe's value there, or null where it never ran.
@@ -239,6 +244,11 @@ export class Renderer {
   // The code as last built, and the buffers the image needs without the probe.
   private sources: {code: string; buffers: readonly string[]; shared: string} = {code: "", buffers: [], shared: ""};
   private imageUsed: number[] = [];
+  // The buffers drawn only for the probe, and whether they've just started.
+  private probeBuffers: number[] = [];
+  private probeRestart = false;
+  // The site and type that last built for an expression, tried first when the code builds again.
+  private probeCache: {key: string; site: number; type: ProbeType} | null = null;
   private layerSize: [number, number] = [1, 1];
   private uniforms = new WeakMap<WebGLProgram, Map<string, WebGLUniformLocation | null>>();
   // [last frame, the one before], for the image and for each buffer in use.
@@ -274,8 +284,9 @@ export class Renderer {
     this.showProbeProgram = show.program;
     // Some phones can only render to half floats, which is all the buffers need.
     const floats = gl.getExtension("EXT_color_buffer_float") !== null;
-    this.floatBuffers = (floats || gl.getExtension("EXT_color_buffer_half_float") !== null) && this.canRenderHalfFloats();
-    this.probeFormat = floats ? "float" : this.floatBuffers ? "half" : "byte";
+    this.floatBuffers = (floats || gl.getExtension("EXT_color_buffer_half_float") !== null) &&
+      this.canRender(gl.RGBA16F, gl.HALF_FLOAT);
+    this.probeFormat = floats && this.canRender(gl.RGBA32F, gl.FLOAT) ? "float" : this.floatBuffers ? "half" : "byte";
     // Uploaded images are flipped so texture coordinates start at the bottom left, as in GL.
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     for (let i = 0; i < NUM_TEXTURES; i++) {
@@ -287,7 +298,7 @@ export class Renderer {
   // Whether a frame depends on the ones before: the shaders' do, or there's a Canvas2D layer, which
   // draws each step in turn.
   get hasState(): boolean {
-    return this.shaderState || this.hasLayer;
+    return this.shaderState || this.probeBuffers.length > 0 || this.hasLayer;
   }
 
   private blankCanvasTexture(): WebGLTexture {
@@ -326,12 +337,12 @@ export class Renderer {
     bitmap.close();
   }
 
-  // Some drivers offer the extensions but still can't draw into a half-float texture.
-  private canRenderHalfFloats(): boolean {
+  // Some drivers offer the extensions but still can't draw into a float texture.
+  private canRender(format: number, type: number): boolean {
     const gl = this.gl;
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, 1, 1, 0, gl.RGBA, gl.HALF_FLOAT, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, format, 1, 1, 0, gl.RGBA, type, null);
     const framebuffer = gl.createFramebuffer();
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
@@ -411,6 +422,7 @@ export class Renderer {
     this.sources = {code, buffers, shared};
     this.imageUsed = buffersUsed(userCode(code, shared), buffers.map(b => userCode(b, shared)));
     this.used = this.imageUsed;
+    this.probeBuffers = [];
     this.shaderState = this.used.length > 0 || uses(userCode(code, shared), /\biPrevFrame\b/);
     this.clearTargets();
     this.useProbe(null);
@@ -433,43 +445,58 @@ export class Renderer {
       return plan;
     }
     const {code, buffers, shared} = this.sources;
-    // Shared code shows in the image if it calls the function, or else the first buffer that does.
-    const calls = new RegExp("\\b" + plan.functionName + "\\s*\\(");
+    // Shared code shows in the image if it reaches the function, or else the first buffer that does.
+    const calls = new RegExp(`\\b(?:${sharedCallers(shared, plan.functionName).join("|")})\\s*\\(`);
     const caller = buffers.findIndex(b => uses(b, calls));
     const shader = request.tab !== "shared" ? request.tab : uses(code, calls) || caller < 0 ? "image" : caller;
     const own = shader === "image" ? code : buffers[shader] ?? "";
-    let firstLog = "";
-    const attempt = (site: number, type: ProbeType | null) => {
+    let reason = "";
+    const attempt = (site: Site, type: ProbeType | null) => {
       const variant = withProbe(request.code, site, plan.expression, type);
       const [c, s] = request.tab === "shared" ? [own, variant] : [variant, shared];
       const result = this.link(probeFragmentSource(c, buffers.length, s));
-      firstLog ||= result.log;
-      return result.program ? {program: result.program, code: userCode(c, s)} : null;
-    };
-    for (const site of plan.sites) {
-      // The guess usually builds first time. If not, check the expression builds here at all.
-      let type = plan.types[0]!;
-      let built = attempt(site, type);
-      if (!built) {
-        const any = attempt(site, null);
-        if (!any) {
-          continue;
-        }
-        this.deleteProgram(any.program);
-        for (const t of plan.types.slice(1)) {
-          built = attempt(site, t);
-          if (built) {
-            type = t;
-            break;
-          }
-        }
+      if (type === null) {
+        reason ||= /ERROR:\s*\d+:\d+:\s*(.*)/.exec(result.log)?.[1]?.trim() ?? "";
       }
-      if (built) {
-        this.useProbe({program: built.program, shader, type, code: built.code});
-        return {ok: true, expression: plan.expression, type, shader, from: plan.from, to: plan.to};
+      return {built: result.program ? {program: result.program, code: userCode(c, s)} : null, log: result.log};
+    };
+    // At site `index`, the type that builds: `first`, the one the compiler names, or else each in turn.
+    const buildAt = (index: number, first: ProbeType) => {
+      const site = plan.sites[index]!;
+      const guessed = attempt(site, first);
+      if (guessed.built) return {...guessed.built, type: first};
+      const named = typeFromError(guessed.log);
+      if (named && named !== first) {
+        const again = attempt(site, named).built;
+        if (again) return {...again, type: named};
+      }
+      const any = attempt(site, null).built;
+      if (!any) return null;
+      this.deleteProgram(any.program);
+      for (const type of plan.types) {
+        const built = type !== first && type !== named ? attempt(site, type).built : null;
+        if (built) return {...built, type};
+      }
+      return null;
+    };
+    const key = [request.tab, plan.functionName, plan.expression, plan.sites.length].join("\n");
+    const cached = this.probeCache?.key === key ? this.probeCache : null;
+    const order = plan.sites.map((_, i) => i);
+    if (cached) {
+      order.splice(cached.site, 1);
+      order.unshift(cached.site);
+    }
+    for (const index of order) {
+      const found = buildAt(index, index === cached?.site ? cached.type : plan.types[0]!);
+      if (found) {
+        this.probeCache = {key, site: index, type: found.type};
+        this.useProbe({program: found.program, shader, type: found.type, code: found.code});
+        return {
+          ok: true, expression: plan.expression, type: found.type, shader, from: plan.from, to: plan.to,
+          unmarked: this.probeFormat === "byte" && probeComponents(found.type) === 4,
+        };
       }
     }
-    const reason = /ERROR:\s*\d+:\d+:\s*(.*)/.exec(firstLog)?.[1]?.trim();
     return {ok: false, message: "This selection doesn't work as a value here" + (reason ? `: ${reason}` : ".")};
   }
 
@@ -478,17 +505,31 @@ export class Renderer {
       this.deleteProgram(this.probe.program);
     }
     this.probe = probe;
-    // A probed buffer draws each frame, with the buffers it reads, even if the image doesn't read it.
-    const {code, buffers, shared} = this.sources;
-    const extra = probe ? buffersUsed((probe.shader === "image" ? "" : `iBuffer${probe.shader} `) + probe.code,
+    // A probed buffer draws each frame, with the buffers it reads, even if the image doesn't read them.
+    const {buffers, shared} = this.sources;
+    const needs = probe ? buffersUsed((probe.shader === "image" ? "" : `iBuffer${probe.shader} `) + probe.code,
       buffers.map(b => userCode(b, shared))) : [];
-    this.used = [...new Set([...this.imageUsed, ...extra])].sort((a, b) => a - b);
-    for (const i of this.used) {
-      if (!this.bufferTargets.has(i)) {
+    const extra = needs.filter(i => !this.imageUsed.includes(i));
+    if (extra.join() !== this.probeBuffers.join()) {
+      // Those buffers start from frame 0, with the image, as they would in a build.
+      for (const i of [...this.probeBuffers, ...extra]) {
+        this.bufferTargets.get(i)?.forEach(t => this.deleteTarget(t));
+        this.bufferTargets.delete(i);
+      }
+      for (const i of extra) {
         this.bufferTargets.set(i, [this.target(true), this.target(true)]);
       }
+      this.probeRestart ||= extra.length > 0;
+      this.probeBuffers = extra;
     }
-    this.shaderState = this.used.length > 0 || uses(userCode(code, shared), /\biPrevFrame\b/);
+    this.used = [...this.imageUsed, ...extra].sort((a, b) => a - b);
+  }
+
+  // Whether the probe has buffers to start from frame 0, so the steps should start again. Asking clears it.
+  takeProbeRestart(): boolean {
+    const restart = this.probeRestart;
+    this.probeRestart = false;
+    return restart;
   }
 
   // Draws the probe again from the last frame's state, without moving on a step.
@@ -541,16 +582,20 @@ export class Renderer {
     let value: number[] | null | undefined;
     if (this.probe && this.probeTarget) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.probeTarget.framebuffer);
+      const count = probeComponents(this.probe.type);
       let raw: number[];
+      let unreached: boolean;
       if (this.probeFormat === "byte") {
         gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, bytes);
         raw = Array.from(bytes, b => b / 255);
+        unreached = count < 4 && bytes[3] === 0;
       } else {
         const floats = new Float32Array(4);
         gl.readPixels(x, y, 1, 1, gl.RGBA, gl.FLOAT, floats);
         raw = Array.from(floats);
+        unreached = raw.every(v => v === UNREACHED);
       }
-      value = raw.every(v => v === UNREACHED) ? null : raw.slice(0, probeComponents(this.probe.type));
+      value = unreached ? null : raw.slice(0, count);
     }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     return {color, ...(value === undefined ? {} : {value})};
@@ -601,15 +646,16 @@ export class Renderer {
 
   // Starts again from a blank previous frame and blank buffers (after a new shader or size, or a rewind).
   clearTargets() {
-    const gl = this.gl;
     for (const pair of [this.targets, ...this.bufferTargets.values()]) {
-      for (const t of pair ?? []) {
-        gl.deleteFramebuffer(t.framebuffer);
-        gl.deleteTexture(t.texture);
-      }
+      pair?.forEach(t => this.deleteTarget(t));
     }
     this.targets = [this.target(false), this.target(false)];
     this.bufferTargets = new Map(this.used.map(i => [i, [this.target(true), this.target(true)]]));
+  }
+
+  private deleteTarget(target: Target) {
+    this.gl.deleteFramebuffer(target.framebuffer);
+    this.gl.deleteTexture(target.texture);
   }
 
   private target(isBuffer: boolean, format?: "float"): Target {
@@ -793,6 +839,7 @@ export class Renderer {
       gl.uniform1i(this.uniform(program, "iTexture"), PREV_FRAME_UNIT);
       gl.uniform1i(this.uniform(program, "iCount"), probeComponents(this.probe.type));
       gl.uniform1i(this.uniform(program, "iSigned"), Number(this.probeSigned));
+      gl.uniform1i(this.uniform(program, "iBytes"), Number(this.probeFormat === "byte"));
       gl.viewport(0, 0, this.width, this.height);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       return;
@@ -818,7 +865,7 @@ export class Renderer {
   // Shows the Canvas2D layer's newest frame without moving on a step. Shaders that read iCanvas2D draw
   // again with it, unless that would step their own state.
   refresh() {
-    if (this.lastInputs && !this.shaderState) {
+    if (this.lastInputs && !this.shaderState && this.probeBuffers.length === 0) {
       this.render(this.lastInputs);
     } else {
       this.present();

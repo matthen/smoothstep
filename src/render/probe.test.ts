@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { analyse } from '../editor/glslDefinitions';
-import { guessType, planProbe, probeComponents, withProbe, type ProbeType } from './probe';
+import { guessType, planProbe, sharedCallers, typeFromError, withProbe, type ProbeType } from './probe';
 
 const CODE = `float circle(vec2 p, float r) {
   return length(p) - r;
@@ -67,11 +67,58 @@ describe("planProbe", () => {
     expect(callLine(before!)).toBe("smoothstepShow((d < 0.1)); if (d < 0.1) col.r = 1.0;");
   });
 
-  it("never puts the call between else and its if", () => {
+  it("never puts the call between else and its if, but in braces around the if", () => {
     const code = "void f() {\n  if (a) { x = 1; } else if (b > 2.) { x = 2; }\n}\n";
-    const result = sites("b > 2.", code);
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatch(/\{ smoothstepShow\(\(b > 2\.\)\); +x = 2; \}/);
+    const [before, inside] = sites("b > 2.", code);
+    expect(callLine(before!)).toMatch(/else +\{ +smoothstepShow\(\(b > 2\.\)\); +if \(b > 2\.\) \{ x = 2; \} +\}$/);
+    expect(inside).toMatch(/\{ smoothstepShow\(\(b > 2\.\)\); +x = 2; \}/);
+  });
+
+  // The call goes before the statement unless the selection is what the statement sets.
+  it.each([
+    ["p = abs(p) - 0.5;", "abs(p)"],
+    ["d += d * 2.;", "d * 2."],
+    ["uv = uv * 2. - 1.;", "uv * 2. - 1."],
+    ["float e = abs(d) * 2.;", "abs(d)"],
+  ])("shows part of %s before it, with the values it reads", (statement, text) => {
+    const code = `void f(vec2 p, float d, vec2 uv) {\n  ${statement}\n}\n`;
+    expect(callLine(sites(text, code)[0]!)).toBe(`smoothstepShow((${text})); ${statement}`);
+  });
+
+  it.each([
+    ["float e = d * 2.;", "e"],
+    ["float e = d * 2.;", "d * 2."],
+    ["float a = 1., e = d * 2.;", "e"],
+    ["d += 1.;", "d"],
+    ["uv.x = 2.;", "uv.x"],
+  ])("shows what %s sets, %s, after it", (statement, text) => {
+    const code = `void f(float d, vec2 uv) {\n  ${statement}\n}\n`;
+    const from = code.indexOf(statement) + statement.indexOf(text);
+    const result = planProbe(code, from, from + text.length);
+    if (!result.ok) throw new Error(result.message);
+    const [first] = result.sites;
+    expect(first!.at).toBe(code.indexOf(statement) + statement.length);
+  });
+
+  it("puts the call in braces with the body of an if, so it runs only when the body does", () => {
+    const [after, before] = sites("col.r");
+    expect(callLine(after!)).toMatch(/^if \(d < 0\.1\) +\{ +col\.r = 1\.0; smoothstepShow\(\(col\.r\)\); +\}$/);
+    expect(callLine(before!)).toMatch(/^if \(d < 0\.1\) +\{ +smoothstepShow\(\(col\.r\)\); col\.r = 1\.0; +\}$/);
+    expect(callLine(sites("1.0")[0]!)).toMatch(/^if \(d < 0\.1\) +\{ +smoothstepShow\(\(1\.0\)\); col\.r/);
+  });
+
+  it("keeps an if's else after the braces it adds to its body", () => {
+    const code = "void f(float a) {\n  float x;\n  if (a > 0.) x = a * 2.; else x = a * 3.;\n}\n";
+    const [inIf] = sites("a * 2.", code);
+    expect(callLine(inIf!)).toMatch(/^if \(a > 0\.\) +\{ +smoothstepShow\(\(a \* 2\.\)\); x = a \* 2\.; +\} +else x = a \* 3\.;$/);
+    const [inElse] = sites("a * 3.", code);
+    expect(callLine(inElse!)).toMatch(/^if \(a > 0\.\) x = a \* 2\.; else +\{ +smoothstepShow\(\(a \* 3\.\)\); x = a \* 3\.; +\}$/);
+  });
+
+  it("puts the call in braces with the body of a for loop", () => {
+    const code = "void f() {\n  float s = 0.;\n  for (int i = 0; i < 3; i++) s += float(i);\n}\n";
+    expect(callLine(sites("float(i)", code)[0]!))
+      .toMatch(/^for \(int i = 0; i < 3; i\+\+\) +\{ +smoothstepShow\(\(float\(i\)\)\); s \+= float\(i\); +\}$/);
   });
 
   it("widens a selection to whole names, and trims spaces", () => {
@@ -110,9 +157,36 @@ describe("planProbe", () => {
 });
 
 describe("withProbe", () => {
-  it("only builds for the given type, as GLSL doesn't convert between types", () => {
-    expect(withProbe("void f() { g(); }", 10, "d", "vec3"))
-      .toBe("void f() { { vec3 smoothstepValue = (d); smoothstepShow(smoothstepValue); }  g(); }");
+  it("keeps the code's lines, so errors in the rest still point at the right line", () => {
+    const code = "void f(float a) {\n  float x;\n  if (a > 0.) x = a;\n  g(x);\n}\n";
+    const result = planProbe(code, code.indexOf("x = a") + 4, code.indexOf("x = a") + 5);
+    if (!result.ok) throw new Error(result.message);
+    for (const site of result.sites) {
+      const lines = withProbe(code, site, result.expression, "float").split("\n");
+      expect(lines).toHaveLength(code.split("\n").length);
+      expect(lines[3]).toBe("  g(x);");
+    }
+  });
+});
+
+describe("typeFromError", () => {
+  it.each<[string, ProbeType | null]>([
+    ["ERROR: 0:4: '=' : cannot convert from 'const 3-component vector of float' to 'highp float'", "vec3"],
+    ["ERROR: 0:4: '=' : cannot convert from 'highp 2-component vector of int' to 'highp float'", "ivec2"],
+    ["ERROR: 0:4: '=' : cannot convert from 'const bool' to 'highp float'", "bool"],
+    ["ERROR: 0:4: '=' : cannot convert from 'const 3-component vector of uint' to 'highp float'", null],
+    ["ERROR: 0:4: 'z' : undeclared identifier", null],
+  ])("reads the expression's type from %s", (log, type) => {
+    expect(typeFromError(log)).toBe(type);
+  });
+});
+
+describe("sharedCallers", () => {
+  it("follows calls between helpers, but not to ones that don't reach the function", () => {
+    const shared = "float a(float x) { return x; }\nfloat b(float x) { return a(x) * 2.; }\n" +
+      "float c(float x) { return b(x) + 1.; }\nfloat other(float x) { return x; }\n";
+    expect(sharedCallers(shared, "a").sort()).toEqual(["a", "b", "c"]);
+    expect(sharedCallers(shared, "c")).toEqual(["c"]);
   });
 });
 
@@ -147,12 +221,5 @@ describe("guessType", () => {
     const result = plan("uv", CODE, 1);
     expect(result.ok && result.types[0]).toBe("vec2");
     expect(result.ok && new Set(result.types).size).toBe(10);
-  });
-});
-
-describe("probeComponents", () => {
-  it("counts a value's numbers", () => {
-    expect([probeComponents("float"), probeComponents("ivec2"), probeComponents("vec3"), probeComponents("bool")])
-      .toEqual([1, 2, 3, 1]);
   });
 });

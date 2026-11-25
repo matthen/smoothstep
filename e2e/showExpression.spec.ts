@@ -184,3 +184,92 @@ test.describe("on a touch screen", () => {
     expect(errors).toEqual([]);
   });
 });
+
+test("an if's body without braces shows only where it runs, striped elsewhere", async ({page, context}) => {
+  const errors = await offline(context);
+  await start(page, `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 uv = fragCoord / iResolution.xy;
+  float d = 0.0;
+  if (uv.x > 0.75) d = uv.x;
+  fragColor = vec4(1.0, 0.0, 0.0, 1.0) + 0.0 * d;
+}`);
+  await word(page, "d", 1).dblclick();
+  await page.keyboard.press("Alt+Enter");
+  await expect(probeBar(page)).toContainText("float");
+  // The middle of the canvas, where uv.x is 0.5, is striped.
+  await expectCenter(page, [55, 56, 72], {tolerance: 20});
+  const canvas = page.locator("#canvas");
+  const readout = page.getByRole("status", {name: "Pixel values"});
+  await canvas.hover();
+  await expect(readout).toContainText("doesn't run at this pixel");
+  const box = (await canvas.boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.9, box.y + box.height / 2);
+  await expect(readout).toContainText(/d = 0\.(89|90)\d/, PIXEL_WAIT);
+  expect(errors).toEqual([]);
+});
+
+test("an expression whose type is guessed wrong still shows, as the type it has", async ({page, context}) => {
+  const errors = await offline(context);
+  await start(page, `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  fragColor = vec4(1.0, 0.0, 0.0, 1.0) + 0.0 * vec4(textureSize(iTexture0, 0), 0, 0);
+}`);
+  // An empty texture slot is 1 pixel, so the ivec2 is (1, 1): yellow.
+  await word(page, "textureSize").click({position: {x: 1, y: 6}});
+  for (let i = 0; i < "textureSize(iTexture0, 0)".length; i++) {
+    await page.keyboard.press("Shift+ArrowRight");
+  }
+  await page.keyboard.press("Alt+Enter");
+  await expect(probeBar(page)).toContainText("ivec2");
+  await expectCenter(page, [255, 255, 0]);
+  expect(errors).toEqual([]);
+});
+
+test("an expression in a shared helper shows in the buffer that reaches it through another helper", async ({page, context}) => {
+  const errors = await offline(context);
+  await start(page);
+  await addTab(page, "Add a buffer");
+  await setCode(page, `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  fragColor = vec4(level(0.5));
+}`);
+  await addTab(page, "Add shared GLSL code");
+  await setCode(page, `float halve(float x) {
+  float scaled = x * 0.5;
+  return scaled;
+}
+float level(float x) {
+  return halve(x);
+}`);
+  await page.keyboard.press("Shift+Enter");
+  await expectCenter(page, RED);
+  await word(page, "scaled").dblclick();
+  await page.keyboard.press("Alt+Enter");
+  await expect(probeBar(page)).toContainText("in iBuffer0.glsl");
+  await expectCenter(page, [64, 64, 64], {tolerance: 20});
+  expect(errors).toEqual([]);
+});
+
+test("a shown expression keeps showing through a build, with the new code's value", async ({page, context}) => {
+  const errors = await offline(context);
+  await start(page);
+  await word(page, "d").dblclick();
+  await page.keyboard.press("Alt+Enter");
+  await expectCenter(page, [128, 128, 128]);
+  await word(page, "0.5").dblclick();
+  await page.keyboard.type("0.25");
+  await page.keyboard.press("Shift+Enter");
+  await expect(probeBar(page)).toContainText("float");
+  await expectCenter(page, [64, 64, 64], {tolerance: 20});
+  expect(errors).toEqual([]);
+});
+
+test("showing an expression in code that doesn't build says why", async ({page, context}) => {
+  const errors = await offline(context);
+  await start(page);
+  await setCode(page, CODE.replace("float d = 0.5;", "float d = 0.5"));
+  await word(page, "tint").dblclick();
+  await page.keyboard.press("Alt+Enter");
+  await expect(page.getByText("The code needs to build first. Fix its errors, then try again.")).toBeVisible();
+  await expect(probeBar(page)).toHaveCount(0);
+  await expectCenter(page, RED);
+  expect(errors).toEqual([]);
+});

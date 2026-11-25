@@ -33,12 +33,19 @@ export type ProbePlan = {
   from: number;
   to: number;
   expression: string;
-  // Where the call can go, best first: after the expression's statement, or before it.
-  sites: number[];
+  // Where the call can go, best first: before or after the expression's statement.
+  sites: Site[];
   // The function it's in, and the types to try, most likely first.
   functionName: string;
   types: ProbeType[];
 } | {ok: false; message: string};
+
+// Where to insert the call, and where to put braces around a statement that has none, so the call
+// runs only when it does.
+export interface Site {
+  at: number;
+  braces?: [number, number];
+}
 
 const STATEMENT_KEYWORDS = new Set(
   "if else for while do return break continue discard switch case default struct const uniform in out inout precision".split(" "));
@@ -132,8 +139,8 @@ function enclosingBody({tokens}: Analysis, index: number): Body | null {
   return null;
 }
 
-// Offsets to insert the call at, best first.
-function insertionSites({tokens}: Analysis, first: number, last: number, body: Body): number[] {
+// Places to insert the call, best first.
+function insertionSites({tokens}: Analysis, first: number, last: number, body: Body): Site[] {
   // The outermost bracket around the selection, if it's in one: a for loop's brackets hold `;`s too.
   let outer = -1;
   let depth = 0;
@@ -147,44 +154,117 @@ function insertionSites({tokens}: Analysis, first: number, last: number, body: B
     }
   }
   const header = outer >= 0 ? tokens[outer - 1]?.text : undefined;
+  const inHeader = header === "if" || header === "while" || header === "for" || header === "switch";
   // A statement's first token: the one after the last `;` or brace outside brackets before `index`.
-  const statementStart = (index: number) => {
-    let d = 0;
-    for (let i = index - 1; i > body.open; i--) {
-      const text = tokens[i]!.text;
-      if (CLOSE.has(text)) d++;
-      else if (OPEN[text]) d--;
-      else if (d <= 0 && (text === ";" || text === "{" || text === "}")) return i + 1;
-    }
-    return body.open + 1;
-  };
-  if (header === "if" || header === "while" || header === "for" || header === "switch") {
-    const startIndex = statementStart(outer - 1);
-    const close = matching(tokens, outer);
-    const bodyStart = tokens[close + 1]?.text === "{" ? [tokens[close + 1]!.to] : [];
-    // Nothing can go between `else` and its `if`.
-    const before = tokens[startIndex]!.text === "else" ? [] : [tokens[startIndex]!.from];
-    // A for loop's variable is only known inside it.
-    return header === "for" ? [...bodyStart, ...before] : [...before, ...bodyStart];
-  }
-  const startIndex = statementStart(outer >= 0 ? outer : first);
-  const start = tokens[startIndex]!.from;
-  // The statement's end: the next `;` outside brackets.
-  let end = -1;
-  let jumps = false;
-  for (let i = startIndex, d = 0; i < body.close; i++) {
+  let start = body.open + 1;
+  for (let i = (inHeader ? outer - 1 : outer >= 0 ? outer : first) - 1, d = 0; i > body.open; i--) {
     const text = tokens[i]!.text;
-    if (JUMPS.has(text)) jumps = true;
-    if (OPEN[text]) d++;
-    else if (CLOSE.has(text)) d--;
-    else if (d === 0 && text === ";" && i > last) {
-      end = i;
-      break;
-    } else if (d === 0 && (text === "{" || text === "}") && i > last) {
+    if (CLOSE.has(text)) d++;
+    else if (OPEN[text]) d--;
+    else if (d <= 0 && (text === ";" || text === "{" || text === "}")) {
+      start = i + 1;
       break;
     }
   }
-  return end < 0 || jumps ? [start] : [tokens[end]!.to, start];
+  // Into the bodies of `if`s, `else`s and loops without braces, which get braces so the call runs only with them.
+  let braced = false;
+  for (;;) {
+    const text = tokens[start]!.text;
+    if (text === "else") {
+      start++;
+    } else if (CONTROL.has(text) && tokens[start + 1]?.text === "(" && matching(tokens, start + 1) < first) {
+      start = matching(tokens, start + 1) + 1;
+    } else {
+      break;
+    }
+    braced = true;
+  }
+  const end = statementEnd(tokens, start, body.close);
+  const braces: [number, number] | undefined = braced ? [tokens[start]!.from, tokens[end]!.to] : undefined;
+  const before = {at: tokens[start]!.from, braces};
+  if (inHeader) {
+    const close = matching(tokens, outer);
+    const bodyStart = tokens[close + 1]?.text === "{" ? [{at: tokens[close + 1]!.to}] : [];
+    // A for loop's variable is only known inside it.
+    return header === "for" ? [...bodyStart, before] : [before, ...bodyStart];
+  }
+  if (tokens[end]!.text !== ";" || tokens.slice(start, end).some(t => JUMPS.has(t.text))) {
+    return [before];
+  }
+  const after = {at: tokens[end]!.to, braces};
+  // Before the statement, the expression reads what the statement reads. After it is only for a
+  // variable it declares or assigns, or a declaration's whole initialiser.
+  const parts = statementParts(tokens, start, end);
+  if (parts.targets.some(([a, b]) => a === first && b === last) || parts.values.some(([a, b]) => a === first && b === last)) {
+    return [after, before];
+  }
+  return parts.declaration ? [before, after] : [before];
+}
+
+const CONTROL = new Set(["if", "for", "while"]);
+
+// The index of the last token of the statement starting at `start`, which for an `if` includes its `else`.
+function statementEnd(tokens: Analysis["tokens"], start: number, limit: number): number {
+  const text = tokens[start]?.text;
+  if (start >= limit) return limit - 1;
+  if (text === "{") {
+    for (let i = start, d = 0; i < limit; i++) {
+      if (tokens[i]!.text === "{") d++;
+      else if (tokens[i]!.text === "}" && --d === 0) return i;
+    }
+    return limit - 1;
+  }
+  if (CONTROL.has(text!) && tokens[start + 1]?.text === "(") {
+    const end = statementEnd(tokens, matching(tokens, start + 1) + 1, limit);
+    return text === "if" && tokens[end + 1]?.text === "else" ? statementEnd(tokens, end + 2, limit) : end;
+  }
+  for (let i = start, d = 0; i < limit; i++) {
+    const t = tokens[i]!.text;
+    if (OPEN[t]) d++;
+    else if (CLOSE.has(t)) d--;
+    else if (d === 0 && (t === ";" || t === "{" || t === "}")) return t === ";" ? i : i - 1;
+  }
+  return limit - 1;
+}
+
+// Token ranges in a simple statement: the names it declares or the variable it assigns, and the
+// declarations' initialisers.
+function statementParts(tokens: Analysis["tokens"], start: number, end: number) {
+  const targets: [number, number][] = [];
+  const values: [number, number][] = [];
+  let i = start;
+  while (tokens[i]?.type === "keyword" && /^(?:const|highp|mediump|lowp)$/.test(tokens[i]!.text)) i++;
+  const declaration = tokens[i]?.type === "typeName" && tokens[i + 1]?.text !== "(" && tokens[i + 1]?.text !== ".";
+  if (declaration) {
+    // Each declarator: a name, maybe an array size, then maybe `=` and its initialiser.
+    let j = i + 1;
+    while (j < end) {
+      if (tokens[j]!.text === "[") j = matching(tokens, j) + 1;
+      targets.push([j, j]);
+      let k = j + 1;
+      if (tokens[k]?.text === "[") k = matching(tokens, k) + 1;
+      let next = k;
+      for (let d = 0; next < end; next++) {
+        const t = tokens[next]!.text;
+        if (OPEN[t]) d++;
+        else if (CLOSE.has(t)) d--;
+        else if (d === 0 && t === ",") break;
+      }
+      if (tokens[k]?.text === "=" && k + 1 < next) values.push([k + 1, next - 1]);
+      j = next + 1;
+    }
+  } else {
+    for (let j = start, d = 0; j < end; j++) {
+      const t = tokens[j]!;
+      if (OPEN[t.text]) d++;
+      else if (CLOSE.has(t.text)) d--;
+      else if (d === 0 && /^(?:[-+*/%&|^]|<<|>>)?=$/.test(t.text)) {
+        if (j > start) targets.push([start, j - 1]);
+        break;
+      }
+    }
+  }
+  return {declaration, targets, values};
 }
 
 function matching(tokens: Analysis["tokens"], open: number): number {
@@ -196,17 +276,75 @@ function matching(tokens: Analysis["tokens"], open: number): number {
   return tokens.length - 1;
 }
 
-// The code with the call to show `expression` inserted at `site`. With a type, it only builds if the
-// expression has that type.
-export function withProbe(code: string, site: number, expression: string, type: ProbeType | null): string {
-  const call = type === null ? ` smoothstepShow((${expression}));` :
-    ` { ${type} smoothstepValue = (${expression}); smoothstepShow(smoothstepValue); }`;
-  return code.slice(0, site) + call + " " + code.slice(site);
+// The code with the call to show `expression` inserted at `site`, on the same line. With a type, it
+// only builds if the expression has that type.
+export function withProbe(code: string, site: Site, expression: string, type: ProbeType | null): string {
+  const call = type === null ? ` smoothstepShow((${expression})); ` :
+    ` { ${type} smoothstepValue = (${expression}); smoothstepShow(smoothstepValue); } `;
+  const inserts: [number, string][] = site.braces ?
+    [[site.braces[0], " { "], [site.at, call], [site.braces[1], " } "]] : [[site.at, call]];
+  let out = "";
+  let pos = 0;
+  for (const [at, text] of inserts) {
+    out += code.slice(pos, at) + text;
+    pos = at;
+  }
+  return out + code.slice(pos);
 }
 
-// All the types, `guess` first.
+// The guess first, then the likely types before the rare ones.
+const TYPE_ORDER: ProbeType[] = ["float", "vec2", "vec3", "vec4", "int", "bool", "ivec2", "ivec3", "ivec4", "uint"];
 function orderTypes(guess: ProbeType | null): ProbeType[] {
-  return guess ? [guess, ...PROBE_TYPES.filter(t => t !== guess)] : [...PROBE_TYPES];
+  return guess ? [guess, ...TYPE_ORDER.filter(t => t !== guess)] : [...TYPE_ORDER];
+}
+
+// `name`, and the functions in `code` that call it, directly or through each other.
+export function sharedCallers(code: string, name: string): string[] {
+  const {tokens} = analyse(code);
+  // Each function's name, and the names it calls.
+  const calls = new Map<string, Set<string>>();
+  for (let i = 0, depth = 0, current: Set<string> | null = null; i < tokens.length; i++) {
+    const text = tokens[i]!.text;
+    if (text === "{" && depth++ === 0 && tokens[i - 1]?.text === ")") {
+      current = new Set();
+      calls.set(tokens[closingBackwards(tokens, i - 1) - 1]?.text ?? "", current);
+    } else if (text === "}" && --depth === 0) {
+      current = null;
+    } else if (current && tokens[i + 1]?.text === "(") {
+      current.add(text);
+    }
+  }
+  const found = new Set([name]);
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const [caller, callees] of calls) {
+      if (!found.has(caller) && [...callees].some(c => found.has(c))) {
+        found.add(caller);
+        grew = true;
+      }
+    }
+  }
+  return [...found];
+}
+
+// The index of the `(` that the `)` at `close` closes.
+function closingBackwards(tokens: Analysis["tokens"], close: number): number {
+  for (let i = close, depth = 0; i >= 0; i--) {
+    if (tokens[i]!.text === ")") depth++;
+    else if (tokens[i]!.text === "(" && --depth === 0) return i;
+  }
+  return 0;
+}
+
+// The expression's type, from a compiler's complaint that it can't be converted to the type tried.
+export function typeFromError(log: string): ProbeType | null {
+  const match = /cannot convert from '(?:const )?(?:(?:high|medium|low)p )?(?:(\d)-component vector of )?(float|int|uint|bool)'/
+    .exec(log);
+  if (!match) return null;
+  const [, size, base] = match;
+  if (!size) return base as ProbeType;
+  const prefix = base === "float" ? "" : base === "int" ? "i" : null;
+  return prefix === null ? null : `${prefix}vec${size}` as ProbeType;
 }
 
 const INPUT_TYPES: Record<string, ProbeType> = {

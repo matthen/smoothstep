@@ -39,6 +39,10 @@ export function CanvasTools({style, inspect, onInspectChange, probe, signed, onS
           <TbEye aria-hidden className="probeIcon" />
           <span className="probeExpression"><GlslCode>{probe.expression}</GlslCode></span>
           <span className="probeType">{probe.type}{where ? " " + where : ""}</span>
+          {probe.unmarked &&
+            <Tooltip label="This device stores values as bytes, so pixels where the line doesn't run can't be striped.">
+              <span className="probeType">skipped pixels not marked</span>
+            </Tooltip>}
           <Tooltip label="The range of values shown from black to full colour. Others clip.">
             <SegmentedControl
               size="xs" value={signed ? "signed" : "unit"} onChange={value => onSignedChange(value === "signed")}

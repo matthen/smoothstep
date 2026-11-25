@@ -66,6 +66,9 @@ import { usePhone, useTouch } from './usePhone';
 const STORAGE_BLOCKED = "This browser isn't letting smoothstep.io store data, so animations can't be saved here. " +
   "Private browsing can cause this.";
 
+// How long after a picker's last change the canvas shows the expression again.
+const PROBE_HOLD_MS = 250;
+
 function windowTitle(title: string) {
   document.title = title === DEFAULT_TITLE ? "smoothstep.io" : title + " - smoothstep.io";
 }
@@ -114,6 +117,9 @@ export default function App() {
   const [builtExtras, setBuiltExtras] = useState<ShaderExtras>(() => shaderExtras(doc));
   // An expression the canvas shows in place of the image, and whether pointing at it shows values.
   const [probe, setProbe] = useState<ProbeRequest | null>(null);
+  const [probeHeld, setProbeHeld] = useState(false);
+  const probeHoldTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(probeHoldTimer.current), []);
   const [inspect, setInspect] = useState(false);
   const [buildId, setBuildId] = useState(0);
   const [lineErrors, setLineErrors] = useState<LineError[]>([]);
@@ -661,7 +667,15 @@ export default function App() {
     if (isHelperChange && allBuilt) {
       setBuiltCode(withCode(doc).code);
       setBuiltExtras(shaderExtras(withCode(doc)));
-      setProbe(probeAgain);
+      if (probe) {
+        // The canvas shows the image while a picker drags, as building the expression each time would slow it.
+        setProbeHeld(true);
+        window.clearTimeout(probeHoldTimer.current);
+        probeHoldTimer.current = window.setTimeout(() => {
+          setProbeHeld(false);
+          setProbe(probeAgain);
+        }, PROBE_HOLD_MS);
+      }
     }
   };
 
@@ -1284,7 +1298,7 @@ export default function App() {
             aspectRatio={doc.aspectRatio}
             onBuilt={onBuilt}
             onRestart={restartFrames} onLayout={setLayout}
-            probe={probe} onProbe={onProbe} onProbeOff={() => setProbe(null)}
+            probe={probeHeld ? null : probe} onProbe={onProbe} onProbeOff={() => setProbe(null)}
             inspect={inspect} onInspectChange={setInspect}
           />
           <PlayerControls

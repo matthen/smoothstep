@@ -60,7 +60,7 @@ interface CanvasProps {
   onInspectChange(on: boolean): void;
 }
 
-// How often the inspector reads its pixel again while the animation plays.
+// How often, at most, the inspector reads its pixel again while the animation plays.
 const READ_INTERVAL_MS = 100;
 
 const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref) {
@@ -100,9 +100,12 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
   // The inspector's point, in CSS pixels from the canvas's top left, and what it read there.
   const [point, setPoint] = useState<{x: number; y: number; touch: boolean} | null>(null);
   const [reading, setReading] = useState<PixelReading | null>(null);
+  // A mouse reads values while an expression shows; a finger only with the inspector on, as it otherwise scrolls.
   const inspecting = props.inspect || probe !== null;
   const sizeRef = useLatest({width, height, pixels: [pixelWidth, pixelHeight] as [number, number]});
   const pointRef = useLatest(point);
+  // Set when the canvas has drawn since the point was last read.
+  const needsRead = useRef(false);
   const lastRead = useRef(0);
   const readPoint = useCallback((at = pointRef.current) => {
     const renderer = rendererRef.current;
@@ -111,7 +114,9 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     }
     const {width, height, pixels} = sizeRef.current;
     const [x, y] = pixelAt(at.x, at.y, width, height, pixels);
-    setReading(renderer.readPixel(x, y));
+    const next = renderer.readPixel(x, y);
+    setReading(last => JSON.stringify(last) === JSON.stringify(next) ? last : next);
+    needsRead.current = false;
     lastRead.current = performance.now();
   }, [pointRef, sizeRef]);
   const movePoint = (event: PointerEvent<HTMLCanvasElement>) => {
@@ -125,10 +130,10 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     readPoint(at);
   };
   useEffect(() => {
-    if (!inspecting) {
-      setPoint(null);
+    if (!inspecting || !props.inspect) {
+      setPoint(p => inspecting && !p?.touch ? p : null);
     }
-  }, [inspecting]);
+  }, [inspecting, props.inspect]);
 
   const steps = useRef(RESTART);
   // The animation's Canvas2D layer, once it has loaded, and the stepping that keeps it with the shaders.
@@ -251,11 +256,17 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     needsRender.current = true;
   }, [props.shaders, props.buildId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // After a build that failed, the last probe stays, with the code that built.
+  // After a build that failed, the probe shown stays, with the code that built.
   const built = useRef(true);
   useEffect(() => {
     const renderer = rendererRef.current;
-    if (!renderer || (props.probe && !built.current)) {
+    if (!renderer) {
+      return;
+    }
+    if (props.probe && !built.current) {
+      if (!probe) {
+        props.onProbe({ok: false, message: "The code needs to build first. Fix its errors, then try again."});
+      }
       return;
     }
     const result = renderer.setProbe(props.probe);
@@ -263,10 +274,12 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     if (result) {
       props.onProbe(result);
     }
-    renderer.redrawProbe();
-    if (pointRef.current) {
-      readPoint();
+    if (renderer.takeProbeRestart()) {
+      restart();
+      needsRender.current = true;
     }
+    renderer.redrawProbe();
+    needsRead.current = true;
   }, [props.probe, props.shaders, props.buildId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -358,10 +371,12 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     const loop = (now: number) => {
       if (!needsRender.current && needsPresent.current) {
         rendererRef.current?.refresh();
+        needsRead.current = true;
       }
       needsPresent.current = false;
       if (needsRender.current) {
         needsRender.current = false;
+        needsRead.current = true;
         renderFrame();
         const rate = frames.current.frame(now);
         if (rate !== null) {
@@ -377,7 +392,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
       } else {
         frames.current.idle();
       }
-      if (pointRef.current && now - lastRead.current > READ_INTERVAL_MS) {
+      if (pointRef.current && needsRead.current && now - lastRead.current > READ_INTERVAL_MS) {
         readPoint();
       }
       id = requestAnimationFrame(loop);
@@ -392,15 +407,17 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
         <>
           <canvas
             ref={canvasRef} id="canvas" data-probe={probe !== null || undefined}
-            style={{width, height, ...(inspecting ? {cursor: "crosshair", touchAction: "none"} : {})}}
+            style={{
+              width, height, ...(inspecting ? {cursor: "crosshair"} : {}), ...(props.inspect ? {touchAction: "none"} : {}),
+            }}
             onPointerDown={event => {
-              if (inspecting && event.pointerType !== "mouse") {
+              if (props.inspect && event.pointerType !== "mouse") {
                 event.currentTarget.setPointerCapture(event.pointerId);
                 movePoint(event);
               }
             }}
             onPointerMove={event => {
-              if (inspecting && (event.pointerType === "mouse" || event.buttons)) {
+              if (event.pointerType === "mouse" ? inspecting : props.inspect && event.buttons) {
                 movePoint(event);
               }
             }}
