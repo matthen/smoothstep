@@ -718,7 +718,7 @@ export default function Timeline(props: TimelineProps) {
               </div>}
           </div>
           <div
-            className={"timeArea" + (canAddRow ? " withAddRow" : "")}
+            className={"timeArea" + (canAddRow ? " withAddRow" : "") + (width <= viewWidth ? " fits" : "")}
             ref={timeAreaRef}
             data-px-per-second={pps}
             style={{width, cursor: resizing ? "ew-resize" : "pointer", backgroundSize: `${ruler.step * pps}px 100%`}}
@@ -729,7 +729,11 @@ export default function Timeline(props: TimelineProps) {
               if (event.pointerType === "touch") {
                 liftTouch(event);
               }
-              cancelCreating();
+              // A scroll between a transition's two taps keeps the start waiting for its end.
+              const current = gestureRef.current;
+              if (!(current.kind === "creating" && current.released)) {
+                cancelCreating();
+              }
             }}
             onPointerLeave={handlePointerLeave}
           >

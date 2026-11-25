@@ -75,20 +75,18 @@ export function extendCreating(gesture: Creating, rows: Rows, x: number): Creati
 // How long a finger stays still on a row before it drags out a transition instead of scrolling.
 export const HOLD_MS = 300;
 
-// Whether a finger is still down where it pressed, so holding it there would start a drag.
+// Whether a finger is still down near where it pressed, so holding it there would start a drag.
 export function canHold(gesture: Gesture): gesture is Creating {
-  return gesture.kind === "creating" && gesture.byTouch && !gesture.released && !gesture.held && !gesture.swiped &&
-    gesture.endDSecs <= gesture.startDSecs + 1;
+  return gesture.kind === "creating" && gesture.byTouch && !gesture.released && !gesture.held && !gesture.swiped;
 }
 
 export function holdCreating(gesture: Gesture): Gesture {
   return canHold(gesture) ? {...gesture, held: true} : gesture;
 }
 
-// A finger's transition that has its start but not yet its end: tapped once, or held without moving.
+// A finger's transition that has its start but not yet its end: tapped once, or held without dragging.
 export function awaitingEnd(gesture: Gesture): boolean {
-  return gesture.kind === "creating" && gesture.byTouch &&
-    (gesture.released || (gesture.held && gesture.endDSecs <= gesture.startDSecs + 1));
+  return gesture.kind === "creating" && gesture.byTouch && (gesture.released || (gesture.held && !gesture.swiped));
 }
 
 // The gesture after the pointer moves to x; the same object if nothing changed.
@@ -126,8 +124,10 @@ export function liftGesture(
     const add = Math.floor(y / ROW_HEIGHT) === gesture.row && fits(rows, span) ? span : null;
     return {gesture: idle, add};
   }
-  // A click or tap without dragging waits for a second one to set the end.
-  if (!gesture.released && gesture.endDSecs <= gesture.startDSecs + 1) {
+  // A click or tap without dragging waits for a second one to set the end. A finger counts as dragging
+  // only once it's moved further than a wobble.
+  const dragged = byTouch ? gesture.swiped : gesture.endDSecs > gesture.startDSecs + 1;
+  if (!gesture.released && !dragged) {
     return {gesture: {...gesture, released: true}, add: null};
   }
   return {gesture: idle, add: fits(rows, gesture) ? gesture : null};

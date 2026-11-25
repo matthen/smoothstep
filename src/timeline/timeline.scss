@@ -379,9 +379,12 @@ div#animationControls {
     background-image: linear-gradient(to right, $grid-line 1px, transparent 1px);
     touch-action: pan-y;
 
-    // Fingers scroll the timeline both ways; transitions are added with two taps instead of a drag.
+    // Fingers scroll the timeline both ways when it's wider than its pane, so a transition is added with
+    // two taps or a held finger. When it fits, a sideways swipe drags one out.
     @media (pointer: coarse) {
-      touch-action: pan-x pan-y;
+      &:not(.fits) {
+        touch-action: pan-x pan-y;
+      }
     }
 
     // Room for the add-a-row button beside it.

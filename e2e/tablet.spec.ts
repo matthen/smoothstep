@@ -71,13 +71,19 @@ test("with the keyboard up, the code or the bottom panel fills the space above i
 test("in browsers that shrink the page for the keyboard, the code keeps its room and its cursor", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./#new");
-  await page.locator(".cm-line").nth(10).click();
+  await page.locator(".cm-line").nth(10).tap();
   await page.setViewportSize({width: 1180, height: VISIBLE_HEIGHT});
   await expect(page.locator(".bottomPanel")).toBeHidden();
   const editor = await box(page, ".editorPane");
   expect(editor.y + editor.height).toBeLessThanOrEqual(VISIBLE_HEIGHT);
   expect(editor.y + editor.height).toBeGreaterThan(VISIBLE_HEIGHT - 20);
-  await expect(page.locator(".cm-cursor-primary")).toBeInViewport();
+  // The cursor is on the tapped line, still in sight.
+  const cursor = page.locator(".cm-cursor-primary");
+  await expect(cursor).toBeInViewport();
+  const line = (await page.locator(".cm-line").nth(10).boundingBox())!;
+  const caret = (await cursor.boundingBox())!;
+  expect(caret.y + caret.height / 2).toBeGreaterThan(line.y);
+  expect(caret.y + caret.height / 2).toBeLessThan(line.y + line.height);
   await page.setViewportSize({width: 1180, height: 820});
   await expect(page.locator(".bottomPanel")).toBeVisible();
   expect(errors).toEqual([]);
@@ -115,6 +121,17 @@ test("a tap shows a transition's open start and asks for its end, and hold and d
   expect(dragged.width).toBeGreaterThan(row.width * 0.15);
   await touch("touchEnd", at(0.8));
   await expect(page.locator(".timeArea .transition")).toHaveCount(2);
+
+  // The timeline fits, so it has nowhere to scroll and a quick sideways swipe draws one as it goes.
+  await page.touchscreen.tap(at(0.9), y);
+  await expect(page.locator(".timeArea .transition.selected")).toHaveCount(0);
+  await touch("touchStart", at(0.42));
+  for (const fraction of [0.45, 0.5, 0.56]) {
+    await touch("touchMove", at(fraction));
+  }
+  await expect(page.locator(".timeArea .transition.hover")).toBeVisible();
+  await touch("touchEnd", at(0.56));
+  await expect(page.locator(".timeArea .transition")).toHaveCount(3);
   expect(errors).toEqual([]);
 });
 

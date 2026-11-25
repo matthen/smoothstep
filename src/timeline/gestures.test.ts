@@ -84,6 +84,18 @@ describe("adding a transition on a touch screen", () => {
     expect(awaitingEnd(lift(held, 10, 0, true).gesture)).toBe(true);
   });
 
+  it("treats a wobble shorter than a swipe as still: a tap waits for its end, and a hold still starts", () => {
+    // Zoomed out, where a wobble crosses several tenths of a second.
+    const wide: Rows = {...rows, pxPerSecond: 60};
+    const start = startCreating(wide, 100, y(0), true)!;
+    const wobbled = moveGesture(start, wide, start.startX + SWIPE_PX - 1) as Creating;
+    expect(wobbled.endDSecs).toBeGreaterThan(start.endDSecs);
+    const tapped = liftGesture(wobbled, wide, wobbled.startX + SWIPE_PX - 1, y(0), true);
+    expect(tapped.add).toBeNull();
+    expect(awaitingEnd(tapped.gesture)).toBe(true);
+    expect(awaitingEnd(holdCreating(wobbled))).toBe(true);
+  });
+
   it("doesn't hold once the finger has swiped", () => {
     const swiped = moveGesture(press(10, 0, true), rows, x(30));
     expect(holdCreating(swiped)).toBe(swiped);

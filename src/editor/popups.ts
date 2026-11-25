@@ -209,7 +209,10 @@ function onClick(view: EditorView, pos: number, touch: boolean, config: ClickCon
   const match = selecting ? null : config.pickerAt(state, line, pos - line.from);
   // A dispatch drops the selection the browser hasn't reported yet, and on a touch screen the tap's
   // cursor comes later, so this puts the cursor where the tap was.
-  const cursor = touch && !selecting ? { selection: { anchor: pos } } : {};
+  // Not over a range the browser has selected, such as a double-tapped word.
+  const dom = document.getSelection();
+  const domRange = dom !== null && !dom.isCollapsed && view.contentDOM.contains(dom.anchorNode);
+  const cursor = touch && !selecting && !domRange ? { selection: { anchor: pos } } : {};
   view.dispatch({ ...cursor, effects: [setIlluminated.of(null), setPopup.of(null)] });
   if (selecting || (wasOpen && match)) return;
   if (match) {
