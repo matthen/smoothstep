@@ -5,10 +5,9 @@ import { Decoration, EditorView, ViewPlugin, showTooltip, type DecorationSet, ty
 import { DOC_SECTIONS, docLinkElement, type DocTarget } from '../lib/docLinks';
 import { eachShaderInput } from '../lib/shaderInputs';
 import glslFunctions from './glslFunctions.json';
-import type { Description } from './glslDefinitions';
 import { USER_NAME_TOKENS } from './glslLanguage';
 import { highlightedCodeElement, type CodeLanguage } from './highlight';
-import { goToDefinitionHint, isDefinitionClick, userDefinitionAt } from './goToDefinition';
+import { goToDefinitionHint, isDefinitionClick, userDefinitionAt, type UserDefinition } from './goToDefinition';
 import { findReferencesAt, findReferencesHint, renameHint, startRename } from './references';
 import {
   createColorPicker, createDirectionPicker, createFloatPicker, createVec2Picker, type PickerWidget,
@@ -50,8 +49,8 @@ export interface ClickConfig {
   definitionAt(state: EditorState, from: number, name: string): Definition | null;
   // Whether a click on the word at `from` underlines its other uses.
   illuminates(state: EditorState, from: number): boolean;
-  // How the user's own function, macro, struct or global at `from` is declared, with a way to go there.
-  userDefinitionAt?(view: EditorView, from: number): (Description & { go(): void }) | null;
+  // How the user's own name at `from` is declared, with a way to go there.
+  userDefinitionAt?(view: EditorView, from: number): UserDefinition | null;
 }
 
 // Built-in functions from the GLSL reference, and the inputs as the docs' Reference page has them.
@@ -185,15 +184,15 @@ function definitionDom(def: Definition, language: CodeLanguage) {
 
 // The user's own definition: how it's declared, the comment above it, and ways to go there, list its
 // uses or rename it.
-function userDefinitionDom(view: EditorView, def: Description & { go(): void }, pos: number) {
+function userDefinitionDom(view: EditorView, def: UserDefinition, pos: number) {
   const dom = document.createElement('div');
   dom.className = 'ss-definition';
-  if (def.comment) {
+  if (def.description?.comment) {
     const p = dom.appendChild(document.createElement('p'));
     p.className = 'oneLiner';
-    p.append(def.comment);
+    p.append(def.description.comment);
   }
-  dom.append(highlightedCodeElement([def.signature], 'glsl'));
+  if (def.description) dom.append(highlightedCodeElement([def.description.signature], 'glsl'));
   const actions = dom.appendChild(document.createElement('p'));
   actions.className = 'ss-go-to-definition';
   const action = (label: string, hint: string, run: () => void) => {
@@ -207,7 +206,7 @@ function userDefinitionDom(view: EditorView, def: Description & { go(): void }, 
     });
     span.appendChild(document.createElement('kbd')).textContent = hint;
   };
-  action('Go to definition', goToDefinitionHint, def.go);
+  if (def.go) action('Go to definition', goToDefinitionHint, def.go);
   action('Find references', findReferencesHint, () => findReferencesAt(view, pos));
   action('Rename', renameHint, () => startRename(view, pos));
   return dom;
@@ -268,9 +267,11 @@ function onClick(view: EditorView, pos: number, touch: boolean, config: ClickCon
   };
   if (def) {
     view.dispatch({ effects: showPopup(definitionDom(def, config.language)) });
-  } else if (config.illuminates(state, word.from) && name.length > 1) {
+  } else if (config.illuminates(state, word.from)) {
     const own = config.userDefinitionAt?.(view, word.from);
-    view.dispatch({ effects: [setIlluminated.of(name), ...own ? [showPopup(userDefinitionDom(view, own, word.from))] : []] });
+    // Underlining every use of a one-letter name would mark most of the code.
+    const illuminate = name.length > 1 ? [setIlluminated.of(name)] : [];
+    view.dispatch({ effects: [...illuminate, ...own ? [showPopup(userDefinitionDom(view, own, word.from))] : []] });
   }
 }
 

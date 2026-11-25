@@ -56,19 +56,23 @@ function definitionAt(state: EditorState, pos: number): { name: Range; target: R
   return target ? { name, target } : null;
 }
 
-// For the popup on a clicked name: how it's declared and a way to go there, unless the click is on the
-// declaration itself.
-export function userDefinitionAt(view: EditorView, pos: number): (Description & { go(): void }) | null {
+// A user-declared name for the click popup: how it's declared (null for locals and parameters), and a
+// way to go there (null on the declaration itself).
+export interface UserDefinition {
+  description: Description | null;
+  go: (() => void) | null;
+}
+
+export function userDefinitionAt(view: EditorView, pos: number): UserDefinition | null {
   const analysis = tabAnalysis(view.state);
   const name = nameAt(analysis, pos);
   if (!name) return null;
   const here = findDefinition(analysis, pos);
   if (here) {
-    const description = here.from === name.from ? null : describe(analysis, here);
-    return description && { ...description, go: () => selectDefinition(view, here) };
+    return { description: describe(analysis, here), go: here.from === name.from ? null : () => selectDefinition(view, here) };
   }
   const elsewhere = view.state.facet(definitionElsewhere)?.(name.text);
-  return elsewhere?.description ? { ...elsewhere.description, go: elsewhere.go } : null;
+  return elsewhere ? { description: elsewhere.description, go: elsewhere.go } : null;
 }
 
 export const goToDefinitionHint = `${isMac ? '⌘' : 'Ctrl'}-click or F12`;
