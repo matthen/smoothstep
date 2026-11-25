@@ -149,7 +149,7 @@ test("a sample video can be chosen for a slot, and plays as a texture, starting 
   await page.getByRole("tab", {name: "Textures"}).click();
   await page.locator("div#textures .texture button").first().click();
   const picker = page.getByRole("dialog", {name: "iTexture0"});
-  await picker.getByRole("region", {name: "Videos"}).getByAltText("videos/colourflow.mp4 preview").click();
+  await picker.getByRole("region", {name: "Videos"}).getByAltText("videos/train.mp4 preview").click();
   await page.getByRole("button", {name: "Apply changes"}).click();
   const thumbnail = page.locator("div#textures video[aria-label='iTexture0 preview']");
   await expect(thumbnail).toBeVisible();

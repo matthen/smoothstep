@@ -28,7 +28,7 @@ const TEXTURES: Record<string, BuiltInTexture[]> = TextureData;
 // The built-in textures' folders, in the order the picker lists them.
 const GROUPS: {key: string; title: string; caption: string}[] = [
   {key: "photos", title: "Photos", caption: "Photographs, and a painting."},
-  {key: "videos", title: "Videos", caption: "Short videos that loop, to play along with your animation."},
+  {key: "videos", title: "Videos", caption: "Short clips of old film, fire, birds and sky, that play along with your animation."},
   {key: "special", title: "Noise", caption: "Random values to read in your code: noise, smooth noise, clouds and plasma."},
   {key: "tiling", title: "Tiling surfaces", caption: "Stone, sand and rust that repeat without seams."},
   {
@@ -48,11 +48,11 @@ const CAPTIONS: Record<string, string> = {
   "photos/jorg-angeli-S56zN8cV5fk-unsplash.jpg": "Castle",
   "photos/nickypainting.jpg": "Painting",
   "photos/tiles.jpg": "Tiles",
-  "videos/ball.mp4": "Bouncing ball",
-  "videos/clouds.mp4": "Moving clouds",
-  "videos/colourflow.mp4": "Colour flow",
-  "videos/testpattern.mp4": "Test pattern",
-  "videos/waves.mp4": "Waves",
+  "videos/arthursseat.mp4": "Clouds over Arthur's Seat",
+  "videos/bonfire.mp4": "Bonfire at night",
+  "videos/dance.mp4": "Serpentine dance, 1895",
+  "videos/starlings.mp4": "Starlings at dusk",
+  "videos/train.mp4": "Lumière: arrival of a train",
   "special/clouds.png": "Clouds",
   "special/noise.png": "Noise",
   "special/noise_gauss.png": "Smooth noise",

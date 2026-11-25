@@ -28,9 +28,8 @@ The Canvas2D layer can import these libraries, each under its own licence:
 - [d3-delaunay](https://github.com/d3/d3-delaunay) (ISC licence)
 
 The default textures are free to reuse: CC0 photos from Flickr, public domain textures and NASA
-imagery, a photo under the Unsplash License, and work by Nicky and Matt Henderson, including the
-sample videos. Thanks to the
-artists:
+imagery, a photo under the Unsplash License, video clips from Wikimedia Commons, and work by Nicky
+and Matt Henderson. Thanks to the artists:
 
 - [Nicky Henderson](https://www.rnhenderson.com/)
 - [pdtextures.blogspot.com](http://pdtextures.blogspot.com)
@@ -42,6 +41,20 @@ artists:
 - [Pavel Kovalev](https://www.flickr.com/photos/137236022@N03)
 - [akhenatenator](https://www.flickr.com/photos/86012097@N08)
 - NASA Goddard Space Flight Center (Blue Marble: Reto Stöckli, Robert Simmon)
+
+The sample videos are cropped, trimmed and re-encoded from these clips on Wikimedia Commons:
+
+- [*Arrival of a Train at La Ciotat*](https://commons.wikimedia.org/wiki/File:Arrival_of_a_Train_at_La_Ciotat_(The_Lumi%C3%A8re_Brothers,_1895).webm)
+  (1895), the Lumière brothers, public domain
+- [*Serpentine Dance*](https://commons.wikimedia.org/wiki/File:Serpentine_Dance_(1895)_-_yt.webm) (1895),
+  William K. L. Dickson and William Heise, public domain
+- [*Flock of starlings (Sturnus vulgaris)*](https://commons.wikimedia.org/wiki/File:Flock_of_starlings_(Sturnus_vulgaris).webm),
+  Karen Roe, [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/)
+- [*Feu*](https://commons.wikimedia.org/wiki/File:Feu.ogv), Thomas Bresson,
+  [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/)
+- [*Clip of Timelapse of clouds over Arthur's Seat*](https://commons.wikimedia.org/wiki/File:Clip_of_Timelapse_of_clouds_over_Arthur_s_Seat_(Source).webm),
+  Learning, Teaching and Web Services, the University of Edinburgh,
+  [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/), also sped up to twice its speed
 
 The font textures, and text on the Canvas2D layer, use Courier Prime, Arimo, Tinos, Inter and
 Exo 2, under the [SIL Open Font License](https://openfontlicense.org). The app's name is set in

@@ -4,7 +4,7 @@ import { isVideoURL } from './media';
 
 describe("isVideoURL", () => {
   it("knows built-in videos by their extension, wherever the app is served", () => {
-    expect(isVideoURL("/images/textures/videos/waves.mp4")).toBe(true);
+    expect(isVideoURL("/images/textures/videos/bonfire.mp4")).toBe(true);
     expect(isVideoURL("https://example.com/sub/images/textures/videos/clip.webm?v=2")).toBe(true);
     expect(isVideoURL("/images/textures/photos/cats1.jpg")).toBe(false);
   });

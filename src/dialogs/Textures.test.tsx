@@ -77,10 +77,10 @@ describe("Textures and TexturePicker", () => {
     await openSlot("iTexture3");
     const videos = within(picker()).getByRole("region", {name: "Videos"});
     expect(within(videos).getAllByText(/^\d+ × \d+, video$/).length).toBeGreaterThan(0);
-    await userEvent.click(within(videos).getByAltText("videos/waves.mp4 preview"));
+    await userEvent.click(within(videos).getByAltText("videos/bonfire.mp4 preview"));
     await userEvent.click(within(picker()).getByRole("button", {name: "Apply changes"}));
     const textures = props.onChange.mock.calls[0]![0] as TextureSlot[];
-    expect(textures[3]).toEqual({id: "iTexture3", url: "videos/waves.mp4", isUserUploaded: false});
+    expect(textures[3]).toEqual({id: "iTexture3", url: "videos/bonfire.mp4", isUserUploaded: false});
 
     cleanup();
     renderTextures(textures);

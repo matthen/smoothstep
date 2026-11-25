@@ -141,7 +141,7 @@ and the example animations in `examples/`: each has its `.json`, a `.png` thumbn
 `src/lib/config.ts`.
 
 `tools/` has the scripts that generate data. `buildTextures.py` makes the texture list and
-thumbnails, `buildVideos.py` draws the sample videos, `buildFonts.py` draws the font sheets, and `buildFunctions.py` makes the list of
+thumbnails, `buildFonts.py` draws the font sheets, and `buildFunctions.py` makes the list of
 GLSL built-ins the editor's hints show. `buildLayerAssets.mjs` bundles the Canvas2D layer's libraries
 into `public/libs/` and copies its fonts into `public/fonts/`. `makeExamplePreviews.mjs` renders the examples' previews
 and thumbnails with the app's own exporter. The end-to-end tests are in `e2e/`. They block every

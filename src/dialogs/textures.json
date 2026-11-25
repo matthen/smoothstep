@@ -305,34 +305,34 @@
     ],
     "videos": [
         {
-            "fname": "videos/ball.mp4",
-            "height": 256,
-            "thumbnail_fname": "videos/ball_thumb.jpg",
-            "width": 256
+            "fname": "videos/arthursseat.mp4",
+            "height": 360,
+            "thumbnail_fname": "videos/arthursseat_thumb.jpg",
+            "width": 360
         },
         {
-            "fname": "videos/clouds.mp4",
-            "height": 256,
-            "thumbnail_fname": "videos/clouds_thumb.jpg",
-            "width": 256
+            "fname": "videos/bonfire.mp4",
+            "height": 360,
+            "thumbnail_fname": "videos/bonfire_thumb.jpg",
+            "width": 360
         },
         {
-            "fname": "videos/colourflow.mp4",
-            "height": 256,
-            "thumbnail_fname": "videos/colourflow_thumb.jpg",
-            "width": 256
+            "fname": "videos/dance.mp4",
+            "height": 360,
+            "thumbnail_fname": "videos/dance_thumb.jpg",
+            "width": 360
         },
         {
-            "fname": "videos/testpattern.mp4",
-            "height": 256,
-            "thumbnail_fname": "videos/testpattern_thumb.jpg",
-            "width": 256
+            "fname": "videos/starlings.mp4",
+            "height": 360,
+            "thumbnail_fname": "videos/starlings_thumb.jpg",
+            "width": 360
         },
         {
-            "fname": "videos/waves.mp4",
-            "height": 256,
-            "thumbnail_fname": "videos/waves_thumb.jpg",
-            "width": 256
+            "fname": "videos/train.mp4",
+            "height": 360,
+            "thumbnail_fname": "videos/train_thumb.jpg",
+            "width": 360
         }
     ]
 }
