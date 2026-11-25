@@ -46,8 +46,8 @@ The sample videos are cropped, trimmed and re-encoded from these clips on Wikime
 
 - [*Arrival of a Train at La Ciotat*](https://commons.wikimedia.org/wiki/File:Arrival_of_a_Train_at_La_Ciotat_(The_Lumi%C3%A8re_Brothers,_1895).webm)
   (1895), the Lumière brothers, public domain
-- [*Ap16 rover*](https://commons.wikimedia.org/wiki/File:Ap16_rover.ogv), John Young driving the
-  Lunar Roving Vehicle on Apollo 16 (1972), NASA, public domain
+- [*Ap16 rover*](https://commons.wikimedia.org/wiki/File:Ap16_rover.ogv), an astronaut driving
+  the Lunar Roving Vehicle on Apollo 16 (1972), NASA, public domain
 - [*Flock of starlings (Sturnus vulgaris)*](https://commons.wikimedia.org/wiki/File:Flock_of_starlings_(Sturnus_vulgaris).webm),
   Karen Roe, [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/)
 - [*Waves at Hikkaduwa beach, Sri Lanka*](https://commons.wikimedia.org/wiki/File:Waves_at_Hikkaduwa_beach,_Sri_Lanka.webm),
