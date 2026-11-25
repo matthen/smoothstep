@@ -403,60 +403,113 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
   z-index: 1000;
 }
 
+// Mantine's dark popover surface, a step lighter than the editor.
+$popup-surface: #343746;
+$popup-line: rgba($dt-gray-light, 0.07);
+$popup-text-muted: #c9cad6;
+
 .ss-definition {
-  background-color: $dt-gray-dark;
-  border: 1px solid $dt-gray-medium;
-  border-radius: 2px;
-  box-shadow: $modal-shadow;
+  background-color: $popup-surface;
+  border: 1px solid $popup-line;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.25);
   color: $dt-gray-light;
-  padding: 16px;
-  font-size: 14px;
-  max-width: min(640px, calc(100vw - 32px));
+  padding: 10px;
+  font-family: var(--mantine-font-family);
+  font-size: 13px;
+  line-height: 1.45;
+  max-width: min(560px, calc(100vw - 32px));
 
   p.oneLiner {
-    margin-bottom: 1rem;
+    margin: 0 2px 8px;
+    color: $popup-text-muted;
   }
 
   .oneLiner a {
-    color: $dt-pink;
+    border-radius: 2px;
+    color: $dt-purple;
     text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $dt-purple;
+      outline-offset: 1px;
+    }
   }
 
-  code {
+  // The signature, as an inset block of highlighted code.
+  > code {
+    display: block;
+    padding: 6px 8px;
+    overflow-x: auto;
+    background: $dt-gray-dark;
+    border-radius: 4px;
+    font-family: var(--mantine-font-family-monospace);
     font-size: 12px;
+    line-height: 1.6;
+    white-space: pre;
     user-select: text;
   }
 
+  // A row of quiet actions; each item is a button with its shortcut after it.
   .ss-go-to-definition {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
-    gap: 6px 20px;
-    margin: 12px 0 0;
+    gap: 2px;
+    margin: 8px -2px 0;
+    padding-top: 6px;
+    border-top: 1px solid $popup-line;
 
     > span {
-      display: flex;
-      align-items: baseline;
+      position: relative;
+      display: inline-flex;
+      align-items: center;
       gap: 8px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      transition: background-color 100ms;
+
+      &:hover {
+        background: rgba($dt-gray-light, 0.08);
+      }
+
+      &:has(button:focus-visible) {
+        outline: 2px solid $dt-purple;
+        outline-offset: -1px;
+      }
     }
 
     button {
       padding: 0;
       border: 0;
       background: none;
-      color: $dt-pink;
+      color: $dt-gray-light;
       font: inherit;
+      font-size: 12.5px;
       cursor: pointer;
+      outline: none;
 
-      &:hover {
-        text-decoration: underline;
+      // The whole chip, shortcut included, is the click target.
+      &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
       }
     }
 
     kbd {
+      padding: 0 4px;
+      border: 1px solid rgba($dt-gray-light, 0.12);
+      border-radius: 3px;
+      background: rgba(0, 0, 0, 0.15);
       color: $dt-gray-medium;
-      font-family: inherit;
-      font-size: 12px;
+      font-family: var(--mantine-font-family-monospace);
+      font-size: 10.5px;
+      line-height: 1.5;
     }
   }
 }
