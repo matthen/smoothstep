@@ -5,7 +5,7 @@ import { Decoration, EditorView, ViewPlugin, keymap, showTooltip, type Tooltip }
 import { planProbe } from '../render/probe';
 import { analysisOf } from './goToDefinition';
 import { valueAt, type Range } from './glslDefinitions';
-import { popupOpen, showValueAt } from './popups';
+import { popupOpen, showOnCanvasButton, showValueAt } from './popups';
 
 // Asks to show the code from `from` to `to` on the canvas, or with null to show the image again.
 export type ShowExpression = (view: EditorView, range: Range | null) => void;
@@ -100,11 +100,7 @@ function tooltipFor(state: EditorState): Tooltip | null {
     pos: state.selection.main.head,
     above: false,
     create: (view) => {
-      const dom = document.createElement('button');
-      dom.type = 'button';
-      dom.className = 'ss-show-expression';
-      dom.textContent = 'Show on canvas';
-      dom.title = 'Show this value on the canvas (Alt + Enter)';
+      const dom = showOnCanvasButton();
       // Keeps the editor's focus and selection.
       dom.addEventListener('mousedown', (e) => e.preventDefault());
       dom.addEventListener('click', () => show(view));

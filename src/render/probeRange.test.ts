@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { combineBlocks, describeRange, mapToRange, rangeFor } from './probeRange';
+import { combineBlocks, describeRange, formatRange, mapToRange, rangeFor } from './probeRange';
 
 describe('combineBlocks', () => {
   it('finds the lowest and highest over the blocks that found values', () => {
@@ -36,12 +36,35 @@ describe('rangeFor', () => {
   });
 });
 
+describe('formatRange', () => {
+  it('rounds both ends to a small part of the gap, without exponents for ordinary sizes', () => {
+    expect(formatRange(0.000014, 0.768)).toBe('0 to 0.77');
+    expect(formatRange(-3.2, 7.5)).toBe('-3.2 to 7.5');
+    expect(formatRange(0, 1200)).toBe('0 to 1200');
+    expect(formatRange(-1.99609375, 5.99609375)).toBe('-2 to 6');
+  });
+
+  it('keeps the digits that tell close ends apart', () => {
+    expect(formatRange(0.5, 0.51)).toBe('0.5 to 0.51');
+    expect(formatRange(1000, 1000.5)).toBe('1000 to 1000.5');
+  });
+
+  it('writes tiny and huge ends compactly, keeping what tells them apart', () => {
+    expect(formatRange(1e-7, 3e-7)).toBe('1e-7 to 3e-7');
+    expect(formatRange(1.23e-7, 3.5e-7)).toBe('1.23e-7 to 3.5e-7');
+    expect(formatRange(0, 1234567)).toBe('0 to 1.23e6');
+  });
+
+  it('never writes minus zero', () => {
+    expect(formatRange(-0.001, 2)).toBe('0 to 2');
+  });
+});
+
 describe('describeRange', () => {
-  it('gives the ends shortly', () => {
-    expect(describeRange([-3.2, 7.5])).toBe('-3.2 to 7.5');
-    expect(describeRange([-1.99609375, 5.99609375])).toBe('-2 to 6');
-    expect(describeRange([0, 123456])).toBe('0 to 1.2e+5');
+  it('says what Auto found', () => {
+    expect(describeRange([0.000014, 0.768])).toBe('0 to 0.77');
     expect(describeRange([0.25, 0.25])).toBe('all 0.25');
+    expect(describeRange([0, 0])).toBe('all 0');
     expect(describeRange(null)).toBe('no values');
   });
 });

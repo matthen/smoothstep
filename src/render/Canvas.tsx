@@ -411,6 +411,9 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     return () => cancelAnimationFrame(id);
   }, [renderFrame, pointRef, readPoint]);
 
+  // Leaves room for the size and frame rate at the top right.
+  const toolsRoom = Math.max(0, width - 16 - 88);
+
   return (
     <div id="canvasContainer" ref={containerRef} data-overlays={overlays || undefined} onPointerDown={showOverlays}>
       {error ? <Alert color="yellow" className="webglError">{error}</Alert> : (
@@ -438,7 +441,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
             }}
           />
           <CanvasTools
-            style={{top: marginTop + 8, left: marginSide + 8, maxWidth: Math.max(0, width - 16 - 88)}}
+            style={{top: marginTop + 8, left: marginSide + 8, maxWidth: toolsRoom}} room={toolsRoom}
             inspect={props.inspect} onInspectChange={props.onInspectChange}
             probe={probe} rangeMode={rangeMode} onRangeModeChange={setRangeMode} found={found} onProbeOff={props.onProbeOff}
           />

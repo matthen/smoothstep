@@ -34,15 +34,29 @@ export function mapToRange(value: number, [lo, hi]: [number, number]): number {
   return (value - lo) / (hi - lo);
 }
 
-// A number short enough for the bar: three significant figures, or exponent form when far from 1.
-function shortNumber(value: number): string {
-  const size = Math.abs(value);
-  if (size !== 0 && (size < 1e-3 || size >= 1e5)) return value.toExponential(1);
-  return String(Number(value.toPrecision(3)));
+// `value` rounded to a multiple of `step`, written plainly, or as e.g. 1.2e6 when far from 1.
+function roundedTo(value: number, step: number): string {
+  const rounded = Math.round(value / step) * step;
+  if (rounded === 0) return "0";
+  const size = Math.abs(rounded);
+  const stepPower = Math.floor(Math.log10(step) + 1e-9);
+  if (size < 1e-3 || size >= 1e5) {
+    const digits = Math.min(6, Math.max(0, Math.floor(Math.log10(size)) - stepPower));
+    return rounded.toExponential(digits).replace(/\.?0+e/, "e").replace("e+", "e");
+  }
+  return String(Number(rounded.toFixed(Math.min(12, Math.max(0, -stepPower)))));
+}
+
+// Two ends rounded to a power of ten below a thirtieth of the gap between them, so "1.4e-5 to 0.768" reads "0 to 0.77".
+export function formatRange(lo: number, hi: number): string {
+  const step = 10 ** Math.floor(Math.log10((hi - lo) / 30));
+  return `${roundedTo(lo, step)} to ${roundedTo(hi, step)}`;
 }
 
 // What the bar says Auto found.
 export function describeRange(found: FoundRange): string {
   if (!found) return "no values";
-  return isConstant(found) ? `all ${shortNumber(found[0])}` : `${shortNumber(found[0])} to ${shortNumber(found[1])}`;
+  if (!isConstant(found)) return formatRange(found[0], found[1]);
+  const size = Math.abs(found[0]);
+  return `all ${size === 0 ? "0" : roundedTo(found[0], 10 ** (Math.floor(Math.log10(size)) - 2))}`;
 }

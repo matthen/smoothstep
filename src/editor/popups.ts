@@ -204,12 +204,29 @@ function actionRow(view: EditorView, label: string, keys: string, run: () => voi
   return row;
 }
 
-// The button a tapped value's popup has on its own.
-function showValueDom(view: EditorView, show: () => void) {
+const SVG = 'http://www.w3.org/2000/svg';
+
+// The Show on canvas button: an eye, the label and its shortcut.
+export function showOnCanvasButton(): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'ss-show-expression';
-  button.textContent = 'Show on canvas';
+  button.setAttribute('aria-label', 'Show on canvas');
+  button.title = 'Show this value on the canvas (Alt + Enter)';
+  const icon = button.appendChild(document.createElementNS(SVG, 'svg'));
+  icon.setAttribute('viewBox', '0 0 24 24');
+  icon.setAttribute('aria-hidden', 'true');
+  for (const d of ['M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0', 'M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6']) {
+    icon.appendChild(document.createElementNS(SVG, 'path')).setAttribute('d', d);
+  }
+  button.append('Show on canvas');
+  button.appendChild(document.createElement('kbd')).textContent = 'Alt+Enter';
+  return button;
+}
+
+// The button a tapped value's popup has on its own.
+function showValueDom(view: EditorView, show: () => void) {
+  const button = showOnCanvasButton();
   button.addEventListener('click', () => {
     view.dispatch({ effects: setPopup.of(null) });
     show();
