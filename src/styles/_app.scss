@@ -1172,6 +1172,16 @@ div#textures .texturesHint {
       padding: 1px 4px;
       opacity: 0;
       transition: opacity 150ms;
+      text-align: right;
+
+      // A video's length goes under its size; the separator is for its text, not its look.
+      .separator {
+        display: none;
+      }
+
+      .length {
+        display: block;
+      }
     }
 
     &:hover span.resolution {

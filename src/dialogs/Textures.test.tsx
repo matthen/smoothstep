@@ -1,4 +1,4 @@
-import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -76,7 +76,10 @@ describe("Textures and TexturePicker", () => {
     const props = renderTextures();
     await openSlot("iTexture3");
     const videos = within(picker()).getByRole("region", {name: "Videos"});
-    expect(within(videos).getAllByText(/^\d+ × \d+, video$/).length).toBeGreaterThan(0);
+    // Each sample video's tile gives its length as well as its size.
+    const waves = within(videos).getByAltText("videos/waves.mp4 preview").closest(".picker") as HTMLElement;
+    expect(waves.textContent).toMatch(/\d+ × \d+/);
+    expect(waves.textContent).toMatch(/\d s/);
     await userEvent.click(within(videos).getByAltText("videos/waves.mp4 preview"));
     await userEvent.click(within(picker()).getByRole("button", {name: "Apply changes"}));
     const textures = props.onChange.mock.calls[0]![0] as TextureSlot[];
@@ -124,10 +127,23 @@ describe("Textures and TexturePicker", () => {
     const thumbnail = await within(picker()).findByRole("img", {name: "clip.mp4 preview"});
     expect(thumbnail.tagName).toBe("VIDEO");
     expect(within(picker()).getByText("64 × 32, video")).toBeTruthy();
+    // Stored without a length, it's read from the thumbnail once the video's loaded.
+    Object.defineProperty(thumbnail, "duration", {value: 12.25});
+    fireEvent.loadedMetadata(thumbnail);
+    const tile = thumbnail.closest(".picker") as HTMLElement;
+    await waitFor(() => expect(tile.textContent).toMatch(/64 × 32.*12\.\d s/));
     await userEvent.click(thumbnail);
     await userEvent.click(within(picker()).getByRole("button", {name: "Apply changes"}));
     const textures = props.onChange.mock.calls[0]![0] as TextureSlot[];
     expect(textures[1]).toEqual({id: "iTexture1", url: "bbbb00000001", isUserUploaded: true});
+  });
+
+  it("shows an uploaded video's stored length", async () => {
+    await addImage("dddd00000001", "long.webm", 1, "video/webm", 72);
+    renderTextures();
+    await openSlot("iTexture0");
+    const tile = (await within(picker()).findByRole("img", {name: "long.webm preview"})).closest(".picker") as HTMLElement;
+    expect(tile.textContent).toMatch(/64 × 32.*1 min 12 s/);
   });
 
   it("deletes an upload after confirming, but not the one in use", async () => {

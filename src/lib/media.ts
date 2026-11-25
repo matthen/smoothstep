@@ -90,6 +90,21 @@ export function videoProblem(bytes: number, width: number, height: number, maxDi
   return null;
 }
 
+// A video's length for people to read, like "6.5 s" or "1 min 12 s", or null if it isn't known.
+export function formatDuration(seconds: number | null | undefined): string | null {
+  if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds <= 0) {
+    return null;
+  }
+  if (seconds < 59.95) {
+    // A very short clip keeps one significant figure, rather than showing as "0 s".
+    return `${Number(seconds.toFixed(1)) || Number(seconds.toPrecision(1))} s`;
+  }
+  const whole = Math.round(seconds);
+  const minutes = Math.floor(whole / 60);
+  const rest = whole % 60;
+  return rest ? `${minutes} min ${rest} s` : `${minutes} min`;
+}
+
 // How long a video may take to show its first frame.
 const VIDEO_LOAD_TIMEOUT_MS = 20_000;
 const HAVE_CURRENT_DATA = 2;

@@ -9,15 +9,21 @@ interface TextureThumbnailProps {
   className?: string;
   style?: CSSProperties;
   loading?: "lazy";
+  // Called with a video's length in seconds once it's known.
+  onDuration?(seconds: number): void;
 }
 
 // A texture's picture: an image, or a video's first frame.
-export default function TextureThumbnail({src, alt, video = isVideoURL(src), className, style, loading}: TextureThumbnailProps) {
+export default function TextureThumbnail(
+  {src, alt, video = isVideoURL(src), className, style, loading, onDuration}: TextureThumbnailProps,
+) {
   if (video) {
     return (
       <video
         src={src} role="img" aria-label={alt} muted playsInline preload="auto"
         className={"videoThumbnail" + (className ? " " + className : "")} style={style}
+        onLoadedMetadata={onDuration && (event => onDuration(event.currentTarget.duration))}
+        onDurationChange={onDuration && (event => onDuration(event.currentTarget.duration))}
       />
     );
   }

@@ -66,7 +66,10 @@ async function addVideo(page: Page, path = COLOURS, size = "64 × 48") {
   await picker.getByRole("button", {name: "Add", exact: true}).click();
   await page.getByText("Video added.").waitFor({timeout: 30_000});
   await dismissAlert(page);
-  await expect(picker.getByText(size + ", video")).toBeVisible();
+  // The new video's tile gives its size and its length.
+  const tile = picker.locator(".picker").filter({has: page.getByRole("img", {name: name + " preview"})});
+  await expect(tile).toContainText(size);
+  await expect(tile).toContainText(/\d s/);
   await picker.getByRole("img", {name: name + " preview"}).click();
   await page.getByRole("button", {name: "Apply changes"}).click();
   await expect(page.locator("div#textures video[aria-label='iTexture0 preview']")).toBeVisible();

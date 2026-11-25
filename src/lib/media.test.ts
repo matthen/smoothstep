@@ -1,6 +1,29 @@
 import { describe, expect, it } from 'vitest';
 
-import { isVideoURL } from './media';
+import { formatDuration, isVideoURL } from './media';
+
+describe("formatDuration", () => {
+  it("gives short videos in seconds, to a tenth", () => {
+    expect(formatDuration(6.5065)).toBe("6.5 s");
+    expect(formatDuration(6)).toBe("6 s");
+    expect(formatDuration(0.04)).toBe("0.04 s");
+    expect(formatDuration(59.9)).toBe("59.9 s");
+  });
+
+  it("gives longer videos in minutes and whole seconds", () => {
+    expect(formatDuration(59.96)).toBe("1 min");
+    expect(formatDuration(72.4)).toBe("1 min 12 s");
+    expect(formatDuration(120)).toBe("2 min");
+    expect(formatDuration(3599.6)).toBe("60 min");
+  });
+
+  it("gives nothing when the length isn't known", () => {
+    expect(formatDuration(undefined)).toBeNull();
+    expect(formatDuration(Infinity)).toBeNull();
+    expect(formatDuration(NaN)).toBeNull();
+    expect(formatDuration(0)).toBeNull();
+  });
+});
 
 describe("isVideoURL", () => {
   it("knows built-in videos by their extension, wherever the app is served", () => {

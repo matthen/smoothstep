@@ -305,30 +305,35 @@
     ],
     "videos": [
         {
+            "duration": 7.0,
             "fname": "videos/arthursseat.mp4",
             "height": 360,
             "thumbnail_fname": "videos/arthursseat_thumb.jpg",
             "width": 360
         },
         {
+            "duration": 6.5,
             "fname": "videos/moon.mp4",
             "height": 360,
             "thumbnail_fname": "videos/moon_thumb.jpg",
             "width": 360
         },
         {
+            "duration": 6.0,
             "fname": "videos/starlings.mp4",
             "height": 360,
             "thumbnail_fname": "videos/starlings_thumb.jpg",
             "width": 360
         },
         {
+            "duration": 6.0,
             "fname": "videos/train.mp4",
             "height": 360,
             "thumbnail_fname": "videos/train_thumb.jpg",
             "width": 360
         },
         {
+            "duration": 6.51,
             "fname": "videos/waves.mp4",
             "height": 360,
             "thumbnail_fname": "videos/waves_thumb.jpg",
