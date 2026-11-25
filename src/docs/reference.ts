@@ -48,6 +48,8 @@ ${inputs.join('\n')}
 
 \`texture(iTexture0, uv)\` reads a texture's colour at \`uv\`, which runs from 0 to 1 across the texture with
 (0, 0) at the bottom left. \`fragCoord / iResolution\` fills the frame with it. Textures repeat outside 0 to 1.
+A texture can also be a video. At time \`iTime\` it shows the video's frame at that time, and a video shorter
+than the animation loops.
 
 ### iPrevFrame and iFrame
 
