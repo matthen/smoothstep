@@ -238,6 +238,10 @@
   .tok-string { color: $dt-yellow; }
   .tok-operator { color: $dt-pink; }
   .tok-property { color: $dt-orange; }
+  .tok-function { color: $dt-yellow; }
+  .tok-parameter { color: $dt-orange; font-style: italic; }
+  .tok-macro { color: $dt-purple; }
+  .tok-meta { color: $dt-pink; }
 }
 
 .learnHints {

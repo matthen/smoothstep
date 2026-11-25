@@ -2,15 +2,9 @@ import { javascriptLanguage } from '@codemirror/lang-javascript';
 import { highlightCode } from '@lezer/highlight';
 import { Fragment, useMemo } from 'react';
 
-import { tokenizeGlsl, type GlslToken } from '../editor/glslLanguage';
+import { GLSL_TOKEN_CLASSES as TOKEN_CLASSES, tokenizeGlsl } from '../editor/glslLanguage';
 import { jsHighlighter } from '../editor/jsHighlighter';
 import { HELPER_NAMES } from '../layer/helpers';
-
-const TOKEN_CLASSES: Record<GlslToken, string> = {
-  "keyword": "tok-keyword", "typeName": "tok-type", "variableName.standard": "tok-builtin",
-  "variableName": "tok-variable", "atom": "tok-atom", "number": "tok-number", "comment": "tok-comment",
-  "string": "tok-string", "meta": "tok-meta", "operator": "tok-operator",
-};
 
 interface Span {
   text: string;

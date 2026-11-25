@@ -136,6 +136,8 @@ main img { border-radius: 8px; border: 1px solid var(--line-soft); }
 .tok-builtin { color: var(--tok-builtin); } .tok-atom, .tok-number { color: var(--tok-number); }
 .tok-comment { color: var(--tok-comment); } .tok-string { color: var(--tok-string); }
 .tok-operator { color: var(--tok-operator); } .tok-property { color: var(--tok-property); }
+.tok-function { color: var(--tok-string); } .tok-parameter { color: var(--tok-property); font-style: italic; }
+.tok-macro { color: var(--tok-number); } .tok-meta { color: var(--tok-operator); }
 @media (max-width: 760px) {
   html { scroll-padding-top: 112px; }
   header { padding: 0 16px; gap: 8px; }

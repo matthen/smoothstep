@@ -5,7 +5,7 @@ import { highlightCode } from '@lezer/highlight';
 import { parser as jsParser } from '@lezer/javascript';
 import { Marked, type Tokens } from 'marked';
 
-import { tokenizeGlsl, type GlslToken } from '../editor/glslLanguage.ts';
+import { GLSL_TOKEN_CLASSES as GLSL_CLASSES, tokenizeGlsl } from '../editor/glslLanguage.ts';
 import { jsHighlighter } from '../editor/jsHighlighter.ts';
 
 export interface DocFile {
@@ -58,12 +58,6 @@ const escapeHtml = (text: string) =>
 const plainText = (html: string) =>
   html.replace(/<button[^>]*>[^<]*<\/button>/g, ' ').replace(/<\/?(?:p|li|ul|ol|h\d|t[dhr]|table|pre|div|br)\b[^>]*>/g, ' ').replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
-
-const GLSL_CLASSES: Record<GlslToken, string> = {
-  keyword: 'tok-keyword', typeName: 'tok-type', 'variableName.standard': 'tok-builtin', variableName: 'tok-variable',
-  atom: 'tok-atom', number: 'tok-number', comment: 'tok-comment', string: 'tok-string', meta: 'tok-meta',
-  operator: 'tok-operator',
-};
 
 const span = (text: string, cls: string) => cls ? `<span class="${cls}">${escapeHtml(text)}</span>` : escapeHtml(text);
 

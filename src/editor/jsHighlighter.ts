@@ -6,6 +6,7 @@ export const jsHighlighter = tagHighlighter([
   { tag: [t.keyword, t.self], class: 'tok-keyword' },
   { tag: t.typeName, class: 'tok-type' },
   { tag: t.propertyName, class: 'tok-property' },
+  { tag: t.function(t.variableName), class: 'tok-function' },
   { tag: t.variableName, class: 'tok-variable' },
   { tag: [t.atom, t.bool, t.null], class: 'tok-atom' },
   { tag: t.number, class: 'tok-number' },
