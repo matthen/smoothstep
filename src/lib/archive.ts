@@ -5,15 +5,12 @@ import { strFromU8, strToU8, unzip, zip, type Unzipped } from 'fflate';
 import { canonicalJSON, parseDocument, type AnimationDocument } from './document';
 import * as localStore from './localStore';
 import type { StoredDocument } from './localStore';
+import { MEDIA_EXTENSIONS, mediaType } from './media';
 
 export const ANIMATION_FORMAT = "smoothstep-animation";
 const EXPORT_FORMAT = "smoothstep-export";
 const VERSION = 1;
 const ID_PATTERN = /^[a-f0-9]{1,32}$/;
-
-const IMAGE_EXTENSIONS: Record<string, string> = {
-  "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif",
-};
 
 export interface ImportSummary {
   animations: number;
@@ -56,7 +53,7 @@ function bytesToBase64(bytes: Uint8Array): string {
 
 async function blobToDataURL(blob: Blob): Promise<string> {
   const bytes = new Uint8Array(await blob.arrayBuffer());
-  return "data:" + (blob.type || imageType(bytes)) + ";base64," + bytesToBase64(bytes);
+  return "data:" + (blob.type || mediaType(bytes)) + ";base64," + bytesToBase64(bytes);
 }
 
 function base64ToBytes(base64: string): Uint8Array {
@@ -72,8 +69,9 @@ function dataURLBytes(dataURL: string): Uint8Array {
   return base64ToBytes(dataURL.split(",")[1] ?? "");
 }
 
-export function imageDataURLBytes(dataURL: unknown): Uint8Array {
-  if (typeof dataURL !== "string" || !/^data:image\/[\w+.-]+;base64,/.test(dataURL)) {
+// An embedded image's or video's bytes.
+export function mediaDataURLBytes(dataURL: unknown): Uint8Array {
+  if (typeof dataURL !== "string" || !/^data:(image|video)\/[\w+.-]+;base64,/.test(dataURL)) {
     throw new Error("Bad image data");
   }
   return dataURLBytes(dataURL);
@@ -81,15 +79,6 @@ export function imageDataURLBytes(dataURL: unknown): Uint8Array {
 
 function pngDataURL(bytes: Uint8Array): string {
   return "data:image/png;base64," + bytesToBase64(bytes);
-}
-
-// An image's type from its first bytes; PNG if unrecognised.
-export function imageType(bytes: Uint8Array): string {
-  const ascii = (start: number, end: number) => String.fromCharCode(...bytes.subarray(start, end));
-  if (bytes[0] === 0xff && bytes[1] === 0xd8) {return "image/jpeg";}
-  if (ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") {return "image/webp";}
-  if (ascii(0, 3) === "GIF") {return "image/gif";}
-  return "image/png";
 }
 
 function validThumbnail(value: unknown): string | null {
@@ -157,7 +146,7 @@ export async function exportAll(): Promise<DownloadableFile & {count: number}> {
     manifest.animations.push(entry);
   }
   for (const image of images) {
-    const file = "images/" + image.id + "." + (IMAGE_EXTENSIONS[image.blob.type] ?? "png");
+    const file = "images/" + image.id + "." + (MEDIA_EXTENSIONS[image.blob.type] ?? "png");
     files[file] = new Uint8Array(await image.blob.arrayBuffer());
     manifest.images.push({
       id: image.id, filename: image.filename, width: image.width, height: image.height,
@@ -261,7 +250,7 @@ async function importImage(entry: ImageEntry, bytes: Uint8Array, summary: Import
     width: typeof entry.width === "number" ? entry.width : 0,
     height: typeof entry.height === "number" ? entry.height : 0,
     created: parseTime(entry.created, Date.now()),
-    blob: new Blob([bytes as Uint8Array<ArrayBuffer>], {type: imageType(bytes)}),
+    blob: new Blob([bytes as Uint8Array<ArrayBuffer>], {type: mediaType(bytes)}),
   });
   summary.images += 1;
 }
@@ -271,7 +260,7 @@ async function importAnimationFile(obj: unknown, summary: ImportSummary, known: 
   if (file && file.format === ANIMATION_FORMAT) {
     const images = (file.images ?? {}) as Record<string, ImageEntry & {data?: unknown}>;
     for (const [id, image] of Object.entries(images)) {
-      await importImage({...image, id}, imageDataURLBytes(image.data), summary);
+      await importImage({...image, id}, mediaDataURLBytes(image.data), summary);
     }
     await importAnimation({...file, json: file.document}, summary, known);
   } else {

@@ -3,13 +3,13 @@
     "name": "setup",
     "kind": "function",
     "oneLiner": "Runs once after each build and each restart, before the first draw. Optional: whatever it returns is passed to draw as data.",
-    "signatures": ["function setup({width, height, duration, floats, textures})"]
+    "signatures": ["function setup({width, height, resolution, duration, floats, textures})"]
   },
   {
     "name": "draw",
     "kind": "function",
     "oneLiner": "Runs once a step, 60 times a second while the animation plays, to draw on the canvas.",
-    "signatures": ["function draw(ctx, {time, frame, duration, width, height, floats, textures, data})"]
+    "signatures": ["function draw(ctx, {time, frame, duration, width, height, resolution, floats, textures, data})"]
   },
   {
     "name": "ctx",
@@ -55,6 +55,13 @@
     "signatures": ["number height"]
   },
   {
+    "name": "resolution",
+    "kind": "input",
+    "type": "number[]",
+    "oneLiner": "The frame's size in pixels, [width, height], the same as iResolution. height / resolution[1] is one pixel in canvas units.",
+    "signatures": ["number[] resolution"]
+  },
+  {
     "name": "floats",
     "kind": "input",
     "type": "number[]",
@@ -65,7 +72,7 @@
     "name": "textures",
     "kind": "input",
     "type": "ImageBitmap[]",
-    "oneLiner": "The 8 texture slots, ready for ctx.drawImage, or null for an empty slot.",
+    "oneLiner": "The 8 texture slots, ready for ctx.drawImage, or null for an empty slot. A video's slot holds its frame at this step's time.",
     "signatures": ["(ImageBitmap | null)[] textures"]
   },
   {

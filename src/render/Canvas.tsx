@@ -41,6 +41,8 @@ interface CanvasProps {
   // The Canvas2D layer's errors; none once it draws.
   onLayerStatus(errors: LineError[]): void;
   time: number;
+  // Whether time is moving on by itself, so videos play along rather than seek to each frame.
+  playing: boolean;
   duration: number;
   stepClock: number;  // seconds played since the simulation restarted
   variableValues: number[];
@@ -107,6 +109,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
       needsRender.current = true;  // Try again next frame, when the layer may have caught up.
       return;
     }
+    renderer.followVideos(p.time, p.playing);
     steps.current = renderSteps(layerSteps ?? renderer, steps.current, p.stepClock, p.time,
       (time, frameIndex) => ({time, duration: p.duration, frameIndex, variableValues: p.variableValues}), 4);
   }, [propsRef]);
@@ -139,6 +142,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     try {
       const renderer = new Renderer(canvasRef.current!);
       renderer.onTextureLoaded = () => {needsRender.current = true;};
+      renderer.onVideoFrame = () => {needsRender.current = true;};
       rendererRef.current = renderer;
       // No dispose(): StrictMode remounts with the same canvas, and a lost context can't be reused.
       return () => {
@@ -268,7 +272,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
 
   useEffect(() => {
     needsRender.current = true;
-  }, [props.time, props.stepClock, props.variableValues, props.duration]);
+  }, [props.time, props.playing, props.stepClock, props.variableValues, props.duration]);
 
   // Render on animation frames when something changed, keeping a smoothed frame rate, and dropping
   // to 1× if it stays slow.

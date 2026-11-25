@@ -82,11 +82,11 @@ on, the drawing also goes over the image.
 
 \`\`\`js
 // Runs after each build and restart. Optional; what it returns is data.
-function setup({width, height, duration, floats, textures}) {
+function setup({width, height, resolution, duration, floats, textures}) {
   return {};
 }
 
-function draw(ctx, {time, frame, duration, width, height, floats, textures, data}) {
+function draw(ctx, {time, frame, duration, width, height, resolution, floats, textures, data}) {
   clear(ctx);
   ctx.fillText("Hello", 60, 110);
 }

@@ -29,7 +29,10 @@ export class LayerSteps implements StepRenderer {
       this.layer.restart();
     }
     this.lastFrame = inputs.frameIndex;
-    this.layer.push({time: inputs.time, frame: inputs.frameIndex, floats: inputs.variableValues});
+    this.layer.push({
+      time: inputs.time, frame: inputs.frameIndex, floats: inputs.variableValues,
+      videoFrames: this.layer.needsVideoFrames ? this.renderer.videoFrames() : undefined,
+    });
   }
 
   restart() {

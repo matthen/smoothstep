@@ -6,6 +6,7 @@ import { GlslCode } from '../editor/InlineCode';
 import { textureURL } from '../lib/config';
 import { EMPTY_TEXTURE, type TextureSlot } from '../lib/document';
 import { usePhone } from '../app/usePhone';
+import TextureThumbnail from './TextureThumbnail';
 import { useImagesChanged } from './useImagesChanged';
 
 interface TexturesProps {
@@ -40,7 +41,7 @@ export default function Textures({textures, count, onChange, onAdd, onMessage}: 
               <span>Choose an image</span>
             </button>
             : <button onClick={() => {setSlot(i); setShowPicker(true);}}>
-              <img src={textureURL(texture)} alt={texture.id + " preview"} />
+              <TextureThumbnail src={textureURL(texture)} alt={texture.id + " preview"} />
             </button>}
         </div>,
       )}

@@ -15,7 +15,7 @@ export const SHADER_INPUTS: readonly ShaderInput[] = [
   {name: "iFrame", type: "int", description: "The frame number, counting from 0 at 60 a second. It goes back to 0 " +
     "when you build, when the animation loops or goes back to the start, and when iPrevFrame is cleared."},
   {name: "iPrevFrame", type: "sampler2D", description: "The frame drawn just before this one."},
-  {name: "iTexture0", last: "iTexture7", type: "sampler2D", description: "The 8 images set in the Textures tab."},
+  {name: "iTexture0", last: "iTexture7", type: "sampler2D", description: "The 8 images or videos set in the Textures tab."},
   {name: "iFloat0", last: "iFloat15", type: "float", description: "The 16 numbers set on the timeline or with sliders."},
   {name: "iBuffer0", last: "iBuffer3", type: "sampler2D",
     description: "What each buffer drew most recently, when the animation has buffers."},

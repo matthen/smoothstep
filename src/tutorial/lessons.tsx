@@ -1240,7 +1240,7 @@ vec4 drawing = texture(iCanvas2D, uv);`}</Lines>
             the link as a QR code for a phone to scan.
           </p>
           <p>
-            A link can't carry images you added yourself. If you used any, download the animation file, put it
+            A link can't carry images or videos you added yourself. If you used any, download the animation file, put it
             online, for example in a GitHub gist, and paste its address into Share to make a link that opens it.
             {" "}<DocsLink to={DOC_SECTIONS.sharing}>Sharing animations</DocsLink> in the docs has the steps.
           </p>

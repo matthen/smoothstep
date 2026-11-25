@@ -44,7 +44,7 @@ inline pickers for colours, numbers and vectors. The timeline drives 16 animated
 overshoot and settle, or grow exponentially for zooms. The Sliders tab has a slider for each one your code uses, to set it or try out
 values while you watch. You get 8
 texture slots, `iTexture0` to `iTexture7`, which take built-in photos, noise, tiling textures
-and font sheets, or your own images up to 4096px. Up to 4 buffers, `iBuffer0` to `iBuffer3`,
+and font sheets, or your own images up to 4096px and videos that play along with the animation. Up to 4 buffers, `iBuffer0` to `iBuffer3`,
 are extra shaders that draw before the image each frame and hold any numbers, so you can run
 simulations across frames. A Canvas2D layer is JavaScript that draws on a 2D canvas each step, with
 drawing helpers, fonts, and built-in physics, noise and triangulation libraries; its drawing goes
@@ -52,7 +52,7 @@ over the image, and every shader can read it as `iCanvas2D` ([docs/canvas2d.md](
 smoothstep.io exports WebM, MP4, animated GIFs and PNG frames, all made
 in your browser.
 
-smoothstep.io keeps your animations and the images you add in your browser's storage. You can download one
+smoothstep.io keeps your animations and the images and videos you add in your browser's storage. You can download one
 animation, or all of them as a zip, to back them up or move them to another computer, and add
 them again with File → Import.
 

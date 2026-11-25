@@ -34,7 +34,7 @@ Animations may also use any of the following input variables (*uniforms*):
 | `vec2 iResolution`  |  The size of the frame in pixels. (Shadertoy's `iResolution` is a `vec3`.) |
 | `int iFrame`  |  The frame number, counting from 0 at 60 a second. See below for when it restarts. |
 | `sampler2D iPrevFrame`  |  The frame drawn just before this one. |
-| `sampler2D iTexture0` ... `iTexture7`  | The 8 images set in the *Textures* tab. |
+| `sampler2D iTexture0` ... `iTexture7`  | The 8 images or videos set in the *Textures* tab. |
 | `float iFloat0` ... `iFloat15`  | The 16 numbers set on the timeline or with sliders. |
 | `sampler2D iBuffer0` ... `iBuffer3`  | What each buffer drew most recently, when the animation has buffers. |
 | `sampler2D iCanvas2D`  | What the Canvas2D layer drew this step, with premultiplied alpha. Transparent when there's no Canvas2D layer. |
@@ -48,7 +48,13 @@ or tap the preview to see its size. A render draws at the size you choose.
 
 `texture(iTexture0, uv)` reads a texture's colour at `uv`, which runs from 0 to 1 across the
 image with (0, 0) at the bottom left. `fragCoord / iResolution` fills the frame with it. Textures
-repeat outside 0 to 1.
+repeat outside 0 to 1. `textureSize(iTexture0, 0)` gives the image's size in pixels.
+
+A texture slot can also hold a video, an MP4, WebM or MOV file that your browser can play. At
+`iTime` the texture shows the video's frame at that time, so the video plays along with the
+animation, and when you scrub the timeline or render a video. A video shorter than the animation
+starts again from its first frame each time it ends. Videos have no sound here. They can be up to
+32 MB, and 4096 pixels wide and tall.
 
 ## iPrevFrame and iFrame
 

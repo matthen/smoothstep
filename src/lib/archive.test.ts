@@ -4,9 +4,10 @@ import 'fake-indexeddb/auto';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { animationFile, exportAll, importDocument, importFiles, imageType, importMessage } from './archive';
+import { animationFile, exportAll, importDocument, importFiles, importMessage } from './archive';
 import { newDocument, type AnimationDocument } from './document';
 import * as localStore from './localStore';
+import { mediaType } from './media';
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 4, 5, 6]);
@@ -159,6 +160,39 @@ describe("importFiles", () => {
     expect(await importFiles([bare])).toMatchObject({animations: 0, images: 0, unchanged: 1, failed: 0});
   });
 
+  it("keeps an uploaded video through an animation file and a zip", async () => {
+    const MP4 = strToU8("\0\0\0\x20ftypisom video bytes");
+    await localStore.putImage({
+      id: "eeee00000001", filename: "clip.mp4", width: 64, height: 32, created: 1000,
+      blob: new Blob([MP4], {type: "video/mp4"}),
+    });
+    const record = {
+      id: "eeee0000d001", title: "Video", created: 1000, modified: 2000,
+      json: docWithTexture("Video", "eeee00000001"), thumbnail: null,
+    };
+    await localStore.putDocument(record);
+    const one = await animationFile(record);
+    const embedded = JSON.parse(await one.blob.text()) as {images: Record<string, {data: string}>};
+    expect(embedded.images.eeee00000001!.data).toMatch(/^data:video\/mp4;base64,/);
+    const zipped = unzipSync(new Uint8Array(await (await exportAll()).blob.arrayBuffer()));
+    expect(zipped["images/eeee00000001.mp4"]).toEqual(MP4);
+
+    for (const file of [new File([await one.blob.arrayBuffer()], one.filename), await zipFile()]) {
+      await clearStore();
+      expect((await importFiles([file])).images).toBe(1);
+      const video = (await localStore.getImage("eeee00000001"))!;
+      expect(video.blob.type).toBe("video/mp4");
+      expect(new Uint8Array(await video.blob.arrayBuffer())).toEqual(MP4);
+    }
+  });
+
+  it("refuses a video too big to embed in an animation file, saying how big it can be", async () => {
+    const big = new File([new Uint8Array((localStore.MAX_VIDEO_MB + 1) * 1024 * 1024)], "long.mp4", {type: "video/mp4"});
+    await expect(localStore.addUploadedImage(big)).rejects.toThrow(
+      new localStore.UploadError(`Videos can be up to ${localStore.MAX_VIDEO_MB} MB, and that one is ${localStore.MAX_VIDEO_MB + 1} MB.`));
+    expect(await localStore.listImages()).toEqual([]);
+  });
+
   it("counts unreadable files and invalid animations as failed", async () => {
     const bad = {...docWithTexture("Bad", null), duration: -1};
     const summary = await importFiles([
@@ -188,11 +222,14 @@ describe("importDocument", () => {
   });
 });
 
-describe("imageType", () => {
+describe("mediaType", () => {
   it("reads the type from the bytes", () => {
-    expect(imageType(JPEG)).toBe("image/jpeg");
-    expect(imageType(PNG)).toBe("image/png");
-    expect(imageType(strToU8("GIF89a..."))).toBe("image/gif");
-    expect(imageType(strToU8("RIFF....WEBPVP8 "))).toBe("image/webp");
+    expect(mediaType(JPEG)).toBe("image/jpeg");
+    expect(mediaType(PNG)).toBe("image/png");
+    expect(mediaType(strToU8("GIF89a..."))).toBe("image/gif");
+    expect(mediaType(strToU8("RIFF....WEBPVP8 "))).toBe("image/webp");
+    expect(mediaType(new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, 1, 2]))).toBe("video/webm");
+    expect(mediaType(strToU8("\0\0\0\x20ftypisom...."))).toBe("video/mp4");
+    expect(mediaType(strToU8("\0\0\0\x14ftypqt  ...."))).toBe("video/quicktime");
   });
 });

@@ -8,9 +8,12 @@ import { usePhone } from '../app/usePhone';
 import { asset, textureURL } from '../lib/config';
 import { EMPTY_TEXTURE, type TextureSlot } from '../lib/document';
 import {
-  addUploadedImage, deleteImage, listImages, MAX_IMAGE_DIM, StorageFullError, type StoredImage,
+  addUploadedImage, deleteImage, listImages, MAX_IMAGE_DIM, MAX_VIDEO_MB, StorageFullError, UploadError,
+  type StoredImage,
 } from '../lib/localStore';
+import { isVideoType } from '../lib/media';
 import TextureData from './textures.json';
+import TextureThumbnail from './TextureThumbnail';
 import { useImagesChanged } from './useImagesChanged';
 
 interface BuiltInTexture {
@@ -92,7 +95,7 @@ function UploadForm({onUploaded, onMessage}: {onUploaded(): void; onMessage(text
   }, [selected]);
 
   const {getRootProps, getInputProps, isDragActive} = useDropzone({
-    accept: {"image/*": []},
+    accept: {"image/*": [], "video/*": []},
     maxFiles: 1,
     onDrop: (acceptedFiles: File[]) => {
       const file = acceptedFiles[0];
@@ -107,13 +110,14 @@ function UploadForm({onUploaded, onMessage}: {onUploaded(): void; onMessage(text
       return;
     }
     setUploading(true);
+    const what = isVideoType(selectedFile.type) ? "video" : "image";
     try {
       await addUploadedImage(selectedFile);
-      onMessage("Image added.");
+      onMessage(what === "video" ? "Video added." : "Image added.");
       onUploaded();
     } catch (error) {
       console.log(error);
-      onMessage(error instanceof StorageFullError ? error.message : "Couldn't add the image.");
+      onMessage(error instanceof StorageFullError || error instanceof UploadError ? error.message : `Couldn't add the ${what}.`);
       setUploading(false);
     }
   };
@@ -122,18 +126,23 @@ function UploadForm({onUploaded, onMessage}: {onUploaded(): void; onMessage(text
     <div {...getRootProps()} className={"dropzone" + (isDragActive ? " active" : "")}>
       <input {...getInputProps()} />
       <TbPhotoPlus className="uploadIcon" />
-      <p>Drop an image here, or click to choose one. It stays in this browser.</p>
+      <p>Drop an image or video here, or click to choose one. It stays in this browser.</p>
       <div className="selectedFile">
         {selected && selectedFile &&
           <>
-            <img src={selected.preview} alt={selectedFile.name} />  {selectedFile.name}
+            <TextureThumbnail src={selected.preview} alt={selectedFile.name} video={isVideoType(selectedFile.type)} />
+            {selectedFile.name}
             <Button onClick={event => void handleUpload(event)} disabled={uploading}>Add</Button>
             {uploading && <Loader size="xs" role="status" />}
           </>
         }
-        {isRejected && <Alert color="red">File must be a single image.</Alert>}
+        {isRejected && <Alert color="red">File must be a single image or video.</Alert>}
       </div>
       <p className="uploadNote">Images larger than {MAX_IMAGE_DIM}&nbsp;px are scaled down.</p>
+      <p className="uploadNote">
+        Videos can be up to {MAX_VIDEO_MB}&nbsp;MB and {MAX_IMAGE_DIM}&nbsp;px. A video plays along with the animation, and
+        starts again from the beginning when it ends.
+      </p>
     </div>
   );
 }
@@ -188,12 +197,13 @@ export default function TexturePicker(
 
   const handleDelete = async (image: StoredImage) => {
     setShowConfirm(false);
+    const what = isVideoType(image.blob.type) ? "video" : "image";
     try {
       await deleteImage(image.id);
-      onMessage("Image deleted.");
+      onMessage(what === "video" ? "Video deleted." : "Image deleted.");
     } catch (error) {
       console.log(error);
-      onMessage("Error deleting image.");
+      onMessage(`Error deleting ${what}.`);
     }
   };
 
@@ -224,25 +234,27 @@ export default function TexturePicker(
         {showUpload
           ? <>
             <Button variant="subtle" color="gray" leftSection={<TbArrowLeft />} mb="sm" onClick={() => setShowUpload(false)}>
-              Back to the images
+              Back to the textures
             </Button>
             <UploadForm key={uploadFormKey} onMessage={onMessage} onUploaded={() => setShowUpload(false)} />
           </>
           : <div className="texturePickerBody" ref={bodyRef}>
-            {section("uploads", "Your images", "Images you've added. They stay in this browser and aren't sent anywhere.", <>
+            {section("uploads", "Your images and videos", "Images and videos you've added. They stay in this browser and aren't sent anywhere.", <>
               {pickerItem(
                 "upload", false, () => {setUploadFormKey(k => k + 1); setShowUpload(true);},
-                <TbPhotoPlus className="thumbnail" />, "Add image",
+                <TbPhotoPlus className="thumbnail" />, "Add image or video",
               )}
               {otherUploads.map(t => pickerItem(
                 "other-" + t.url, t.url === texture.url, () => select(t.url, true),
-                <img src={uploadThumbURL(t.url)} alt="texture preview" />,
+                <TextureThumbnail src={uploadThumbURL(t.url)} alt="texture preview" />,
               ))}
               {uploads.map(image =>
                 <figure className={"picker" + (image.id === texture.url ? " selected" : "")} key={image.id}>
                   <button type="button" onClick={() => select(image.id, true)} className="select" title={image.filename}>
-                    <img src={uploadThumbURL(image.id)} alt={image.filename + " preview"} />
-                    <span className="resolution">{image.width} &times; {image.height}</span>
+                    <TextureThumbnail src={uploadThumbURL(image.id)} alt={image.filename + " preview"} video={isVideoType(image.blob.type)} />
+                    <span className="resolution">
+                      {image.width} &times; {image.height}{isVideoType(image.blob.type) ? ", video" : ""}
+                    </span>
                   </button>
                   <figcaption>{image.filename}</figcaption>
                   {image.id !== texture.url &&
@@ -276,14 +288,15 @@ export default function TexturePicker(
         </Group>
       </AppModal>
       <AppModal
-        opened={showConfirm && toDelete !== null} onClose={() => setShowConfirm(false)} title="Delete image" size="sm"
+        opened={showConfirm && toDelete !== null} onClose={() => setShowConfirm(false)}
+        title={toDelete && isVideoType(toDelete.blob.type) ? "Delete video" : "Delete image"} size="sm"
         closeOnClickOutside={false}
       >
         {toDelete &&
           <>
             <Text mb="sm">Delete '<b>{toDelete.filename}</b>'?</Text>
-            <img
-              src={uploadThumbURL(toDelete.id)} alt={toDelete.filename + " preview"}
+            <TextureThumbnail
+              src={uploadThumbURL(toDelete.id)} alt={toDelete.filename + " preview"} video={isVideoType(toDelete.blob.type)}
               style={{maxHeight: 128, maxWidth: 128}}
             />
           </>}

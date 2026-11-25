@@ -21,8 +21,8 @@ An animation is a JSON object, as produced by `App.toJSON()`:
 ```
 
 - `textures` has 8 slots, `iTexture0` to `iTexture7`. A built-in texture's `url` is its path
-  under `public/images/textures/`; an uploaded one has `isUserUploaded: true` and `url` set to
-  the image's id.
+  under `public/images/textures/`; an uploaded image or video has `isUserUploaded: true` and `url`
+  set to its id.
 - `variables` has 16 entries. Each transition runs from `startDSecs` to `endDSecs`, in
   tenths of a second, with up to one decimal place for times to a hundredth of a second (`12.5` is
   1.25s), and `type` one of `step`, `linear`, `smoothstep`, `easeIn`, `easeOut`, `overshoot` or `exponential`. A
@@ -45,7 +45,7 @@ An animation is a JSON object, as produced by `App.toJSON()`:
 ## One animation: `<title>.smoothstep.json`
 
 File → Export saves the open animation, and the download button in File → Open saves a
-stored one. Either way you get a JSON file with the uploaded images it uses embedded:
+stored one. Either way you get a JSON file with the uploaded images and videos it uses embedded:
 
 ```json
 {
@@ -64,7 +64,8 @@ stored one. Either way you get a JSON file with the uploaded images it uses embe
 }
 ```
 
-`thumbnail` may be null. A bare document JSON (just the object above) also opens.
+A video is embedded the same way, as a `data:video/mp4`, `data:video/webm` or `data:video/quicktime`
+URL. `thumbnail` may be null. A bare document JSON (just the object above) also opens.
 
 ## Everything: `smoothstep-animations-<date>.zip`
 
@@ -74,7 +75,8 @@ stored one. Either way you get a JSON file with the uploaded images it uses embe
 manifest.json
 animations/<id>.json      the document JSON
 thumbnails/<id>.png       128px preview (optional)
-images/<image id>.<ext>   uploaded images: PNG, JPEG, WebP or GIF (.png/.jpg/.webp/.gif)
+images/<image id>.<ext>   uploaded images: PNG, JPEG, WebP or GIF (.png/.jpg/.webp/.gif),
+                          and videos: MP4, WebM or MOV (.mp4/.webm/.mov)
 ```
 
 ```json
@@ -98,8 +100,9 @@ the importer finds `manifest.json` and reads the other paths relative to it. Tim
 
 ## Importing
 
-- Uploaded images are at most 4096px (or the GPU's texture limit, if lower). An image's type
-  is read from its bytes, whatever its file name or data URL says.
+- Uploaded images are at most 4096px (or the GPU's texture limit, if lower). Uploaded videos are
+  stored as they are, and are at most 32 MB and 4096px. An image's or video's type is read from its
+  bytes, whatever its file name or data URL says.
 - Importing the same file twice changes nothing: an animation is skipped when one with the
   same id has the same document (comparing the JSON, ignoring key order), or, for a bare
   document or an older copy of an edited animation, when any stored animation has it.
@@ -115,6 +118,6 @@ the importer finds `manifest.json` and reads the other paths relative to it. Tim
 
 A share link carries one document JSON: compressed with raw DEFLATE (RFC 1951), then written as
 base64url without padding (`src/lib/share.ts`). Texture slots holding the user's own images are
-set to the empty built-in texture first, since a link can't carry the images. Links to a file
+set to the empty built-in texture first, since a link can't carry the images or videos. Links to a file
 (`#url/<address>`) or a GitHub gist (`#gist/<id>`) open a `.smoothstep.json` file or a bare
 document JSON. A gist's file is the first one ending in `.smoothstep.json`, or else in `.json`.
