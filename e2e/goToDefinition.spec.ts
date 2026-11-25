@@ -88,6 +88,25 @@ test("Clicking a call to your own function shows its comment and signature, and 
   expect(errors).toEqual([]);
 });
 
+test("Clicking a function's name or a parameter where it's declared offers its uses and a rename", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#new");
+  await setCode(page, `// Ripples over time.\n${CODE}`);
+  const popup = page.locator(".ss-popup");
+
+  await word(page, "wave", 0).click();
+  await expect(popup).toContainText("float wave(float t)");
+  await expect(popup.getByRole("button", {name: "Go to definition"})).toHaveCount(0);
+  await popup.getByRole("button", {name: "Find references"}).click();
+  await expect(page.locator(".ss-references")).toContainText("wave");
+
+  await page.keyboard.press("Escape");
+  await word(page, "t", 0).click();
+  await expect(popup.getByRole("button", {name: "Go to definition"})).toHaveCount(0);
+  await expect(popup.getByRole("button", {name: "Rename"})).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test("Ctrl-click on a name from the shared code opens that tab at its definition", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./#new");

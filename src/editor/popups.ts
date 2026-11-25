@@ -5,10 +5,10 @@ import { Decoration, EditorView, ViewPlugin, showTooltip, type DecorationSet, ty
 import { DOC_SECTIONS, docLinkElement, type DocTarget } from '../lib/docLinks';
 import { eachShaderInput } from '../lib/shaderInputs';
 import glslFunctions from './glslFunctions.json';
-import type { Description } from './glslDefinitions';
 import { USER_NAME_TOKENS } from './glslLanguage';
 import { highlightedCodeElement, type CodeLanguage } from './highlight';
-import { goToDefinitionHint, isDefinitionClick, userDefinitionAt } from './goToDefinition';
+import { goToDefinitionHint, isDefinitionClick, userDefinitionAt, type UserDefinition } from './goToDefinition';
+import { findReferencesAt, findReferencesHint, renameHint, startRename } from './references';
 import {
   createColorPicker, createDirectionPicker, createFloatPicker, createVec2Picker, type PickerWidget,
 } from './pickers';
@@ -49,8 +49,8 @@ export interface ClickConfig {
   definitionAt(state: EditorState, from: number, name: string): Definition | null;
   // Whether a click on the word at `from` underlines its other uses.
   illuminates(state: EditorState, from: number): boolean;
-  // How the user's own function, macro, struct or global at `from` is declared, with a way to go there.
-  userDefinitionAt?(view: EditorView, from: number): (Description & { go(): void }) | null;
+  // How the user's own name at `from` is declared, with a way to go there.
+  userDefinitionAt?(view: EditorView, from: number): UserDefinition | null;
 }
 
 // Built-in functions from the GLSL reference, and the inputs as the docs' Reference page has them.
@@ -189,21 +189,6 @@ function definitionDom(def: Definition, language: CodeLanguage) {
   return dom;
 }
 
-// A row in a popup: a link-like button and the key that does the same.
-function actionRow(view: EditorView, label: string, keys: string, run: () => void) {
-  const row = document.createElement('p');
-  row.className = 'ss-go-to-definition';
-  const button = row.appendChild(document.createElement('button'));
-  button.type = 'button';
-  button.textContent = label;
-  button.addEventListener('click', () => {
-    view.dispatch({ effects: setPopup.of(null) });
-    run();
-  });
-  row.appendChild(document.createElement('kbd')).textContent = keys;
-  return row;
-}
-
 const SVG = 'http://www.w3.org/2000/svg';
 
 // The Show on canvas button: an eye, the label and its shortcut.
@@ -234,19 +219,34 @@ function showValueDom(view: EditorView, show: () => void) {
   return button;
 }
 
-// The user's own definition: how it's declared, the comment above it, a way to go there, and one to
-// show it on the canvas when it's a value.
-function userDefinitionDom(view: EditorView, def: Description & { go(): void }, show: (() => void) | null) {
+// The user's own definition: how it's declared, the comment above it, and ways to go there, list its
+// uses, rename it, or show it on the canvas when it's a value.
+function userDefinitionDom(view: EditorView, def: UserDefinition, pos: number, show: (() => void) | null) {
   const dom = document.createElement('div');
   dom.className = 'ss-definition';
-  if (def.comment) {
+  if (def.description?.comment) {
     const p = dom.appendChild(document.createElement('p'));
     p.className = 'oneLiner';
-    p.append(def.comment);
+    p.append(def.description.comment);
   }
-  dom.append(highlightedCodeElement([def.signature], 'glsl'));
-  dom.append(actionRow(view, 'Go to definition', goToDefinitionHint, def.go));
-  if (show) dom.append(actionRow(view, 'Show on canvas', 'Alt + Enter', show));
+  if (def.description) dom.append(highlightedCodeElement([def.description.signature], 'glsl'));
+  const actions = dom.appendChild(document.createElement('p'));
+  actions.className = 'ss-go-to-definition';
+  const action = (label: string, hint: string, run: () => void) => {
+    const span = actions.appendChild(document.createElement('span'));
+    const button = span.appendChild(document.createElement('button'));
+    button.type = 'button';
+    button.textContent = label;
+    button.addEventListener('click', () => {
+      view.dispatch({ effects: setPopup.of(null) });
+      run();
+    });
+    span.appendChild(document.createElement('kbd')).textContent = hint;
+  };
+  if (def.go) action('Go to definition', goToDefinitionHint, def.go);
+  action('Find references', findReferencesHint, () => findReferencesAt(view, pos));
+  action('Rename', renameHint, () => startRename(view, pos));
+  if (show) action('Show on canvas', 'Alt+Enter', show);
   return dom;
 }
 
@@ -306,12 +306,13 @@ function onClick(view: EditorView, pos: number, touch: boolean, config: ClickCon
   if (def) {
     view.dispatch({ effects: showPopup(definitionDom(def, config.language)) });
   } else if (config.illuminates(state, word.from)) {
-    const long = name.length > 1;
-    const own = long ? config.userDefinitionAt?.(view, word.from) : null;
+    const own = config.userDefinitionAt?.(view, word.from);
     // A mouse gets the button under the cursor instead, once it rests.
     const show = view.state.facet(showValueAt)?.(view, pos) ?? null;
-    const dom = own ? userDefinitionDom(view, own, show) : show && touch ? showValueDom(view, show) : null;
-    view.dispatch({ effects: [...long ? [setIlluminated.of(name)] : [], ...dom ? [showPopup(dom)] : []] });
+    const dom = own ? userDefinitionDom(view, own, word.from, show) : show && touch ? showValueDom(view, show) : null;
+    // Underlining every use of a one-letter name would mark most of the code.
+    const illuminate = name.length > 1 ? [setIlluminated.of(name)] : [];
+    view.dispatch({ effects: [...illuminate, ...dom ? [showPopup(dom)] : []] });
   }
 }
 

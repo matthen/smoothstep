@@ -16,6 +16,8 @@ These are also in the app, under Help → Keyboard shortcuts.
 | `Shift + Ctrl + R` (Mac: `Shift + Cmd + Alt + F`) | replace all |
 | `Alt + G` | go to a line |
 | `F12`, or `Mod` and click a name | in a shader tab, go to where the name is defined |
+| `Shift + F12` | in a shader tab, list every use of the name at the cursor |
+| `F2` | in a shader tab, rename the name at the cursor everywhere it's used |
 | `Alt + Enter` | in a shader tab, show the value of the selection or the name at the cursor on the canvas, or the image again ([Checking values](coding-specification.md#checking-values)) |
 | `Mod + /` | comment or uncomment |
 | `Tab` | indent the selection, or insert two spaces; in a snippet, go to its next blank |
@@ -25,7 +27,7 @@ These are also in the app, under Help → Keyboard shortcuts.
 | `Ctrl + Space` | show completions (`Tab` or `Enter` picks one) |
 | `Mod + D` | also select the next match of the selection |
 | `Alt + ↑` or `Alt + ↓` | move the line up or down |
-| `Esc` | close the find panel, completions or a picker |
+| `Esc` | close the find panel, the list of uses, completions or a picker |
 
 ## Playing the animation
 
@@ -52,6 +54,19 @@ In a shader tab, hold `Cmd` on a Mac or `Ctrl` elsewhere and click one of your o
 function, a `#define`, a variable or a parameter, to go to where it's defined. Names you can follow
 are underlined while you hold the key. A name from the shared code opens the shared.glsl tab at its
 definition. `F12` does the same for the name at the cursor.
+
+`Shift + F12` lists every use of the name at the cursor in a panel under the code, with each one's tab
+and line, and marks them in the code. Click one to go there. `F2` renames the name at the cursor: type
+the new name over it and press `Enter`, or `Esc` to leave it. Every use changes, and `Mod + Z` undoes
+the rename in one step. A local variable or parameter only changes in its own function. A name from
+the shared code changes in every shader tab. Built-in names can't be renamed, and neither can a new
+name that's already used where the old one is, or a local variable that a `#define` uses. Clicking one of your own functions, `#define`s or
+globals shows links to all three: Go to definition, Find references and Rename. These work in the
+shader tabs only.
+
+Code longer than the editor gets a minimap down its right edge: each line as small blocks in its
+colours, with a box over the part you can see. Click it to jump there, or drag the box to scroll.
+Phones and narrow editors don't show it.
 
 Under **Snippets** at the end of the completions are starting points for common code, marked ⋯.
 In a shader tab: `mainImage`, `feedback` (a shader that builds on its own last frame), `raymarch`

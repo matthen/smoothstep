@@ -13,11 +13,13 @@ import {
 import { tagHighlighter, tags as t } from '@lezer/highlight';
 import { glslCompletionSource } from './completion';
 import { glslLanguage } from './glslLanguage';
-import { definitionElsewhere, goToDefinitionExtension, type DefinitionElsewhere } from './goToDefinition';
+import { codeTabs, definitionElsewhere, goToDefinitionExtension, type CodeTabs, type DefinitionElsewhere } from './goToDefinition';
 import { lineErrors } from './lineErrors';
 import { links } from './links';
+import { minimap } from './minimap';
 import { clickHelpers } from './popups';
 import { showExpressionExtension, type ShowExpression } from './showExpression';
+import { referencesExtension } from './references';
 
 // Classes styled in editor.scss with the old Dracula colours.
 const highlighter = tagHighlighter([
@@ -51,6 +53,8 @@ export interface EditorCallbacks {
   definitionElsewhere?: DefinitionElsewhere;
   // For showing a selected expression on the canvas, in a shader tab.
   onShowExpression?: ShowExpression;
+  // The GLSL tabs, for finding and renaming a name's uses in all of them.
+  codeTabs?: CodeTabs;
 }
 
 // What a tab's code is written in: the shader language, or JavaScript for the Canvas2D layer.
@@ -99,9 +103,10 @@ export function editorExtensions(callbacks: EditorCallbacks, language: EditorLan
     indentOnInput(),
     // JavaScript brings its own highlighting and click helpers.
     language === "glsl" ? [
-      glslLanguage, syntaxHighlighting(highlighter), clickHelpers(), goToDefinitionExtension(),
+      glslLanguage, syntaxHighlighting(highlighter), clickHelpers(), goToDefinitionExtension(), referencesExtension(),
       callbacks.definitionElsewhere ? definitionElsewhere.of(callbacks.definitionElsewhere) : [],
       callbacks.onShowExpression ? showExpressionExtension(callbacks.onShowExpression) : [],
+      callbacks.codeTabs ? codeTabs.of(callbacks.codeTabs) : [],
     ] :
       javascriptCompartment.of(javascriptSupport ?? []),
     bracketMatching(),
@@ -120,5 +125,6 @@ export function editorExtensions(callbacks: EditorCallbacks, language: EditorLan
     tooltips({ parent: document.body }),
     links(),
     lineErrors({ onFixed: () => callbacks.onFixed?.() }),
+    minimap(),
   ];
 }

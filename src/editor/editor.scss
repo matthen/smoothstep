@@ -100,6 +100,114 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
     border-bottom: 1px dashed rgba($dt-gray-light, 0.7);
   }
 
+  // The uses listed by Find references.
+  .cm-reference {
+    background-color: rgba($dt-purple, 0.22);
+    border-radius: 2px;
+  }
+
+  // Its colours are read from these classes.
+  .cm-minimap {
+    position: absolute;
+    right: 0;
+    width: 96px;
+    border-left: 1px solid rgba($dt-gray, 0.7);
+    cursor: default;
+    touch-action: none;
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .cm-minimap-box {
+      color: rgba($dt-gray-medium, 0.14);
+    }
+
+    .cm-minimap-box-dragged {
+      color: rgba($dt-gray-medium, 0.26);
+    }
+  }
+
+  // Find references' list, under the code.
+  .cm-panels-bottom {
+    border-top: 1px solid $dt-gray-medium;
+  }
+
+  .ss-references {
+    font-family: var(--mantine-font-family);
+    font-size: 12px;
+
+    .ss-references-head {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 4px 4px 10px;
+      color: $dt-gray-medium;
+
+      code {
+        font-size: 12px;
+      }
+
+      button {
+        margin-left: auto;
+        padding: 0 6px;
+        background: none;
+        border: none;
+        color: $dt-gray-medium;
+        font-size: 16px;
+        line-height: 1;
+        cursor: pointer;
+
+        &:hover {
+          color: $dt-gray-light;
+        }
+      }
+    }
+
+    ul {
+      max-height: 140px;
+      margin: 0;
+      padding: 0 0 4px;
+      overflow-y: auto;
+      list-style: none;
+    }
+
+    .ss-reference {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      width: 100%;
+      padding: 2px 10px;
+      background: none;
+      border: none;
+      color: $dt-gray-medium;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+
+      &:hover,
+      &:focus-visible {
+        background: $dt-gray;
+        outline: none;
+      }
+
+      .ss-reference-line {
+        min-width: 2.5em;
+        text-align: right;
+        font-family: var(--mantine-font-family-monospace);
+      }
+
+      code {
+        overflow: hidden;
+        font-size: 12px;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+    }
+  }
+
   // Search, replace and go-to-line panels.
   .cm-panels {
     background-color: $dt-gray-dark;
@@ -362,54 +470,151 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
   z-index: 1000;
 }
 
+// Mantine's dark popover surface, a step lighter than the editor.
+$popup-surface: #343746;
+$popup-line: rgba($dt-gray-light, 0.07);
+$popup-text-muted: #c9cad6;
+
 .ss-definition {
-  background-color: $dt-gray-dark;
-  border: 1px solid $dt-gray-medium;
-  border-radius: 2px;
-  box-shadow: $modal-shadow;
+  background-color: $popup-surface;
+  border: 1px solid $popup-line;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.25);
   color: $dt-gray-light;
-  padding: 16px;
-  font-size: 14px;
-  max-width: min(640px, calc(100vw - 32px));
+  padding: 10px;
+  font-family: var(--mantine-font-family);
+  font-size: 13px;
+  line-height: 1.45;
+  max-width: min(560px, calc(100vw - 32px));
 
   p.oneLiner {
-    margin-bottom: 1rem;
+    margin: 0 2px 8px;
+    color: $popup-text-muted;
   }
 
   .oneLiner a {
-    color: $dt-pink;
+    border-radius: 2px;
+    color: $dt-purple;
     text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $dt-purple;
+      outline-offset: 1px;
+    }
   }
 
-  code {
+  // The signature, as an inset block of highlighted code.
+  > code {
+    display: block;
+    padding: 6px 8px;
+    overflow-x: auto;
+    background: $dt-gray-dark;
+    border-radius: 4px;
+    font-family: var(--mantine-font-family-monospace);
     font-size: 12px;
+    line-height: 1.6;
+    white-space: pre;
     user-select: text;
   }
 
+  // A row of quiet actions; each item is a button with its shortcut after it.
   .ss-go-to-definition {
     display: flex;
-    align-items: baseline;
-    gap: 10px;
-    margin: 12px 0 0;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin: 8px -2px 0;
+    padding-top: 6px;
+    border-top: 1px solid $popup-line;
+
+    > span {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      transition: background-color 100ms;
+
+      &:hover {
+        background: rgba($dt-gray-light, 0.08);
+      }
+
+      &:has(button:focus-visible) {
+        outline: 2px solid $dt-purple;
+        outline-offset: -1px;
+      }
+    }
 
     button {
       padding: 0;
       border: 0;
       background: none;
-      color: $dt-pink;
+      color: $dt-gray-light;
       font: inherit;
+      font-size: 12.5px;
       cursor: pointer;
+      outline: none;
 
-      &:hover {
-        text-decoration: underline;
+      // The whole chip, shortcut included, is the click target.
+      &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
       }
     }
 
     kbd {
+      padding: 0 4px;
+      border: 1px solid rgba($dt-gray-light, 0.12);
+      border-radius: 3px;
+      background: rgba(0, 0, 0, 0.15);
       color: $dt-gray-medium;
-      font-family: inherit;
-      font-size: 12px;
+      font-family: var(--mantine-font-family-monospace);
+      font-size: 10.5px;
+      line-height: 1.5;
     }
+  }
+}
+
+// A short note at the cursor, such as why a name can't be renamed.
+.cm-tooltip.ss-editor-message {
+  padding: 4px 8px;
+  background: $dt-gray-darker;
+  border: 1px solid $dt-gray;
+  border-radius: 2px;
+  color: $dt-gray-light;
+  font-size: 12px;
+}
+
+// Rename's input, over the name.
+.cm-tooltip.ss-rename {
+  background: none;
+  border: none;
+  z-index: 1000;
+  input {
+    padding: 1px 4px;
+    background: $dt-gray-darker;
+    border: 1px solid $dt-purple;
+    border-radius: 2px;
+    color: $dt-gray-light;
+    font-family: monospace;
+    font-size: 13px;
+    outline: none;
+  }
+
+  .ss-rename-error:not(:empty) {
+    max-width: 320px;
+    margin-top: 2px;
+    padding: 4px 8px;
+    background: $dt-gray-darker;
+    border-left: 3px solid $dt-red;
+    color: $dt-gray-light;
+    font-size: 12px;
   }
 }
 

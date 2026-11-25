@@ -20,6 +20,8 @@ export interface Declaration extends Range {
   scope: Range;
   // A function with a body, rather than a prototype.
   body: boolean;
+  // Where it comes into scope: after its initialiser, for a variable.
+  start: number;
 }
 
 export interface Analysis {
@@ -30,10 +32,10 @@ export interface Analysis {
 }
 
 // The code's tokens with their offsets, leaving out spaces and comments.
-function tokensOf(code: string): Tok[] {
+function tokensOf(code: string, structs: readonly string[]): Tok[] {
   const out: Tok[] = [];
   let offset = 0;
-  for (const line of tokenizeGlsl(code)) {
+  for (const line of tokenizeGlsl(code, structs)) {
     for (const t of line) {
       if (t.type !== 'comment' && t.text.trim()) out.push({ text: t.text, type: t.type, from: offset, to: offset + t.text.length });
       offset += t.text.length;
@@ -54,6 +56,18 @@ function logicalLineEnd(code: string, pos: number): number {
   return end < 0 ? code.length : end;
 }
 
+// The struct types declared at the top level.
+export const structsOf = (analysis: Analysis) =>
+  analysis.declarations.filter((d) => d.kind === 'struct' && isGlobal(analysis, d)).map((d) => d.name);
+
+// Each #define line, from its directive to its end.
+export function defineLines(analysis: Analysis): Range[] {
+  return analysis.declarations.filter((d) => d.kind === 'macro').map((d) => {
+    const from = analysis.code.lastIndexOf('\n', d.from - 1) + 1;
+    return { from, to: logicalLineEnd(analysis.code, d.from) };
+  });
+}
+
 // The index of the bracket closing the one at `open`, or the last token.
 function closing(tokens: Tok[], open: number): number {
   const [o, c] = tokens[open]!.text === '(' ? ['(', ')'] : ['{', '}'];
@@ -65,12 +79,16 @@ function closing(tokens: Tok[], open: number): number {
   return tokens.length - 1;
 }
 
-export function analyse(code: string): Analysis {
-  const tokens = tokensOf(code);
+// `structs` are struct types declared elsewhere, as in the shared tab, that this code can use.
+export function analyse(code: string, structs: readonly string[] = []): Analysis {
+  const tokens = tokensOf(code, structs);
   const whole = { from: 0, to: code.length };
   const declarations: Declaration[] = [];
-  const declare = (t: Tok, kind: DeclarationKind, scope: Range, body = false) =>
-    declarations.push({ name: t.text, kind, from: t.from, to: t.to, scope, body });
+  const declare = (t: Tok, kind: DeclarationKind, scope: Range, body = false) => {
+    const d: Declaration = { name: t.text, kind, from: t.from, to: t.to, scope, body, start: t.to };
+    declarations.push(d);
+    return d;
+  };
   // The blocks open at each token, innermost last.
   const blocks: Range[] = [];
   const scope = () => blocks.at(-1) ?? whole;
@@ -124,18 +142,25 @@ export function analyse(code: string): Analysis {
     }
     if (mainImage) continue;
     // A variable, and any more declared after commas in the same statement, as in `float a = f(x, y), b;`.
-    declare(t, 'variable', scope());
-    for (let j = i + 1, depth = 0; j < tokens.length; j++) {
+    // Each comes into scope after its initialiser, so in `float s = s * 2.;` the second `s` is an outer one.
+    let last: Declaration | null = declare(t, 'variable', scope());
+    let j = i + 1;
+    for (let depth = 0; j < tokens.length; j++) {
       const text = tokens[j]!.text;
       if (text === '(' || text === '[') depth++;
       else if (text === ')' || text === ']') {
         if (--depth < 0) break;
       } else if (text === ';' || text === '{' || text === '}') break;
-      else if (text === ',' && depth === 0 && isName(tokens[j + 1])) {
-        declare(tokens[j + 1]!, 'variable', scope());
-        handled.add(j + 1);
+      else if (text === ',' && depth === 0) {
+        if (last) last.start = tokens[j]!.from;
+        last = null;
+        if (isName(tokens[j + 1])) {
+          last = declare(tokens[j + 1]!, 'variable', scope());
+          handled.add(j + 1);
+        }
       }
     }
+    if (last) last.start = tokens[j]?.from ?? code.length;
   }
   return { code, tokens, declarations, length: code.length };
 }
@@ -203,15 +228,22 @@ const size = (r: Range) => r.to - r.from;
 export function findDefinition(analysis: Analysis, pos: number): Declaration | null {
   const name = nameAt(analysis, pos);
   if (!name) return null;
+  return resolve(analysis, pos) ?? analysis.declarations.find((d) => d.name === name.text) ?? null;
+}
+
+// The declaration in scope at `pos`, or null when nothing here declares the name there.
+export function resolve(analysis: Analysis, pos: number): Declaration | null {
+  const name = nameAt(analysis, pos);
+  if (!name) return null;
   const same = analysis.declarations.filter((d) => d.name === name.text);
   const own = same.find((d) => d.from === name.from);
   if (own) return own.kind === 'function' && !own.body ? same.find((d) => d.kind === 'function' && d.body) ?? own : own;
   const global = (d: Declaration) => size(d.scope) === analysis.length;
-  const visible = same.filter((d) => d.scope.from <= pos && pos <= d.scope.to && (global(d) || d.from <= pos));
-  const before = (d: Declaration) => Number(d.from <= pos);
+  const visible = same.filter((d) => d.scope.from <= pos && pos <= d.scope.to && (global(d) || d.start <= pos));
+  const before = (d: Declaration) => Number(d.start <= pos);
   visible.sort((a, b) => size(a.scope) - size(b.scope) || Number(b.body) - Number(a.body) ||
     before(b) - before(a) || Math.abs(a.from - pos) - Math.abs(b.from - pos));
-  return visible[0] ?? topLevel(analysis, name.text) ?? same[0] ?? null;
+  return visible[0] ?? topLevel(analysis, name.text);
 }
 
 // A declaration of `name` that the whole code can see, preferring a function's body to its prototype.
@@ -220,7 +252,7 @@ export function topLevel(analysis: Analysis, name: string): Declaration | null {
   return same.find((d) => d.body) ?? same[0] ?? null;
 }
 
-const isGlobal = (analysis: Analysis, d: Declaration) => size(d.scope) === analysis.length;
+export const isGlobal = (analysis: Analysis, d: Declaration) => size(d.scope) === analysis.length;
 
 export interface Description {
   signature: string;
