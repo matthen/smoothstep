@@ -13,12 +13,12 @@ import {
 import { tagHighlighter, tags as t } from '@lezer/highlight';
 import { glslCompletionSource } from './completion';
 import { glslLanguage } from './glslLanguage';
-import { definitionElsewhere, goToDefinitionExtension, type DefinitionElsewhere } from './goToDefinition';
+import { codeTabs, definitionElsewhere, goToDefinitionExtension, type CodeTabs, type DefinitionElsewhere } from './goToDefinition';
 import { lineErrors } from './lineErrors';
 import { links } from './links';
 import { minimap } from './minimap';
 import { clickHelpers } from './popups';
-import { codeTabs, referencesExtension, type CodeTabs } from './references';
+import { referencesExtension } from './references';
 
 // Classes styled in editor.scss with the old Dracula colours.
 const highlighter = tagHighlighter([

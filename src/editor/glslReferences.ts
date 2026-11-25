@@ -1,5 +1,5 @@
 // Every use of one of the user's names, and renaming it, across the GLSL tabs.
-import { isGlobal, nameAt, resolve, topLevel, type Analysis, type Declaration, type Range } from './glslDefinitions';
+import { defineLines, isGlobal, nameAt, resolve, topLevel, type Analysis, type Declaration, type Range } from './glslDefinitions';
 import { tokenizeGlsl } from './glslLanguage';
 
 // One tab's code. The shared tab's top-level names are seen by every other tab.
@@ -68,9 +68,20 @@ function isField(analysis: Analysis, d: Declaration): boolean {
   return analysis.tokens[i]?.text === '{' && analysis.tokens[i - 2]?.text === 'struct';
 }
 
+const contains = (r: Range, pos: number) => r.from <= pos && pos <= r.to;
+
 // Why the name can't be renamed at all, if it can't.
 export function renameRefusal(target: Target): string | null {
-  return isField(target.home.analysis, target.declaration) ? "A struct's fields can't be renamed." : null;
+  const { name, declaration, home } = target;
+  if (isField(home.analysis, declaration)) return "A struct's fields can't be renamed.";
+  // A macro can use a local where it's expanded, but its uses can't be told apart from other names.
+  const local = declaration.kind === 'parameter' || (declaration.kind === 'variable' && !isGlobal(home.analysis, declaration));
+  const defines = defineLines(home.analysis);
+  if (local && !defines.some((r) => contains(r, declaration.from))) {
+    const used = home.analysis.tokens.some((t) => t.text === name && defines.some((r) => contains(r, t.from)));
+    if (used) return `A #define uses ${name}, so it can't be renamed.`;
+  }
+  return null;
 }
 
 // Words GLSL keeps for itself beyond its keywords, types and built-ins, and `main`, which wraps mainImage.
@@ -106,6 +117,11 @@ export function renameProblem(target: Target, newName: string, sources: Source[]
     const scope = source === target.home ? target.declaration.scope : { from: 0, to: source.analysis.length };
     if (source.analysis.declarations.some((d) => d.name === newName && overlaps(d.scope, scope))) {
       return `${newName} is already a name in ${source.id}.`;
+    }
+    // A use of a name declared nowhere here, as from a tab this can't see, could be captured.
+    if (source.analysis.tokens.some((t) => t.text === newName && nameAt(source.analysis, t.from)?.from === t.from &&
+      !resolve(source.analysis, t.from))) {
+      return `${newName} is already used in ${source.id}.`;
     }
   }
   return null;

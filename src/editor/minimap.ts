@@ -1,7 +1,7 @@
 // A minimap down the editor's right edge: each line of code as small blocks in its syntax colours, with
 // the part in view as a box. A click or drag on it scrolls the code. It shows once the code is longer
 // than the editor, when the editor is wide enough to spare the room.
-import { highlightingFor, syntaxTree } from '@codemirror/language';
+import { highlightingFor, language, syntaxTree } from '@codemirror/language';
 import { type Extension } from '@codemirror/state';
 import { EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import { highlightTree } from '@lezer/highlight';
@@ -51,6 +51,9 @@ class Minimap {
 
   update(update: ViewUpdate) {
     if (update.docChanged || update.geometryChanged || update.heightChanged || update.viewportChanged) this.measure();
+    // The colours change as background parsing catches up, or when the language loads.
+    else if (syntaxTree(update.state) !== syntaxTree(update.startState) ||
+      update.state.facet(language) !== update.startState.facet(language)) this.scheduleDraw();
   }
 
   onScroll = () => this.measure();

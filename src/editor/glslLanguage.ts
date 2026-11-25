@@ -413,9 +413,10 @@ export interface Token {
   type: GlslToken | null;
 }
 
-// Tokenises code line by line, for tests and for finding the token under a click.
-export function tokenizeGlsl(code: string): Token[][] {
-  const state = glslParser.startState!(INDENT_UNIT);
+// Tokenises code line by line, for tests and for finding the token under a click. `structs` are struct
+// types declared elsewhere.
+export function tokenizeGlsl(code: string, structs: readonly string[] = []): Token[][] {
+  const state = { ...glslParser.startState!(INDENT_UNIT), structs };
   return code.split('\n').map((line) => {
     const tokens: Token[] = [];
     const stream = new StringStream(line, 2, INDENT_UNIT);

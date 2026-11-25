@@ -79,6 +79,24 @@ test("Shift-F12 on a name from the shared code lists its uses in every tab, and 
   expect(errors).toEqual([]);
 });
 
+test("Editing another tab the list shows closes the list", async ({page, context}) => {
+  const errors = await offline(context);
+  await sharedSetup(page);
+
+  await word(page, "magenta", 1).click();
+  await page.keyboard.press("Shift+F12");
+  await expect(openPanel(page).locator(".ss-reference")).toHaveCount(3);
+
+  await tab(page, /^shared\.glsl/).click();
+  await page.locator(OPEN_EDITOR).click();
+  await page.keyboard.press("ControlOrMeta+Home");
+  await page.keyboard.type("// colours\n");
+  await tab(page, /^Image\.glsl/).click();
+  await expect(openPanel(page)).toHaveCount(0);
+  await expect(page.locator(`${OPEN_EDITOR} .cm-reference`)).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
 test("F2 renames a shared name in every tab, as one undo step in each", async ({page, context}) => {
   const errors = await offline(context);
   await sharedSetup(page);

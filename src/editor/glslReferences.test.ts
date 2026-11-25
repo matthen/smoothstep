@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyse } from './glslDefinitions';
+import { analyse, structsOf } from './glslDefinitions';
 import { findReferences, renameProblem, renameRefusal, targetAt, type Source } from './glslReferences';
 
 const source = (id: string, code: string, shared = false): Source => ({ id, analysis: analyse(code), shared });
@@ -118,5 +118,118 @@ describe('renameProblem', () => {
     const sources = [source('Image.glsl', 'struct Ray { vec3 o; };')];
     const current = sources[0]!;
     expect(renameRefusal(targetAt(sources, current, current.analysis.code.indexOf('o;'))!)).toMatch(/fields/);
+  });
+});
+
+// The tabs as the app analyses them: the others know the shared tab's struct types.
+function tabs(shared: string, others: Record<string, string>): Source[] {
+  const sharedSource = source('shared.glsl', shared, true);
+  const structs = structsOf(sharedSource.analysis);
+  return [sharedSource, ...Object.entries(others).map(([id, code]) => ({ id, analysis: analyse(code, structs), shared: false }))];
+}
+
+// Each tab's code after renaming the first `name` from `marker` on in `tab`, or why it can't be renamed.
+function renamed(sources: Source[], tab: string, name: string, newName: string, marker = '') {
+  const current = sources.find((s) => s.id === tab)!;
+  const target = targetAt(sources, current, offsetOf(current.analysis.code, name, marker))!;
+  const problem = renameRefusal(target) ?? renameProblem(target, newName, sources);
+  if (problem) return problem;
+  const references = findReferences(target);
+  return Object.fromEntries(sources.map((s) => {
+    let code = s.analysis.code;
+    for (const r of references.filter((r) => r.source === s).reverse()) code = code.slice(0, r.from) + newName + code.slice(r.to);
+    return [s.id, code];
+  }));
+}
+
+describe('a declaration shadowing a name in its own initialiser', () => {
+  const code = 'float scale = 2.;\nfloat f() { float scale = scale * .5; return scale; }';
+  const image = [source('Image.glsl', code)];
+
+  it('leaves the initialiser referring to the outer name', () => {
+    expect(referencesOf(image, 'Image.glsl', 'scale')).toEqual(['Image.glsl:1:6', 'Image.glsl:2:26']);
+    expect(referencesOf(image, 'Image.glsl', 'scale', 'scale = scale')).toEqual(['Image.glsl:2:18', 'Image.glsl:2:45']);
+    expect(renamed(image, 'Image.glsl', 'scale', 'size')).toEqual({
+      'Image.glsl': 'float size = 2.;\nfloat f() { float scale = size * .5; return scale; }',
+    });
+    expect(renamed(image, 'Image.glsl', 'scale', 'k', 'scale = scale')).toEqual({
+      'Image.glsl': 'float scale = 2.;\nfloat f() { float k = scale * .5; return k; }',
+    });
+  });
+
+  it('works the same for a parameter shadowed in a block', () => {
+    const param = [source('Image.glsl', 'float f(float t) { { float t = t; } return t; }')];
+    expect(referencesOf(param, 'Image.glsl', 't')).toEqual(['Image.glsl:1:14', 'Image.glsl:1:31', 'Image.glsl:1:43']);
+    expect(renamed(param, 'Image.glsl', 't', 'time')).toEqual({
+      'Image.glsl': 'float f(float time) { { float t = time; } return time; }',
+    });
+    expect(renamed(param, 'Image.glsl', 't', 'u', 't = t')).toEqual({
+      'Image.glsl': 'float f(float t) { { float u = t; } return t; }',
+    });
+  });
+
+  it('brings each of several declarators into scope after its own initialiser', () => {
+    const several = [source('Image.glsl', 'float a = 1.;\nvoid f() { float a = 2., b = a; }')];
+    expect(referencesOf(several, 'Image.glsl', 'a')).toEqual(['Image.glsl:1:6']);
+    expect(referencesOf(several, 'Image.glsl', 'a', 'a = 2')).toEqual(['Image.glsl:2:17', 'Image.glsl:2:29']);
+  });
+});
+
+describe('struct types from the shared tab', () => {
+  const shared = 'struct L { vec3 p; };\nfloat light;';
+
+  it('refuses a rename that a parameter of a shared struct type would capture', () => {
+    const sources = tabs(shared, { 'Image.glsl': 'float sh(L sun) { return sun.p.x * light; }' });
+    expect(renamed(sources, 'shared.glsl', 'light', 'sun')).toMatch(/already a name in Image.glsl/);
+    expect(renamed(sources, 'shared.glsl', 'light', 'glow')).toEqual({
+      'shared.glsl': 'struct L { vec3 p; };\nfloat glow;',
+      'Image.glsl': 'float sh(L sun) { return sun.p.x * glow; }',
+    });
+  });
+
+  it('recognises locals, globals and functions declared with a shared struct', () => {
+    const image = 'L g;\nL mk() { L l; l.p = g.p; return l; }\nvoid mainImage(out vec4 c, in vec2 q) { c = vec4(mk().p, 1.); }';
+    const sources = tabs(shared, { 'Image.glsl': image });
+    expect(referencesOf(sources, 'Image.glsl', 'g')).toEqual(['Image.glsl:1:2', 'Image.glsl:2:20']);
+    expect(referencesOf(sources, 'Image.glsl', 'l')).toEqual(['Image.glsl:2:11', 'Image.glsl:2:14', 'Image.glsl:2:32']);
+    expect(referencesOf(sources, 'Image.glsl', 'mk')).toEqual(['Image.glsl:2:2', 'Image.glsl:3:49']);
+    expect(renamed(sources, 'Image.glsl', 'mk', 'make')).toEqual({
+      'shared.glsl': shared,
+      'Image.glsl': image.replace(/mk/g, 'make'),
+    });
+  });
+
+  it('refuses a new name used, but declared nowhere, in a tab the rename reaches', () => {
+    const sources = [source('Image.glsl', 'float f(float t) { return t * glow; }')];
+    expect(renamed(sources, 'Image.glsl', 't', 'glow')).toMatch(/already used in Image.glsl/);
+  });
+});
+
+describe('a local used in a #define', () => {
+  it('refuses to rename it', () => {
+    const sources = [source('Image.glsl', '#define STEP p *= 2.\nvoid f(vec2 p) { STEP; }')];
+    expect(renamed(sources, 'Image.glsl', 'p', 'q', 'vec2 p')).toMatch(/#define uses p/);
+  });
+
+  it("still renames a macro's own parameter, and a global a macro uses", () => {
+    const param = [source('Image.glsl', '#define TWICE(x) (x + x)\nfloat y = TWICE(1.);')];
+    expect(renamed(param, 'Image.glsl', 'x', 'v')).toEqual({ 'Image.glsl': '#define TWICE(v) (v + v)\nfloat y = TWICE(1.);' });
+    const global = [source('Image.glsl', 'float k = 1.;\n#define K2 (k * 2.)\nfloat y = K2;')];
+    expect(renamed(global, 'Image.glsl', 'k', 'scale')).toEqual({ 'Image.glsl': 'float scale = 1.;\n#define K2 (scale * 2.)\nfloat y = K2;' });
+  });
+});
+
+describe('preprocessor lines', () => {
+  it('finds a macro in #ifdef and #if defined()', () => {
+    const code = '#define FAST\n#ifdef FAST\nfloat a;\n#endif\n#if defined(FAST) && 1\nfloat b;\n#endif';
+    expect(referencesOf([source('Image.glsl', code)], 'Image.glsl', 'FAST')).toEqual(['Image.glsl:1:8', 'Image.glsl:2:7', 'Image.glsl:5:12']);
+  });
+
+  it("keeps a multi-line #define's parameters to its lines", () => {
+    const code = '#define MIX(a, b) \\\n  mix(a, b, .5)\nfloat a = 1.;\nfloat c = MIX(a, 2.);';
+    const sources = [source('Image.glsl', code)];
+    expect(referencesOf(sources, 'Image.glsl', 'a')).toEqual(['Image.glsl:1:12', 'Image.glsl:2:6']);
+    expect(referencesOf(sources, 'Image.glsl', 'a', 'float a')).toEqual(['Image.glsl:3:6', 'Image.glsl:4:14']);
+    expect(renamed(sources, 'Image.glsl', 'MIX', 'BLEND')).toEqual({ 'Image.glsl': code.replace('MIX', 'BLEND').replace('MIX', 'BLEND') });
   });
 });

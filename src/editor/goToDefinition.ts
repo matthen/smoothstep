@@ -3,7 +3,7 @@
 import { Facet, StateEffect, StateField, type EditorState, type Extension, type Text } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, keymap } from '@codemirror/view';
 import { isMac } from '../app/platform';
-import { analyse, describe, findDefinition, nameAt, type Analysis, type Description, type Range } from './glslDefinitions';
+import { analyse, describe, findDefinition, nameAt, structsOf, type Analysis, type Description, type Range } from './glslDefinitions';
 
 // A name declared in another tab: a way to go there, and how it's declared.
 interface Elsewhere {
@@ -19,17 +19,37 @@ export const definitionElsewhere = Facet.define<DefinitionElsewhere, DefinitionE
 
 export const isDefinitionClick = (e: MouseEvent | KeyboardEvent) => isMac ? e.metaKey : e.ctrlKey;
 
-const analyses = new WeakMap<Text, Analysis>();
+// A GLSL tab: its name, its editor, and a way to show it.
+export interface CodeTab {
+  name: string;
+  view: EditorView;
+  shared: boolean;
+  show(): void;
+}
 
-export function analysisOf(doc: Text): Analysis {
-  let analysis = analyses.get(doc);
-  if (!analysis) analyses.set(doc, analysis = analyse(doc.toString()));
-  return analysis;
+export type CodeTabs = () => CodeTab[];
+
+export const codeTabs = Facet.define<CodeTabs, CodeTabs | null>({ combine: (values) => values[0] ?? null });
+
+const analyses = new WeakMap<Text, { structs: string; analysis: Analysis }>();
+
+// `structs` are struct types declared in the shared tab.
+export function analysisOf(doc: Text, structs: readonly string[] = []): Analysis {
+  const key = structs.join(' ');
+  let cached = analyses.get(doc);
+  if (cached?.structs !== key) analyses.set(doc, cached = { structs: key, analysis: analyse(doc.toString(), structs) });
+  return cached.analysis;
+}
+
+// The analysis of a tab's code, knowing the struct types the shared tab declares.
+export function tabAnalysis(state: EditorState): Analysis {
+  const shared = state.facet(codeTabs)?.().find((t) => t.shared)?.view.state.doc;
+  return analysisOf(state.doc, shared && shared !== state.doc ? structsOf(analysisOf(shared)) : []);
 }
 
 // The name at `pos` and where its definition is: in this code, or in another tab.
 function definitionAt(state: EditorState, pos: number): { name: Range; target: Range | Elsewhere } | null {
-  const analysis = analysisOf(state.doc);
+  const analysis = tabAnalysis(state);
   const name = nameAt(analysis, pos);
   if (!name) return null;
   const target = findDefinition(analysis, pos) ?? state.facet(definitionElsewhere)?.(name.text);
@@ -39,7 +59,7 @@ function definitionAt(state: EditorState, pos: number): { name: Range; target: R
 // For the popup on a clicked name: how it's declared and a way to go there, unless the click is on the
 // declaration itself.
 export function userDefinitionAt(view: EditorView, pos: number): (Description & { go(): void }) | null {
-  const analysis = analysisOf(view.state.doc);
+  const analysis = tabAnalysis(view.state);
   const name = nameAt(analysis, pos);
   if (!name) return null;
   const here = findDefinition(analysis, pos);

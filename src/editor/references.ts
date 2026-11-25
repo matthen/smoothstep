@@ -1,24 +1,12 @@
 // Find references (Shift-F12) lists every use of the name at the cursor in a panel under the code, and
 // Rename (F2) changes them all, in this tab and, for a name from the shared code, in every shader tab.
 import { isolateHistory } from '@codemirror/commands';
-import { Facet, StateEffect, StateField, type Extension } from '@codemirror/state';
+import { StateEffect, StateField, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, keymap, showPanel, showTooltip, type Panel, type Tooltip } from '@codemirror/view';
 import { nameAt, type Range } from './glslDefinitions';
 import { findReferences, isGlslWord, renameProblem, renameRefusal, targetAt, type Source, type Target } from './glslReferences';
-import { analysisOf, selectDefinition } from './goToDefinition';
+import { codeTabs, selectDefinition, tabAnalysis, type CodeTab } from './goToDefinition';
 import { highlightedCodeElement } from './highlight';
-
-// A GLSL tab: its name, its editor, and a way to show it.
-export interface CodeTab {
-  name: string;
-  view: EditorView;
-  shared: boolean;
-  show(): void;
-}
-
-export type CodeTabs = () => CodeTab[];
-
-export const codeTabs = Facet.define<CodeTabs, CodeTabs | null>({ combine: (values) => values[0] ?? null });
 
 export const findReferencesHint = 'Shift-F12';
 export const renameHint = 'F2';
@@ -34,7 +22,7 @@ interface Found {
 function find(view: EditorView, pos: number): Found {
   const tabs = view.state.facet(codeTabs)?.() ?? [];
   if (!tabs.some((t) => t.view === view)) tabs.push({ name: '', view, shared: false, show() {} });
-  const sources = tabs.map((t): Source => ({ id: t.name, analysis: analysisOf(t.view.state.doc), shared: t.shared }));
+  const sources = tabs.map((t): Source => ({ id: t.name, analysis: tabAnalysis(t.view.state), shared: t.shared }));
   const current = sources[tabs.findIndex((t) => t.view === view)]!;
   const target = targetAt(sources, current, pos);
   let why = '';
@@ -156,13 +144,24 @@ function referencesPanel(view: EditorView, refs: References): Panel {
 
 function goTo(view: EditorView, item: Item) {
   const there = item.tab.view;
+  const length = there.state.doc.length;
+  const range = { from: Math.min(item.from, length), to: Math.min(item.to, length) };
   if (there !== view) {
     view.dispatch({ effects: setReferences.of(null) });
     item.tab.show();
-    findReferencesAt(there, item.from);
+    findReferencesAt(there, range.from);
   }
-  selectDefinition(there, item);
+  selectDefinition(there, range);
 }
+
+// An edit in one tab moves the uses listed in other tabs' panels, so those panels close too.
+const closeOthers = EditorView.updateListener.of((update) => {
+  if (!update.docChanged) return;
+  for (const tab of update.state.facet(codeTabs)?.() ?? []) {
+    const refs = tab.view === update.view ? null : tab.view.state.field(referencesField, false);
+    if (refs?.items.some((i) => i.tab.view === update.view)) tab.view.dispatch({ effects: setReferences.of(null) });
+  }
+});
 
 export function findReferencesAt(view: EditorView, pos: number): boolean {
   const { tabs, sources, target, why } = find(view, pos);
@@ -205,7 +204,7 @@ export function startRename(view: EditorView, pos: number): boolean {
     showMessage(view, pos, refusal ?? why);
     return true;
   }
-  const name = nameAt(analysisOf(view.state.doc), pos)!;
+  const name = nameAt(tabAnalysis(view.state), pos)!;
   const tooltip: Tooltip = { pos: name.from, above: false, create: () => renameDom(view, target.name) };
   view.dispatch({ effects: [setRenaming.of({ pos, name, tooltip }), setMessage.of(null), setReferences.of(null)] });
   return true;
@@ -284,6 +283,7 @@ export function referencesExtension(): Extension {
   return [
     messageField,
     referencesField,
+    closeOthers,
     renamingField,
     keymap.of([
       { key: 'Shift-F12', preventDefault: true, run: (view) => findReferencesAt(view, view.state.selection.main.head) },

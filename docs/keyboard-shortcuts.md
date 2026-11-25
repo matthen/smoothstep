@@ -59,7 +59,7 @@ and line, and marks them in the code. Click one to go there. `F2` renames the na
 the new name over it and press `Enter`, or `Esc` to leave it. Every use changes, and `Mod + Z` undoes
 the rename in one step. A local variable or parameter only changes in its own function. A name from
 the shared code changes in every shader tab. Built-in names can't be renamed, and neither can a new
-name that's already used where the old one is. Clicking one of your own functions, `#define`s or
+name that's already used where the old one is, or a local variable that a `#define` uses. Clicking one of your own functions, `#define`s or
 globals shows links to all three: Go to definition, Find references and Rename. These work in the
 shader tabs only.
 
