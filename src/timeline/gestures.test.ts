@@ -2,7 +2,8 @@ import {describe, expect, it} from "vitest";
 import type {Transition} from "../lib/document";
 import {ROW_BAND_BOTTOM, ROW_BAND_TOP, ROW_HEIGHT, timeToX} from "./geometry";
 import {
-  extendCreating, liftGesture, moveGesture, NO_TOUCHES, shownCreating, startCreating, touchDown, touchUp,
+  awaitingEnd, extendCreating, holdCreating, liftGesture, moveGesture, NO_TOUCHES, shownCreating, startCreating,
+  SWIPE_PX, touchDown, touchUp,
 } from "./gestures";
 import type {Creating, Gesture, Rows} from "./gestures";
 
@@ -58,10 +59,46 @@ describe("adding a transition on a touch screen", () => {
     expect(second.gesture.kind).toBe("idle");
   });
 
-  it("shows nothing until the first tap lifts, so a swipe to scroll doesn't flash one", () => {
-    const swiping = moveGesture(press(10, 0, true), rows, x(30));
-    expect(shownCreating(swiping)).toBeNull();
-    expect(shownCreating(lift(press(10, 0, true), 10, 0, true).gesture)).not.toBeNull();
+  it("shows nothing while the finger moves less than a scroll would, so a scroll doesn't flash one", () => {
+    const start = press(10, 0, true);
+    expect(shownCreating(start)).toBeNull();
+    expect(shownCreating(moveGesture(start, rows, start.startX + SWIPE_PX - 1))).toBeNull();
+    const swiped = moveGesture(start, rows, start.startX + SWIPE_PX + 1);
+    expect(shownCreating(swiped)).not.toBeNull();
+    expect(lift(moveGesture(swiped, rows, x(30)), 30, 0, true).add).toMatchObject({startDSecs: 10, endDSecs: 30});
+  });
+
+  it("shows the start, waiting for the end, after a tap lifts", () => {
+    const tapped = lift(press(10, 0, true), 10, 0, true).gesture;
+    expect(shownCreating(tapped)).not.toBeNull();
+    expect(awaitingEnd(tapped)).toBe(true);
+  });
+
+  it("drags out a transition from a held finger, which waits for a tap if it lifts without moving", () => {
+    const held = holdCreating(press(10, 0, true));
+    expect(shownCreating(held)).not.toBeNull();
+    expect(awaitingEnd(held)).toBe(true);
+    const dragged = moveGesture(held, rows, x(30));
+    expect(awaitingEnd(dragged)).toBe(false);
+    expect(lift(dragged, 30, 0, true).add).toMatchObject({startDSecs: 10, endDSecs: 30});
+    expect(awaitingEnd(lift(held, 10, 0, true).gesture)).toBe(true);
+  });
+
+  it("treats a wobble shorter than a swipe as still: a tap waits for its end, and a hold still starts", () => {
+    // Zoomed out, where a wobble crosses several tenths of a second.
+    const wide: Rows = {...rows, pxPerSecond: 60};
+    const start = startCreating(wide, 100, y(0), true)!;
+    const wobbled = moveGesture(start, wide, start.startX + SWIPE_PX - 1) as Creating;
+    expect(wobbled.endDSecs).toBeGreaterThan(start.endDSecs);
+    const tapped = liftGesture(wobbled, wide, wobbled.startX + SWIPE_PX - 1, y(0), true);
+    expect(tapped.add).toBeNull();
+    expect(awaitingEnd(tapped.gesture)).toBe(true);
+    expect(awaitingEnd(holdCreating(wobbled))).toBe(true);
+  });
+
+  it("doesn't hold once the finger has swiped", () => {
+    const swiped = moveGesture(press(10, 0, true), rows, x(30));
+    expect(holdCreating(swiped)).toBe(swiped);
   });
 
   it("cancels when the second tap is in another row", () => {

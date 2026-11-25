@@ -1,6 +1,7 @@
 import {
   ActionIcon, Badge, Button, Group, Kbd, Loader, Menu, SegmentedControl, Switch, Tabs, Text, TextInput, Tooltip,
 } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react';
@@ -20,7 +21,7 @@ import Share from '../dialogs/Share';
 import Splash from '../dialogs/Splash';
 import Textures from '../dialogs/Textures';
 import CodeEditor, { insertCode } from '../editor/CodeEditor';
-import type { EditorView } from '@codemirror/view';
+import { EditorView } from '@codemirror/view';
 import { DOC_SECTIONS, onOpenDocs, type DocTarget } from '../lib/docLinks';
 import ShaderTabs, { shaderCaption, shaderName, starterFunction } from '../editor/ShaderTabs';
 import * as archive from '../lib/archive';
@@ -194,7 +195,23 @@ export default function App() {
   }, [fullView]);
   const phone = usePhone();
   const touch = useTouch();
-  useKeyboardInset();
+  // The desktop layout's width, and its height before a keyboard took some of it.
+  const wide = useMediaQuery("(min-width: 768px)");
+  const keyboard = useKeyboardInset();
+  const tabletKeyboard = keyboard.open && touch && wide && keyboard.fullHeight > 520;
+  // On a tablet, the code or the bottom panel, whichever the on-screen keyboard is typing in, takes
+  // the room above it.
+  const [typingIn, setTypingIn] = useState<"code" | "panel" | null>(null);
+  useEffect(() => {
+    const update = () => {
+      const focused = document.activeElement;
+      setTypingIn(!tabletKeyboard ? null : focused?.closest(".editorPane") ? "code" :
+        focused?.closest(".bottomPanel") ? "panel" : null);
+    };
+    update();
+    document.addEventListener("focusin", update);
+    return () => document.removeEventListener("focusin", update);
+  }, [tabletKeyboard]);
   const [mobileTab, setMobileTab] = useState<MobileTab>(tutorialStart && phone ? "learn" : "code");
   const [panelTab, setPanelTab] = useState<PanelTab>("animation");
   const [tourTaken, setTourTaken] = useState(() => tourState() === "taken");
@@ -390,6 +407,17 @@ export default function App() {
       view.focus();
     }
   };
+
+  // The code shrinks to the space above the on-screen keyboard, so bring the cursor back into sight.
+  useEffect(() => {
+    const view = editorViews.current.get(codeTab);
+    if (typingIn !== "code" || !view?.hasFocus) {
+      return;
+    }
+    const frame = requestAnimationFrame(() =>
+      view.dispatch({effects: EditorView.scrollIntoView(view.state.selection.main.head, {y: "center"})}));
+    return () => cancelAnimationFrame(frame);
+  }, [typingIn, codeTab]);
 
   // Shows a one-time tip for what just happened, unless something else has the user's attention.
   const showTip = (event: TipEvent) => {
@@ -963,6 +991,7 @@ export default function App() {
       data-full-view={fullView || undefined}
       data-mobile-tab={mobileTab} data-tutorial={tutorialOpen || undefined}
       data-side-panel={tutorialOpen || undefined}
+      data-keyboard={typingIn ?? undefined}
     >
       <header className="appHeader">
         <a className="brand" href="./" aria-label="smoothstep.io home">

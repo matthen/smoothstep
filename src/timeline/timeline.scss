@@ -379,9 +379,12 @@ div#animationControls {
     background-image: linear-gradient(to right, $grid-line 1px, transparent 1px);
     touch-action: pan-y;
 
-    // Fingers scroll the timeline both ways; transitions are added with two taps instead of a drag.
+    // Fingers scroll the timeline both ways when it's wider than its pane, so a transition is added with
+    // two taps or a held finger. When it fits, a sideways swipe drags one out.
     @media (pointer: coarse) {
-      touch-action: pan-x pan-y;
+      &:not(.fits) {
+        touch-action: pan-x pan-y;
+      }
     }
 
     // Room for the add-a-row button beside it.
@@ -511,6 +514,24 @@ div#animationControls {
           }
         }
       }
+
+      // A finger's new transition with only its start: a closed left edge, with a tail that reaches to
+      // the right for its end.
+      .transitionStart {
+        position: absolute;
+        top: 3px;
+        width: 64px;
+        height: 24px;
+        border-left: 3px solid $dt-pink;
+        border-radius: 4px 0 0 4px;
+        background: linear-gradient(to right, rgba($dt-pink, 0.6), rgba($dt-pink, 0));
+        pointer-events: none;
+        animation: transitionStartReach 1s ease-in-out infinite alternate;
+
+        @media (prefers-reduced-motion: reduce) {
+          animation: none;
+        }
+      }
     }
   }
 
@@ -528,3 +549,11 @@ div#animationControls {
   }
 }
 
+@keyframes transitionStartReach {
+  from {
+    width: 24px;
+  }
+  to {
+    width: 120px;
+  }
+}

@@ -1,8 +1,9 @@
 import {useEffect, useEffectEvent, useLayoutEffect, useRef, useState} from "react";
 import type {PointerEvent as ReactPointerEvent} from "react";
-import {ActionIcon, NativeSelect, NumberInput, Tooltip} from "@mantine/core";
+import {ActionIcon, NativeSelect, NumberInput, Tooltip, VisuallyHidden} from "@mantine/core";
 import {useMediaQuery} from "@mantine/hooks";
 import {TbArrowAutofitWidth, TbPlus, TbTrash, TbZoomIn, TbZoomOut} from "react-icons/tb";
+import {usePhone} from "../app/usePhone";
 import {variableValue} from "../lib/document";
 import type {Transition, TransitionType, Variable} from "../lib/document";
 import {rowPaths, valueRange} from "./curves";
@@ -11,8 +12,8 @@ import {
   roundDSecs, roundDuration, rowAt, rulerTicks, timeAreaWidth, timeToX, xToTime,
 } from "./geometry";
 import {
-  extendCreating, liftGesture, moveGesture, newTransitionAt, NO_TOUCHES, shownCreating, startCreating, touchDown,
-  touchUp,
+  awaitingEnd, canHold, extendCreating, HOLD_MS, holdCreating, liftGesture, moveGesture, newTransitionAt, NO_TOUCHES,
+  shownCreating, startCreating, touchDown, touchUp,
 } from "./gestures";
 import type {Gesture, Rows, Span} from "./gestures";
 import {keyAction, shortcutsAllowed} from "./keys";
@@ -106,6 +107,7 @@ export default function Timeline(props: TimelineProps) {
   const gestureRef = useRef<Gesture>(gesture);
   const [drafts, setDrafts] = useState<Drafts>({});
   const touch = useMediaQuery("(hover: none)");
+  const phone = usePhone();
 
   const maxDSecs = durationDSecs(duration);
   const maxTime = maxTimeFor(variables, duration);
@@ -164,6 +166,15 @@ export default function Timeline(props: TimelineProps) {
     gestureRef.current = next;
     setGestureState(next);
   }
+
+  // A finger held still on a row drags out the transition from there.
+  useEffect(() => {
+    if (!canHold(gesture)) {
+      return;
+    }
+    const timer = setTimeout(() => setGesture(holdCreating(gestureRef.current)), HOLD_MS);
+    return () => clearTimeout(timer);
+  }, [gesture]);
 
   function select(next: Selection | null) {
     setSelection(next);
@@ -472,6 +483,12 @@ export default function Timeline(props: TimelineProps) {
     };
   });
   const onTouchMove = useEffectEvent((event: TouchEvent) => {
+    // A held finger drags out its transition, so the timeline doesn't scroll under it.
+    const current = gestureRef.current;
+    if (current.kind === "creating" && current.held && !current.released) {
+      event.preventDefault();
+      return;
+    }
     const pinch = pinchRef.current;
     if (!pinch || event.touches.length !== 2) {
       return;
@@ -558,8 +575,13 @@ export default function Timeline(props: TimelineProps) {
   }, []);
 
   const creating = shownCreating(gesture);
-  const pending = creating ? {row: creating.row, startDSecs: creating.startDSecs, endDSecs: creating.endDSecs as number | null} :
+  // A finger's transition with only its start shows open-ended, with what to do next.
+  const startOnly = awaitingEnd(gesture);
+  const pending = creating ?
+    {row: creating.row, startDSecs: creating.startDSecs, endDSecs: startOnly ? null : creating.endDSecs as number | null} :
     hover ? {...hover, endDSecs: null} : null;
+  const prompt = creating && startOnly ? (creating.released ? "Tap again to set the end time." : "Drag to set the end time.") :
+    null;
   const heading = selected && selection ? {row: selection.row, ...selected} : pending;
   const resizing = gesture.kind === "scrubbing" || gesture.kind === "duration" ||
     (gesture.kind === "dragging" && gesture.mode !== "move");
@@ -589,6 +611,8 @@ export default function Timeline(props: TimelineProps) {
                 {heading.endDSecs !== null && <> &mdash; {headingSeconds(heading.endDSecs)}</>}s
               </span>}
           </h4>}
+        {/* Not on phones, where the panel is above the rows and the line would shift them between taps. */}
+        {prompt && !phone && <p className="hint" role="status">{prompt}</p>}
         {!heading &&
           <p className="hint">
             {touch ? "Tap where a transition starts, then where it ends." : "Click or drag in a row to add a transition."}
@@ -694,7 +718,7 @@ export default function Timeline(props: TimelineProps) {
               </div>}
           </div>
           <div
-            className={"timeArea" + (canAddRow ? " withAddRow" : "")}
+            className={"timeArea" + (canAddRow ? " withAddRow" : "") + (width <= viewWidth ? " fits" : "")}
             ref={timeAreaRef}
             data-px-per-second={pps}
             style={{width, cursor: resizing ? "ew-resize" : "pointer", backgroundSize: `${ruler.step * pps}px 100%`}}
@@ -705,7 +729,11 @@ export default function Timeline(props: TimelineProps) {
               if (event.pointerType === "touch") {
                 liftTouch(event);
               }
-              cancelCreating();
+              // A scroll between a transition's two taps keeps the start waiting for its end.
+              const current = gestureRef.current;
+              if (!(current.kind === "creating" && current.released)) {
+                cancelCreating();
+              }
             }}
             onPointerLeave={handlePointerLeave}
           >
@@ -736,8 +764,12 @@ export default function Timeline(props: TimelineProps) {
                       />
                     );
                   })}
-                  {pending?.row === row &&
-                    <div className="transition hover" style={blockStyle(pending.startDSecs, pending.endDSecs ?? pending.startDSecs + 1)} />}
+                  {pending?.row === row && (prompt ?
+                    <>
+                      <div className="transitionStart" style={{left: pending.startDSecs * pxPerDSec}} />
+                      {phone && <VisuallyHidden role="status">{prompt}</VisuallyHidden>}
+                    </> :
+                    <div className="transition hover" style={blockStyle(pending.startDSecs, pending.endDSecs ?? pending.startDSecs + 1)} />)}
                   {paths.curves.length > 0 &&
                     <svg className="curves" width={width} height={ROW_HEIGHT} aria-hidden>
                       <path className="held" d={paths.held} />

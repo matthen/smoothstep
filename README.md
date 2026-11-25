@@ -74,6 +74,9 @@ npm test           # unit tests
 npm run test:e2e   # end-to-end tests in Chromium, against the build
 ```
 
+The end-to-end tests draw with software WebGL, so they run on machines without a GPU. On a Linux
+machine with Vulkan, `E2E_GPU=1 npm run test:e2e` uses the GPU instead, which is faster and lighter on the CPU.
+
 `npm run build` makes a plain static site in `dist/`. You can put it on any static host,
 such as GitHub Pages or Netlify, at any path. It needs no server code or network access to run,
 including video export. smoothstep.io is published on GitHub Pages by the "Deploy to smoothstep.io"

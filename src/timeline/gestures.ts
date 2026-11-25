@@ -24,7 +24,15 @@ export interface Creating extends Span {
   kind: "creating";
   released: boolean;
   byTouch: boolean;
+  // Where the press began, and for a finger, whether it moved far enough sideways to be a swipe or
+  // was held still long enough to drag out the transition instead of scrolling.
+  startX: number;
+  swiped: boolean;
+  held: boolean;
 }
+
+// How far a finger moves sideways before it's a swipe, about where browsers decide it's a scroll.
+export const SWIPE_PX = 16;
 
 // The shown rows' transitions, the last tenth of a second they may reach, and the scale.
 export interface Rows {
@@ -50,13 +58,35 @@ export function newTransitionAt(rows: Rows, x: number, y: number): {row: number;
 
 export function startCreating(rows: Rows, x: number, y: number, byTouch: boolean): Creating | null {
   const at = newTransitionAt(rows, x, y);
-  return at && {kind: "creating", ...at, endDSecs: at.startDSecs + 1, released: false, byTouch};
+  return at && {
+    kind: "creating", ...at, endDSecs: at.startDSecs + 1, released: false, byTouch, startX: x, swiped: false,
+    held: false,
+  };
 }
 
 // Moves a new transition's end to x, if it fits there.
 export function extendCreating(gesture: Creating, rows: Rows, x: number): Creating {
+  const swiped = gesture.swiped || Math.abs(x - gesture.startX) > SWIPE_PX;
   const endDSecs = hoverEndDSecs(x, gesture.startDSecs, rows.pxPerSecond);
-  return endDSecs !== gesture.endDSecs && fits(rows, {...gesture, endDSecs}) ? {...gesture, endDSecs} : gesture;
+  const moved = endDSecs !== gesture.endDSecs && fits(rows, {...gesture, endDSecs}) ? {...gesture, endDSecs} : gesture;
+  return swiped === moved.swiped ? moved : {...moved, swiped};
+}
+
+// How long a finger stays still on a row before it drags out a transition instead of scrolling.
+export const HOLD_MS = 300;
+
+// Whether a finger is still down near where it pressed, so holding it there would start a drag.
+export function canHold(gesture: Gesture): gesture is Creating {
+  return gesture.kind === "creating" && gesture.byTouch && !gesture.released && !gesture.held && !gesture.swiped;
+}
+
+export function holdCreating(gesture: Gesture): Gesture {
+  return canHold(gesture) ? {...gesture, held: true} : gesture;
+}
+
+// A finger's transition that has its start but not yet its end: tapped once, or held without dragging.
+export function awaitingEnd(gesture: Gesture): boolean {
+  return gesture.kind === "creating" && gesture.byTouch && (gesture.released || (gesture.held && !gesture.swiped));
 }
 
 // The gesture after the pointer moves to x; the same object if nothing changed.
@@ -94,16 +124,20 @@ export function liftGesture(
     const add = Math.floor(y / ROW_HEIGHT) === gesture.row && fits(rows, span) ? span : null;
     return {gesture: idle, add};
   }
-  // A click or tap without dragging waits for a second one to set the end.
-  if (!gesture.released && gesture.endDSecs <= gesture.startDSecs + 1) {
+  // A click or tap without dragging waits for a second one to set the end. A finger counts as dragging
+  // only once it's moved further than a wobble.
+  const dragged = byTouch ? gesture.swiped : gesture.endDSecs > gesture.startDSecs + 1;
+  if (!gesture.released && !dragged) {
     return {gesture: {...gesture, released: true}, add: null};
   }
   return {gesture: idle, add: fits(rows, gesture) ? gesture : null};
 }
 
-// The new transition to draw: a touch's only once it lifts as a tap, so a swipe to scroll doesn't flash one.
+// The new transition to draw. A finger's shows once it's held, lifted as a tap, or swiped further than a
+// scroll would start, so a scroll doesn't flash one.
 export function shownCreating(gesture: Gesture): Creating | null {
-  return gesture.kind === "creating" && !(gesture.byTouch && !gesture.released) ? gesture : null;
+  return gesture.kind === "creating" &&
+    (!gesture.byTouch || gesture.released || gesture.held || gesture.swiped) ? gesture : null;
 }
 
 // The fingers down on the rows, and whether two were down at once since all were last lifted.
