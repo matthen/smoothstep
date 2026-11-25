@@ -18,8 +18,12 @@ export default defineConfig({
     // The app's service worker would answer requests before page.route sees them. Tests of offline
     // use opt in.
     serviceWorkers: 'block',
-    // Software WebGL, so tests run on machines without a GPU.
-    launchOptions: {args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader']},
+    // Software WebGL, so tests run on machines without a GPU. E2E_GPU=1 uses the machine's GPU through Vulkan.
+    launchOptions: {
+      args: process.env.E2E_GPU ?
+        ['--use-angle=vulkan', '--enable-features=Vulkan', '--enable-gpu', '--ignore-gpu-blocklist'] :
+        ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
+    },
   },
   projects: [{name: 'chromium', use: {...devices['Desktop Chrome'], viewport: {width: 1440, height: 900}}}],
   webServer: {
