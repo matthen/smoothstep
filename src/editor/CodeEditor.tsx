@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 import type { LineError } from '../lib/types';
 import { lastFrameName } from './completion';
 import { editorExtensions, loadJavaScript, type EditorLanguage } from './extensions';
+import type { DefinitionElsewhere } from './goToDefinition';
 import { errorLinePos, missingSkeleton, setLineErrors } from './lineErrors';
 import { pickerEdit } from './popups';
 import './editor.scss';
@@ -28,6 +29,8 @@ export interface CodeEditorProps {
   lastFrame?: string;
   // Given the editor once it's made, and null when it goes, so code can be inserted from outside.
   onView?(view: EditorView | null): void;
+  // Finds a name declared in another tab, for going to its definition.
+  definitionElsewhere?: DefinitionElsewhere;
 }
 
 // Puts `code` at the cursor, on lines of its own, and shows it.
@@ -48,12 +51,12 @@ export function insertCode(view: EditorView, code: string) {
 
 export default function CodeEditor({
   value, onChange, onBuild, onSave, lineErrors, hidden, language = "glsl", autoFocus, skeleton, onFixed, lastFrame,
-  onView,
+  onView, definitionElsewhere,
 }: CodeEditorProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const extensionsRef = useRef<Extension | null>(null);
-  const callbacksRef = useRef({ onChange, onBuild, onSave, onFixed });
+  const callbacksRef = useRef({ onChange, onBuild, onSave, onFixed, definitionElsewhere });
   const lineErrorsRef = useRef(lineErrors);
   // The code the editor last reported or was given, so our own edits coming back as `value` are ignored.
   const knownValueRef = useRef(value);
@@ -62,7 +65,7 @@ export default function CodeEditor({
   const reportedRef = useRef<string[]>([]);
 
   useLayoutEffect(() => {
-    callbacksRef.current = { onChange, onBuild, onSave, onFixed };
+    callbacksRef.current = { onChange, onBuild, onSave, onFixed, definitionElsewhere };
     lineErrorsRef.current = lineErrors;
   });
 
@@ -72,6 +75,7 @@ export default function CodeEditor({
         onBuild: () => callbacksRef.current.onBuild(),
         onSave: () => callbacksRef.current.onSave(),
         onFixed: () => callbacksRef.current.onFixed?.(),
+        definitionElsewhere: (name) => callbacksRef.current.definitionElsewhere?.(name) ?? null,
       }, language),
       skeleton ? missingSkeleton.of(skeleton) : [],
       lastFrame ? lastFrameName.of(lastFrame) : [],

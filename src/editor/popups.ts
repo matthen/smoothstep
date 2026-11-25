@@ -5,6 +5,8 @@ import { Decoration, EditorView, ViewPlugin, showTooltip, type DecorationSet, ty
 import { DOC_SECTIONS, docLinkElement, type DocTarget } from '../lib/docLinks';
 import { eachShaderInput } from '../lib/shaderInputs';
 import glslFunctions from './glslFunctions.json';
+import { USER_NAME_TOKENS } from './glslLanguage';
+import { isDefinitionClick } from './goToDefinition';
 import {
   createColorPicker, createDirectionPicker, createFloatPicker, createVec2Picker, type PickerWidget,
 } from './pickers';
@@ -60,7 +62,7 @@ const glslClicks: ClickConfig = {
   },
   definitionAt: (state, from, name) =>
     nodeNameAt(state, from) === 'variableName.standard' ? glslDefinitions.get(name) ?? null : null,
-  illuminates: (state, from) => nodeNameAt(state, from) === 'variableName',
+  illuminates: (state, from) => USER_NAME_TOKENS.has(nodeNameAt(state, from)),
 };
 
 interface Popup {
@@ -266,6 +268,8 @@ export function clickHelpers(config: ClickConfig = glslClicks): Extension {
         return false;
       },
       click: (e, view) => {
+        // That goes to a definition, or adds a cursor.
+        if (isDefinitionClick(e)) return false;
         const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
         if (pos !== null) onClick(view, pos, pointerType !== 'mouse', config);
         return false;

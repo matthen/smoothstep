@@ -21,6 +21,8 @@ import Share from '../dialogs/Share';
 import Splash from '../dialogs/Splash';
 import Textures from '../dialogs/Textures';
 import CodeEditor, { insertCode } from '../editor/CodeEditor';
+import { topLevel } from '../editor/glslDefinitions';
+import { analysisOf, selectDefinition } from '../editor/goToDefinition';
 import { EditorView } from '@codemirror/view';
 import { DOC_SECTIONS, onOpenDocs, type DocTarget } from '../lib/docLinks';
 import ShaderTabs, { shaderCaption, shaderName, starterFunction } from '../editor/ShaderTabs';
@@ -406,6 +408,19 @@ export default function App() {
     if (!phone) {
       view.focus();
     }
+  };
+
+  // Goes from a name in another shader tab to its definition in the shared code.
+  const sharedDefinition = (name: string) => {
+    const view = editorViews.current.get("shared");
+    const found = view && topLevel(analysisOf(view.state.doc), name);
+    if (!view || !found) {
+      return null;
+    }
+    return () => {
+      flushSync(() => showCodeTab("shared"));
+      selectDefinition(view, found);
+    };
   };
 
   // The code shrinks to the space above the on-screen keyboard, so bring the cursor back into sight.
@@ -1166,6 +1181,7 @@ export default function App() {
               autoFocus={tab === justAdded}
               skeleton={starterFunction(tab)} onFixed={() => setBuildQueued(true)}
               lastFrame={typeof tab === "number" ? "iBuffer" + tab : "iPrevFrame"}
+              definitionElsewhere={tab === "shared" || tab === "canvas" ? undefined : sharedDefinition}
               onView={view => {
                 if (view) {
                   editorViews.current.set(tab, view);

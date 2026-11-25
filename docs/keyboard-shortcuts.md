@@ -15,6 +15,7 @@ These are also in the app, under Help → Keyboard shortcuts.
 | `Shift + Ctrl + F` (Mac: `Cmd + Alt + F`) | find and replace |
 | `Shift + Ctrl + R` (Mac: `Shift + Cmd + Alt + F`) | replace all |
 | `Alt + G` | go to a line |
+| `F12`, or `Mod` and click a name | in a shader tab, go to where the name is defined |
 | `Mod + /` | comment or uncomment |
 | `Tab` | indent the selection, or insert two spaces; in a snippet, go to its next blank |
 | `Shift + Tab` | re-indent the line or selection; in a snippet, go back a blank |
@@ -45,6 +46,11 @@ Click a number in the code for a slider that you can drag sideways to change it,
 zoom in or out. A `vec2` value brings up a 2D picker. A `vec3` brings up a colour picker when its
 values are between 0 and 1, and a 3D direction picker otherwise. Click a built-in function, like `smoothstep`, or an input, like
 `iTime`, to see its definition. The editor also suggests completions as you type.
+
+In a shader tab, hold `Cmd` on a Mac or `Ctrl` elsewhere and click one of your own names, like a
+function, a `#define`, a variable or a parameter, to go to where it's defined. Names you can follow
+are underlined while you hold the key. A name from the shared code opens the shared.glsl tab at its
+definition. `F12` does the same for the name at the cursor.
 
 Under **Snippets** at the end of the completions are starting points for common code, marked ⋯.
 In a shader tab: `mainImage`, `feedback` (a shader that builds on its own last frame), `raymarch`
