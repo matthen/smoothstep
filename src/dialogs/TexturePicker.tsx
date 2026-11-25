@@ -170,7 +170,7 @@ export default function TexturePicker(
   const [toDelete, setToDelete] = useState<StoredImage | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [wasShown, setWasShown] = useState(false);
-  // Lengths of uploaded videos stored without one, read from their thumbnails.
+  // Lengths of uploaded videos with none stored, read from their thumbnails.
   const [measured, setMeasured] = useState<Record<string, number>>({});
   const bodyRef = useRef<HTMLDivElement>(null);
   const imagesVersion = useImagesChanged();
@@ -261,7 +261,11 @@ export default function TexturePicker(
               )}
               {otherUploads.map(t => pickerItem(
                 "other-" + t.url, t.url === texture.url, () => select(t.url, true),
-                <TextureThumbnail src={uploadThumbURL(t.url)} alt="texture preview" />,
+                <TextureThumbnail
+                  src={uploadThumbURL(t.url)} alt="texture preview"
+                  onDuration={seconds => setMeasured(m => m[t.url] === seconds ? m : {...m, [t.url]: seconds})}
+                />,
+                undefined, undefined, isVideoURL(uploadThumbURL(t.url)) ? formatDuration(measured[t.url]) : null,
               ))}
               {uploads.map(image =>
                 <figure className={"picker" + (image.id === texture.url ? " selected" : "")} key={image.id}>

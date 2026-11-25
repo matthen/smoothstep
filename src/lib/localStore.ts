@@ -72,6 +72,8 @@ async function write<T>(op: () => Promise<T>): Promise<T> {
 
 // Object URLs for every stored image, so textures can be drawn synchronously.
 const imageURLs = new Map<string, string>();
+// Stored videos' lengths in seconds, for those stored with one.
+const imageDurations = new Map<string, number>();
 const imageListeners = new Set<() => void>();
 
 export function onImagesChanged(listener: () => void): () => void {
@@ -103,10 +105,19 @@ function cacheImageURL(image: StoredImage) {
     revokeMediaURL(old);
   }
   imageURLs.set(image.id, mediaObjectURL(image.blob));
+  if (image.duration === undefined) {
+    imageDurations.delete(image.id);
+  } else {
+    imageDurations.set(image.id, image.duration);
+  }
 }
 
 export function imageURL(id: string): string | null {
   return imageURLs.get(id) ?? null;
+}
+
+export function imageDuration(id: string): number | undefined {
+  return imageDurations.get(id);
 }
 
 // Images from an animation opened from a link, kept in memory until that animation is saved.
@@ -209,6 +220,7 @@ export async function deleteImage(id: string): Promise<void> {
     revokeMediaURL(url);
     imageURLs.delete(id);
   }
+  imageDurations.delete(id);
   imagesChanged();
 }
 

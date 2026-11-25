@@ -6,15 +6,28 @@ describe("formatDuration", () => {
   it("gives short videos in seconds, to a tenth", () => {
     expect(formatDuration(6.5065)).toBe("6.5 s");
     expect(formatDuration(6)).toBe("6 s");
-    expect(formatDuration(0.04)).toBe("0.04 s");
     expect(formatDuration(59.9)).toBe("59.9 s");
+  });
+
+  it("gives very short videos as under a tenth of a second", () => {
+    expect(formatDuration(0.05)).toBe("0.1 s");
+    expect(formatDuration(0.04)).toBe("<0.1 s");
+    expect(formatDuration(1e-7)).toBe("<0.1 s");
   });
 
   it("gives longer videos in minutes and whole seconds", () => {
     expect(formatDuration(59.96)).toBe("1 min");
     expect(formatDuration(72.4)).toBe("1 min 12 s");
     expect(formatDuration(120)).toBe("2 min");
-    expect(formatDuration(3599.6)).toBe("60 min");
+    expect(formatDuration(3569.4)).toBe("59 min 29 s");
+  });
+
+  it("gives videos an hour or longer in hours and whole minutes", () => {
+    expect(formatDuration(3599.6)).toBe("1 h");
+    expect(formatDuration(3600)).toBe("1 h");
+    expect(formatDuration(7200)).toBe("2 h");
+    expect(formatDuration(7500)).toBe("2 h 5 min");
+    expect(formatDuration(5429)).toBe("1 h 30 min");
   });
 
   it("gives nothing when the length isn't known", () => {

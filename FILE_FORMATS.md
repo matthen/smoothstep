@@ -65,7 +65,8 @@ stored one. Either way you get a JSON file with the uploaded images and videos i
 ```
 
 A video is embedded the same way, as a `data:video/mp4`, `data:video/webm` or `data:video/quicktime`
-URL. `thumbnail` may be null. A bare document JSON (just the object above) also opens.
+URL, with its length in seconds as `duration` when the browser knew it. Files without `duration`
+still open; the length is then read from the video when it shows. `thumbnail` may be null. A bare document JSON (just the object above) also opens.
 
 ## Everything: `smoothstep-animations-<date>.zip`
 
@@ -92,6 +93,9 @@ images/<image id>.<ext>   uploaded images: PNG, JPEG, WebP or GIF (.png/.jpg/.we
               "created": "...", "file": "images/9a3c61e0b2d4.jpg", "type": "image/jpeg"}]
 }
 ```
+
+A video's entry also has `duration`, its length in seconds, when that's known, as in the
+single-animation file.
 
 The files may sit inside one top-level folder (as when a zip is unpacked and re-zipped);
 the importer finds `manifest.json` and reads the other paths relative to it. Times are ISO

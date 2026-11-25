@@ -102,12 +102,13 @@ export function download({blob, filename}: DownloadableFile): void {
 // Export.
 
 export async function animationFile(record: StoredDocument): Promise<DownloadableFile> {
-  const images: Record<string, {filename: string; width: number; height: number; data: string}> = {};
+  const images: Record<string, {filename: string; width: number; height: number; duration?: number; data: string}> = {};
   for (const imageId of userImageIds(record.json)) {
     const image = await localStore.getImage(imageId);
     if (image && !images[imageId]) {
       images[imageId] = {
         filename: image.filename, width: image.width, height: image.height,
+        ...(image.duration === undefined ? {} : {duration: image.duration}),
         data: await blobToDataURL(image.blob),
       };
     }
@@ -154,6 +155,7 @@ export async function exportAll(): Promise<DownloadableFile & {count: number}> {
     manifest.images.push({
       id: image.id, filename: image.filename, width: image.width, height: image.height,
       created: iso(image.created), file, type: image.blob.type,
+      ...(image.duration === undefined ? {} : {duration: image.duration}),
     });
   }
   files["manifest.json"] = strToU8(JSON.stringify(manifest, null, 1));
@@ -238,6 +240,7 @@ interface ImageEntry {
   width?: unknown;
   height?: unknown;
   created?: unknown;
+  duration?: unknown;
 }
 
 // `storedType` is the type it was exported with, kept if its bytes aren't recognised.
@@ -259,6 +262,8 @@ async function importImage(entry: ImageEntry, bytes: Uint8Array, summary: Import
     height: typeof entry.height === "number" ? entry.height : 0,
     created: parseTime(entry.created, Date.now()),
     blob: new Blob([bytes as Uint8Array<ArrayBuffer>], {type}),
+    ...(isVideoType(type) && typeof entry.duration === "number" && Number.isFinite(entry.duration) && entry.duration > 0
+      ? {duration: entry.duration} : {}),
   });
   summary.images += 1;
 }

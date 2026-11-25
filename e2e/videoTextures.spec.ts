@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { PNG } from 'pngjs';
 
+import { formatDuration } from '../src/lib/media';
 import { addTab, canvasCenter, dismissAlert, expectCenter, near, offline, PIXEL_WAIT, setCode, skipTour } from './helpers';
 
 // 2 seconds of 64×48 video at 10fps: red, then green, blue and white, half a second each.
@@ -56,6 +57,9 @@ async function start(page: Page, code: string, duration = DURATION) {
   await page.locator(".durationInput").press("Enter");
 }
 
+// Each fixture's length in seconds.
+const LENGTHS: Record<string, number> = {[COLOURS]: 2, [FRAMES]: 0.4};
+
 async function addVideo(page: Page, path = COLOURS, size = "64 × 48") {
   const name = path.split("/").pop()!;
   await page.getByRole("tab", {name: "Textures"}).click();
@@ -68,12 +72,13 @@ async function addVideo(page: Page, path = COLOURS, size = "64 × 48") {
   await dismissAlert(page);
   // The new video's tile gives its size and its length.
   const tile = picker.locator(".picker").filter({has: page.getByRole("img", {name: name + " preview"})});
+  const length = formatDuration(LENGTHS[path])!;
   await expect(tile).toContainText(size);
-  await expect(tile).toContainText(/\d s/);
+  await expect(tile.locator(".videoLength")).toHaveText(length);
   await picker.getByRole("img", {name: name + " preview"}).click();
   await page.getByRole("button", {name: "Apply changes"}).click();
   await expect(page.locator("div#textures video[aria-label='iTexture0 preview']")).toBeVisible();
-  await expect(page.locator("div#textures .texture").first()).toContainText(/\d s/);
+  await expect(page.locator("div#textures .texture").first().locator(".videoLength")).toHaveText(length);
 }
 
 async function addLayer(page: Page, code: string) {
