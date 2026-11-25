@@ -11,9 +11,9 @@ import {
   addUploadedImage, deleteImage, listImages, MAX_IMAGE_DIM, MAX_VIDEO_MB, StorageFullError, UploadError,
   type StoredImage,
 } from '../lib/localStore';
-import { isVideoType, isVideoURL } from '../lib/media';
+import { formatDuration, isVideoType, isVideoURL } from '../lib/media';
 import TextureData from './textures.json';
-import TextureThumbnail from './TextureThumbnail';
+import TextureThumbnail, { VideoLength } from './TextureThumbnail';
 import { useImagesChanged } from './useImagesChanged';
 
 interface BuiltInTexture {
@@ -21,6 +21,7 @@ interface BuiltInTexture {
   thumbnail_fname: string;
   width: number;
   height: number;
+  duration?: number;  // A video's length in seconds
 }
 
 const TEXTURES: Record<string, BuiltInTexture[]> = TextureData;
@@ -79,6 +80,11 @@ interface TexturePickerProps {
   onPick(texture: TextureSlot): void;
   onHide(): void;
   onMessage?(text: string): void;
+}
+
+// A texture's size, shown on hover. A video whose length shows in its badge needn't say it's a video.
+function sizeLabel(width: number, height: number, video: boolean, duration?: number): string {
+  return `${width} × ${height}${video && !formatDuration(duration) ? ", video" : ""}`;
 }
 
 function uploadThumbURL(id: string): string {
@@ -164,6 +170,8 @@ export default function TexturePicker(
   const [toDelete, setToDelete] = useState<StoredImage | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [wasShown, setWasShown] = useState(false);
+  // Lengths of uploaded videos with none stored, read from their thumbnails.
+  const [measured, setMeasured] = useState<Record<string, number>>({});
   const bodyRef = useRef<HTMLDivElement>(null);
   const imagesVersion = useImagesChanged();
   const phone = usePhone();
@@ -214,12 +222,13 @@ export default function TexturePicker(
   };
 
   const pickerItem = (
-    key: string, selected: boolean, onClick: () => void, image: ReactNode, caption?: string, size?: string,
+    key: string, selected: boolean, onClick: () => void, image: ReactNode, caption?: string, size?: string, length?: string | null,
   ) =>
     <figure className={"picker" + (selected ? " selected" : "")} key={key}>
       <button type="button" onClick={onClick} className="select" title={caption}>
         {image}
         {size && <span className="resolution">{size}</span>}
+        <VideoLength text={length} />
       </button>
       {caption && <figcaption>{caption}</figcaption>}
     </figure>;
@@ -252,15 +261,25 @@ export default function TexturePicker(
               )}
               {otherUploads.map(t => pickerItem(
                 "other-" + t.url, t.url === texture.url, () => select(t.url, true),
-                <TextureThumbnail src={uploadThumbURL(t.url)} alt="texture preview" />,
+                <TextureThumbnail
+                  src={uploadThumbURL(t.url)} alt="texture preview"
+                  onDuration={seconds => setMeasured(m => m[t.url] === seconds ? m : {...m, [t.url]: seconds})}
+                />,
+                undefined, undefined, isVideoURL(uploadThumbURL(t.url)) ? formatDuration(measured[t.url]) : null,
               ))}
               {uploads.map(image =>
                 <figure className={"picker" + (image.id === texture.url ? " selected" : "")} key={image.id}>
                   <button type="button" onClick={() => select(image.id, true)} className="select" title={image.filename}>
-                    <TextureThumbnail src={uploadThumbURL(image.id)} alt={image.filename + " preview"} video={isVideoType(image.blob.type)} />
+                    <TextureThumbnail
+                      src={uploadThumbURL(image.id)} alt={image.filename + " preview"} video={isVideoType(image.blob.type)}
+                      onDuration={image.duration === undefined
+                        ? seconds => setMeasured(m => m[image.id] === seconds ? m : {...m, [image.id]: seconds})
+                        : undefined}
+                    />
                     <span className="resolution">
-                      {image.width} &times; {image.height}{isVideoType(image.blob.type) ? ", video" : ""}
+                      {sizeLabel(image.width, image.height, isVideoType(image.blob.type), image.duration ?? measured[image.id])}
                     </span>
+                    {isVideoType(image.blob.type) && <VideoLength text={formatDuration(image.duration ?? measured[image.id])} />}
                   </button>
                   <figcaption>{image.filename}</figcaption>
                   {image.id !== texture.url &&
@@ -276,7 +295,8 @@ export default function TexturePicker(
               TEXTURES[key]!.filter(t => t.fname !== EMPTY_TEXTURE).map(t => pickerItem(
                 t.fname, t.fname === texture.url, () => select(t.fname, false),
                 <img src={asset("/images/textures/" + t.thumbnail_fname)} alt={t.fname + " preview"} loading="lazy" />,
-                CAPTIONS[t.fname], `${t.width} × ${t.height}${isVideoURL(t.fname) ? ", video" : ""}`,
+                CAPTIONS[t.fname], sizeLabel(t.width, t.height, isVideoURL(t.fname), t.duration),
+                isVideoURL(t.fname) ? formatDuration(t.duration) : null,
               )),
             ))}
           </div>}

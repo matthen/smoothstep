@@ -1,10 +1,12 @@
-import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { render } from '../test/render';
 import { emptyTextures, type TextureSlot } from '../lib/document';
 import * as localStore from '../lib/localStore';
+import { formatDuration } from '../lib/media';
+import TextureData from './textures.json';
 import { addImage, clearStore } from './testUtils';
 import Textures from './Textures';
 
@@ -24,6 +26,17 @@ function renderTextures(textures: TextureSlot[] = emptyTextures(), count = 8) {
 }
 
 const picker = () => screen.getAllByRole("dialog")[0]!;
+
+// The length badge in the tile or slot holding `media`, if it has one.
+const badge = (media: HTMLElement) => media.closest("button")!.querySelector(".videoLength")?.textContent ?? null;
+
+// Fires the events a video sends once the browser knows its length.
+function loadVideo(video: HTMLElement, duration: number) {
+  Object.defineProperty(video, "duration", {value: duration});
+  fireEvent.loadedMetadata(video);
+}
+
+const WAVES_LENGTH = formatDuration(TextureData.videos.find(t => t.fname === "videos/waves.mp4")!.duration)!;
 
 // The picker is loaded on first open, so wait for it.
 async function openSlot(id: string) {
@@ -66,6 +79,8 @@ describe("Textures and TexturePicker", () => {
     await userEvent.click(within(picker()).getByAltText("fonts/1.png preview"));
     expect(within(picker()).getByAltText("fonts/1.png preview").closest(".picker")!.className).toContain("selected");
     expect(within(picker()).getAllByText("512 × 192").length).toBeGreaterThan(0);
+    // Images have no length.
+    expect(badge(within(picker()).getByAltText("fonts/1.png preview"))).toBeNull();
     await userEvent.click(within(picker()).getByRole("button", {name: "Apply changes"}));
     const textures = props.onChange.mock.calls[0]![0] as TextureSlot[];
     expect(textures[2]).toEqual({id: "iTexture2", url: "fonts/1.png", isUserUploaded: false});
@@ -76,7 +91,11 @@ describe("Textures and TexturePicker", () => {
     const props = renderTextures();
     await openSlot("iTexture3");
     const videos = within(picker()).getByRole("region", {name: "Videos"});
-    expect(within(videos).getAllByText(/^\d+ × \d+, video$/).length).toBeGreaterThan(0);
+    // Each sample video's tile gives its length as well as its size.
+    const waves = within(videos).getByAltText("videos/waves.mp4 preview");
+    expect(WAVES_LENGTH).toBe("6.5 s");
+    expect(badge(waves)).toBe(WAVES_LENGTH);
+    expect(waves.closest(".picker")!.textContent).toContain("360 × 360");
     await userEvent.click(within(videos).getByAltText("videos/waves.mp4 preview"));
     await userEvent.click(within(picker()).getByRole("button", {name: "Apply changes"}));
     const textures = props.onChange.mock.calls[0]![0] as TextureSlot[];
@@ -84,7 +103,18 @@ describe("Textures and TexturePicker", () => {
 
     cleanup();
     renderTextures(textures);
-    expect(screen.getByRole("img", {name: "iTexture3 preview"}).tagName).toBe("VIDEO");
+    const slot = screen.getByRole("img", {name: "iTexture3 preview"});
+    expect(slot.tagName).toBe("VIDEO");
+    // The filled slot gives the sample's known length straight away, the same as the picker.
+    expect(badge(slot)).toBe(WAVES_LENGTH);
+  });
+
+  it("shows a stored upload's length in its slot straight away", async () => {
+    await addImage("dddd00000002", "long.webm", 1, "video/webm", 72);
+    const textures = emptyTextures();
+    textures[0] = {id: "iTexture0", url: "dddd00000002", isUserUploaded: true};
+    renderTextures(textures);
+    expect(badge(screen.getByRole("img", {name: "iTexture0 preview"}))).toBe("1 min 12 s");
   });
 
   it("cancel leaves the textures alone", async () => {
@@ -124,10 +154,33 @@ describe("Textures and TexturePicker", () => {
     const thumbnail = await within(picker()).findByRole("img", {name: "clip.mp4 preview"});
     expect(thumbnail.tagName).toBe("VIDEO");
     expect(within(picker()).getByText("64 × 32, video")).toBeTruthy();
+    // Stored without a length, it's read from the thumbnail once the video's loaded.
+    loadVideo(thumbnail, 12.25);
+    await waitFor(() => expect(badge(thumbnail)).toBe(formatDuration(12.25)));
+    expect(within(picker()).getByText("64 × 32")).toBeTruthy();
     await userEvent.click(thumbnail);
     await userEvent.click(within(picker()).getByRole("button", {name: "Apply changes"}));
     const textures = props.onChange.mock.calls[0]![0] as TextureSlot[];
     expect(textures[1]).toEqual({id: "iTexture1", url: "bbbb00000001", isUserUploaded: true});
+  });
+
+  it("shows an uploaded video's stored length", async () => {
+    await addImage("dddd00000001", "long.webm", 1, "video/webm", 72);
+    renderTextures();
+    await openSlot("iTexture0");
+    const thumbnail = await within(picker()).findByRole("img", {name: "long.webm preview"});
+    expect(badge(thumbnail)).toBe("1 min 12 s");
+    expect(thumbnail.closest(".picker")!.textContent).toContain("64 × 32");
+  });
+
+  it("says an upload is a video when the browser can't tell its length", async () => {
+    await addImage("dddd00000003", "recorded.webm", 1, "video/webm");
+    renderTextures();
+    await openSlot("iTexture0");
+    const thumbnail = await within(picker()).findByRole("img", {name: "recorded.webm preview"});
+    loadVideo(thumbnail, Infinity);
+    expect(badge(thumbnail)).toBeNull();
+    expect(within(thumbnail.closest(".picker") as HTMLElement).getByText("64 × 32, video")).toBeTruthy();
   });
 
   it("deletes an upload after confirming, but not the one in use", async () => {
@@ -156,6 +209,18 @@ describe("Textures and TexturePicker", () => {
     await openSlot("iTexture3");
     const other = within(picker()).getByAltText("texture preview").closest(".picker")!;
     expect(other.className).toContain("selected");
+  });
+
+  it("gives the length of a video the animation uses that this browser doesn't have", async () => {
+    localStore.addTemporaryImage("dddd00000004", new Blob(["x"], {type: "video/webm"}));
+    const textures = emptyTextures();
+    textures[3] = {id: "iTexture3", url: "dddd00000004", isUserUploaded: true};
+    renderTextures(textures);
+    await userEvent.click(screen.getByRole("img", {name: "iTexture3 preview"}));
+    const other = await within(await screen.findByRole("dialog")).findByRole("img", {name: "texture preview"});
+    expect(other.tagName).toBe("VIDEO");
+    loadVideo(other, 9.5);
+    await waitFor(() => expect(badge(other)).toBe(formatDuration(9.5)));
   });
 
   it("empties a slot", async () => {

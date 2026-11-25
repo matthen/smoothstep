@@ -160,11 +160,11 @@ describe("importFiles", () => {
     expect(await importFiles([bare])).toMatchObject({animations: 0, images: 0, unchanged: 1, failed: 0});
   });
 
-  it("keeps an uploaded video through an animation file and a zip", async () => {
+  it("keeps an uploaded video and its length through an animation file and a zip", async () => {
     const MP4 = strToU8("\0\0\0\x20ftypisom video bytes");
     await localStore.putImage({
       id: "eeee00000001", filename: "clip.mp4", width: 64, height: 32, created: 1000,
-      blob: new Blob([MP4], {type: "video/mp4"}),
+      blob: new Blob([MP4], {type: "video/mp4"}), duration: 12.5,
     });
     const record = {
       id: "eeee0000d001", title: "Video", created: 1000, modified: 2000,
@@ -183,6 +183,7 @@ describe("importFiles", () => {
       const video = (await localStore.getImage("eeee00000001"))!;
       expect(video.blob.type).toBe("video/mp4");
       expect(new Uint8Array(await video.blob.arrayBuffer())).toEqual(MP4);
+      expect(video.duration).toBe(12.5);
     }
   });
 
@@ -216,6 +217,8 @@ describe("importFiles", () => {
     };
     expect((await importFiles([new File([JSON.stringify(file)], "m4v.smoothstep.json")])).images).toBe(1);
     expect((await localStore.getImage("eeee00000003"))!.blob.type).toBe("video/x-m4v");
+    // A file from before lengths were stored has none.
+    expect((await localStore.getImage("eeee00000003"))!.duration).toBeUndefined();
     const zip = await zipFile();
     expect(Object.keys(unzipSync(new Uint8Array(await zip.arrayBuffer())))).toContain("images/eeee00000003.m4v");
     await clearStore();

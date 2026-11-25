@@ -1,5 +1,5 @@
 """Build a JSON file indexing the textures, with a thumbnail of each. Videos' thumbnails are their
-first frame, taken with ffmpeg."""
+first frame, taken with ffmpeg, and their entries give their length in seconds."""
 
 import json
 import os
@@ -16,7 +16,7 @@ def _thumbnail_fname(fname):
     return f"{prefix}_thumb{suffix}"
 
 
-def _video_size(fname):
+def _video_info(fname):
     out = subprocess.check_output(
         [
             "ffprobe",
@@ -25,15 +25,16 @@ def _video_size(fname):
             "-select_streams",
             "v:0",
             "-show_entries",
-            "stream=width,height",
+            "stream=width,height:format=duration",
             "-of",
-            "csv=p=0",
+            "json",
             fname,
         ],
         text=True,
     )
-    width, height = out.strip().split(",")
-    return int(width), int(height)
+    info = json.loads(out)
+    stream = info["streams"][0]
+    return int(stream["width"]), int(stream["height"]), round(float(info["format"]["duration"]), 2)
 
 
 root_dir = os.path.join(
@@ -55,8 +56,9 @@ for dirname in os.listdir(root_dir):
 
         fname = os.path.join(root_dir, dirname, image)
         thumbnail_fname = _thumbnail_fname(image)
+        entry = {}
         if image.endswith(".mp4"):
-            width, height = _video_size(fname)
+            width, height, entry["duration"] = _video_info(fname)
             subprocess.check_call(
                 [
                     "ffmpeg",
@@ -86,6 +88,7 @@ for dirname in os.listdir(root_dir):
                 "width": width,
                 "height": height,
                 "thumbnail_fname": os.path.join(dirname, thumbnail_fname),
+                **entry,
             }
         )
 

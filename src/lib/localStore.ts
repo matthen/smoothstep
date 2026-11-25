@@ -22,6 +22,7 @@ export interface StoredImage {
   height: number;
   created: number;
   blob: Blob;  // PNG, JPEG, WebP, GIF, or a video the browser can play
+  duration?: number;  // A video's length in seconds, when it was known on storing
 }
 
 export type DocumentSummary = Omit<StoredDocument, "json">;
@@ -71,6 +72,8 @@ async function write<T>(op: () => Promise<T>): Promise<T> {
 
 // Object URLs for every stored image, so textures can be drawn synchronously.
 const imageURLs = new Map<string, string>();
+// Stored videos' lengths in seconds, for those stored with one.
+const imageDurations = new Map<string, number>();
 const imageListeners = new Set<() => void>();
 
 export function onImagesChanged(listener: () => void): () => void {
@@ -102,10 +105,19 @@ function cacheImageURL(image: StoredImage) {
     revokeMediaURL(old);
   }
   imageURLs.set(image.id, mediaObjectURL(image.blob));
+  if (image.duration === undefined) {
+    imageDurations.delete(image.id);
+  } else {
+    imageDurations.set(image.id, image.duration);
+  }
 }
 
 export function imageURL(id: string): string | null {
   return imageURLs.get(id) ?? null;
+}
+
+export function imageDuration(id: string): number | undefined {
+  return imageDurations.get(id);
 }
 
 // Images from an animation opened from a link, kept in memory until that animation is saved.
@@ -124,7 +136,7 @@ async function storeTemporaryImages(json: AnimationDocument) {
   for (const slot of json.textures) {
     const blob = slot.isUserUploaded ? temporaryImages.get(slot.url) : undefined;
     if (blob) {
-      let image: {width: number; height: number};
+      let image: {width: number; height: number; duration?: number};
       try {
         image = isVideoType(blob.type) ? await checkedVideo(blob) : await loadImage(blob);
       } catch (error) {
@@ -133,7 +145,7 @@ async function storeTemporaryImages(json: AnimationDocument) {
       }
       await putImage({
         id: slot.url, filename: slot.url + "." + mediaExtension(blob.type),
-        width: image.width, height: image.height, created: Date.now(), blob,
+        width: image.width, height: image.height, created: Date.now(), blob, ...knownDuration(image.duration),
       });
       temporaryImages.delete(slot.url);
     }
@@ -208,6 +220,7 @@ export async function deleteImage(id: string): Promise<void> {
     revokeMediaURL(url);
     imageURLs.delete(id);
   }
+  imageDurations.delete(id);
   imagesChanged();
 }
 
@@ -250,6 +263,7 @@ async function addUploadedVideo(file: File, type: string): Promise<StoredImage> 
   const video = await checkedVideo(blob);
   const record: StoredImage = {
     id: newId(), filename: file.name || "video", width: video.width, height: video.height, created: Date.now(), blob,
+    ...knownDuration(video.duration),
   };
   await putImage(record);
   return record;
@@ -263,26 +277,31 @@ export function checkVideo(bytes: number, width = 0, height = 0, maxDim = MAX_IM
   }
 }
 
-// A video's size, if it plays and isn't too big to be a texture.
-async function checkedVideo(blob: Blob): Promise<{width: number; height: number}> {
+// A duration to store, left out when the browser doesn't know it (a recorded WebM can say Infinity).
+function knownDuration(duration: number | undefined): {duration?: number} {
+  return duration !== undefined && Number.isFinite(duration) && duration > 0 ? {duration} : {};
+}
+
+// A video's size and length, if it plays and isn't too big to be a texture.
+async function checkedVideo(blob: Blob): Promise<{width: number; height: number; duration: number}> {
   checkVideo(blob.size);
   const video = await loadVideo(blob);
   checkVideo(blob.size, video.width, video.height, textureSizeLimit());
   return video;
 }
 
-// A video's size, once the browser has decoded its first frame.
-async function loadVideo(blob: Blob): Promise<{width: number; height: number}> {
+// A video's size and length, once the browser has decoded its first frame.
+async function loadVideo(blob: Blob): Promise<{width: number; height: number; duration: number}> {
   const url = URL.createObjectURL(blob);
   const video = document.createElement("video");
   video.muted = true;
   video.playsInline = true;
   video.preload = "auto";
   video.src = url;
-  let size: {width: number; height: number};
+  let size: {width: number; height: number; duration: number};
   try {
     await videoLoaded(video);
-    size = {width: video.videoWidth, height: video.videoHeight};
+    size = {width: video.videoWidth, height: video.videoHeight, duration: video.duration};
   } catch (error) {
     throw new UploadError(error instanceof Error ? error.message : String(error));
   } finally {
