@@ -512,32 +512,22 @@ div#animationControls {
         }
       }
 
-      // A finger's new transition with only its start: a closed left edge, open to the right.
+      // A finger's new transition with only its start: a closed left edge, with a tail that reaches to
+      // the right for its end.
       .transitionStart {
         position: absolute;
         top: 3px;
-        width: 48px;
+        width: 64px;
         height: 24px;
         border-left: 3px solid $dt-pink;
         border-radius: 4px 0 0 4px;
-        background: linear-gradient(to right, rgba($dt-pink, 0.55), rgba($dt-pink, 0));
+        background: linear-gradient(to right, rgba($dt-pink, 0.6), rgba($dt-pink, 0));
         pointer-events: none;
-        animation: transitionStartPulse 0.9s ease-in-out infinite alternate;
-      }
+        animation: transitionStartReach 1s ease-in-out infinite alternate;
 
-      .transitionPrompt {
-        position: absolute;
-        top: 5px;
-        z-index: 3;
-        padding: 2px 8px;
-        border-radius: 10px;
-        background: $dt-pink;
-        color: $dt-gray-darker;
-        font-size: 12px;
-        font-weight: 600;
-        line-height: 16px;
-        white-space: nowrap;
-        pointer-events: none;
+        @media (prefers-reduced-motion: reduce) {
+          animation: none;
+        }
       }
     }
   }
@@ -556,12 +546,11 @@ div#animationControls {
   }
 }
 
-
-@keyframes transitionStartPulse {
+@keyframes transitionStartReach {
   from {
-    opacity: 1;
+    width: 24px;
   }
   to {
-    opacity: 0.5;
+    width: 120px;
   }
 }

@@ -1,6 +1,6 @@
 import {useEffect, useEffectEvent, useLayoutEffect, useRef, useState} from "react";
 import type {PointerEvent as ReactPointerEvent} from "react";
-import {ActionIcon, NativeSelect, NumberInput, Tooltip} from "@mantine/core";
+import {ActionIcon, NativeSelect, NumberInput, Tooltip, VisuallyHidden} from "@mantine/core";
 import {useMediaQuery} from "@mantine/hooks";
 import {TbArrowAutofitWidth, TbPlus, TbTrash, TbZoomIn, TbZoomOut} from "react-icons/tb";
 import {variableValue} from "../lib/document";
@@ -758,14 +758,7 @@ export default function Timeline(props: TimelineProps) {
                   {pending?.row === row && (prompt ?
                     <>
                       <div className="transitionStart" style={{left: pending.startDSecs * pxPerDSec}} />
-                      <div
-                        className="transitionPrompt" role="status"
-                        // Beside the start, or before it when there's no room after.
-                        style={pending.startDSecs * pxPerDSec > width - 210 ?
-                          {right: width - pending.startDSecs * pxPerDSec + 8} : {left: pending.startDSecs * pxPerDSec + 56}}
-                      >
-                        {prompt}
-                      </div>
+                      <VisuallyHidden role="status">{prompt}</VisuallyHidden>
                     </> :
                     <div className="transition hover" style={blockStyle(pending.startDSecs, pending.endDSecs ?? pending.startDSecs + 1)} />)}
                   {paths.curves.length > 0 &&
