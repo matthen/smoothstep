@@ -207,7 +207,10 @@ function onClick(view: EditorView, pos: number, touch: boolean, config: ClickCon
   const selecting = !sel.empty && pos >= sel.from && pos <= sel.to;
   const line = state.doc.lineAt(pos);
   const match = selecting ? null : config.pickerAt(state, line, pos - line.from);
-  view.dispatch({ effects: [setIlluminated.of(null), setPopup.of(null)] });
+  // A dispatch drops the selection the browser hasn't reported yet, and on a touch screen the tap's
+  // cursor comes later, so this puts the cursor where the tap was.
+  const cursor = touch && !selecting ? { selection: { anchor: pos } } : {};
+  view.dispatch({ ...cursor, effects: [setIlluminated.of(null), setPopup.of(null)] });
   if (selecting || (wasOpen && match)) return;
   if (match) {
     openPicker(view, line.from + match.from, line.from + match.to, match.kind, match.text, pos - line.from - match.from);
