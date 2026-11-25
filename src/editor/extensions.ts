@@ -16,7 +16,9 @@ import { glslLanguage } from './glslLanguage';
 import { definitionElsewhere, goToDefinitionExtension, type DefinitionElsewhere } from './goToDefinition';
 import { lineErrors } from './lineErrors';
 import { links } from './links';
+import { minimap } from './minimap';
 import { clickHelpers } from './popups';
+import { codeTabs, referencesExtension, type CodeTabs } from './references';
 
 // Classes styled in editor.scss with the old Dracula colours.
 const highlighter = tagHighlighter([
@@ -48,6 +50,8 @@ export interface EditorCallbacks {
   onFixed?(): void;
   // For going to a definition in another tab.
   definitionElsewhere?: DefinitionElsewhere;
+  // The GLSL tabs, for finding and renaming a name's uses in all of them.
+  codeTabs?: CodeTabs;
 }
 
 // What a tab's code is written in: the shader language, or JavaScript for the Canvas2D layer.
@@ -96,8 +100,9 @@ export function editorExtensions(callbacks: EditorCallbacks, language: EditorLan
     indentOnInput(),
     // JavaScript brings its own highlighting and click helpers.
     language === "glsl" ? [
-      glslLanguage, syntaxHighlighting(highlighter), clickHelpers(), goToDefinitionExtension(),
+      glslLanguage, syntaxHighlighting(highlighter), clickHelpers(), goToDefinitionExtension(), referencesExtension(),
       callbacks.definitionElsewhere ? definitionElsewhere.of(callbacks.definitionElsewhere) : [],
+      callbacks.codeTabs ? codeTabs.of(callbacks.codeTabs) : [],
     ] :
       javascriptCompartment.of(javascriptSupport ?? []),
     bracketMatching(),
@@ -116,5 +121,6 @@ export function editorExtensions(callbacks: EditorCallbacks, language: EditorLan
     tooltips({ parent: document.body }),
     links(),
     lineErrors({ onFixed: () => callbacks.onFixed?.() }),
+    minimap(),
   ];
 }

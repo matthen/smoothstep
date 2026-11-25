@@ -9,6 +9,7 @@ import type { Description } from './glslDefinitions';
 import { USER_NAME_TOKENS } from './glslLanguage';
 import { highlightedCodeElement, type CodeLanguage } from './highlight';
 import { goToDefinitionHint, isDefinitionClick, userDefinitionAt } from './goToDefinition';
+import { findReferencesAt, findReferencesHint, renameHint, startRename } from './references';
 import {
   createColorPicker, createDirectionPicker, createFloatPicker, createVec2Picker, type PickerWidget,
 } from './pickers';
@@ -182,8 +183,9 @@ function definitionDom(def: Definition, language: CodeLanguage) {
   return dom;
 }
 
-// The user's own definition: how it's declared, the comment above it, and a way to go there.
-function userDefinitionDom(view: EditorView, def: Description & { go(): void }) {
+// The user's own definition: how it's declared, the comment above it, and ways to go there, list its
+// uses or rename it.
+function userDefinitionDom(view: EditorView, def: Description & { go(): void }, pos: number) {
   const dom = document.createElement('div');
   dom.className = 'ss-definition';
   if (def.comment) {
@@ -192,16 +194,22 @@ function userDefinitionDom(view: EditorView, def: Description & { go(): void }) 
     p.append(def.comment);
   }
   dom.append(highlightedCodeElement([def.signature], 'glsl'));
-  const go = dom.appendChild(document.createElement('p'));
-  go.className = 'ss-go-to-definition';
-  const button = go.appendChild(document.createElement('button'));
-  button.type = 'button';
-  button.textContent = 'Go to definition';
-  button.addEventListener('click', () => {
-    view.dispatch({ effects: setPopup.of(null) });
-    def.go();
-  });
-  go.appendChild(document.createElement('kbd')).textContent = goToDefinitionHint;
+  const actions = dom.appendChild(document.createElement('p'));
+  actions.className = 'ss-go-to-definition';
+  const action = (label: string, hint: string, run: () => void) => {
+    const span = actions.appendChild(document.createElement('span'));
+    const button = span.appendChild(document.createElement('button'));
+    button.type = 'button';
+    button.textContent = label;
+    button.addEventListener('click', () => {
+      view.dispatch({ effects: setPopup.of(null) });
+      run();
+    });
+    span.appendChild(document.createElement('kbd')).textContent = hint;
+  };
+  action('Go to definition', goToDefinitionHint, def.go);
+  action('Find references', findReferencesHint, () => findReferencesAt(view, pos));
+  action('Rename', renameHint, () => startRename(view, pos));
   return dom;
 }
 
@@ -262,7 +270,7 @@ function onClick(view: EditorView, pos: number, touch: boolean, config: ClickCon
     view.dispatch({ effects: showPopup(definitionDom(def, config.language)) });
   } else if (config.illuminates(state, word.from) && name.length > 1) {
     const own = config.userDefinitionAt?.(view, word.from);
-    view.dispatch({ effects: [setIlluminated.of(name), ...own ? [showPopup(userDefinitionDom(view, own))] : []] });
+    view.dispatch({ effects: [setIlluminated.of(name), ...own ? [showPopup(userDefinitionDom(view, own, word.from))] : []] });
   }
 }
 

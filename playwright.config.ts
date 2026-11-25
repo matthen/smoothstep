@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 // The built app is served under /sub/ to check it works away from a site root.
-const PORT = 4173;
+const PORT = Number(process.env.E2E_PORT ?? 4173);
 
 export default defineConfig({
   testDir: 'e2e',

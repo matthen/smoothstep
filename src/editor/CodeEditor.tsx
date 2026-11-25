@@ -5,6 +5,7 @@ import type { LineError } from '../lib/types';
 import { lastFrameName } from './completion';
 import { editorExtensions, loadJavaScript, type EditorLanguage } from './extensions';
 import type { DefinitionElsewhere } from './goToDefinition';
+import type { CodeTabs } from './references';
 import { errorLinePos, missingSkeleton, setLineErrors } from './lineErrors';
 import { pickerEdit } from './popups';
 import './editor.scss';
@@ -31,6 +32,8 @@ export interface CodeEditorProps {
   onView?(view: EditorView | null): void;
   // Finds a name declared in another tab, for going to its definition.
   definitionElsewhere?: DefinitionElsewhere;
+  // The GLSL tabs, for finding and renaming a name's uses across them.
+  codeTabs?: CodeTabs;
 }
 
 // Puts `code` at the cursor, on lines of its own, and shows it.
@@ -51,12 +54,12 @@ export function insertCode(view: EditorView, code: string) {
 
 export default function CodeEditor({
   value, onChange, onBuild, onSave, lineErrors, hidden, language = "glsl", autoFocus, skeleton, onFixed, lastFrame,
-  onView, definitionElsewhere,
+  onView, definitionElsewhere, codeTabs,
 }: CodeEditorProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const extensionsRef = useRef<Extension | null>(null);
-  const callbacksRef = useRef({ onChange, onBuild, onSave, onFixed, definitionElsewhere });
+  const callbacksRef = useRef({ onChange, onBuild, onSave, onFixed, definitionElsewhere, codeTabs });
   const lineErrorsRef = useRef(lineErrors);
   // The code the editor last reported or was given, so our own edits coming back as `value` are ignored.
   const knownValueRef = useRef(value);
@@ -65,7 +68,7 @@ export default function CodeEditor({
   const reportedRef = useRef<string[]>([]);
 
   useLayoutEffect(() => {
-    callbacksRef.current = { onChange, onBuild, onSave, onFixed, definitionElsewhere };
+    callbacksRef.current = { onChange, onBuild, onSave, onFixed, definitionElsewhere, codeTabs };
     lineErrorsRef.current = lineErrors;
   });
 
@@ -76,6 +79,7 @@ export default function CodeEditor({
         onSave: () => callbacksRef.current.onSave(),
         onFixed: () => callbacksRef.current.onFixed?.(),
         definitionElsewhere: (name) => callbacksRef.current.definitionElsewhere?.(name) ?? null,
+        codeTabs: () => callbacksRef.current.codeTabs?.() ?? [],
       }, language),
       skeleton ? missingSkeleton.of(skeleton) : [],
       lastFrame ? lastFrameName.of(lastFrame) : [],

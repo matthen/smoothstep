@@ -24,6 +24,7 @@ import CodeEditor, { insertCode } from '../editor/CodeEditor';
 import { describe, topLevel } from '../editor/glslDefinitions';
 import { GlslCode } from '../editor/InlineCode';
 import { analysisOf, selectDefinition } from '../editor/goToDefinition';
+import type { CodeTab } from '../editor/references';
 import { EditorView } from '@codemirror/view';
 import { DOC_SECTIONS, onOpenDocs, type DocTarget } from '../lib/docLinks';
 import ShaderTabs, { shaderCaption, shaderName, starterFunction } from '../editor/ShaderTabs';
@@ -722,6 +723,11 @@ export default function App() {
     ...(doc.buffers ?? []).map((buffer, i) => ({tab: i, code: buffer.code})),
     {tab: "image", code: doc.code},
   ];
+  // The shader tabs' editors, for finding and renaming a name's uses across them.
+  const glslTabs = (): CodeTab[] => codeTabs.flatMap(({tab}) => {
+    const view = tab === "canvas" ? undefined : editorViews.current.get(tab);
+    return view ? [{name: shaderName(tab), view, shared: tab === "shared", show: () => flushSync(() => showCodeTab(tab))}] : [];
+  });
 
   const save = async (asCopy: boolean, copyTitle?: string) => {
     // Saving before the animation has loaded would overwrite it with the default document, and
@@ -1187,6 +1193,7 @@ export default function App() {
               skeleton={starterFunction(tab)} onFixed={() => setBuildQueued(true)}
               lastFrame={typeof tab === "number" ? "iBuffer" + tab : "iPrevFrame"}
               definitionElsewhere={tab === "shared" || tab === "canvas" ? undefined : sharedDefinition}
+              codeTabs={glslTabs}
               onView={view => {
                 if (view) {
                   editorViews.current.set(tab, view);

@@ -39,7 +39,8 @@ fine here on GitHub.
 </p>
 
 The editor highlights GLSL, shows compile errors on the line they occur, and gives you
-inline pickers for colours, numbers and vectors. The timeline drives 16 animated variables,
+inline pickers for colours, numbers and vectors. It can go to where one of your names is defined, list
+its uses and rename it in every tab, and long code gets a minimap. The timeline drives 16 animated variables,
 `iFloat0` to `iFloat15`, each a sequence of transitions that step, move steadily, ease in or out,
 overshoot and settle, or grow exponentially for zooms. The Sliders tab has a slider for each one your code uses, to set it or try out
 values while you watch. You get 8

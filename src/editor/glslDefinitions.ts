@@ -157,6 +157,13 @@ const size = (r: Range) => r.to - r.from;
 export function findDefinition(analysis: Analysis, pos: number): Declaration | null {
   const name = nameAt(analysis, pos);
   if (!name) return null;
+  return resolve(analysis, pos) ?? analysis.declarations.find((d) => d.name === name.text) ?? null;
+}
+
+// The declaration in scope at `pos`, or null when nothing here declares the name there.
+export function resolve(analysis: Analysis, pos: number): Declaration | null {
+  const name = nameAt(analysis, pos);
+  if (!name) return null;
   const same = analysis.declarations.filter((d) => d.name === name.text);
   const own = same.find((d) => d.from === name.from);
   if (own) return own.kind === 'function' && !own.body ? same.find((d) => d.kind === 'function' && d.body) ?? own : own;
@@ -165,7 +172,7 @@ export function findDefinition(analysis: Analysis, pos: number): Declaration | n
   const before = (d: Declaration) => Number(d.from <= pos);
   visible.sort((a, b) => size(a.scope) - size(b.scope) || Number(b.body) - Number(a.body) ||
     before(b) - before(a) || Math.abs(a.from - pos) - Math.abs(b.from - pos));
-  return visible[0] ?? topLevel(analysis, name.text) ?? same[0] ?? null;
+  return visible[0] ?? topLevel(analysis, name.text);
 }
 
 // A declaration of `name` that the whole code can see, preferring a function's body to its prototype.
@@ -174,7 +181,7 @@ export function topLevel(analysis: Analysis, name: string): Declaration | null {
   return same.find((d) => d.body) ?? same[0] ?? null;
 }
 
-const isGlobal = (analysis: Analysis, d: Declaration) => size(d.scope) === analysis.length;
+export const isGlobal = (analysis: Analysis, d: Declaration) => size(d.scope) === analysis.length;
 
 export interface Description {
   signature: string;
