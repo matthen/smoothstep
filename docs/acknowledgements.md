@@ -50,8 +50,8 @@ The sample videos are cropped, trimmed and re-encoded from these clips on Wikime
   the Lunar Roving Vehicle on Apollo 16 (1972), NASA, public domain
 - [*Flock of starlings (Sturnus vulgaris)*](https://commons.wikimedia.org/wiki/File:Flock_of_starlings_(Sturnus_vulgaris).webm),
   Karen Roe, [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/)
-- [*Waves at Hikkaduwa beach, Sri Lanka*](https://commons.wikimedia.org/wiki/File:Waves_at_Hikkaduwa_beach,_Sri_Lanka.webm),
-  Jan Kranendonk, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+- [*Waves crashing on rocks off Beach 4, Kalaloch Beach, Washington 02*](https://commons.wikimedia.org/wiki/File:Waves_crashing_on_rocks_off_Beach_4,_Kalaloch_Beach,_Washington_02.webm),
+  Joe Mabel, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), also slightly brightened
 - [*Clip of Timelapse of clouds over Arthur's Seat*](https://commons.wikimedia.org/wiki/File:Clip_of_Timelapse_of_clouds_over_Arthur_s_Seat_(Source).webm),
   Learning, Teaching and Web Services, the University of Edinburgh,
   [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/), also sped up to twice its speed

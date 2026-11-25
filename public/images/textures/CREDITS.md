@@ -22,12 +22,12 @@ Licences were checked on 19 Nov 2026, and the videos' on 25 Nov 2026.
 | `videos/train.mp4` | *Arrival of a Train at La Ciotat* (1895), Lumière brothers, [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Arrival_of_a_Train_at_La_Ciotat_(The_Lumi%C3%A8re_Brothers,_1895).webm) | Public domain |
 | `videos/moon.mp4` | *Ap16 rover*, an astronaut driving the Lunar Roving Vehicle on Apollo 16 (1972), NASA, [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Ap16_rover.ogv) | Public domain |
 | `videos/starlings.mp4` | *Flock of starlings (Sturnus vulgaris)*, Karen Roe, [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Flock_of_starlings_(Sturnus_vulgaris).webm) | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/) |
-| `videos/waves.mp4` | *Waves at Hikkaduwa beach, Sri Lanka*, Jan Kranendonk, [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Waves_at_Hikkaduwa_beach,_Sri_Lanka.webm) | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
+| `videos/waves.mp4` | *Waves crashing on rocks off Beach 4, Kalaloch Beach, Washington 02*, Joe Mabel, [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Waves_crashing_on_rocks_off_Beach_4,_Kalaloch_Beach,_Washington_02.webm) | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
 | `videos/arthursseat.mp4` | *Clip of Timelapse of clouds over Arthur's Seat*, Learning, Teaching and Web Services, the University of Edinburgh, [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Clip_of_Timelapse_of_clouds_over_Arthur_s_Seat_(Source).webm) | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) |
 | `fonts/*.png` | Drawn by `tools/buildFonts.py` with Courier Prime, Arimo, Tinos, Inter and Exo 2 | Fonts under the [SIL Open Font License 1.1](https://openfontlicense.org); the images: same as the code |
 
 The videos are cropped, trimmed and re-encoded from the originals; the Arthur's Seat clip also plays
-at twice its speed. The CC BY-SA clips, as changed here, are shared under the same licences.
+at twice its speed, and the waves clip is slightly brightened. The CC BY-SA clips, as changed here, are shared under the same licences.
 
 Thumbnails (`*_thumb.*`) are smaller copies of the files above, or a video's first frame, and share
 their licences.

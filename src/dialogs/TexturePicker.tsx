@@ -52,7 +52,7 @@ const CAPTIONS: Record<string, string> = {
   "videos/moon.mp4": "Apollo 16: driving on the Moon",
   "videos/starlings.mp4": "Starlings at dusk",
   "videos/train.mp4": "Lumière: arrival of a train",
-  "videos/waves.mp4": "Waves at the beach",
+  "videos/waves.mp4": "Waves on a rock at sunset",
   "special/clouds.png": "Clouds",
   "special/noise.png": "Noise",
   "special/noise_gauss.png": "Smooth noise",
