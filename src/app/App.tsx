@@ -195,8 +195,10 @@ export default function App() {
   }, [fullView]);
   const phone = usePhone();
   const touch = useTouch();
-  const short = useMediaQuery("(max-height: 520px)");
-  const tabletKeyboard = useKeyboardInset() && touch && !phone && !short;
+  // The desktop layout's width, and its height before a keyboard took some of it.
+  const wide = useMediaQuery("(min-width: 768px)");
+  const keyboard = useKeyboardInset();
+  const tabletKeyboard = keyboard.open && touch && wide && keyboard.fullHeight > 520;
   // On a tablet, the code or the bottom panel, whichever the on-screen keyboard is typing in, takes
   // the room above it.
   const [typingIn, setTypingIn] = useState<"code" | "panel" | null>(null);

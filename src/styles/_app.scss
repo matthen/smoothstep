@@ -103,12 +103,14 @@ a {
 
   // A tablet's on-screen keyboard covers the bottom of the page, so the app fits in the part still in
   // sight, and the code or the bottom panel, whichever has the keyboard, takes all of it.
-  // Set only in the desktop layout on a touch screen (see App).
+  // Set only in the desktop layout on a touch screen (see App). It wins over the short-screen layout,
+  // for browsers that shrink the page itself for the keyboard.
   &[data-keyboard] {
     position: fixed;
     inset: var(--visible-top, 0px) 0 auto;
     height: var(--visible-height, 100%);
     min-height: 0;
+    grid-template-rows: $header-height minmax(0, 1fr) auto;
   }
 
   &[data-keyboard="code"] .bottomPanel {

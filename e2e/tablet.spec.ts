@@ -68,6 +68,21 @@ test("with the keyboard up, the code or the bottom panel fills the space above i
   expect(errors).toEqual([]);
 });
 
+test("in browsers that shrink the page for the keyboard, the code keeps its room and its cursor", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#new");
+  await page.locator(".cm-line").nth(10).click();
+  await page.setViewportSize({width: 1180, height: VISIBLE_HEIGHT});
+  await expect(page.locator(".bottomPanel")).toBeHidden();
+  const editor = await box(page, ".editorPane");
+  expect(editor.y + editor.height).toBeLessThanOrEqual(VISIBLE_HEIGHT);
+  expect(editor.y + editor.height).toBeGreaterThan(VISIBLE_HEIGHT - 20);
+  await expect(page.locator(".cm-cursor-primary")).toBeInViewport();
+  await page.setViewportSize({width: 1180, height: 820});
+  await expect(page.locator(".bottomPanel")).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test("the layout stays put for the title, and for a pinch zoom", async ({page, context}) => {
   const errors = await offline(context);
   await fakeViewport(page);
