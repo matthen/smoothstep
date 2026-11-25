@@ -20,7 +20,9 @@ export function useKeyboardInset(): boolean {
       root.style.setProperty("--keyboard-inset", covered + "px");
       root.style.setProperty("--visible-top", Math.round(viewport.offsetTop) + "px");
       root.style.setProperty("--visible-height", Math.round(viewport.height) + "px");
-      setOpen(covered > KEYBOARD_MIN_HEIGHT);
+      // Not offsetTop: iOS scrolls the page to show the focused field, with the keyboard still up.
+      // And not while pinch-zoomed, which shrinks the visual viewport too.
+      setOpen(window.innerHeight - viewport.height > KEYBOARD_MIN_HEIGHT && Math.abs(viewport.scale - 1) < 0.01);
     };
     update();
     viewport.addEventListener("resize", update);

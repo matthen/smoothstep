@@ -153,8 +153,13 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
 
   useEffect(() => {
     const element = containerRef.current!;
-    const observer = new ResizeObserver(() =>
-      setContainer([element.clientWidth, element.clientHeight, element.offsetTop]));
+    // A hidden canvas (the bottom panel taking the screen above a tablet's keyboard) keeps its size,
+    // so its simulation carries on when it comes back.
+    const observer = new ResizeObserver(() => {
+      if (element.clientWidth > 0 && element.clientHeight > 0) {
+        setContainer([element.clientWidth, element.clientHeight, element.offsetTop]);
+      }
+    });
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
