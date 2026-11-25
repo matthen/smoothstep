@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { PNG } from 'pngjs';
 
-import { addTab, dismissAlert, expectCenter, near, offline, PIXEL_WAIT, setCode, skipTour } from './helpers';
+import { addTab, canvasCenter, dismissAlert, expectCenter, near, offline, PIXEL_WAIT, setCode, skipTour } from './helpers';
 
 // 2 seconds of 64×48 video at 10fps: red, then green, blue and white, half a second each.
 const COLOURS = fileURLToPath(new URL("fixtures/colours.webm", import.meta.url));
@@ -140,6 +140,38 @@ test("a video texture shows its frame at the animation's time, scrubbed and rend
     await expectCenter(page, colour);
   }
   expectFrames(await renderFrames(page));
+  expect(errors).toEqual([]);
+});
+
+test("a sample video can be chosen for a slot, and plays as a texture, starting again when it ends", async ({page, context}) => {
+  const errors = await offline(context);
+  await start(page, LEFT_SHADER.replace("uv.x < 0.5", "true"));
+  await page.getByRole("tab", {name: "Textures"}).click();
+  await page.locator("div#textures .texture button").first().click();
+  const picker = page.getByRole("dialog", {name: "iTexture0"});
+  await picker.getByRole("region", {name: "Videos"}).getByAltText("videos/colourflow.mp4 preview").click();
+  await page.getByRole("button", {name: "Apply changes"}).click();
+  const thumbnail = page.locator("div#textures video[aria-label='iTexture0 preview']");
+  await expect(thumbnail).toBeVisible();
+
+  // Twice the video's length, so a tenth of the way in and six tenths are one video length apart.
+  const length = await thumbnail.evaluate(async (video: HTMLVideoElement) => {
+    while (!Number.isFinite(video.duration)) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    return video.duration;
+  });
+  await page.locator(".durationInput").fill(String(2 * length));
+  await page.locator(".durationInput").press("Enter");
+  const colourAt = async (tenths: number) => {
+    await page.locator("#canvas").click();
+    await page.keyboard.press(String(tenths));
+    return canvasCenter(page);
+  };
+  await expect.poll(async () => near(await colourAt(1), [0, 0, 0]), PIXEL_WAIT).toBe(false);
+  const first = await colourAt(1);
+  await expect.poll(async () => near(await colourAt(3), first), PIXEL_WAIT).toBe(false);
+  await expect.poll(async () => near(await colourAt(6), first, 20), PIXEL_WAIT).toBe(true);
   expect(errors).toEqual([]);
 });
 

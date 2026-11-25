@@ -711,17 +711,17 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
           <p>This step is a new shader, and its one new line reads an image:</p>
           <Lines>fragColor = texture(iTexture0, uv);</Lines>
           <p>
-            A texture is an image your shader can read. <GlslCode>texture(iTexture0, uv)</GlslCode> looks up the colour
-            of the image in slot <GlslCode>iTexture0</GlslCode> at the point <GlslCode>uv</GlslCode>, where 0 to 1 covers the
-            whole image.
+            A texture is an image or video your shader can read. <GlslCode>texture(iTexture0, uv)</GlslCode> looks up the colour
+            of the texture in slot <GlslCode>iTexture0</GlslCode> at the point <GlslCode>uv</GlslCode>, where 0 to 1 covers the
+            whole of it.
           </p>
           <p>
             Build this. The canvas is black, because the slot is empty, and empty slots are black. Open the
-            Textures tab, click <GlslCode>iTexture0</GlslCode>, and choose a photo or add your own.
+            Textures tab, click <GlslCode>iTexture0</GlslCode>, and choose a photo or a video, or add your own.
           </p>
         </>,
         code: shaders.TEXTURE,
-        task: "Read a texture in your code, and choose an image for it.",
+        task: "Read a texture in your code, and choose an image or video for it.",
         check: now => now.built && textureChosen(now),
       },
       {

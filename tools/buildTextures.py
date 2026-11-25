@@ -1,7 +1,9 @@
-"""Build a JSON file indexing the textures."""
+"""Build a JSON file indexing the textures, with a thumbnail of each. Videos' thumbnails are their
+first frame, taken with ffmpeg."""
 
 import json
 import os
+import subprocess
 
 from PIL import Image
 
@@ -10,8 +12,17 @@ json_obj = {}
 
 def _thumbnail_fname(fname):
     prefix = fname[:-4]
-    suffix = fname[-4:]
+    suffix = ".jpg" if fname.endswith(".mp4") else fname[-4:]
     return f"{prefix}_thumb{suffix}"
+
+
+def _video_size(fname):
+    out = subprocess.check_output([
+        "ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height",
+        "-of", "csv=p=0", fname,
+    ], text=True)
+    width, height = out.strip().split(",")
+    return int(width), int(height)
 
 
 root_dir = os.path.join(
@@ -28,15 +39,23 @@ for dirname in os.listdir(root_dir):
             os.remove(os.path.join(root_dir, dirname, image))
 
     for image in sorted(os.listdir(os.path.join(root_dir, dirname))):
-        if not image.endswith(".png") and not image.endswith(".jpg"):
+        if not image.endswith((".png", ".jpg", ".mp4")):
             continue
 
         fname = os.path.join(root_dir, dirname, image)
-        image_obj = Image.open(fname)
-        width, height = image_obj.size
         thumbnail_fname = _thumbnail_fname(image)
-        image_obj.thumbnail((128, 128))
-        image_obj.save(os.path.join(root_dir, dirname, thumbnail_fname))
+        if image.endswith(".mp4"):
+            width, height = _video_size(fname)
+            subprocess.check_call([
+                "ffmpeg", "-y", "-loglevel", "error", "-i", fname, "-frames:v", "1",
+                "-vf", "scale=128:128:force_original_aspect_ratio=decrease", "-q:v", "3",
+                os.path.join(root_dir, dirname, thumbnail_fname),
+            ])
+        else:
+            image_obj = Image.open(fname)
+            width, height = image_obj.size
+            image_obj.thumbnail((128, 128))
+            image_obj.save(os.path.join(root_dir, dirname, thumbnail_fname))
 
         json_obj[dirname].append(
             dict(

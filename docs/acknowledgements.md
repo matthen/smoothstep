@@ -28,7 +28,8 @@ The Canvas2D layer can import these libraries, each under its own licence:
 - [d3-delaunay](https://github.com/d3/d3-delaunay) (ISC licence)
 
 The default textures are free to reuse: CC0 photos from Flickr, public domain textures and NASA
-imagery, a photo under the Unsplash License, and work by Nicky and Matt Henderson. Thanks to the
+imagery, a photo under the Unsplash License, and work by Nicky and Matt Henderson, including the
+sample videos. Thanks to the
 artists:
 
 - [Nicky Henderson](https://www.rnhenderson.com/)

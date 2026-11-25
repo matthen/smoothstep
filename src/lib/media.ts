@@ -1,4 +1,4 @@
-// Telling the user's videos from their images: by their bytes, and by the texture URLs made for them.
+// Telling videos from images: by their bytes, and by their texture URLs.
 
 // Object URLs made for video blobs. A blob URL doesn't say what it holds, so they're noted here.
 const videoURLs = new Set<string>();
@@ -38,9 +38,12 @@ export function playableURL(url: string): string {
   return mediaObjectURL(new Blob([bytes], {type: match[1]}));
 }
 
-// Whether a texture's URL is a video, so it's played rather than loaded as an image.
+// Whether a texture's URL is a video, so it's played rather than loaded as an image: an uploaded
+// video's data or object URL, or a built-in video's path.
 export function isVideoURL(url: string | null | undefined): boolean {
-  return typeof url === "string" && (url.startsWith("data:video/") || videoURLs.has(url));
+  return typeof url === "string" &&
+    (url.startsWith("data:video/") || videoURLs.has(url) ||
+      (!/^(data|blob):/.test(url) && /\.(mp4|webm|mov|m4v)$/i.test(url.split(/[?#]/)[0]!)));
 }
 
 // An image's or video's type from its first bytes. Bytes it doesn't recognise keep the type they

@@ -11,7 +11,7 @@ import {
   addUploadedImage, deleteImage, listImages, MAX_IMAGE_DIM, MAX_VIDEO_MB, StorageFullError, UploadError,
   type StoredImage,
 } from '../lib/localStore';
-import { isVideoType } from '../lib/media';
+import { isVideoType, isVideoURL } from '../lib/media';
 import TextureData from './textures.json';
 import TextureThumbnail from './TextureThumbnail';
 import { useImagesChanged } from './useImagesChanged';
@@ -28,6 +28,7 @@ const TEXTURES: Record<string, BuiltInTexture[]> = TextureData;
 // The built-in textures' folders, in the order the picker lists them.
 const GROUPS: {key: string; title: string; caption: string}[] = [
   {key: "photos", title: "Photos", caption: "Photographs, and a painting."},
+  {key: "videos", title: "Videos", caption: "Short videos that loop, to play along with your animation."},
   {key: "special", title: "Noise", caption: "Random values to read in your code: noise, smooth noise, clouds and plasma."},
   {key: "tiling", title: "Tiling surfaces", caption: "Stone, sand and rust that repeat without seams."},
   {
@@ -47,6 +48,11 @@ const CAPTIONS: Record<string, string> = {
   "photos/jorg-angeli-S56zN8cV5fk-unsplash.jpg": "Castle",
   "photos/nickypainting.jpg": "Painting",
   "photos/tiles.jpg": "Tiles",
+  "videos/ball.mp4": "Bouncing ball",
+  "videos/clouds.mp4": "Moving clouds",
+  "videos/colourflow.mp4": "Colour flow",
+  "videos/testpattern.mp4": "Test pattern",
+  "videos/waves.mp4": "Waves",
   "special/clouds.png": "Clouds",
   "special/noise.png": "Noise",
   "special/noise_gauss.png": "Smooth noise",
@@ -174,7 +180,7 @@ export default function TexturePicker(
     if (show) {
       listImages().then(setUploads).catch((error: unknown) => {
         console.log(error);
-        onMessage("Error listing your images.");
+        onMessage("Error listing your images and videos.");
       });
     }
   }, [show, imagesVersion]);  // eslint-disable-line react-hooks/exhaustive-deps
@@ -270,7 +276,7 @@ export default function TexturePicker(
               TEXTURES[key]!.filter(t => t.fname !== EMPTY_TEXTURE).map(t => pickerItem(
                 t.fname, t.fname === texture.url, () => select(t.fname, false),
                 <img src={asset("/images/textures/" + t.thumbnail_fname)} alt={t.fname + " preview"} loading="lazy" />,
-                CAPTIONS[t.fname], `${t.width} × ${t.height}`,
+                CAPTIONS[t.fname], `${t.width} × ${t.height}${isVideoURL(t.fname) ? ", video" : ""}`,
               )),
             ))}
           </div>}

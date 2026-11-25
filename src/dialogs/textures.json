@@ -302,5 +302,37 @@
             "thumbnail_fname": "tiling/461223148_thumb.jpg",
             "width": 512
         }
+    ],
+    "videos": [
+        {
+            "fname": "videos/ball.mp4",
+            "height": 256,
+            "thumbnail_fname": "videos/ball_thumb.jpg",
+            "width": 256
+        },
+        {
+            "fname": "videos/clouds.mp4",
+            "height": 256,
+            "thumbnail_fname": "videos/clouds_thumb.jpg",
+            "width": 256
+        },
+        {
+            "fname": "videos/colourflow.mp4",
+            "height": 256,
+            "thumbnail_fname": "videos/colourflow_thumb.jpg",
+            "width": 256
+        },
+        {
+            "fname": "videos/testpattern.mp4",
+            "height": 256,
+            "thumbnail_fname": "videos/testpattern_thumb.jpg",
+            "width": 256
+        },
+        {
+            "fname": "videos/waves.mp4",
+            "height": 256,
+            "thumbnail_fname": "videos/waves_thumb.jpg",
+            "width": 256
+        }
     ]
 }

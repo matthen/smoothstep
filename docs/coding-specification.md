@@ -47,10 +47,11 @@ or tap the preview to see its size. A render draws at the size you choose.
 ## Textures
 
 `texture(iTexture0, uv)` reads a texture's colour at `uv`, which runs from 0 to 1 across the
-image with (0, 0) at the bottom left. `fragCoord / iResolution` fills the frame with it. Textures
-repeat outside 0 to 1. `textureSize(iTexture0, 0)` gives the image's size in pixels.
+texture with (0, 0) at the bottom left. `fragCoord / iResolution` fills the frame with it. Textures
+repeat outside 0 to 1. `textureSize(iTexture0, 0)` gives its size in pixels.
 
-A texture slot can also hold a video, an MP4, WebM or MOV file that your browser can play. At
+A texture slot can also hold a video: one of the built-in videos, or your own MP4, WebM or MOV file
+that your browser can play. At
 `iTime` the texture shows the video's frame at that time, so the video plays along with the
 animation, and when you scrub the timeline or render a video. A video shorter than the animation
 starts again from its first frame each time it ends. Videos have no sound here. They can be up to

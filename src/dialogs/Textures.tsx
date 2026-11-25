@@ -36,9 +36,9 @@ export default function Textures({textures, count, onChange, onAdd, onMessage}: 
         <div className="texture" key={texture.id}>
           <h1>{texture.id}</h1>
           {texture.url === EMPTY_TEXTURE && !texture.isUserUploaded
-            ? <button className="empty" onClick={() => {setSlot(i); setShowPicker(true);}} aria-label={texture.id + " is empty: choose an image"}>
+            ? <button className="empty" onClick={() => {setSlot(i); setShowPicker(true);}} aria-label={texture.id + " is empty: choose an image or video"}>
               <TbPhotoPlus />
-              <span>Choose an image</span>
+              <span>Choose an image or video</span>
             </button>
             : <button onClick={() => {setSlot(i); setShowPicker(true);}}>
               <TextureThumbnail src={textureURL(texture)} alt={texture.id + " preview"} />
@@ -53,7 +53,7 @@ export default function Textures({textures, count, onChange, onAdd, onMessage}: 
         </Tooltip>}
       {textures.every(texture => texture.url === EMPTY_TEXTURE) &&
         <p className="texturesHint">
-          {phone ? "Tap" : "Click"} a slot to choose an image. In your code, <GlslCode>texture(iTexture0, uv)</GlslCode> reads its colour,
+          {phone ? "Tap" : "Click"} a slot to choose an image or video. In your code, <GlslCode>texture(iTexture0, uv)</GlslCode> reads its colour,
           with <GlslCode>uv</GlslCode> from 0 to 1.
         </p>}
       {current && slot !== null &&

@@ -15,7 +15,7 @@
 </p>
 
 smoothstep.io is a toolkit for making animations in the WebGL shader language. You write a
-GLSL fragment shader, animate its inputs on a timeline, give it image textures, and export
+GLSL fragment shader, animate its inputs on a timeline, give it image and video textures, and export
 the result as video. For text, shapes and physics, a Canvas2D layer adds JavaScript that draws on a
 2D canvas over the image. It all runs in your browser, with no server or sign-in.
 
@@ -43,8 +43,8 @@ inline pickers for colours, numbers and vectors. The timeline drives 16 animated
 `iFloat0` to `iFloat15`, each a sequence of transitions that step, move steadily, ease in or out,
 overshoot and settle, or grow exponentially for zooms. The Sliders tab has a slider for each one your code uses, to set it or try out
 values while you watch. You get 8
-texture slots, `iTexture0` to `iTexture7`, which take built-in photos, noise, tiling textures
-and font sheets, or your own images up to 4096px and videos that play along with the animation. Up to 4 buffers, `iBuffer0` to `iBuffer3`,
+texture slots, `iTexture0` to `iTexture7`, which take built-in photos, noise, tiling textures,
+font sheets and videos, or your own images up to 4096px and videos that play along with the animation. Up to 4 buffers, `iBuffer0` to `iBuffer3`,
 are extra shaders that draw before the image each frame and hold any numbers, so you can run
 simulations across frames. A Canvas2D layer is JavaScript that draws on a 2D canvas each step, with
 drawing helpers, fonts, and built-in physics, noise and triangulation libraries; its drawing goes
@@ -141,7 +141,7 @@ and the example animations in `examples/`: each has its `.json`, a `.png` thumbn
 `src/lib/config.ts`.
 
 `tools/` has the scripts that generate data. `buildTextures.py` makes the texture list and
-thumbnails, `buildFonts.py` draws the font sheets, and `buildFunctions.py` makes the list of
+thumbnails, `buildVideos.py` draws the sample videos, `buildFonts.py` draws the font sheets, and `buildFunctions.py` makes the list of
 GLSL built-ins the editor's hints show. `buildLayerAssets.mjs` bundles the Canvas2D layer's libraries
 into `public/libs/` and copies its fonts into `public/fonts/`. `makeExamplePreviews.mjs` renders the examples' previews
 and thumbnails with the app's own exporter. The end-to-end tests are in `e2e/`. They block every

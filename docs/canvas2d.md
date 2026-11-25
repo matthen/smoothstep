@@ -144,7 +144,7 @@ The fonts are part of smoothstep.io, so they work offline and in player files.
 
 ## Textures
 
-`textures` holds the images in the 8 texture slots, so you can draw them on the canvas:
+`textures` holds the images and videos in the 8 texture slots, so you can draw them on the canvas:
 
 ```js
 function draw(ctx, {width, height, textures}) {

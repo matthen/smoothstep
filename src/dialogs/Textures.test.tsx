@@ -36,14 +36,14 @@ describe("Textures and TexturePicker", () => {
     const textures = emptyTextures();
     textures[1] = {id: "iTexture1", url: "fonts/1.png", isUserUploaded: false};
     renderTextures(textures);
-    expect(screen.getAllByRole("button", {name: /^iTexture\d is empty: choose an image$/}).length).toBe(7);
+    expect(screen.getAllByRole("button", {name: /^iTexture\d is empty: choose an image or video$/}).length).toBe(7);
     expect(screen.getByAltText("iTexture1 preview")).toBeTruthy();
   });
 
   it("shows only the first slots it's given, and a button to add the next", async () => {
     const props = renderTextures(emptyTextures(), 3);
     expect(screen.getAllByRole("button", {name: /is empty/}).map(b => b.getAttribute("aria-label"))).toEqual(
-      [0, 1, 2].map(i => `iTexture${i} is empty: choose an image`));
+      [0, 1, 2].map(i => `iTexture${i} is empty: choose an image or video`));
     await userEvent.click(screen.getByRole("button", {name: "Add a texture slot"}));
     expect(props.onAdd).toHaveBeenCalled();
   });
@@ -70,6 +70,21 @@ describe("Textures and TexturePicker", () => {
     const textures = props.onChange.mock.calls[0]![0] as TextureSlot[];
     expect(textures[2]).toEqual({id: "iTexture2", url: "fonts/1.png", isUserUploaded: false});
     expect(textures[1]).toEqual(emptyTextures()[1]);
+  });
+
+  it("picks a built-in video, and the slot shows it as a video", async () => {
+    const props = renderTextures();
+    await openSlot("iTexture3");
+    const videos = within(picker()).getByRole("region", {name: "Videos"});
+    expect(within(videos).getAllByText(/^\d+ × \d+, video$/).length).toBeGreaterThan(0);
+    await userEvent.click(within(videos).getByAltText("videos/waves.mp4 preview"));
+    await userEvent.click(within(picker()).getByRole("button", {name: "Apply changes"}));
+    const textures = props.onChange.mock.calls[0]![0] as TextureSlot[];
+    expect(textures[3]).toEqual({id: "iTexture3", url: "videos/waves.mp4", isUserUploaded: false});
+
+    cleanup();
+    renderTextures(textures);
+    expect(screen.getByRole("img", {name: "iTexture3 preview"}).tagName).toBe("VIDEO");
   });
 
   it("cancel leaves the textures alone", async () => {
