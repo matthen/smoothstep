@@ -21,7 +21,7 @@ import Share from '../dialogs/Share';
 import Splash from '../dialogs/Splash';
 import Textures from '../dialogs/Textures';
 import CodeEditor, { insertCode } from '../editor/CodeEditor';
-import { topLevel } from '../editor/glslDefinitions';
+import { describe, topLevel } from '../editor/glslDefinitions';
 import { analysisOf, selectDefinition } from '../editor/goToDefinition';
 import { EditorView } from '@codemirror/view';
 import { DOC_SECTIONS, onOpenDocs, type DocTarget } from '../lib/docLinks';
@@ -413,13 +413,17 @@ export default function App() {
   // Goes from a name in another shader tab to its definition in the shared code.
   const sharedDefinition = (name: string) => {
     const view = editorViews.current.get("shared");
-    const found = view && topLevel(analysisOf(view.state.doc), name);
+    const analysis = view && analysisOf(view.state.doc);
+    const found = analysis && topLevel(analysis, name);
     if (!view || !found) {
       return null;
     }
-    return () => {
-      flushSync(() => showCodeTab("shared"));
-      selectDefinition(view, found);
+    return {
+      go: () => {
+        flushSync(() => showCodeTab("shared"));
+        selectDefinition(view, found);
+      },
+      description: describe(analysis, found),
     };
   };
 

@@ -3,10 +3,15 @@
 import { Facet, StateEffect, StateField, type EditorState, type Extension, type Text } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, keymap } from '@codemirror/view';
 import { isMac } from '../app/platform';
-import { analyse, findDefinition, nameAt, type Analysis, type Range } from './glslDefinitions';
+import { analyse, describe, findDefinition, nameAt, type Analysis, type Description, type Range } from './glslDefinitions';
 
-// Finds a name declared in another tab, giving a way to go there.
-export type DefinitionElsewhere = (name: string) => (() => void) | null;
+// A name declared in another tab: a way to go there, and how it's declared.
+interface Elsewhere {
+  go(): void;
+  description: Description | null;
+}
+
+export type DefinitionElsewhere = (name: string) => Elsewhere | null;
 
 export const definitionElsewhere = Facet.define<DefinitionElsewhere, DefinitionElsewhere | null>({
   combine: (values) => values[0] ?? null,
@@ -22,14 +27,31 @@ export function analysisOf(doc: Text): Analysis {
   return analysis;
 }
 
-// The name at `pos` and where its definition is: in this code, or a way to go to another tab.
-function definitionAt(state: EditorState, pos: number): { name: Range; target: Range | (() => void) } | null {
+// The name at `pos` and where its definition is: in this code, or in another tab.
+function definitionAt(state: EditorState, pos: number): { name: Range; target: Range | Elsewhere } | null {
   const analysis = analysisOf(state.doc);
   const name = nameAt(analysis, pos);
   if (!name) return null;
   const target = findDefinition(analysis, pos) ?? state.facet(definitionElsewhere)?.(name.text);
   return target ? { name, target } : null;
 }
+
+// For the popup on a clicked name: how it's declared and a way to go there, unless the click is on the
+// declaration itself.
+export function userDefinitionAt(view: EditorView, pos: number): (Description & { go(): void }) | null {
+  const analysis = analysisOf(view.state.doc);
+  const name = nameAt(analysis, pos);
+  if (!name) return null;
+  const here = findDefinition(analysis, pos);
+  if (here) {
+    const description = here.from === name.from ? null : describe(analysis, here);
+    return description && { ...description, go: () => selectDefinition(view, here) };
+  }
+  const elsewhere = view.state.facet(definitionElsewhere)?.(name.text);
+  return elsewhere?.description ? { ...elsewhere.description, go: elsewhere.go } : null;
+}
+
+export const goToDefinitionHint = `${isMac ? '⌘' : 'Ctrl'}-click or F12`;
 
 export function selectDefinition(view: EditorView, range: Range) {
   view.dispatch({
@@ -43,7 +65,7 @@ export function selectDefinition(view: EditorView, range: Range) {
 function goToDefinition(view: EditorView, pos: number): boolean {
   const found = definitionAt(view.state, pos);
   if (!found) return false;
-  if (typeof found.target === 'function') found.target();
+  if ('go' in found.target) found.target.go();
   else selectDefinition(view, found.target);
   return true;
 }

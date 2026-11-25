@@ -11,8 +11,11 @@ interface Tok extends Range {
   type: GlslToken | null;
 }
 
-interface Declaration extends Range {
+type DeclarationKind = 'function' | 'macro' | 'struct' | 'variable' | 'parameter';
+
+export interface Declaration extends Range {
   name: string;
+  kind: DeclarationKind;
   // Where it can be used.
   scope: Range;
   // A function with a body, rather than a prototype.
@@ -20,6 +23,7 @@ interface Declaration extends Range {
 }
 
 export interface Analysis {
+  code: string;
   tokens: Tok[];
   declarations: Declaration[];
   length: number;
@@ -65,8 +69,8 @@ export function analyse(code: string): Analysis {
   const tokens = tokensOf(code);
   const whole = { from: 0, to: code.length };
   const declarations: Declaration[] = [];
-  const declare = (t: Tok, scope: Range, body = false) =>
-    declarations.push({ name: t.text, from: t.from, to: t.to, scope, body });
+  const declare = (t: Tok, kind: DeclarationKind, scope: Range, body = false) =>
+    declarations.push({ name: t.text, kind, from: t.from, to: t.to, scope, body });
   // The blocks open at each token, innermost last.
   const blocks: Range[] = [];
   const scope = () => blocks.at(-1) ?? whole;
@@ -88,15 +92,17 @@ export function analyse(code: string): Analysis {
     const mainImage = t.text === 'mainImage' && t.type === 'variableName.standard';
     if (handled.has(i) || !(isName(t) || mainImage)) continue;
     if (prev?.type === 'meta' && /^#\s*define$/.test(prev.text)) {
-      declare(t, whole);
+      declare(t, 'macro', whole);
       if (next?.text === '(' && next.from === t.to) {
         const lineScope = { from: t.from, to: logicalLineEnd(code, t.from) };
-        for (let j = i + 2; j < closing(tokens, i + 1); j++) if (isName(tokens[j])) declare(tokens[j]!, lineScope);
+        for (let j = i + 2; j < closing(tokens, i + 1); j++) {
+          if (isName(tokens[j])) declare(tokens[j]!, 'parameter', lineScope);
+        }
       }
       continue;
     }
     if (prev?.text === 'struct') {
-      declare(t, scope());
+      declare(t, 'struct', scope());
       continue;
     }
     if (!isType(prev) || tokens[i - 2]?.text === '.') continue;
@@ -104,13 +110,13 @@ export function analyse(code: string): Analysis {
     if (next?.text === '(' && blocks.length === 0) {
       const close = closing(tokens, i + 1);
       const hasBody = tokens[close + 1]?.text === '{';
-      if (!mainImage) declare(t, whole, hasBody);
+      if (!mainImage) declare(t, 'function', whole, hasBody);
       const paramScope = hasBody ?
         { from: tokens[close + 1]!.from, to: tokens[closing(tokens, close + 1)]!.to } :
         { from: next.from, to: tokens[close]!.to };
       for (let j = i + 2; j < close; j++) {
         if (isName(tokens[j]) && isType(tokens[j - 1])) {
-          declare(tokens[j]!, paramScope);
+          declare(tokens[j]!, 'parameter', paramScope);
           handled.add(j);
         }
       }
@@ -118,7 +124,7 @@ export function analyse(code: string): Analysis {
     }
     if (mainImage) continue;
     // A variable, and any more declared after commas in the same statement, as in `float a = f(x, y), b;`.
-    declare(t, scope());
+    declare(t, 'variable', scope());
     for (let j = i + 1, depth = 0; j < tokens.length; j++) {
       const text = tokens[j]!.text;
       if (text === '(' || text === '[') depth++;
@@ -126,12 +132,12 @@ export function analyse(code: string): Analysis {
         if (--depth < 0) break;
       } else if (text === ';' || text === '{' || text === '}') break;
       else if (text === ',' && depth === 0 && isName(tokens[j + 1])) {
-        declare(tokens[j + 1]!, scope());
+        declare(tokens[j + 1]!, 'variable', scope());
         handled.add(j + 1);
       }
     }
   }
-  return { tokens, declarations, length: code.length };
+  return { code, tokens, declarations, length: code.length };
 }
 
 // The name at `pos`, or just before it as when the cursor is at a word's end, if it's one of the user's.
@@ -146,7 +152,7 @@ export function nameAt(analysis: Analysis, pos: number): Tok | null {
 const size = (r: Range) => r.to - r.from;
 
 // The declaration `pos` is in or refers to: the nearest enclosing one in scope, else the first in the code.
-export function findDefinition(analysis: Analysis, pos: number): Range | null {
+export function findDefinition(analysis: Analysis, pos: number): Declaration | null {
   const name = nameAt(analysis, pos);
   if (!name) return null;
   const same = analysis.declarations.filter((d) => d.name === name.text);
@@ -159,7 +165,48 @@ export function findDefinition(analysis: Analysis, pos: number): Range | null {
 }
 
 // A declaration of `name` that the whole code can see, preferring a function's body to its prototype.
-export function topLevel(analysis: Analysis, name: string): Range | null {
-  const same = analysis.declarations.filter((d) => d.name === name && size(d.scope) === analysis.length);
+export function topLevel(analysis: Analysis, name: string): Declaration | null {
+  const same = analysis.declarations.filter((d) => d.name === name && isGlobal(analysis, d));
   return same.find((d) => d.body) ?? same[0] ?? null;
+}
+
+const isGlobal = (analysis: Analysis, d: Declaration) => size(d.scope) === analysis.length;
+
+export interface Description {
+  signature: string;
+  // The `//` comment lines just above it.
+  comment: string;
+}
+
+const MAX_SIGNATURE = 120;
+
+// How a function, macro, struct or global is declared, with its comment, for a popup. Locals and
+// parameters are declared close by, so they have none.
+export function describe(analysis: Analysis, d: Declaration): Description | null {
+  if (d.kind === 'parameter' || (d.kind === 'variable' && !isGlobal(analysis, d))) return null;
+  const { code, tokens } = analysis;
+  const lineStart = code.lastIndexOf('\n', d.from - 1) + 1;
+  let end: number;
+  if (d.kind === 'function') {
+    const i = tokens.findIndex((t) => t.from === d.from);
+    end = tokens[closing(tokens, i + 1)]!.to;
+  } else if (d.kind === 'macro') {
+    end = logicalLineEnd(code, d.from);
+  } else if (d.kind === 'struct') {
+    end = d.to;
+  } else {
+    const semicolon = code.indexOf(';', d.to);
+    end = semicolon < 0 ? code.indexOf('\n', d.to) : semicolon + 1;
+  }
+  let signature = code.slice(lineStart, end < 0 ? code.length : end).replace(/\\\n/g, ' ').replace(/\s+/g, ' ').trim();
+  if (signature.length > MAX_SIGNATURE) signature = signature.slice(0, MAX_SIGNATURE - 1) + '…';
+  const comment: string[] = [];
+  for (let to = lineStart - 1; to > 0; ) {
+    const from = code.lastIndexOf('\n', to - 1) + 1;
+    const line = code.slice(from, to).trim();
+    if (!line.startsWith('//')) break;
+    comment.unshift(line.replace(/^\/\/\s?/, ''));
+    to = from - 1;
+  }
+  return { signature, comment: comment.join(' ') };
 }

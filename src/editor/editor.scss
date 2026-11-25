@@ -196,7 +196,7 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
   .tok-type { color: $dt-pink; }
   .tok-builtin { color: $dt-green; }
   .tok-variable { color: $dt-gray-light; }
-  .tok-function { color: $dt-yellow; }
+  .tok-function { color: $code-function; }
   .tok-parameter { color: $dt-orange; font-style: italic; }
   .tok-macro { color: $dt-purple; }
   // The Canvas2D tab marks its helpers and inputs around or inside the highlighter's own span.
@@ -331,6 +331,32 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
     color: $dt-gray-light;
     font-size: 12px;
     user-select: text;
+  }
+
+  .ss-go-to-definition {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 12px 0 0;
+
+    button {
+      padding: 0;
+      border: 0;
+      background: none;
+      color: $dt-pink;
+      font: inherit;
+      cursor: pointer;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    kbd {
+      color: $dt-gray-medium;
+      font-family: inherit;
+      font-size: 12px;
+    }
   }
 }
 

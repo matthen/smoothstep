@@ -5,8 +5,9 @@ import { Decoration, EditorView, ViewPlugin, showTooltip, type DecorationSet, ty
 import { DOC_SECTIONS, docLinkElement, type DocTarget } from '../lib/docLinks';
 import { eachShaderInput } from '../lib/shaderInputs';
 import glslFunctions from './glslFunctions.json';
+import type { Description } from './glslDefinitions';
 import { USER_NAME_TOKENS } from './glslLanguage';
-import { isDefinitionClick } from './goToDefinition';
+import { goToDefinitionHint, isDefinitionClick, userDefinitionAt } from './goToDefinition';
 import {
   createColorPicker, createDirectionPicker, createFloatPicker, createVec2Picker, type PickerWidget,
 } from './pickers';
@@ -45,6 +46,8 @@ export interface ClickConfig {
   definitionAt(state: EditorState, from: number, name: string): Definition | null;
   // Whether a click on the word at `from` underlines its other uses.
   illuminates(state: EditorState, from: number): boolean;
+  // How the user's own function, macro, struct or global at `from` is declared, with a way to go there.
+  userDefinitionAt?(view: EditorView, from: number): (Description & { go(): void }) | null;
 }
 
 // Built-in functions from the GLSL reference, and the inputs as the docs' Reference page has them.
@@ -63,6 +66,7 @@ const glslClicks: ClickConfig = {
   definitionAt: (state, from, name) =>
     nodeNameAt(state, from) === 'variableName.standard' ? glslDefinitions.get(name) ?? null : null,
   illuminates: (state, from) => USER_NAME_TOKENS.has(nodeNameAt(state, from)),
+  userDefinitionAt,
 };
 
 interface Popup {
@@ -178,6 +182,29 @@ function definitionDom(def: Definition) {
   return dom;
 }
 
+// The user's own definition: how it's declared, the comment above it, and a way to go there.
+function userDefinitionDom(view: EditorView, def: Description & { go(): void }) {
+  const dom = document.createElement('div');
+  dom.className = 'ss-definition';
+  if (def.comment) {
+    const p = dom.appendChild(document.createElement('p'));
+    p.className = 'oneLiner';
+    p.append(def.comment);
+  }
+  dom.appendChild(document.createElement('code')).append(def.signature);
+  const go = dom.appendChild(document.createElement('p'));
+  go.className = 'ss-go-to-definition';
+  const button = go.appendChild(document.createElement('button'));
+  button.type = 'button';
+  button.textContent = 'Go to definition';
+  button.addEventListener('click', () => {
+    view.dispatch({ effects: setPopup.of(null) });
+    def.go();
+  });
+  go.appendChild(document.createElement('kbd')).textContent = goToDefinitionHint;
+  return dom;
+}
+
 function nodeNameAt(state: EditorState, pos: number) {
   return syntaxTree(state).resolveInner(pos, 1).name;
 }
@@ -227,12 +254,15 @@ function onClick(view: EditorView, pos: number, touch: boolean, config: ClickCon
   if (!word) return;
   const name = state.sliceDoc(word.from, word.to);
   const def = config.definitionAt(state, word.from, name);
+  const showPopup = (dom: HTMLElement) => {
+    const tooltip: Tooltip = { pos: word.from, above: false, create: () => ({ dom: popupDom(dom), offset: { x: 0, y: 8 } }) };
+    return setPopup.of({ from: word.from, to: word.to, anchor: 0, tooltip });
+  };
   if (def) {
-    const create = () => ({ dom: popupDom(definitionDom(def)), offset: { x: 0, y: 8 } });
-    const tooltip: Tooltip = { pos: word.from, above: false, create };
-    view.dispatch({ effects: setPopup.of({ from: word.from, to: word.to, anchor: 0, tooltip }) });
+    view.dispatch({ effects: showPopup(definitionDom(def)) });
   } else if (config.illuminates(state, word.from) && name.length > 1) {
-    view.dispatch({ effects: setIlluminated.of(name) });
+    const own = config.userDefinitionAt?.(view, word.from);
+    view.dispatch({ effects: [setIlluminated.of(name), ...own ? [showPopup(userDefinitionDom(view, own))] : []] });
   }
 }
 
