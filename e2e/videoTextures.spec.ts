@@ -73,6 +73,7 @@ async function addVideo(page: Page, path = COLOURS, size = "64 × 48") {
   await picker.getByRole("img", {name: name + " preview"}).click();
   await page.getByRole("button", {name: "Apply changes"}).click();
   await expect(page.locator("div#textures video[aria-label='iTexture0 preview']")).toBeVisible();
+  await expect(page.locator("div#textures .texture").first()).toContainText(/\d s/);
 }
 
 async function addLayer(page: Page, code: string) {

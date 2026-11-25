@@ -6,7 +6,8 @@ import { GlslCode } from '../editor/InlineCode';
 import { textureURL } from '../lib/config';
 import { EMPTY_TEXTURE, type TextureSlot } from '../lib/document';
 import { usePhone } from '../app/usePhone';
-import TextureThumbnail from './TextureThumbnail';
+import { formatDuration, isVideoURL } from '../lib/media';
+import TextureThumbnail, { VideoLength } from './TextureThumbnail';
 import { useImagesChanged } from './useImagesChanged';
 
 interface TexturesProps {
@@ -26,6 +27,8 @@ const TexturePicker = lazy(() => import('./TexturePicker'));
 export default function Textures({textures, count, onChange, onAdd, onMessage}: TexturesProps) {
   const [slot, setSlot] = useState<number | null>(null);
   const [showPicker, setShowPicker] = useState(false);
+  // Each video slot's length, read from its thumbnail.
+  const [lengths, setLengths] = useState<Record<string, number>>({});
   useImagesChanged();
   const phone = usePhone();
 
@@ -41,7 +44,11 @@ export default function Textures({textures, count, onChange, onAdd, onMessage}: 
               <span>Choose an image or video</span>
             </button>
             : <button onClick={() => {setSlot(i); setShowPicker(true);}}>
-              <TextureThumbnail src={textureURL(texture)} alt={texture.id + " preview"} />
+              <TextureThumbnail
+                src={textureURL(texture)} alt={texture.id + " preview"}
+                onDuration={seconds => setLengths(l => l[texture.url] === seconds ? l : {...l, [texture.url]: seconds})}
+              />
+              {isVideoURL(textureURL(texture)) && <VideoLength text={formatDuration(lengths[texture.url])} />}
             </button>}
         </div>,
       )}

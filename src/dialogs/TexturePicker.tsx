@@ -13,7 +13,7 @@ import {
 } from '../lib/localStore';
 import { formatDuration, isVideoType, isVideoURL } from '../lib/media';
 import TextureData from './textures.json';
-import TextureThumbnail from './TextureThumbnail';
+import TextureThumbnail, { VideoLength } from './TextureThumbnail';
 import { useImagesChanged } from './useImagesChanged';
 
 interface BuiltInTexture {
@@ -82,16 +82,9 @@ interface TexturePickerProps {
   onMessage?(text: string): void;
 }
 
-// A texture's size, and a video's length when it's known, which goes on a line of its own.
-function sizeLabel(width: number, height: number, video: boolean, duration?: number): ReactNode {
-  const size = `${width} × ${height}`;
-  if (!video) {
-    return size;
-  }
-  const length = formatDuration(duration);
-  return length
-    ? <>{size}<span className="separator"> · </span><span className="length">{length}</span></>
-    : `${size}, video`;
+// A texture's size, shown on hover. A video whose length shows in its badge needn't say it's a video.
+function sizeLabel(width: number, height: number, video: boolean, duration?: number): string {
+  return `${width} × ${height}${video && !formatDuration(duration) ? ", video" : ""}`;
 }
 
 function uploadThumbURL(id: string): string {
@@ -229,12 +222,13 @@ export default function TexturePicker(
   };
 
   const pickerItem = (
-    key: string, selected: boolean, onClick: () => void, image: ReactNode, caption?: string, size?: ReactNode,
+    key: string, selected: boolean, onClick: () => void, image: ReactNode, caption?: string, size?: string, length?: string | null,
   ) =>
     <figure className={"picker" + (selected ? " selected" : "")} key={key}>
       <button type="button" onClick={onClick} className="select" title={caption}>
         {image}
         {size && <span className="resolution">{size}</span>}
+        <VideoLength text={length} />
       </button>
       {caption && <figcaption>{caption}</figcaption>}
     </figure>;
@@ -281,6 +275,7 @@ export default function TexturePicker(
                     <span className="resolution">
                       {sizeLabel(image.width, image.height, isVideoType(image.blob.type), image.duration ?? measured[image.id])}
                     </span>
+                    {isVideoType(image.blob.type) && <VideoLength text={formatDuration(image.duration ?? measured[image.id])} />}
                   </button>
                   <figcaption>{image.filename}</figcaption>
                   {image.id !== texture.url &&
@@ -297,6 +292,7 @@ export default function TexturePicker(
                 t.fname, t.fname === texture.url, () => select(t.fname, false),
                 <img src={asset("/images/textures/" + t.thumbnail_fname)} alt={t.fname + " preview"} loading="lazy" />,
                 CAPTIONS[t.fname], sizeLabel(t.width, t.height, isVideoURL(t.fname), t.duration),
+                isVideoURL(t.fname) ? formatDuration(t.duration) : null,
               )),
             ))}
           </div>}

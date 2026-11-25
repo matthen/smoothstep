@@ -66,6 +66,8 @@ describe("Textures and TexturePicker", () => {
     await userEvent.click(within(picker()).getByAltText("fonts/1.png preview"));
     expect(within(picker()).getByAltText("fonts/1.png preview").closest(".picker")!.className).toContain("selected");
     expect(within(picker()).getAllByText("512 × 192").length).toBeGreaterThan(0);
+    // Images have no length.
+    expect(within(picker()).getByAltText("fonts/1.png preview").closest(".picker")!.textContent).not.toMatch(/\d s/);
     await userEvent.click(within(picker()).getByRole("button", {name: "Apply changes"}));
     const textures = props.onChange.mock.calls[0]![0] as TextureSlot[];
     expect(textures[2]).toEqual({id: "iTexture2", url: "fonts/1.png", isUserUploaded: false});
@@ -87,7 +89,12 @@ describe("Textures and TexturePicker", () => {
 
     cleanup();
     renderTextures(textures);
-    expect(screen.getByRole("img", {name: "iTexture3 preview"}).tagName).toBe("VIDEO");
+    const slot = screen.getByRole("img", {name: "iTexture3 preview"});
+    expect(slot.tagName).toBe("VIDEO");
+    // The filled slot gives the video's length once it's loaded.
+    Object.defineProperty(slot, "duration", {value: 6.5});
+    fireEvent.loadedMetadata(slot);
+    await waitFor(() => expect(slot.closest("button")!.textContent).toMatch(/6\.5 s/));
   });
 
   it("cancel leaves the textures alone", async () => {

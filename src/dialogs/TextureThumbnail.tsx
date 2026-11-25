@@ -29,3 +29,8 @@ export default function TextureThumbnail(
   }
   return <img src={src} alt={alt} className={className} style={style} loading={loading} />;
 }
+
+// A video's length in a tile's corner, always shown since a touch screen has no hover.
+export function VideoLength({text}: {text: string | null | undefined}) {
+  return text ? <span className="videoLength">{text}</span> : null;
+}
