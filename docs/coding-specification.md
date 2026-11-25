@@ -87,6 +87,35 @@ bottom left like the other textures. Its colours are premultiplied by alpha, so
 `col = col * (1.0 - c.a) + c.rgb` puts it over a colour. [The Canvas2D layer](canvas2d.md) has the
 details.
 
+## Checking values
+
+To see what a part of your code works out, select it in a shader tab and click **Show on canvas**
+under the selection, or press `Alt + Enter`. It can be a name like `d`, a part like `uv.x`, or a
+calculation like `length(p) - r`. With nothing selected, `Alt + Enter` shows the name at the cursor.
+The canvas then shows that value at every pixel, at the current time, in place of the image:
+
+| type | shown as |
+|---|---|
+| `float`, `int`, `bool` | grey, from black at 0 to white at 1 |
+| `vec2` | red and green |
+| `vec3` | red, green and blue |
+| `vec4` | red, green and blue, over a checkerboard where alpha is below 1 |
+
+Values below 0 show as 0, and values above 1 as 1. Choose **-1 to 1** in the bar above the canvas
+to show -1 as black and 1 as full colour instead. A value in a buffer's tab shows that buffer's
+value, and one in shared.glsl shows in the image, or in the first buffer that calls its function.
+Pixels where the code never runs, such as inside an `if` that's false there, are striped. If it runs
+more than once for a pixel, as in a loop, the canvas shows the last value.
+
+The selected code is marked with a dashed line. It stays on the canvas as you edit and build, until
+you click the × in the bar above the canvas, or press `Alt + Enter` on it again. Your code, your saved
+animation and anything you render stay as they are.
+
+The pixel inspector shows the numbers. Click its button at the top left of the canvas, then point
+at the canvas, or touch it on a touch screen. It shows the pixel's colour from 0 to 1 and as a hex
+code, its `fragCoord`, and its `uv`, which is `fragCoord / iResolution`. While the canvas shows a value
+from your code, the inspector shows that value itself, beyond 0 to 1 too.
+
 ## Coming from Shadertoy
 
 Shadertoy's other inputs, such as `iChannel0`, `iMouse` and `iDate`, don't exist in smoothstep.

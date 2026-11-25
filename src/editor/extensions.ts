@@ -17,6 +17,7 @@ import { definitionElsewhere, goToDefinitionExtension, type DefinitionElsewhere 
 import { lineErrors } from './lineErrors';
 import { links } from './links';
 import { clickHelpers } from './popups';
+import { showExpressionExtension, type ShowExpression } from './showExpression';
 
 // Classes styled in editor.scss with the old Dracula colours.
 const highlighter = tagHighlighter([
@@ -48,6 +49,8 @@ export interface EditorCallbacks {
   onFixed?(): void;
   // For going to a definition in another tab.
   definitionElsewhere?: DefinitionElsewhere;
+  // For showing a selected expression on the canvas, in a shader tab.
+  onShowExpression?: ShowExpression;
 }
 
 // What a tab's code is written in: the shader language, or JavaScript for the Canvas2D layer.
@@ -98,6 +101,7 @@ export function editorExtensions(callbacks: EditorCallbacks, language: EditorLan
     language === "glsl" ? [
       glslLanguage, syntaxHighlighting(highlighter), clickHelpers(), goToDefinitionExtension(),
       callbacks.definitionElsewhere ? definitionElsewhere.of(callbacks.definitionElsewhere) : [],
+      callbacks.onShowExpression ? showExpressionExtension(callbacks.onShowExpression) : [],
     ] :
       javascriptCompartment.of(javascriptSupport ?? []),
     bracketMatching(),

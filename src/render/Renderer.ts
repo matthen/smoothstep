@@ -5,6 +5,9 @@
 import { MAX_BUFFERS, NUM_TEXTURES, NUM_VARIABLES } from '../lib/document';
 import type { LineError } from '../lib/types';
 import { uses } from '../lib/glslCode';
+import {
+  PROBE_DECLARATIONS, PROBE_MAIN, planProbe, probeComponents, UNREACHED, withProbe, type ProbeType,
+} from './probe';
 
 const VERTEX_SHADER = `#version 300 es
 in vec4 a_position;
@@ -20,6 +23,33 @@ uniform vec2 iResolution;
 out vec4 fragColor;
 void main() {
   fragColor = texture(iTexture, gl_FragCoord.xy / iResolution.xy);
+}
+`;
+
+// Shows the value a probe kept for each pixel: a float as grey, a vec2 as red and green, and so on.
+// Pixels it never ran for are striped, and a vec4's alpha shows over a checkerboard.
+const SHOW_PROBE_SHADER = `#version 300 es
+precision highp float;
+uniform sampler2D iTexture;
+uniform int iCount;
+uniform bool iSigned;
+out vec4 fragColor;
+void main() {
+  vec4 v = texelFetch(iTexture, ivec2(gl_FragCoord.xy), 0);
+  if (all(equal(v, vec4(${UNREACHED}.)))) {
+    float stripe = mod(floor((gl_FragCoord.x + gl_FragCoord.y) / 8.), 2.);
+    fragColor = vec4(mix(vec3(0.16, 0.16, 0.21), vec3(0.27, 0.28, 0.35), stripe), 1.);
+    return;
+  }
+  if (iSigned) {
+    v = v * 0.5 + 0.5;
+  }
+  vec3 c = clamp(iCount == 1 ? v.rrr : iCount == 2 ? vec3(v.rg, 0.) : v.rgb, 0., 1.);
+  if (iCount == 4) {
+    vec2 cell = floor(gl_FragCoord.xy / 8.);
+    c = mix(vec3(mod(cell.x + cell.y, 2.) == 0. ? 0.3 : 0.5), c, clamp(v.a, 0., 1.));
+  }
+  fragColor = vec4(c, 1.);
 }
 `;
 
@@ -53,6 +83,12 @@ function userCode(code: string, shared: string): string {
 
 export function fragmentSource(code: string, numBuffers = 0, isBuffer = false, shared = ""): string {
   return shaderPrefix(numBuffers) + userCode(code, shared) + shaderSuffix(isBuffer);
+}
+
+// A shader that outputs the value its probe kept in place of its colour.
+function probeFragmentSource(code: string, numBuffers: number, shared: string): string {
+  return shaderPrefix(numBuffers).slice(0, -1) + PROBE_DECLARATIONS + "\n" + userCode(code, shared) +
+    "\nout vec4 smoothstepColor;\n" + PROBE_MAIN + "\n";
 }
 
 // Splits errors in a shader's code, after the shared code, into those in the shared code and
@@ -134,6 +170,38 @@ export type ShaderId = "image" | "shared" | "canvas" | number;
 
 export type CompileResult = {ok: true} | {ok: false; shader: ShaderId; errors: LineError[]};
 
+// An expression to show in place of the image: the code of the tab it's in, and where it is in that code.
+export interface ProbeRequest {
+  tab: ShaderId;
+  code: string;
+  from: number;
+  to: number;
+}
+
+export type ProbeResult = {
+  ok: true;
+  expression: string;
+  type: ProbeType;
+  // The shader it's shown in, which for shared code is the first that calls its function.
+  shader: "image" | number;
+  from: number;
+  to: number;
+} | {ok: false; message: string};
+
+// What the inspector reads at a pixel: its colour, and the probe's value there, or null where it never ran.
+export interface PixelReading {
+  color: [number, number, number];
+  value?: number[] | null;
+}
+
+interface Probe {
+  program: Program;
+  shader: "image" | number;
+  type: ProbeType;
+  // The code it runs, to find the buffers it reads.
+  code: string;
+}
+
 // Texture units: the previous frame, then the texture slots, then the buffers, then the Canvas2D layer.
 const PREV_FRAME_UNIT = 0;
 const TEXTURE_UNIT = 1;
@@ -159,6 +227,19 @@ export class Renderer {
   layerOverlay = true;
   private lastInputs: FrameInputs | null = null;
   private copyProgram: Program;
+  private showProbeProgram: Program;
+  private probe: Probe | null = null;
+  private probeTarget: (Target & {width: number; height: number}) | null = null;
+  // The probe's values as 32-bit floats where they can be drawn and read back, else half floats or bytes.
+  private probeFormat: "float" | "half" | "byte";
+  // Whether the probe's values are shown from -1 to 1 rather than 0 to 1.
+  probeSigned = false;
+  // Off while a thumbnail is taken.
+  showProbe = true;
+  // The code as last built, and the buffers the image needs without the probe.
+  private sources: {code: string; buffers: readonly string[]; shared: string} = {code: "", buffers: [], shared: ""};
+  private imageUsed: number[] = [];
+  private layerSize: [number, number] = [1, 1];
   private uniforms = new WeakMap<WebGLProgram, Map<string, WebGLUniformLocation | null>>();
   // [last frame, the one before], for the image and for each buffer in use.
   private targets: [Target, Target] | null = null;
@@ -186,9 +267,15 @@ export class Renderer {
       throw new Error("Couldn't build the copy shader: " + copy.log);
     }
     this.copyProgram = copy.program;
+    const show = this.link(SHOW_PROBE_SHADER);
+    if (!show.program) {
+      throw new Error("Couldn't build the probe shader: " + show.log);
+    }
+    this.showProbeProgram = show.program;
     // Some phones can only render to half floats, which is all the buffers need.
-    this.floatBuffers = (gl.getExtension("EXT_color_buffer_float") !== null ||
-      gl.getExtension("EXT_color_buffer_half_float") !== null) && this.canRenderHalfFloats();
+    const floats = gl.getExtension("EXT_color_buffer_float") !== null;
+    this.floatBuffers = (floats || gl.getExtension("EXT_color_buffer_half_float") !== null) && this.canRenderHalfFloats();
+    this.probeFormat = floats ? "float" : this.floatBuffers ? "half" : "byte";
     // Uploaded images are flipped so texture coordinates start at the bottom left, as in GL.
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     for (let i = 0; i < NUM_TEXTURES; i++) {
@@ -234,6 +321,7 @@ export class Renderer {
       gl.activeTexture(gl.TEXTURE0 + CANVAS_UNIT);
       gl.bindTexture(gl.TEXTURE_2D, this.canvasTexture);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, bitmap);
+      this.layerSize = [bitmap.width, bitmap.height];
     }
     bitmap.close();
   }
@@ -320,10 +408,157 @@ export class Renderer {
     [this.program, ...this.bufferPrograms].forEach(p => p && this.deleteProgram(p));
     this.program = programs[0]!;
     this.bufferPrograms = programs.slice(1);
-    this.used = buffersUsed(userCode(code, shared), buffers.map(b => userCode(b, shared)));
+    this.sources = {code, buffers, shared};
+    this.imageUsed = buffersUsed(userCode(code, shared), buffers.map(b => userCode(b, shared)));
+    this.used = this.imageUsed;
     this.shaderState = this.used.length > 0 || uses(userCode(code, shared), /\biPrevFrame\b/);
     this.clearTargets();
+    this.useProbe(null);
     return {ok: true};
+  }
+
+  // Shows the expression `request` selects in place of the image, or the image again for null. The
+  // probe's tab uses the request's code; the others, the code last built. Builds the expression at
+  // each place it could go and as each type it could be, until one works.
+  setProbe(request: ProbeRequest | null): ProbeResult | null {
+    if (!request) {
+      this.useProbe(null);
+      return null;
+    }
+    if (request.tab === "canvas") {
+      return {ok: false, message: "Select an expression in a shader tab."};
+    }
+    const plan = planProbe(request.code, request.from, request.to);
+    if (!plan.ok) {
+      return plan;
+    }
+    const {code, buffers, shared} = this.sources;
+    // Shared code shows in the image if it calls the function, or else the first buffer that does.
+    const calls = new RegExp("\\b" + plan.functionName + "\\s*\\(");
+    const caller = buffers.findIndex(b => uses(b, calls));
+    const shader = request.tab !== "shared" ? request.tab : uses(code, calls) || caller < 0 ? "image" : caller;
+    const own = shader === "image" ? code : buffers[shader] ?? "";
+    let firstLog = "";
+    const attempt = (site: number, type: ProbeType | null) => {
+      const variant = withProbe(request.code, site, plan.expression, type);
+      const [c, s] = request.tab === "shared" ? [own, variant] : [variant, shared];
+      const result = this.link(probeFragmentSource(c, buffers.length, s));
+      firstLog ||= result.log;
+      return result.program ? {program: result.program, code: userCode(c, s)} : null;
+    };
+    for (const site of plan.sites) {
+      // The guess usually builds first time. If not, check the expression builds here at all.
+      let type = plan.types[0]!;
+      let built = attempt(site, type);
+      if (!built) {
+        const any = attempt(site, null);
+        if (!any) {
+          continue;
+        }
+        this.deleteProgram(any.program);
+        for (const t of plan.types.slice(1)) {
+          built = attempt(site, t);
+          if (built) {
+            type = t;
+            break;
+          }
+        }
+      }
+      if (built) {
+        this.useProbe({program: built.program, shader, type, code: built.code});
+        return {ok: true, expression: plan.expression, type, shader, from: plan.from, to: plan.to};
+      }
+    }
+    const reason = /ERROR:\s*\d+:\d+:\s*(.*)/.exec(firstLog)?.[1]?.trim();
+    return {ok: false, message: "This selection doesn't work as a value here" + (reason ? `: ${reason}` : ".")};
+  }
+
+  private useProbe(probe: Probe | null) {
+    if (this.probe) {
+      this.deleteProgram(this.probe.program);
+    }
+    this.probe = probe;
+    // A probed buffer draws each frame, with the buffers it reads, even if the image doesn't read it.
+    const {code, buffers, shared} = this.sources;
+    const extra = probe ? buffersUsed((probe.shader === "image" ? "" : `iBuffer${probe.shader} `) + probe.code,
+      buffers.map(b => userCode(b, shared))) : [];
+    this.used = [...new Set([...this.imageUsed, ...extra])].sort((a, b) => a - b);
+    for (const i of this.used) {
+      if (!this.bufferTargets.has(i)) {
+        this.bufferTargets.set(i, [this.target(true), this.target(true)]);
+      }
+    }
+    this.shaderState = this.used.length > 0 || uses(userCode(code, shared), /\biPrevFrame\b/);
+  }
+
+  // Draws the probe again from the last frame's state, without moving on a step.
+  redrawProbe() {
+    if (this.lastInputs) {
+      this.drawProbe(this.lastInputs);
+    }
+    this.present();
+  }
+
+  // The probed shader draws again into the probe's target, reading what it read when it drew this frame.
+  private drawProbe(inputs: FrameInputs) {
+    const gl = this.gl;
+    if (!this.probe || !this.targets) {
+      return;
+    }
+    if (this.probeTarget?.width !== this.width || this.probeTarget.height !== this.height) {
+      if (this.probeTarget) {
+        gl.deleteFramebuffer(this.probeTarget.framebuffer);
+        gl.deleteTexture(this.probeTarget.texture);
+      }
+      const target = this.probeFormat === "float" ? this.target(false, "float") : this.target(this.probeFormat === "half");
+      this.probeTarget = {...target, width: this.width, height: this.height};
+    }
+    const shader = this.probe.shader;
+    this.draw(this.probe.program, this.probeTarget, inputs, this.targets[1], shader === "image" ? undefined : shader);
+  }
+
+  // The colour shown at a pixel, counted from the bottom left, and the probe's value there.
+  readPixel(x: number, y: number): PixelReading | null {
+    const gl = this.gl;
+    if (!this.targets || x < 0 || y < 0 || x >= this.width || y >= this.height) {
+      return null;
+    }
+    const bytes = new Uint8Array(4);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.targets[0].framebuffer);
+    gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, bytes);
+    let color: [number, number, number] = [bytes[0]! / 255, bytes[1]! / 255, bytes[2]! / 255];
+    if (this.hasLayer && this.layerOverlay) {
+      // The layer's frame goes over the image with premultiplied alpha, as present() draws it.
+      const layer = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, layer);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.canvasTexture, 0);
+      const [lw, lh] = this.layerSize;
+      gl.readPixels(Math.floor(x * lw / this.width), Math.floor(y * lh / this.height), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, bytes);
+      gl.deleteFramebuffer(layer);
+      const alpha = bytes[3]! / 255;
+      color = [0, 1, 2].map(i => color[i]! * (1 - alpha) + bytes[i]! / 255) as [number, number, number];
+    }
+    let value: number[] | null | undefined;
+    if (this.probe && this.probeTarget) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.probeTarget.framebuffer);
+      let raw: number[];
+      if (this.probeFormat === "byte") {
+        gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, bytes);
+        raw = Array.from(bytes, b => b / 255);
+      } else {
+        const floats = new Float32Array(4);
+        gl.readPixels(x, y, 1, 1, gl.RGBA, gl.FLOAT, floats);
+        raw = Array.from(floats);
+      }
+      value = raw.every(v => v === UNREACHED) ? null : raw.slice(0, probeComponents(this.probe.type));
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return {color, ...(value === undefined ? {} : {value})};
+  }
+
+  // The probed expression's type, while one is shown.
+  get probeType(): ProbeType | null {
+    return this.probe?.type ?? null;
   }
 
   // Returns whether the previous frame was cleared, as it is when the size changes, unless `resample`
@@ -377,12 +612,14 @@ export class Renderer {
     this.bufferTargets = new Map(this.used.map(i => [i, [this.target(true), this.target(true)]]));
   }
 
-  private target(isBuffer: boolean): Target {
+  private target(isBuffer: boolean, format?: "float"): Target {
     const gl = this.gl;
     const texture = gl.createTexture();
     gl.activeTexture(gl.TEXTURE0 + PREV_FRAME_UNIT);
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    if (isBuffer && this.floatBuffers) {
+    if (format === "float") {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, this.width, this.height, 0, gl.RGBA, gl.FLOAT, null);
+    } else if (isBuffer && this.floatBuffers) {
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, this.width, this.height, 0, gl.RGBA, gl.HALF_FLOAT, null);
     } else {
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.width, this.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
@@ -488,8 +725,9 @@ export class Renderer {
   }
 
   // Draws one shader into `output`. Every unit is bound afresh, so the texture being drawn into is
-  // never also bound for reading, which WebGL refuses.
-  private draw(program: Program, output: Target, inputs: FrameInputs, prevFrame: Target) {
+  // never also bound for reading, which WebGL refuses. Drawing buffer `again` once more after the
+  // frame, it and the buffers after it read their frame before, as they did then.
+  private draw(program: Program, output: Target, inputs: FrameInputs, prevFrame: Target, again?: number) {
     const gl = this.gl;
     gl.useProgram(program);
     gl.bindVertexArray(program.vao);
@@ -511,7 +749,7 @@ export class Renderer {
     this.bufferPrograms.forEach((_, i) => {
       // A buffer's latest frame: this frame's if it has already rendered, otherwise the last one.
       gl.activeTexture(gl.TEXTURE0 + BUFFER_UNIT + i);
-      gl.bindTexture(gl.TEXTURE_2D, this.bufferTargets.get(i)?.[0].texture ?? null);
+      gl.bindTexture(gl.TEXTURE_2D, this.bufferTargets.get(i)?.[again !== undefined && i >= again ? 1 : 0].texture ?? null);
       gl.uniform1i(this.uniform(program, "iBuffer" + i), BUFFER_UNIT + i);
     });
     inputs.variableValues.forEach((value, i) => {
@@ -535,6 +773,7 @@ export class Renderer {
     this.draw(this.program, output, inputs, input);
     this.targets = [output, input];
     this.lastInputs = inputs;
+    this.drawProbe(inputs);
     this.present();
   }
 
@@ -542,6 +781,20 @@ export class Renderer {
   present() {
     const gl = this.gl;
     if (!this.targets) {
+      return;
+    }
+    if (this.probe && this.probeTarget && this.showProbe) {
+      const program = this.showProbeProgram;
+      gl.useProgram(program);
+      gl.bindVertexArray(program.vao);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.activeTexture(gl.TEXTURE0 + PREV_FRAME_UNIT);
+      gl.bindTexture(gl.TEXTURE_2D, this.probeTarget.texture);
+      gl.uniform1i(this.uniform(program, "iTexture"), PREV_FRAME_UNIT);
+      gl.uniform1i(this.uniform(program, "iCount"), probeComponents(this.probe.type));
+      gl.uniform1i(this.uniform(program, "iSigned"), Number(this.probeSigned));
+      gl.viewport(0, 0, this.width, this.height);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
       return;
     }
     gl.useProgram(this.copyProgram);

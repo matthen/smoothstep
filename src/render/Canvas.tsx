@@ -5,9 +5,11 @@ import type { CanvasLayer } from '../layer/CanvasLayer';
 import type { AspectRatio, ShaderExtras } from '../lib/document';
 import type { LineError } from '../lib/types';
 import { useLatest } from '../lib/useLatest';
+import { CanvasTools, PixelReadout, type ShownProbe } from './CanvasTools';
+import { pixelAt } from './inspect';
 import { LayerSteps } from './layerSteps';
 import { drawingSize, fitCanvas, SlowFrames } from './layout';
-import { Renderer, type CompileResult } from './Renderer';
+import { Renderer, type CompileResult, type PixelReading, type ProbeRequest, type ProbeResult } from './Renderer';
 import { renderSteps, RESTART, restarts } from './steps';
 
 export interface CanvasLayout {
@@ -49,7 +51,17 @@ interface CanvasProps {
   // The previous frame was cleared (new build, size or textures), so iFrame should restart at 0.
   onRestart(): void;
   onLayout(layout: CanvasLayout): void;
+  // An expression to show in place of the image, what became of it, and the way to turn it off.
+  probe: ProbeRequest | null;
+  onProbe(result: ProbeResult): void;
+  onProbeOff(): void;
+  // Whether pointing at the canvas shows a pixel's values.
+  inspect: boolean;
+  onInspectChange(on: boolean): void;
 }
+
+// How often the inspector reads its pixel again while the animation plays.
+const READ_INTERVAL_MS = 100;
 
 const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -82,6 +94,41 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
   const [layerWidth, layerHeight] = drawingSize(width, height, window.devicePixelRatio);
   const marginTop = Math.max(0, (container[1] - height) / 2);
   const marginSide = Math.max(0, (container[0] - width) / 2);
+
+  const [probe, setProbe] = useState<ShownProbe | null>(null);
+  const [signed, setSigned] = useState(false);
+  // The inspector's point, in CSS pixels from the canvas's top left, and what it read there.
+  const [point, setPoint] = useState<{x: number; y: number; touch: boolean} | null>(null);
+  const [reading, setReading] = useState<PixelReading | null>(null);
+  const inspecting = props.inspect || probe !== null;
+  const sizeRef = useLatest({width, height, pixels: [pixelWidth, pixelHeight] as [number, number]});
+  const pointRef = useLatest(point);
+  const lastRead = useRef(0);
+  const readPoint = useCallback((at = pointRef.current) => {
+    const renderer = rendererRef.current;
+    if (!renderer || !at) {
+      return;
+    }
+    const {width, height, pixels} = sizeRef.current;
+    const [x, y] = pixelAt(at.x, at.y, width, height, pixels);
+    setReading(renderer.readPixel(x, y));
+    lastRead.current = performance.now();
+  }, [pointRef, sizeRef]);
+  const movePoint = (event: PointerEvent<HTMLCanvasElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const at = {
+      x: Math.min(rect.width, Math.max(0, event.clientX - rect.left)),
+      y: Math.min(rect.height, Math.max(0, event.clientY - rect.top)),
+      touch: event.pointerType !== "mouse",
+    };
+    setPoint(at);
+    readPoint(at);
+  };
+  useEffect(() => {
+    if (!inspecting) {
+      setPoint(null);
+    }
+  }, [inspecting]);
 
   const steps = useRef(RESTART);
   // The animation's Canvas2D layer, once it has loaded, and the stepping that keeps it with the shaders.
@@ -118,20 +165,27 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
       if (!renderer || !canvas) {
         return null;
       }
-      if (layerRef.current) {
-        renderer.refresh();  // Drawing a step would also step the layer, whose frame comes later.
-      } else {
-        renderFrame();
+      // The thumbnail is the image, even while the canvas shows an expression.
+      renderer.showProbe = false;
+      try {
+        if (layerRef.current) {
+          renderer.refresh();  // Drawing a step would also step the layer, whose frame comes later.
+        } else {
+          renderFrame();
+        }
+        // In the same task as the draw, so the buffer is still there. Thumbnails stay at the CSS size.
+        if (canvas.width === width && canvas.height === height) {
+          return canvas.toDataURL("image/png");
+        }
+        const thumbnail = document.createElement("canvas");
+        thumbnail.width = width;
+        thumbnail.height = height;
+        thumbnail.getContext("2d")?.drawImage(canvas, 0, 0, width, height);
+        return thumbnail.toDataURL("image/png");
+      } finally {
+        renderer.showProbe = true;
+        needsPresent.current = true;
       }
-      // In the same task as the draw, so the buffer is still there. Thumbnails stay at the CSS size.
-      if (canvas.width === width && canvas.height === height) {
-        return canvas.toDataURL("image/png");
-      }
-      const thumbnail = document.createElement("canvas");
-      thumbnail.width = width;
-      thumbnail.height = height;
-      thumbnail.getContext("2d")?.drawImage(canvas, 0, 0, width, height);
-      return thumbnail.toDataURL("image/png");
     },
   }));
 
@@ -189,12 +243,38 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
       return;
     }
     const result = renderer.setCode(props.shaders.code, props.shaders.buffers, props.shaders.shared);
+    built.current = result.ok;
     props.onBuilt(result);
     if (result.ok) {
       restart();
     }
     needsRender.current = true;
   }, [props.shaders, props.buildId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // After a build that failed, the last probe stays, with the code that built.
+  const built = useRef(true);
+  useEffect(() => {
+    const renderer = rendererRef.current;
+    if (!renderer || (props.probe && !built.current)) {
+      return;
+    }
+    const result = renderer.setProbe(props.probe);
+    setProbe(result?.ok && props.probe ? {...result, tab: props.probe.tab} : null);
+    if (result) {
+      props.onProbe(result);
+    }
+    renderer.redrawProbe();
+    if (pointRef.current) {
+      readPoint();
+    }
+  }, [props.probe, props.shaders, props.buildId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (rendererRef.current) {
+      rendererRef.current.probeSigned = signed;
+      needsPresent.current = true;
+    }
+  }, [signed]);
 
   // The Canvas2D layer: started when a build has one, and again when what it runs with changes.
   const layerCode = props.shaders === null ? undefined : props.shaders.canvas;
@@ -297,24 +377,58 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
       } else {
         frames.current.idle();
       }
+      if (pointRef.current && now - lastRead.current > READ_INTERVAL_MS) {
+        readPoint();
+      }
       id = requestAnimationFrame(loop);
     };
     id = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(id);
-  }, [renderFrame]);
+  }, [renderFrame, pointRef, readPoint]);
 
   return (
     <div id="canvasContainer" ref={containerRef} data-overlays={overlays || undefined} onPointerDown={showOverlays}>
       {error ? <Alert color="yellow" className="webglError">{error}</Alert> : (
         <>
-          <canvas ref={canvasRef} id="canvas" style={{width, height}} />
+          <canvas
+            ref={canvasRef} id="canvas" data-probe={probe !== null || undefined}
+            style={{width, height, ...(inspecting ? {cursor: "crosshair", touchAction: "none"} : {})}}
+            onPointerDown={event => {
+              if (inspecting && event.pointerType !== "mouse") {
+                event.currentTarget.setPointerCapture(event.pointerId);
+                movePoint(event);
+              }
+            }}
+            onPointerMove={event => {
+              if (inspecting && (event.pointerType === "mouse" || event.buttons)) {
+                movePoint(event);
+              }
+            }}
+            onPointerLeave={event => {
+              if (event.pointerType === "mouse") {
+                setPoint(null);
+              }
+            }}
+          />
+          <CanvasTools
+            style={{top: marginTop + 8, left: marginSide + 8, maxWidth: Math.max(0, width - 16 - 88)}}
+            inspect={props.inspect} onInspectChange={props.onInspectChange}
+            probe={probe} signed={signed} onSignedChange={setSigned} onProbeOff={props.onProbeOff}
+          />
+          {point && reading &&
+            <PixelReadout
+              reading={reading} probe={probe} left={marginSide + point.x} top={marginTop + point.y}
+              flipX={point.x > width - 270} flipY={point.touch ? point.y < 90 : point.y > height - 70}
+              touch={point.touch} pixel={pixelAt(point.x, point.y, width, height, [pixelWidth, pixelHeight])}
+              resolution={[pixelWidth, pixelHeight]}
+            />}
           <div className="fps" style={{top: marginTop + 8, right: marginSide + 8}}>
             <p>{pixelWidth}&times;{pixelHeight}px</p>
             {fps ? <p>{fps} fps</p> : null}
             <p>{Math.max(0, steps.current.rendered)}</p>
           </div>
           {layerBusy !== null ? (
-            <p className="layerBusy" role="status" style={{top: marginTop + 8, left: marginSide + 8}}>
+            <p className="layerBusy" role="status" style={{top: marginTop + 44, left: marginSide + 8}}>
               {layerBusy === "starting" ? "Running the Canvas2D code…" : `Drawing step ${layerBusy}…`}
             </p>
           ) : null}
