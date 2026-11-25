@@ -92,7 +92,7 @@ test("a tap shows a transition's open start and asks for its end, and hold and d
 
   await page.touchscreen.tap(at(0.2), y);
   await expect(page.locator(".transitionStart")).toBeVisible();
-  await expect(page.getByRole("status").filter({hasText: "Tap where it ends"})).toBeVisible();
+  await expect(page.getByRole("status").filter({hasText: "Tap again to set the end time."})).toBeVisible();
   await page.touchscreen.tap(at(0.4), y);
   await expect(page.locator(".timeArea .transition")).toHaveCount(1);
   await expect(page.locator(".transitionStart")).toHaveCount(0);
@@ -106,7 +106,7 @@ test("a tap shows a transition's open start and asks for its end, and hold and d
     type, touchPoints: type === "touchEnd" ? [] : [{x, y}],
   });
   await touch("touchStart", at(0.6));
-  await expect(page.getByRole("status").filter({hasText: "Drag to where it ends"})).toBeVisible();
+  await expect(page.getByRole("status").filter({hasText: "Drag to set the end time."})).toBeVisible();
   for (const fraction of [0.65, 0.7, 0.75, 0.8]) {
     await touch("touchMove", at(fraction));
   }

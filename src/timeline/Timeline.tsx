@@ -3,6 +3,7 @@ import type {PointerEvent as ReactPointerEvent} from "react";
 import {ActionIcon, NativeSelect, NumberInput, Tooltip, VisuallyHidden} from "@mantine/core";
 import {useMediaQuery} from "@mantine/hooks";
 import {TbArrowAutofitWidth, TbPlus, TbTrash, TbZoomIn, TbZoomOut} from "react-icons/tb";
+import {usePhone} from "../app/usePhone";
 import {variableValue} from "../lib/document";
 import type {Transition, TransitionType, Variable} from "../lib/document";
 import {rowPaths, valueRange} from "./curves";
@@ -106,6 +107,7 @@ export default function Timeline(props: TimelineProps) {
   const gestureRef = useRef<Gesture>(gesture);
   const [drafts, setDrafts] = useState<Drafts>({});
   const touch = useMediaQuery("(hover: none)");
+  const phone = usePhone();
 
   const maxDSecs = durationDSecs(duration);
   const maxTime = maxTimeFor(variables, duration);
@@ -578,7 +580,8 @@ export default function Timeline(props: TimelineProps) {
   const pending = creating ?
     {row: creating.row, startDSecs: creating.startDSecs, endDSecs: startOnly ? null : creating.endDSecs as number | null} :
     hover ? {...hover, endDSecs: null} : null;
-  const prompt = creating && startOnly ? (creating.released ? "Tap where it ends" : "Drag to where it ends") : null;
+  const prompt = creating && startOnly ? (creating.released ? "Tap again to set the end time." : "Drag to set the end time.") :
+    null;
   const heading = selected && selection ? {row: selection.row, ...selected} : pending;
   const resizing = gesture.kind === "scrubbing" || gesture.kind === "duration" ||
     (gesture.kind === "dragging" && gesture.mode !== "move");
@@ -608,6 +611,8 @@ export default function Timeline(props: TimelineProps) {
                 {heading.endDSecs !== null && <> &mdash; {headingSeconds(heading.endDSecs)}</>}s
               </span>}
           </h4>}
+        {/* Not on phones, where the panel is above the rows and the line would shift them between taps. */}
+        {prompt && !phone && <p className="hint" role="status">{prompt}</p>}
         {!heading &&
           <p className="hint">
             {touch ? "Tap where a transition starts, then where it ends." : "Click or drag in a row to add a transition."}
@@ -758,7 +763,7 @@ export default function Timeline(props: TimelineProps) {
                   {pending?.row === row && (prompt ?
                     <>
                       <div className="transitionStart" style={{left: pending.startDSecs * pxPerDSec}} />
-                      <VisuallyHidden role="status">{prompt}</VisuallyHidden>
+                      {phone && <VisuallyHidden role="status">{prompt}</VisuallyHidden>}
                     </> :
                     <div className="transition hover" style={blockStyle(pending.startDSecs, pending.endDSecs ?? pending.startDSecs + 1)} />)}
                   {paths.curves.length > 0 &&
