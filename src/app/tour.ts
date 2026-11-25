@@ -4,6 +4,7 @@ import './tour.scss';
 
 import { driver, type DriveStep } from 'driver.js';
 
+import { glslCodeHtml } from '../editor/highlight';
 import { MOD_KEY } from './platform';
 
 export interface TourOptions {
@@ -172,9 +173,15 @@ function phoneSteps({showPane}: TourOptions): DriveStep[] {
   ];
 }
 
+// The steps' <code> is all GLSL, coloured as in the editor.
+const highlightCode = (steps: DriveStep[]): DriveStep[] => steps.map(step => step.popover?.description ? {
+  ...step,
+  popover: {...step.popover, description: step.popover.description.replace(/<code>([^<]*)<\/code>/g, (_, c: string) => glslCodeHtml(c))},
+} : step);
+
 export function startTour(options: TourOptions) {
   const tour = driver({
-    steps: options.phone ? phoneSteps(options) : desktopSteps(options),
+    steps: highlightCode(options.phone ? phoneSteps(options) : desktopSteps(options)),
     showProgress: true,
     progressText: "{{current}} of {{total}}",
     nextBtnText: "Next",

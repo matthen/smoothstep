@@ -88,6 +88,7 @@ const namesPlugin = ViewPlugin.fromClass(class {
 const STRINGS = new Set(['String', 'TemplateString']);
 
 export const javascriptClicks: ClickConfig = {
+  language: 'js',
   pickerAt(state, line, ch) {
     const match = findJsPickerMatch(line.text, ch);
     if (!match) return null;

@@ -22,6 +22,7 @@ import Splash from '../dialogs/Splash';
 import Textures from '../dialogs/Textures';
 import CodeEditor, { insertCode } from '../editor/CodeEditor';
 import { describe, topLevel } from '../editor/glslDefinitions';
+import { GlslCode } from '../editor/InlineCode';
 import { analysisOf, selectDefinition } from '../editor/goToDefinition';
 import { EditorView } from '@codemirror/view';
 import { DOC_SECTIONS, onOpenDocs, type DocTarget } from '../lib/docLinks';
@@ -77,9 +78,9 @@ const TutorialPanel = lazy(() => import('../tutorial/TutorialPanel'));
 const ReferencePanel = lazy(() => import('../reference/ReferencePanel'));
 type Dialog = "open" | "import" | "saveCopy" | "share" | "export" | "splash";
 
-// Text with `code` in backticks.
+// Text with GLSL `code` in backticks.
 function withCode(text: string) {
-  return text.split("`").map((part, i) => i % 2 ? <code key={i}>{part}</code> : part);
+  return text.split("`").map((part, i) => i % 2 ? <GlslCode key={i}>{part}</GlslCode> : part);
 }
 
 function showMessage(text: string, loading = false) {

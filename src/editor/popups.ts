@@ -7,6 +7,7 @@ import { eachShaderInput } from '../lib/shaderInputs';
 import glslFunctions from './glslFunctions.json';
 import type { Description } from './glslDefinitions';
 import { USER_NAME_TOKENS } from './glslLanguage';
+import { highlightedCodeElement, type CodeLanguage } from './highlight';
 import { goToDefinitionHint, isDefinitionClick, userDefinitionAt } from './goToDefinition';
 import {
   createColorPicker, createDirectionPicker, createFloatPicker, createVec2Picker, type PickerWidget,
@@ -40,6 +41,8 @@ function glslDocs(name: string): DocTarget | undefined {
 
 // What a click finds, in one language.
 export interface ClickConfig {
+  // How definitions' signatures are coloured.
+  language: CodeLanguage;
   // The value at column `ch` of `line` to open a picker on, if it can have one there.
   pickerAt(state: EditorState, line: Line, ch: number): PickerMatch | null;
   // The definition to show for the word at from..to.
@@ -59,6 +62,7 @@ const glslDefinitions = new Map([
 ]);
 
 const glslClicks: ClickConfig = {
+  language: 'glsl',
   pickerAt(state, line, ch) {
     const match = findPickerMatch(line.text, ch);
     return match && nodeNameAt(state, line.from + match.from) !== 'comment' ? match : null;
@@ -156,7 +160,7 @@ function openPicker(view: EditorView, from: number, to: number, kind: PickerKind
   view.dispatch({ effects: setPopup.of({ from, to, anchor, tooltip }) });
 }
 
-function definitionDom(def: Definition) {
+function definitionDom(def: Definition, language: CodeLanguage) {
   const dom = document.createElement('div');
   dom.className = 'ss-definition';
   const p = dom.appendChild(document.createElement('p'));
@@ -174,11 +178,7 @@ function definitionDom(def: Definition) {
   if (def.docs) {
     p.append(' ', docLinkElement('In the docs', def.docs), '.');
   }
-  const code = dom.appendChild(document.createElement('code'));
-  def.signatures.forEach((sig, i) => {
-    if (i) code.append(document.createElement('br'));
-    code.append(sig);
-  });
+  dom.append(highlightedCodeElement(def.signatures, language));
   return dom;
 }
 
@@ -191,7 +191,7 @@ function userDefinitionDom(view: EditorView, def: Description & { go(): void }) 
     p.className = 'oneLiner';
     p.append(def.comment);
   }
-  dom.appendChild(document.createElement('code')).append(def.signature);
+  dom.append(highlightedCodeElement([def.signature], 'glsl'));
   const go = dom.appendChild(document.createElement('p'));
   go.className = 'ss-go-to-definition';
   const button = go.appendChild(document.createElement('button'));
@@ -259,7 +259,7 @@ function onClick(view: EditorView, pos: number, touch: boolean, config: ClickCon
     return setPopup.of({ from: word.from, to: word.to, anchor: 0, tooltip });
   };
   if (def) {
-    view.dispatch({ effects: showPopup(definitionDom(def)) });
+    view.dispatch({ effects: showPopup(definitionDom(def, config.language)) });
   } else if (config.illuminates(state, word.from) && name.length > 1) {
     const own = config.userDefinitionAt?.(view, word.from);
     view.dispatch({ effects: [setIlluminated.of(name), ...own ? [showPopup(userDefinitionDom(view, own))] : []] });

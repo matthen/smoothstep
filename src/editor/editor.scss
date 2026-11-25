@@ -192,20 +192,11 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
   }
 
   // Syntax colours: CodeMirror 5's Dracula theme with smoothstep.io's overrides.
-  .tok-keyword { color: $dt-cyan; }
-  .tok-type { color: $dt-pink; }
-  .tok-builtin { color: $dt-green; }
-  .tok-variable { color: $dt-gray-light; }
-  .tok-function { color: $code-function; }
-  .tok-parameter { color: $dt-orange; font-style: italic; }
-  .tok-macro { color: $dt-purple; }
+  @include code-tokens;
   // The Canvas2D tab marks its helpers and inputs around or inside the highlighter's own span.
   .tok-builtin .tok-variable,
   .tok-builtin .tok-function,
   .tok-builtin .tok-property { color: inherit; }
-  .tok-atom,
-  .tok-number { color: $dt-purple; }
-  .tok-comment { color: $dt-blue; }
   // Links in comments: a softer colour than code, with a faint underline that firms up on hover.
   .cm-link {
     color: mix($dt-cyan, $dt-blue, 70%);
@@ -224,10 +215,6 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
   .cm-link .tok-comment, .tok-comment .cm-link { color: inherit; }
   .cm-link:hover .tok-comment { color: $dt-cyan; }
   .cm-link-bracket { opacity: 0.5; }
-  .tok-string { color: $dt-yellow; }
-  .tok-meta { color: $dt-pink; }
-  .tok-operator { color: $dt-pink; }
-  .tok-property { color: $dt-orange; }
 }
 
 // Tooltips live in document.body so they can overflow the editor.
@@ -328,7 +315,6 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
   }
 
   code {
-    color: $dt-gray-light;
     font-size: 12px;
     user-select: text;
   }

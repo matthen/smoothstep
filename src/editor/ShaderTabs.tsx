@@ -6,6 +6,7 @@ import {
 
 import { bufferMainImage, DEFAULT_MAIN_IMAGE, MAX_BUFFERS, NEW_CANVAS_DRAW } from '../lib/document';
 import type { ShaderId } from '../render/Renderer';
+import { GlslCode } from './InlineCode';
 
 interface ShaderTabsProps {
   numBuffers: number;
@@ -40,10 +41,10 @@ function shaderNameParts(shader: ShaderId): [string, string] {
 
 // The line above each tab's code: what it does and how the others read it.
 export function shaderCaption(shader: ShaderId): ReactNode {
-  return shader === "canvas" ? <>Draws first; shaders read it as <code>iCanvas2D</code></> :
+  return shader === "canvas" ? <>Draws first; shaders read it as <GlslCode>iCanvas2D</GlslCode></> :
     shader === "shared" ? <>Goes at the top of every shader tab</> :
     shader === "image" ? <>Draws last; it's what you see</> :
-    <>Draws before the image; shaders read it as <code>iBuffer{shader}</code></>;
+    <>Draws before the image; shaders read it as <GlslCode>{`iBuffer${shader}`}</GlslCode></>;
 }
 
 // The function a tab's code must have, as a new tab of its kind starts with it.

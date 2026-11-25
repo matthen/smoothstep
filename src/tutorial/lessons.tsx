@@ -7,6 +7,7 @@ import { EXAMPLES } from '../lib/config';
 import { DOC_SECTIONS, openDocs, type DocTarget } from '../lib/docLinks';
 import { stripComments, uses } from '../lib/glslCode';
 import type { ShaderId } from '../render/Renderer';
+import { GlslCode, JsCode } from '../editor/InlineCode';
 import HighlightedCode from './HighlightedCode';
 import * as shaders from './shaders';
 
@@ -165,19 +166,19 @@ export const LESSONS: Lesson[] = [
         body: <>
           <p>
             A shader is a small program that works out the colour of every pixel on the canvas. In
-            smoothstep.io it's a function called <code>mainImage</code>. Your computer runs it for every pixel at
+            smoothstep.io it's a function called <GlslCode>mainImage</GlslCode>. Your computer runs it for every pixel at
             once, many times a second.
           </p>
           <p>
-            <code>fragCoord</code> is where the pixel is, counted in pixels from the bottom-left corner.
-            Whatever you put in <code>fragColor</code> is the colour that pixel gets. A colour is four numbers
+            <GlslCode>fragCoord</GlslCode> is where the pixel is, counted in pixels from the bottom-left corner.
+            Whatever you put in <GlslCode>fragColor</GlslCode> is the colour that pixel gets. A colour is four numbers
             from 0 to 1: red, green, blue, and opacity, where 1 means solid.
           </p>
           <p>
-            The canvas can be any size, so the code divides <code>fragCoord</code> by{" "}
-            <code>iResolution</code>, the canvas's width and height. That gives <code>uv</code>, which goes
+            The canvas can be any size, so the code divides <GlslCode>fragCoord</GlslCode> by{" "}
+            <GlslCode>iResolution</GlslCode>, the canvas's width and height. That gives <GlslCode>uv</GlslCode>, which goes
             from 0 at the left edge to 1 at the right, and from 0 at the bottom to 1 at the top. The colour
-            uses <code>uv.x</code> for red and <code>uv.y</code> for green, so the canvas gets redder to the
+            uses <GlslCode>uv.x</GlslCode> for red and <GlslCode>uv.y</GlslCode> for green, so the canvas gets redder to the
             right and greener towards the top.
           </p>
           <p>
@@ -193,12 +194,12 @@ export const LESSONS: Lesson[] = [
         title: "Pick a colour",
         body: <>
           <p>
-            A <code>vec3</code> is a group of three numbers. Here it holds the red, green and blue of an orange
+            A <GlslCode>vec3</GlslCode> is a group of three numbers. Here it holds the red, green and blue of an orange
             colour. The code also makes the colour darker towards the bottom of the canvas. Put this in the
             editor and build it.
           </p>
           <p>
-            Then click inside <code>vec3(0.95, 0.45, 0.25)</code> in the editor. A colour picker opens, and
+            Then click inside <GlslCode>vec3(0.95, 0.45, 0.25)</GlslCode> in the editor. A colour picker opens, and
             the canvas changes as you drag around it. Click back in the code to close it.
           </p>
         </>,
@@ -213,13 +214,13 @@ export const LESSONS: Lesson[] = [
           <p>This step adds a second colour, and blends the two with one new line:</p>
           <Lines>vec3 colour = mix(left, right, uv.x);</Lines>
           <p>
-            <code>mix(a, b, t)</code> blends two colours. When <code>t</code> is 0 you get <code>a</code>, when
-            it's 1 you get <code>b</code>, and at 0.5 you get half of each.
+            <GlslCode>mix(a, b, t)</GlslCode> blends two colours. When <GlslCode>t</GlslCode> is 0 you get <GlslCode>a</GlslCode>, when
+            it's 1 you get <GlslCode>b</GlslCode>, and at 0.5 you get half of each.
           </p>
           <p>
-            Here <code>t</code> is <code>uv.x</code>, so the canvas fades from the <code>left</code> colour at
-            the left edge to the <code>right</code> colour at the right edge. Put this in the editor and build
-            it, then click in each <code>vec3</code> to pick your own two colours.
+            Here <GlslCode>t</GlslCode> is <GlslCode>uv.x</GlslCode>, so the canvas fades from the <GlslCode>left</GlslCode> colour at
+            the left edge to the <GlslCode>right</GlslCode> colour at the right edge. Put this in the editor and build
+            it, then click in each <GlslCode>vec3</GlslCode> to pick your own two colours.
           </p>
         </>,
         code: shaders.TWO_COLOURS,
@@ -230,7 +231,7 @@ export const LESSONS: Lesson[] = [
         <li><b>Bottom to top.</b> Make the colours blend from the bottom of the canvas to the top.</li>
         <li><b>Sunset.</b> Make the canvas look like the sky at sunset.</li>
       </>, <>
-        <li><b>Bottom to top:</b> <code>uv.x</code> goes from 0 to 1 left to right. Which number goes from 0 to 1 bottom to top?</li>
+        <li><b>Bottom to top:</b> <GlslCode>uv.x</GlslCode> goes from 0 to 1 left to right. Which number goes from 0 to 1 bottom to top?</li>
         <li><b>Sunset:</b> pick two colours with the colour picker, and blend them bottom to top.</li>
       </>),
     ],
@@ -243,19 +244,19 @@ export const LESSONS: Lesson[] = [
         title: "Animate with iTime",
         body: <>
           <p>
-            This step blends the two colours by a number <code>t</code> that changes with time, in place of{" "}
-            <code>uv.x</code>:
+            This step blends the two colours by a number <GlslCode>t</GlslCode> that changes with time, in place of{" "}
+            <GlslCode>uv.x</GlslCode>:
           </p>
           <Lines>{`float t = 0.5 + 0.5 * sin(iTime);
 vec3 colour = mix(left, right, t);`}</Lines>
           <p>
-            <code>iTime</code> is the number of seconds since the animation started. As it goes up,{" "}
-            <code>sin(iTime)</code> goes smoothly up to 1, down to -1, and back, over and over.{" "}
-            <code>mix</code> needs a number from 0 to 1, so the code halves it, giving -0.5 to 0.5, and adds
+            <GlslCode>iTime</GlslCode> is the number of seconds since the animation started. As it goes up,{" "}
+            <GlslCode>sin(iTime)</GlslCode> goes smoothly up to 1, down to -1, and back, over and over.{" "}
+            <GlslCode>mix</GlslCode> needs a number from 0 to 1, so the code halves it, giving -0.5 to 0.5, and adds
             0.5, giving 0 to 1.
           </p>
           <p>
-            Every pixel gets the same <code>t</code>, so the whole canvas fades from one colour to the other and
+            Every pixel gets the same <GlslCode>t</GlslCode>, so the whole canvas fades from one colour to the other and
             back.
           </p>
           <p>Put it in the editor, build it, and press the play button under the canvas.</p>
@@ -268,17 +269,17 @@ vec3 colour = mix(left, right, t);`}</Lines>
         id: "waves",
         title: "Make waves",
         body: <>
-          <p>This step changes one line, the one that works out <code>t</code>:</p>
+          <p>This step changes one line, the one that works out <GlslCode>t</GlslCode>:</p>
           <Lines>float t = 0.5 + 0.5 * sin(2.0 * iTime - 12.0 * uv.x);</Lines>
           <p>
-            Before, <code>t</code> depended only on the time, so every pixel was the same colour. Now it also
-            depends on <code>uv.x</code>, how far across the canvas the pixel is. So at any moment, pixels at
+            Before, <GlslCode>t</GlslCode> depended only on the time, so every pixel was the same colour. Now it also
+            depends on <GlslCode>uv.x</GlslCode>, how far across the canvas the pixel is. So at any moment, pixels at
             different places across the canvas get different colours, which makes stripes. And because{" "}
-            <code>t</code> still depends on <code>iTime</code>, the stripes slide along as the animation plays.
+            <GlslCode>t</GlslCode> still depends on <GlslCode>iTime</GlslCode>, the stripes slide along as the animation plays.
           </p>
           <p>
-            Build it and play. Then try other numbers: <code>2.0</code> sets how fast the stripes move, and{" "}
-            <code>12.0</code> sets how many fit across.
+            Build it and play. Then try other numbers: <GlslCode>2.0</GlslCode> sets how fast the stripes move, and{" "}
+            <GlslCode>12.0</GlslCode> sets how many fit across.
           </p>
         </>,
         code: shaders.WAVES,
@@ -290,18 +291,18 @@ vec3 colour = mix(left, right, t);`}</Lines>
         id: "shimmer",
         title: "A colour shimmer",
         body: <>
-          <p>This step is a new shader. The line that matters works out the colour from a number <code>t</code>:</p>
+          <p>This step is a new shader. The line that matters works out the colour from a number <GlslCode>t</GlslCode>:</p>
           <Lines>vec3 colour = 0.5 + 0.5 * cos(6.28318 * (t + vec3(0.0, 0.33, 0.67)));</Lines>
           <p>
             This is a cosine palette, a trick for getting a whole rainbow from one number. Red, green and blue
-            each rise and fall with a cosine of <code>t</code>, and the <code>vec3(0.0, 0.33, 0.67)</code>{" "}
-            offsets them, so they peak at different times. Each time <code>t</code> goes up by 1, the colour
+            each rise and fall with a cosine of <GlslCode>t</GlslCode>, and the <GlslCode>vec3(0.0, 0.33, 0.67)</GlslCode>{" "}
+            offsets them, so they peak at different times. Each time <GlslCode>t</GlslCode> goes up by 1, the colour
             goes round the rainbow and back to where it started.
           </p>
           <p>
-            Here <code>t</code> depends on the pixel's position and on <code>iTime</code>, so the colours drift
+            Here <GlslCode>t</GlslCode> depends on the pixel's position and on <GlslCode>iTime</GlslCode>, so the colours drift
             across the canvas as it plays. Build it and play, then change the numbers in the{" "}
-            <code>vec3</code> to get a different set of colours.
+            <GlslCode>vec3</GlslCode> to get a different set of colours.
           </p>
         </>,
         code: shaders.SHIMMER,
@@ -318,12 +319,12 @@ vec3 colour = mix(left, right, t);`}</Lines>
         <li><b>Your own palette.</b> Change the palette's numbers to make colours for the sea, a fire or a forest.</li>
       </>, <>
         <li>
-          <b>A perfect loop:</b> <code>iDuration</code> is the animation's length in seconds, so{" "}
-          <code>iTime / iDuration</code> goes from 0 to 1 over the whole animation. The palette comes back
-          round each time <code>t</code> goes up by 1, and <code>sin</code> comes back round every 6.28318.
+          <b>A perfect loop:</b> <GlslCode>iDuration</GlslCode> is the animation's length in seconds, so{" "}
+          <GlslCode>iTime / iDuration</GlslCode> goes from 0 to 1 over the whole animation. The palette comes back
+          round each time <GlslCode>t</GlslCode> goes up by 1, and <GlslCode>sin</GlslCode> comes back round every 6.28318.
         </li>
         <li><b>Rising waves:</b> which part of the waves' code makes them depend on how far across a pixel is?</li>
-        <li><b>Your own palette:</b> try numbers above 1 in the <code>vec3</code>, or put a smaller number in front of the cosine.</li>
+        <li><b>Your own palette:</b> try numbers above 1 in the <GlslCode>vec3</GlslCode>, or put a smaller number in front of the cosine.</li>
       </>),
       {
         id: "explore-time",
@@ -343,10 +344,10 @@ vec3 colour = mix(left, right, t);`}</Lines>
         id: "centred",
         title: "Centred coordinates",
         body: <>
-          <p>This step works out <code>uv</code> a new way:</p>
+          <p>This step works out <GlslCode>uv</GlslCode> a new way:</p>
           <Lines>vec2 uv = (2.0 * fragCoord - iResolution.xy) / iResolution.y;</Lines>
           <p>
-            So far <code>uv</code> has started at (0, 0) in the bottom-left corner. For drawing shapes it's
+            So far <GlslCode>uv</GlslCode> has started at (0, 0) in the bottom-left corner. For drawing shapes it's
             easier to have (0, 0) in the middle. This line moves it there, with y going from -1 at the bottom
             to 1 at the top. x uses the same scale, so on a wide canvas it goes past 1 at the sides, and circles
             stay round.
@@ -365,16 +366,16 @@ vec3 colour = mix(left, right, t);`}</Lines>
         id: "circle",
         title: "A circle",
         body: <>
-          <p>This step draws a circle. The key line works out a number <code>d</code> for each pixel:</p>
+          <p>This step draws a circle. The key line works out a number <GlslCode>d</GlslCode> for each pixel:</p>
           <Lines>float d = length(uv) - radius;</Lines>
           <p>
-            <code>length(uv)</code> is how far the pixel is from the centre. Take away the radius and you get{" "}
-            <code>d</code>, which is negative for pixels inside the circle, 0 on its edge, and positive outside.
+            <GlslCode>length(uv)</GlslCode> is how far the pixel is from the centre. Take away the radius and you get{" "}
+            <GlslCode>d</GlslCode>, which is negative for pixels inside the circle, 0 on its edge, and positive outside.
             Most shaders draw shapes this way: they work out how far each pixel is from the shape's edge.
           </p>
           <p>
-            <code>step(0.0, d)</code> turns <code>d</code> into 0 inside the circle and 1 outside, and{" "}
-            <code>mix</code> uses that to choose the inside or outside colour. Build it, then change the
+            <GlslCode>step(0.0, d)</GlslCode> turns <GlslCode>d</GlslCode> into 0 inside the circle and 1 outside, and{" "}
+            <GlslCode>mix</GlslCode> uses that to choose the inside or outside colour. Build it, then change the
             radius.
           </p>
         </>,
@@ -386,15 +387,15 @@ vec3 colour = mix(left, right, t);`}</Lines>
         id: "soft-edge",
         title: "Soft edges",
         body: <>
-          <p>This step changes <code>step(0.0, d)</code> to <code>smoothstep(0.0, 0.01, d)</code>.</p>
+          <p>This step changes <GlslCode>step(0.0, d)</GlslCode> to <GlslCode>smoothstep(0.0, 0.01, d)</GlslCode>.</p>
           <p>
             Look closely at the last step's circle and its edge is jagged, because each pixel is either fully
-            inside or fully outside. <code>smoothstep(a, b, d)</code> fixes that. It's 0 when <code>d</code> is below{" "}
-            <code>a</code>, 1 when it's above <code>b</code>, and rises smoothly in between, so pixels right on
+            inside or fully outside. <GlslCode>smoothstep(a, b, d)</GlslCode> fixes that. It's 0 when <GlslCode>d</GlslCode> is below{" "}
+            <GlslCode>a</GlslCode>, 1 when it's above <GlslCode>b</GlslCode>, and rises smoothly in between, so pixels right on
             the edge get a blend of the two colours. It's the function this app is named after.
           </p>
           <p>
-            Build this, then change the <code>0.01</code>. A bigger number spreads the blend over a wider band,
+            Build this, then change the <GlslCode>0.01</GlslCode>. A bigger number spreads the blend over a wider band,
             so the edge looks blurrier.
           </p>
         </>,
@@ -410,7 +411,7 @@ vec3 colour = mix(left, right, t);`}</Lines>
           <Lines>{`vec2 centre = vec2(0.6 * sin(iTime), 0.0);
 float d = length(uv - centre) - radius;`}</Lines>
           <p>
-            <code>sin(iTime)</code> swings between -1 and 1, so <code>centre</code> moves between -0.6 and 0.6
+            <GlslCode>sin(iTime)</GlslCode> swings between -1 and 1, so <GlslCode>centre</GlslCode> moves between -0.6 and 0.6
             across the canvas, and the circle slides from side to side with it. Build it and play.
           </p>
         </>,
@@ -423,10 +424,10 @@ float d = length(uv - centre) - radius;`}</Lines>
         id: "two-circles",
         title: "Two circles",
         body: <>
-          <p>This step has two moving centres, <code>a</code> and <code>b</code>, and works out <code>d</code> from both:</p>
+          <p>This step has two moving centres, <GlslCode>a</GlslCode> and <GlslCode>b</GlslCode>, and works out <GlslCode>d</GlslCode> from both:</p>
           <Lines>float d = min(length(uv - a) - 0.4, length(uv - b) - 0.3);</Lines>
           <p>
-            That's the distance to each circle, and <code>min</code> picks the smaller of the two. A pixel inside either circle has a negative distance to it, so the smaller one is negative
+            That's the distance to each circle, and <GlslCode>min</GlslCode> picks the smaller of the two. A pixel inside either circle has a negative distance to it, so the smaller one is negative
             too, and the pixel gets the inside colour. Build it and play to watch them slide through each
             other.
           </p>
@@ -441,12 +442,12 @@ float d = length(uv - centre) - radius;`}</Lines>
         <li><b>A picture.</b> Draw a snowman, a face or a traffic light out of circles.</li>
       </>, <>
         <li>
-          <b>A ring:</b> <code>length(uv) - radius</code> is 0 on the circle's edge, and{" "}
-          <code>abs</code> of it is how far a pixel is from the edge, inside or out. What shape is close to
+          <b>A ring:</b> <GlslCode>length(uv) - radius</GlslCode> is 0 on the circle's edge, and{" "}
+          <GlslCode>abs</GlslCode> of it is how far a pixel is from the edge, inside or out. What shape is close to
           the edge?
         </li>
-        <li><b>An orbit:</b> a point at <code>vec2(cos(iTime), sin(iTime))</code> goes round in a circle.</li>
-        <li><b>A picture:</b> <code>min</code> can join as many shapes as you like, and each can have its own colour.</li>
+        <li><b>An orbit:</b> a point at <GlslCode>vec2(cos(iTime), sin(iTime))</GlslCode> goes round in a circle.</li>
+        <li><b>A picture:</b> <GlslCode>min</GlslCode> can join as many shapes as you like, and each can have its own colour.</li>
       </>),
       {
         id: "explore-shapes",
@@ -468,15 +469,15 @@ float d = length(uv - centre) - radius;`}</Lines>
         body: <>
           <p>
             The timeline lets you animate numbers by drawing, without writing any maths. It gives you 16
-            numbers, <code>iFloat0</code> to <code>iFloat15</code>, each with its own row, and you can use them
+            numbers, <GlslCode>iFloat0</GlslCode> to <GlslCode>iFloat15</GlslCode>, each with its own row, and you can use them
             anywhere in your code.
           </p>
           <p>This step's code uses the first one to set the circle's size:</p>
           <Lines>{`#define grow iFloat0
 float radius = 0.15 + 0.5 * grow;`}</Lines>
           <p>
-            <code>#define</code> gives <code>iFloat0</code> a name, <code>grow</code>, which makes the code
-            easier to read, and the timeline shows that name on its row. Build this. <code>grow</code> is 0
+            <GlslCode>#define</GlslCode> gives <GlslCode>iFloat0</GlslCode> a name, <GlslCode>grow</GlslCode>, which makes the code
+            easier to read, and the timeline shows that name on its row. Build this. <GlslCode>grow</GlslCode> is 0
             until you change it, so the circle is small.
           </p>
         </>,
@@ -490,7 +491,7 @@ float radius = 0.15 + 0.5 * grow;`}</Lines>
         body: <>
           <p>
             Before you animate a number, you can try out values by hand. Open the Sliders tab, or Sliders on a
-            phone, and drag the <code>grow</code> slider. The circle changes size as you drag.
+            phone, and drag the <GlslCode>grow</GlslCode> slider. The circle changes size as you drag.
           </p>
           <p>
             The value you set is saved with your animation. To change a slider's range, click the number at
@@ -506,7 +507,7 @@ float radius = 0.15 + 0.5 * grow;`}</Lines>
         body: <>
           <p>
             A transition changes a number from one value to another over a stretch of time. In the Timeline
-            tab, drag along the <code>grow</code> row to make one. On a phone, tap where it should start, then
+            tab, drag along the <GlslCode>grow</GlslCode> row to make one. On a phone, tap where it should start, then
             where it should end.
           </p>
           <p>
@@ -548,12 +549,12 @@ float radius = 0.15 + 0.5 * grow;`}</Lines>
         id: "second-variable",
         title: "A second number",
         body: <>
-          <p>This step adds a second number, <code>warmth</code>, and uses it for the circle's colour:</p>
+          <p>This step adds a second number, <GlslCode>warmth</GlslCode>, and uses it for the circle's colour:</p>
           <Lines>{`#define warmth iFloat1
 vec3 inside = mix(vec3(0.3, 0.55, 1.0), vec3(1.0, 0.6, 0.2), warmth);`}</Lines>
           <p>
             At 0 the circle is cool blue, and at 1 it's warm orange. Build it, then give the{" "}
-            <code>warmth</code> row a transition from 0 to 1.
+            <GlslCode>warmth</GlslCode> row a transition from 0 to 1.
           </p>
         </>,
         code: shaders.TWO_VARIABLES,
@@ -581,11 +582,11 @@ vec3 inside = mix(vec3(0.3, 0.55, 1.0), vec3(1.0, 0.6, 0.2), warmth);`}</Lines>
         <li><b>A heartbeat.</b> Make the circle beat twice, rest, then beat twice again.</li>
       </>, <>
         <li>
-          <b>Slide:</b> give <code>iFloat2</code> a name with <code>#define</code>, like <code>grow</code> and{" "}
-          <code>warmth</code>. Then measure the distance from a point that moves with it, as in the Move it
+          <b>Slide:</b> give <GlslCode>iFloat2</GlslCode> a name with <GlslCode>#define</GlslCode>, like <GlslCode>grow</GlslCode> and{" "}
+          <GlslCode>warmth</GlslCode>. Then measure the distance from a point that moves with it, as in the Move it
           step of the Shapes lesson.
         </li>
-        <li><b>A heartbeat:</b> put several short transitions one after another on the <code>grow</code> row.</li>
+        <li><b>A heartbeat:</b> put several short transitions one after another on the <GlslCode>grow</GlslCode> row.</li>
       </>),
       {
         id: "explore-timeline",
@@ -611,15 +612,15 @@ vec3 inside = mix(vec3(0.3, 0.55, 1.0), vec3(1.0, 0.6, 0.2), warmth);`}</Lines>
           <p>This step splits the canvas into tiles with one new line:</p>
           <Lines>vec2 cell = fract(3.0 * uv) * 2.0 - 1.0;</Lines>
           <p>
-            <code>fract</code> keeps only the part of a number after the decimal point: <code>fract(2.7)</code>{" "}
-            is 0.7. So as you move across the canvas, <code>fract(3.0 * uv)</code> counts up from 0 to 1, then
+            <GlslCode>fract</GlslCode> keeps only the part of a number after the decimal point: <GlslCode>fract(2.7)</GlslCode>{" "}
+            is 0.7. So as you move across the canvas, <GlslCode>fract(3.0 * uv)</GlslCode> counts up from 0 to 1, then
             starts again from 0, over and over. That splits the canvas into tiles. The{" "}
-            <code>* 2.0 - 1.0</code> turns each tile's 0 to 1 into -1 to 1, so (0, 0) is in the middle of
+            <GlslCode>* 2.0 - 1.0</GlslCode> turns each tile's 0 to 1 into -1 to 1, so (0, 0) is in the middle of
             every tile, and the circle code draws a circle there.
           </p>
           <p>
             The shader still works out just one distance for each pixel, so a hundred circles are no slower to
-            draw than one. Build it, and change the <code>3.0</code> to get bigger or smaller tiles.
+            draw than one. Build it, and change the <GlslCode>3.0</GlslCode> to get bigger or smaller tiles.
           </p>
         </>,
         code: shaders.TILES,
@@ -631,14 +632,14 @@ vec3 inside = mix(vec3(0.3, 0.55, 1.0), vec3(1.0, 0.6, 0.2), warmth);`}</Lines>
         title: "Rotate",
         body: <>
           <p>
-            This step adds two lines before the tiles, which turn <code>uv</code> and so turn the whole
+            This step adds two lines before the tiles, which turn <GlslCode>uv</GlslCode> and so turn the whole
             pattern:
           </p>
           <Lines>{`float angle = 0.3 * iTime;
 uv = mat2(cos(angle), -sin(angle), sin(angle), cos(angle)) * uv;`}</Lines>
           <p>
-            A <code>mat2</code> is a 2 × 2 grid of numbers. Multiplying <code>uv</code> by this one, made from the cosine and sine of an
-            angle, turns it by that angle around the centre. The angle grows with <code>iTime</code>, so the
+            A <GlslCode>mat2</GlslCode> is a 2 × 2 grid of numbers. Multiplying <GlslCode>uv</GlslCode> by this one, made from the cosine and sine of an
+            angle, turns it by that angle around the centre. The angle grows with <GlslCode>iTime</GlslCode>, so the
             pattern slowly spins. Build it and play.
           </p>
         </>,
@@ -656,12 +657,12 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
           <p>
             So far a position has been x and y: how far across and how far up. Polar coordinates describe it
             another way, by the angle around the centre and the distance out from it.{" "}
-            <code>atan(uv.y, uv.x)</code> gives the angle, and dividing by 6.28318 makes one whole turn add up
-            to 1. <code>length(uv)</code> gives the distance.
+            <GlslCode>atan(uv.y, uv.x)</GlslCode> gives the angle, and dividing by 6.28318 makes one whole turn add up
+            to 1. <GlslCode>length(uv)</GlslCode> gives the distance.
           </p>
           <p>
             Tiles made from those curve round into rings. Build it, and try
-            other numbers in <code>vec2(12.0, 3.0)</code>. The first sets how many tiles go round each ring,
+            other numbers in <GlslCode>vec2(12.0, 3.0)</GlslCode>. The first sets how many tiles go round each ring,
             and the second sets how close together the rings are.
           </p>
         </>,
@@ -675,14 +676,14 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         <li><b>Your own pattern.</b> Mix tiles, turns and polar coordinates to make a pattern you like.</li>
       </>, <>
         <li>
-          <b>A checkerboard:</b> <code>floor</code> keeps the part of a number before the decimal point, so it
+          <b>A checkerboard:</b> <GlslCode>floor</GlslCode> keeps the part of a number before the decimal point, so it
           gives each tile its own whole numbers. Add a tile's two numbers together: next-door tiles
-          take turns being odd and even. <code>mod(n, 2.0)</code> is 0 when <code>n</code> is even and 1
+          take turns being odd and even. <GlslCode>mod(n, 2.0)</GlslCode> is 0 when <GlslCode>n</GlslCode> is even and 1
           when it's odd.
         </li>
         <li>
           <b>A flower:</b> a circle is everywhere closer to the centre than its radius. Make the radius change
-          with the angle round the centre, like <code>0.5 + 0.2 * cos(5.0 * atan(uv.y, uv.x))</code>, and the circle
+          with the angle round the centre, like <GlslCode>0.5 + 0.2 * cos(5.0 * atan(uv.y, uv.x))</GlslCode>, and the circle
           gets petals.
         </li>
       </>),
@@ -710,13 +711,13 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
           <p>This step is a new shader, and its one new line reads an image:</p>
           <Lines>fragColor = texture(iTexture0, uv);</Lines>
           <p>
-            A texture is an image your shader can read. <code>texture(iTexture0, uv)</code> looks up the colour
-            of the image in slot <code>iTexture0</code> at the point <code>uv</code>, where 0 to 1 covers the
+            A texture is an image your shader can read. <GlslCode>texture(iTexture0, uv)</GlslCode> looks up the colour
+            of the image in slot <GlslCode>iTexture0</GlslCode> at the point <GlslCode>uv</GlslCode>, where 0 to 1 covers the
             whole image.
           </p>
           <p>
             Build this. The canvas is black, because the slot is empty, and empty slots are black. Open the
-            Textures tab, click <code>iTexture0</code>, and choose a photo or add your own.
+            Textures tab, click <GlslCode>iTexture0</GlslCode>, and choose a photo or add your own.
           </p>
         </>,
         code: shaders.TEXTURE,
@@ -730,12 +731,12 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
           <p>This step adds one line before reading the texture:</p>
           <Lines>uv.x += 0.02 * sin(10.0 * uv.y + iTime);</Lines>
           <p>
-            <code>+=</code> adds to <code>uv.x</code>, so each pixel reads the image from a spot a little to
-            the left or right. The amount depends on <code>uv.y</code>, so each row shifts by a different
-            amount, and on <code>iTime</code>, so it changes as the animation plays and the image wobbles.
+            <GlslCode>+=</GlslCode> adds to <GlslCode>uv.x</GlslCode>, so each pixel reads the image from a spot a little to
+            the left or right. The amount depends on <GlslCode>uv.y</GlslCode>, so each row shifts by a different
+            amount, and on <GlslCode>iTime</GlslCode>, so it changes as the animation plays and the image wobbles.
           </p>
           <p>
-            Build it and play, then try a bigger number than <code>0.02</code> for a stronger wobble.
+            Build it and play, then try a bigger number than <GlslCode>0.02</GlslCode> for a stronger wobble.
           </p>
         </>,
         code: shaders.WARPED_TEXTURE,
@@ -751,9 +752,9 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
           </p>
           <Lines>uv = abs(uv - 0.5) * 2.0;</Lines>
           <p>
-            <code>abs</code> turns negative numbers positive: <code>abs(-0.3)</code> is 0.3. And{" "}
-            <code>uv - 0.5</code> is 0 in the middle of the canvas and negative to the left of it, so after{" "}
-            <code>abs</code> the left half gets the same numbers as the right half. The same happens top to
+            <GlslCode>abs</GlslCode> turns negative numbers positive: <GlslCode>abs(-0.3)</GlslCode> is 0.3. And{" "}
+            <GlslCode>uv - 0.5</GlslCode> is 0 in the middle of the canvas and negative to the left of it, so after{" "}
+            <GlslCode>abs</GlslCode> the left half gets the same numbers as the right half. The same happens top to
             bottom, so the image is mirrored into each quarter of the canvas, like a kaleidoscope. Build it and
             play.
           </p>
@@ -795,13 +796,13 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         body: <>
           <p>
             So far each frame has been drawn from scratch, with no idea what was drawn before.{" "}
-            <code>iPrevFrame</code> changes that. It's the frame drawn just before this one, and you read it
+            <GlslCode>iPrevFrame</GlslCode> changes that. It's the frame drawn just before this one, and you read it
             like the images in the last lesson.
           </p>
           <p>This step is a new shader. Its main line reads the previous frame and makes it a little darker:</p>
           <Lines>vec3 colour = 0.97 * texture(iPrevFrame, uv).rgb;</Lines>
           <p>
-            <code>.rgb</code> takes the red, green and blue, and multiplying by 0.97 makes them 3% darker.
+            <GlslCode>.rgb</GlslCode> takes the red, green and blue, and multiplying by 0.97 makes them 3% darker.
             Build it and play. The canvas
             stays black, because the first frame was black, so there's nothing to remember yet.
           </p>
@@ -815,12 +816,12 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         title: "Leave a trail",
         body: <>
           <p>
-            This step adds a block of code, under <code>// A dot moving in a loop</code>, that draws a dot on
+            This step adds a block of code, under <GlslCode>// A dot moving in a loop</GlslCode>, that draws a dot on
             top of the faded frame. Each frame keeps 97% of the brightness of the last one, so everywhere the
             dot has been fades out slowly, leaving a trail.
           </p>
           <p>
-            Build it and play. Try <code>0.99</code> in place of <code>0.97</code> for a longer trail. How long
+            Build it and play. Try <GlslCode>0.99</GlslCode> in place of <GlslCode>0.97</GlslCode> for a longer trail. How long
             the trail is depends on how many frames a second your computer draws, but rendered videos use the
             frame rate you choose.
           </p>
@@ -835,7 +836,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         title: "The first frame",
         body: <>
           <p>
-            <code>iFrame</code> counts the frames: 0 for the first one, then 1, 2, 3 and so on. It goes back to
+            <GlslCode>iFrame</GlslCode> counts the frames: 0 for the first one, then 1, 2, 3 and so on. It goes back to
             0 when you build, when the animation loops back to the start, and when you rewind.
           </p>
           <p>This step adds three lines before the dot:</p>
@@ -843,7 +844,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
   colour = 0.5 * vec3(uv, 1.0);
 }`}</Lines>
           <p>
-            So the code inside <code>if (iFrame == 0)</code> only runs on the first frame, and you can use it
+            So the code inside <GlslCode>if (iFrame == 0)</GlslCode> only runs on the first frame, and you can use it
             to set up a starting picture. This one starts with a gradient, which fades away as the dot moves.
             It also clears the canvas each time the animation loops, so the trail from the end of one loop
             isn't still there at the start of the next.
@@ -885,14 +886,14 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         title: "Add a buffer",
         body: <>
           <p>
-            <code>iPrevFrame</code> remembers the last picture. Sometimes you want to remember something that
+            <GlslCode>iPrevFrame</GlslCode> remembers the last picture. Sometimes you want to remember something that
             isn't a picture, like how hot each spot is, or which way water is flowing. That's what buffers are
             for.
           </p>
           <p>
             A buffer is an extra shader with its own tab. Each frame it runs before the image, and what it draws
             is kept for the other tabs to read. Click the <span aria-label="add">⊕</span> above the code and
-            choose Add a buffer. Its tab is called <code>iBuffer0</code>.
+            choose Add a buffer. Its tab is called <GlslCode>iBuffer0</GlslCode>.
           </p>
         </>,
         task: "Click the ⊕ above the code and choose Add a buffer.",
@@ -903,13 +904,13 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         title: "Store some heat",
         body: <>
           <p>
-            This step puts code in the <code>iBuffer0</code> tab. It keeps track of heat, and its first line
+            This step puts code in the <GlslCode>iBuffer0</GlslCode> tab. It keeps track of heat, and its first line
             reads the heat from the buffer's own last frame:
           </p>
           <Lines>float heat = 0.99 * texture(iBuffer0, uv).r;</Lines>
           <p>
-            Any tab can read what the buffer drew as <code>iBuffer0</code>, the same way you read a texture,
-            and that includes the buffer itself. <code>.r</code> takes just the first number, which is where
+            Any tab can read what the buffer drew as <GlslCode>iBuffer0</GlslCode>, the same way you read a texture,
+            and that includes the buffer itself. <GlslCode>.r</GlslCode> takes just the first number, which is where
             the heat is kept. So each frame the buffer keeps 99% of the heat it had, then adds a little more
             under a moving dot.
           </p>
@@ -928,7 +929,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         body: <>
           <p>
             This step's image code reads the heat from the buffer, with{" "}
-            <code>float heat = texture(iBuffer0, uv).r;</code>, and turns it into colour: black where it's cold,
+            <GlslCode>float heat = texture(iBuffer0, uv).r;</GlslCode>, and turns it into colour: black where it's cold,
             then red, yellow, and white where it's hottest. Colours only go from 0 to 1, but a buffer can hold
             bigger numbers, so the heat can keep building up past 1. Build it and play.
           </p>
@@ -949,7 +950,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
           </p>
           <p>
             Updating every pixel from the last frame like this is how buffers simulate things like heat, smoke
-            and water. Build it and play. Try <code>0.995</code> in place of <code>0.99</code> to make it cool
+            and water. Build it and play. Try <GlslCode>0.995</GlslCode> in place of <GlslCode>0.99</GlslCode> to make it cool
             down more slowly.
           </p>
         </>,
@@ -965,11 +966,11 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
           <p>
             Say you want the image to draw the dot too. Both tabs then need to know where the dot is. Rather
             than writing the same code twice, you can put it in a shared.glsl tab, which sits to the left of
-            the shader tabs. The ⊕ adds one, and this step adds it for you. Functions, constants and <code>#define</code>s there can be
+            the shader tabs. The ⊕ adds one, and this step adds it for you. Functions, constants and <GlslCode>#define</GlslCode>s there can be
             used in every shader tab.
           </p>
           <p>
-            This puts the dot's path in a function called <code>dotPosition</code> in the shared.glsl tab. The
+            This puts the dot's path in a function called <GlslCode>dotPosition</GlslCode> in the shared.glsl tab. The
             buffer uses it to heat the dot, and the image uses it to draw a ring around the dot, so the two
             always line up. This step fills in three tabs, so build it and play.
           </p>
@@ -987,8 +988,8 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         <li><b>Something else.</b> Change the colours so the heat looks like lava, ink, or a thermal camera.</li>
       </>, <>
         <li>
-          <b>Two dots:</b> <code>dotPosition(iTime)</code> is where the dot is now, so{" "}
-          <code>dotPosition(iTime + 3.0)</code> is where it will be in 3 seconds: another point on the same
+          <b>Two dots:</b> <GlslCode>dotPosition(iTime)</GlslCode> is where the dot is now, so{" "}
+          <GlslCode>dotPosition(iTime + 3.0)</GlslCode> is where it will be in 3 seconds: another point on the same
           path.
         </li>
         <li><b>Something else:</b> the colours come from one line in the Image.glsl tab.</li>
@@ -998,7 +999,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         title: "Explore",
         body: <>
           <p>
-            Ink in water uses two buffers. <code>iBuffer0</code> moves the water, and <code>iBuffer1</code> carries
+            Ink in water uses two buffers. <GlslCode>iBuffer0</GlslCode> moves the water, and <GlslCode>iBuffer1</GlslCode> carries
             the ink along with it. The shared.glsl tab has the jets that both of them use.
           </p>
           {EXPLORE}
@@ -1027,11 +1028,11 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
             move up and down over the shader.
           </p>
           <p>
-            The code has two functions. <code>setup</code> runs once at the start, before the first draw, and
+            The code has two functions. <JsCode>setup</JsCode> runs once at the start, before the first draw, and
             is for working things out before the drawing starts. Whatever it returns reaches{" "}
-            <code>draw</code> as <code>data</code>: here it returns the message, and <code>draw</code> writes{" "}
-            <code>data.message</code>. <code>draw</code> runs 60 times a second while the animation plays.{" "}
-            <code>ctx</code> is what it draws with, and <code>clear(ctx)</code> rubs out the last drawing first.
+            <JsCode>draw</JsCode> as <JsCode>data</JsCode>: here it returns the message, and <JsCode>draw</JsCode> writes{" "}
+            <JsCode>data.message</JsCode>. <JsCode>draw</JsCode> runs 60 times a second while the animation plays.{" "}
+            <JsCode>ctx</JsCode> is what it draws with, and <JsCode>clear(ctx)</JsCode> rubs out the last drawing first.
           </p>
         </>,
         task: "Click the ⊕ above the code and choose Add the Canvas2D layer.",
@@ -1044,22 +1045,22 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
           <p>This step changes the line that writes the text:</p>
           <Lines js>{`ctx.fillText("Time: " + time.toFixed(1), 80, 160);`}</Lines>
           <p>
-            <code>fillText(text, x, y)</code> writes text with its left end at <code>x</code> and its bottom
-            at <code>y</code>. The text is now the time: <code>time</code> is the number of seconds since the
-            animation started, like <code>iTime</code> in a shader. <code>time.toFixed(1)</code> turns it
-            into text with one digit after the decimal point, like 2.4, and <code>+</code> joins that onto{" "}
-            <code>"Time: "</code>.
+            <JsCode>fillText(text, x, y)</JsCode> writes text with its left end at <JsCode>x</JsCode> and its bottom
+            at <JsCode>y</JsCode>. The text is now the time: <JsCode>time</JsCode> is the number of seconds since the
+            animation started, like <GlslCode>iTime</GlslCode> in a shader. <JsCode>time.toFixed(1)</JsCode> turns it
+            into text with one digit after the decimal point, like 2.4, and <JsCode>+</JsCode> joins that onto{" "}
+            <JsCode>"Time: "</JsCode>.
           </p>
           <p>
-            <code>x</code> and <code>y</code> are in canvas units. The canvas is always 1080 units tall, with{" "}
-            <code>y</code> = 0 at the top, going down, so 160 is near the top. How wide it is depends on its
+            <JsCode>x</JsCode> and <JsCode>y</JsCode> are in canvas units. The canvas is always 1080 units tall, with{" "}
+            <JsCode>y</JsCode> = 0 at the top, going down, so 160 is near the top. How wide it is depends on its
             shape: 1080 for a square canvas, and 1920 for a 16:9 one. The <code>80px</code> in{" "}
-            <code>ctx.font</code> is in the same units, so the text is the same size in the preview and in a
+            <JsCode>ctx.font</JsCode> is in the same units, so the text is the same size in the preview and in a
             video.
           </p>
           <p>
-            Put this in the editor, build it and play. Then try other numbers: <code>80</code> moves the text
-            left and right, <code>160</code> moves it up and down, and <code>80px</code> sets how big it is.
+            Put this in the editor, build it and play. Then try other numbers: <JsCode>80</JsCode> moves the text
+            left and right, <JsCode>160</JsCode> moves it up and down, and <code>80px</code> sets how big it is.
           </p>
         </>,
         tabs: [{tab: "canvas", code: shaders.CANVAS_LABEL}],
@@ -1078,22 +1079,22 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
   ...
 ]);`}</Lines>
           <p>
-            <code>drawList</code> draws each thing in the list in turn. Its coordinates aren't canvas units:
-            they're the same as the centred <code>uv</code> from the Shapes lesson. (0, 0) is the middle of the
+            <JsCode>drawList</JsCode> draws each thing in the list in turn. Its coordinates aren't canvas units:
+            they're the same as the centred <GlslCode>uv</GlslCode> from the Shapes lesson. (0, 0) is the middle of the
             canvas, y goes up from -1 at the bottom to 1 at the top, and x uses the same scale. So{" "}
-            <code>{`Disk({center: [0, 0], radius: 0.5})`}</code> is a circle reaching halfway to the top, just
-            where a shader would draw one with <code>length(uv) - 0.5</code>.
+            <JsCode>{`Disk({center: [0, 0], radius: 0.5})`}</JsCode> is a circle reaching halfway to the top, just
+            where a shader would draw one with <GlslCode>length(uv) - 0.5</GlslCode>.
           </p>
           <p>
-            <code>Set</code> picks the colour for what comes after it, and <code>Polygon</code> fills the shape
-            through a list of points, here a triangle. <code>{`Rotate({angle: time})`}</code> turns everything
-            after it around the middle by <code>time</code> radians, so one whole turn takes about 6.3
+            <JsCode>Set</JsCode> picks the colour for what comes after it, and <JsCode>Polygon</JsCode> fills the shape
+            through a list of points, here a triangle. <JsCode>{`Rotate({angle: time})`}</JsCode> turns everything
+            after it around the middle by <JsCode>time</JsCode> radians, so one whole turn takes about 6.3
             seconds. The orange disk is in the middle, so it looks the same however it's turned, but the
             small white disk goes round it and the triangle spins.
           </p>
           <p>
-            Build it and play. Then try other numbers: the <code>0.75</code> in <code>[0.75, 0]</code> sets how
-            far out the small disk goes round, and <code>2 * time</code> in place of <code>time</code> spins
+            Build it and play. Then try other numbers: the <JsCode>0.75</JsCode> in <JsCode>[0.75, 0]</JsCode> sets how
+            far out the small disk goes round, and <JsCode>2 * time</JsCode> in place of <JsCode>time</JsCode> spins
             twice as fast.
           </p>
         </>,
@@ -1118,23 +1119,23 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
   Polygon(...),
 ]);`}</Lines>
           <p>
-            A <code>Rotate</code>, <code>Translate</code> or <code>Set</code> only lasts until the end of the
+            A <JsCode>Rotate</JsCode>, <JsCode>Translate</JsCode> or <JsCode>Set</JsCode> only lasts until the end of the
             list it's in. So now only the small disk turns. The triangle comes after the inner list, so it
             stands still, and it's orange, because the white was set inside the brackets. (This step leaves out
             the big orange disk, so you can see the triangle.)
           </p>
           <p>
-            <code>{`Translate({offset: [0.75, 0]})`}</code> moves the starting point 0.75 to the right, so a disk at{" "}
-            <code>[0, 0]</code> is drawn there. Because the <code>Rotate</code> comes first, that starting point
+            <JsCode>{`Translate({offset: [0.75, 0]})`}</JsCode> moves the starting point 0.75 to the right, so a disk at{" "}
+            <JsCode>[0, 0]</JsCode> is drawn there. Because the <JsCode>Rotate</JsCode> comes first, that starting point
             goes round the middle. Inside it is one more list, with a tiny moon. Its{" "}
-            <code>{`Rotate({angle: 4 * time})`}</code> turns around the small disk, because that's where the
+            <JsCode>{`Rotate({angle: 4 * time})`}</JsCode> turns around the small disk, because that's where the
             starting point is by then, so the moon circles the small disk four times as fast while the small
             disk circles the middle.
           </p>
           <p>
-            Build it and play. Then try other numbers: <code>0.2</code> in the moon's{" "}
-            <code>[0.2, 0]</code> sets how far it is from the small disk, and the <code>4</code> how fast it
-            goes round. Move <code>Polygon</code> into the inner list and watch it follow the small disk.
+            Build it and play. Then try other numbers: <JsCode>0.2</JsCode> in the moon's{" "}
+            <JsCode>[0.2, 0]</JsCode> sets how far it is from the small disk, and the <JsCode>4</JsCode> how fast it
+            goes round. Move <JsCode>Polygon</JsCode> into the inner list and watch it follow the small disk.
           </p>
         </>,
         tabs: [{tab: "canvas", code: shaders.CANVAS_ORBIT}],
@@ -1146,7 +1147,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
         title: "Shaders read the drawing",
         body: <>
           <p>
-            Every shader can read the layer's drawing as a texture called <code>iCanvas2D</code>. This step's
+            Every shader can read the layer's drawing as a texture called <GlslCode>iCanvas2D</GlslCode>. This step's
             image shader reads it from a spot that wobbles:
           </p>
           <Lines>{`uv.x += 0.01 * sin(30.0 * uv.y - 4.0 * iTime);
@@ -1154,15 +1155,15 @@ vec4 drawing = texture(iCanvas2D, uv);`}</Lines>
           <p>
             As in the Warp it step of the Textures lesson, each row reads the drawing from a little to the left
             or right, by a wave that moves up the canvas as time goes on. Then{" "}
-            <code>colour * (1.0 - drawing.a) + drawing.rgb</code> puts the drawing over a dark blue background:{" "}
-            <code>drawing.a</code> is how solid the drawing is at that pixel. Bending a drawing pixel by pixel
-            like this is easy in a shader, and hard with <code>ctx</code>.
+            <GlslCode>colour * (1.0 - drawing.a) + drawing.rgb</GlslCode> puts the drawing over a dark blue background:{" "}
+            <GlslCode>drawing.a</GlslCode> is how solid the drawing is at that pixel. Bending a drawing pixel by pixel
+            like this is easy in a shader, and hard with <JsCode>ctx</JsCode>.
           </p>
           <p>
             Put this in the editor, build it and play. The sharp drawing still shows on top, because the layer
             draws over the image. Open the <code>Canvas2D.js</code> tab and turn off Draw over the image, so
-            only the shader's wobbly copy shows. Then try other numbers: <code>0.01</code> sets how far the
-            wobble reaches, and <code>30.0</code> how close together the waves are.
+            only the shader's wobbly copy shows. Then try other numbers: <GlslCode>0.01</GlslCode> sets how far the
+            wobble reaches, and <GlslCode>30.0</GlslCode> how close together the waves are.
           </p>
         </>,
         tabs: [{tab: "canvas", code: shaders.CANVAS_ORBIT}, {tab: "image", code: shaders.CANVAS_WOBBLE}],
@@ -1177,17 +1178,17 @@ vec4 drawing = texture(iCanvas2D, uv);`}</Lines>
         <li><b>Your own.</b> Mix text, shapes and a shader effect into something you like.</li>
       </>, <>
         <li>
-          <b>A clock:</b> a <code>Line</code> from <code>[0, 0]</code> is a hand, and <code>Rotate</code> turns
-          it. One whole turn is 6.28 radians, and <code>Rotate</code> turns anticlockwise, so think about the
+          <b>A clock:</b> a <JsCode>Line</JsCode> from <JsCode>[0, 0]</JsCode> is a hand, and <JsCode>Rotate</JsCode> turns
+          it. One whole turn is 6.28 radians, and <JsCode>Rotate</JsCode> turns anticlockwise, so think about the
           sign of the angle.
         </li>
         <li>
-          <b>A glowing name:</b> read <code>iCanvas2D</code> at a few spots around each pixel and add them up,
-          so the drawing spreads out softly. <code>ctx.textAlign = "center"</code> centres text on its{" "}
-          <code>x</code>.
+          <b>A glowing name:</b> read <GlslCode>iCanvas2D</GlslCode> at a few spots around each pixel and add them up,
+          so the drawing spreads out softly. <JsCode>ctx.textAlign = "center"</JsCode> centres text on its{" "}
+          <JsCode>x</JsCode>.
         </li>
         <li>
-          <b>A starfield:</b> a <code>for</code> loop can draw many shapes. <code>seededRandom(7)</code> gives a
+          <b>A starfield:</b> a <JsCode>for</JsCode> loop can draw many shapes. <JsCode>seededRandom(7)</JsCode> gives a
           function whose numbers come out the same every step, so each star stays in its place.
         </li>
       </>),
@@ -1196,10 +1197,10 @@ vec4 drawing = texture(iCanvas2D, uv);`}</Lines>
         title: "Explore",
         body: <>
           <p>
-            Hypocycloids draws circles rolling inside circles with <code>drawList</code>. Bean machine drops balls
+            Hypocycloids draws circles rolling inside circles with <JsCode>drawList</JsCode>. Bean machine drops balls
             through pegs with planck.js, a physics library: a line at the top of the Canvas2D code,{" "}
-            <code>import planck from "planck";</code>, loads it. Its image shader reads the drawing as{" "}
-            <code>iCanvas2D</code>.
+            <JsCode>import planck from "planck";</JsCode>, loads it. Its image shader reads the drawing as{" "}
+            <GlslCode>iCanvas2D</GlslCode>.
           </p>
           <p>
             <DocsLink to={DOC_SECTIONS.canvas2d}>The Canvas2D layer</DocsLink> in the docs has everything the layer

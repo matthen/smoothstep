@@ -2,6 +2,7 @@ import { ActionIcon, Tooltip } from '@mantine/core';
 import { lazy, Suspense, useState } from 'react';
 import { TbPhotoPlus, TbPlus } from 'react-icons/tb';
 
+import { GlslCode } from '../editor/InlineCode';
 import { textureURL } from '../lib/config';
 import { EMPTY_TEXTURE, type TextureSlot } from '../lib/document';
 import { usePhone } from '../app/usePhone';
@@ -51,8 +52,8 @@ export default function Textures({textures, count, onChange, onAdd, onMessage}: 
         </Tooltip>}
       {textures.every(texture => texture.url === EMPTY_TEXTURE) &&
         <p className="texturesHint">
-          {phone ? "Tap" : "Click"} a slot to choose an image. In your code, <code>texture(iTexture0, uv)</code> reads its colour,
-          with <code>uv</code> from 0 to 1.
+          {phone ? "Tap" : "Click"} a slot to choose an image. In your code, <GlslCode>texture(iTexture0, uv)</GlslCode> reads its colour,
+          with <GlslCode>uv</GlslCode> from 0 to 1.
         </p>}
       {current && slot !== null &&
         <Suspense fallback={null}>

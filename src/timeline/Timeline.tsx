@@ -4,6 +4,7 @@ import {ActionIcon, NativeSelect, NumberInput, Tooltip, VisuallyHidden} from "@m
 import {useMediaQuery} from "@mantine/hooks";
 import {TbArrowAutofitWidth, TbPlus, TbTrash, TbZoomIn, TbZoomOut} from "react-icons/tb";
 import {usePhone} from "../app/usePhone";
+import {GlslCode} from "../editor/InlineCode";
 import {variableValue} from "../lib/document";
 import type {Transition, TransitionType, Variable} from "../lib/document";
 import {rowPaths, valueRange} from "./curves";
@@ -620,8 +621,8 @@ export default function Timeline(props: TimelineProps) {
         {/* Not on touch screens, where it would shift the rows between a transition's two taps. */}
         {!heading && !touch && variables.every(variable => variable.transitions.length === 0) &&
           <p className="hint">
-            Then use <code>iFloat0</code> to <code>iFloat15</code> in your code, like any number.
-            {" "}A line like <code>#define size iFloat0</code> names the <code>iFloat0</code> row <code>size</code>.
+            Then use <GlslCode>iFloat0</GlslCode> to <GlslCode>iFloat15</GlslCode> in your code, like any number.
+            {" "}A line like <GlslCode>#define size iFloat0</GlslCode> names the <GlslCode>iFloat0</GlslCode> row <GlslCode>size</GlslCode>.
           </p>}
         {selected &&
           <form className="transitionForm" onSubmit={e => e.preventDefault()}>

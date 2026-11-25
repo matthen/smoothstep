@@ -170,6 +170,15 @@ describe("the docs in the app", () => {
     expect(block).toContain('<span class="tok-keyword">function</span>');
   });
 
+  it("colour inline shader code, and leave file names and keys as they are", () => {
+    const files = [{path: "a.md", text: "Use `#define size iFloat0` in `Image.glsl`, then press `Mod + S`."}];
+    const [page] = renderDocs(files, {target: "site", repoUrl: "https://example.com/repo"});
+    expect(page!.html).toContain('<code class="ss-code"><span class="tok-meta">#define</span> ' +
+      '<span class="tok-macro">size</span> <span class="tok-builtin">iFloat0</span></code>');
+    expect(page!.html).toContain('<code>Image.glsl</code>');
+    expect(page!.html).toContain('<code>Mod + S</code>');
+  });
+
   it("have a Reference page with every input, helper, font and library the editor knows", () => {
     const text = pages.find(p => p.slug === "reference")!.sections.map(s => s.text).join(" ");
     for (const input of SHADER_INPUTS) {
