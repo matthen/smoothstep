@@ -10,13 +10,14 @@ Anyone who opens it gets the animation in the editor, and can play it, change it
 copy. The built-in examples make links of 600 to 3,200 characters, which work in chat apps and
 email. Shorter links also fit in a QR code, which Share can show for phones to scan.
 
-A link can't carry the images you added yourself, only the built-in textures. When you share an
-animation that uses your own images, those texture slots are empty for whoever opens the link. To
-share the images too, share an animation file instead, as below.
+A link can't carry the images and videos you added yourself, only the built-in textures. When you
+share an animation that uses your own images or videos, those texture slots are empty for whoever
+opens the link. To share them too, share an animation file instead, as below.
 
 ## An animation file
 
-File → Export downloads a `.smoothstep.json` file with your own images inside it.
+File → Export downloads a `.smoothstep.json` file with your own images and videos inside it. A
+video makes the file about a third bigger than the video itself.
 smoothstep.io can open one of these from any website that lets other sites read its files. Put the file
 online, then paste its address into "Link to a file online" in Share, and Share gives you a link that
 opens it. The link reads the file each time it's opened, so if you change the file at that address, the
@@ -47,5 +48,5 @@ Share also gives you code for an `<iframe>` that plays the animation on any web 
 It takes the same `#share/`, `#gist/`, `#url/` and `#example/` addresses as the app.
 
 Download player file saves a single HTML page that plays the animation, with its script and the
-images it uses inside it. It works offline, opened straight from your downloads, and you can put it
+images and videos it uses inside it. It works offline, opened straight from your downloads, and you can put it
 on any website without smoothstep.

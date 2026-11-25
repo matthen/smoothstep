@@ -4,7 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 import * as net from 'node:net';
 import { PNG } from 'pngjs';
 
-import { addTab, MAGENTA, near, offline, OPEN_EDITOR, PIXEL_WAIT, setCode, skipTour } from './helpers';
+import { addTab, expectCenter, MAGENTA, near, offline, OPEN_EDITOR, PIXEL_WAIT, setCode, skipTour } from './helpers';
 
 const BLUE: [number, number, number] = [0, 0, 255];
 
@@ -99,6 +99,22 @@ test("⊕ has a menu while it can add more than one thing, adds the last one dir
   await expect(plus).toHaveAccessibleName("Add a buffer, the Canvas2D layer or shared GLSL code");
   await plus.click();
   await expect(page.getByRole("menuitem")).toHaveText([/^Add a buffer/, /^Add the Canvas2D layer/, /^Add shared GLSL code/]);
+  expect(errors).toEqual([]);
+});
+
+test("the Canvas2D layer gets the frame's size in pixels as resolution, in setup and draw", async ({page, context}) => {
+  const errors = await offline(context);
+  await start(page);
+  await setCode(page, [
+    "let fromSetup;",
+    "function setup({resolution}) {\n  fromSetup = resolution.join(\"x\");\n}",
+    "function draw(ctx, {width, height, resolution}) {",
+    "  const pixels = ctx.canvas.width + \"x\" + ctx.canvas.height;",
+    "  clear(ctx, resolution.join(\"x\") === pixels && fromSetup === pixels && pixels !== \"0x0\" ? \"rgb(220, 20, 200)\" : \"black\");",
+    "}",
+  ].join("\n"));
+  await page.keyboard.press("Shift+Enter");
+  await expectCenter(page, MAGENTA);
   expect(errors).toEqual([]);
 });
 

@@ -46,7 +46,7 @@ ${inputs.join('\n')}
 
 ### Textures
 
-\`texture(iTexture0, uv)\` reads a texture's colour at \`uv\`, which runs from 0 to 1 across the image with
+\`texture(iTexture0, uv)\` reads a texture's colour at \`uv\`, which runs from 0 to 1 across the texture with
 (0, 0) at the bottom left. \`fragCoord / iResolution\` fills the frame with it. Textures repeat outside 0 to 1.
 
 ### iPrevFrame and iFrame
@@ -82,11 +82,11 @@ on, the drawing also goes over the image.
 
 \`\`\`js
 // Runs after each build and restart. Optional; what it returns is data.
-function setup({width, height, duration, floats, textures}) {
+function setup({width, height, resolution, duration, floats, textures}) {
   return {};
 }
 
-function draw(ctx, {time, frame, duration, width, height, floats, textures, data}) {
+function draw(ctx, {time, frame, duration, width, height, resolution, floats, textures, data}) {
   clear(ctx);
   ctx.fillText("Hello", 60, 110);
 }

@@ -5,6 +5,8 @@
 import { MAX_BUFFERS, NUM_TEXTURES, NUM_VARIABLES } from '../lib/document';
 import type { LineError } from '../lib/types';
 import { uses } from '../lib/glslCode';
+import { isVideoURL } from '../lib/media';
+import { VideoTexture } from './videoTexture';
 import {
   PROBE_DECLARATIONS, PROBE_MAIN, planProbe, probeComponents, sharedCallers, typeFromError, UNREACHED, withProbe,
   type ProbeType, type Site,
@@ -310,7 +312,12 @@ export class Renderer {
   private textureUnits: WebGLTexture[] = [];
   private images = new Map<string, HTMLImageElement>();
   private textureURLs: string[] = [];
+  // Each slot's video, or null for an image; slots with the same video share it.
+  private slotVideos: (VideoTexture | null)[] = [];
+  private videos = new Map<string, VideoTexture>();
   onTextureLoaded: () => void = () => {};
+  // A paused video has a new frame to show, so draw again.
+  onVideoFrame: () => void = () => {};
 
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext("webgl2", {antialias: false, preserveDrawingBuffer: false});
@@ -809,13 +816,18 @@ export class Renderer {
     return texture;
   }
 
-  // Sets the image URL of each texture slot; images load in the background, black until then.
+  // Sets the image or video URL of each texture slot; they load in the background, black until then.
   setTextures(urls: readonly string[]) {
     urls.forEach((url, i) => {
       if (this.textureURLs[i] === url) {
         return;
       }
       this.textureURLs[i] = url;
+      this.slotVideos[i] = null;
+      if (isVideoURL(url)) {
+        this.setVideo(i, url);
+        return;
+      }
       const cached = this.images.get(url);
       if (cached?.complete && cached.naturalWidth) {
         this.upload(i, cached);
@@ -835,11 +847,87 @@ export class Renderer {
         }
       }, {once: true});
     });
+    // Videos no slot shows any more stop playing.
+    for (const [url, video] of this.videos) {
+      if (!this.slotVideos.includes(video)) {
+        video.dispose();
+        this.videos.delete(url);
+      }
+    }
   }
 
-  // Resolves once every texture slot's image has loaded or failed.
+  private setVideo(slot: number, url: string) {
+    let video = this.videos.get(url);
+    if (!video) {
+      const created = new VideoTexture(url, () => this.onVideoFrame());
+      void created.whenLoaded().then(() => {
+        if (this.slotVideos.includes(created)) {
+          this.onTextureLoaded();
+        }
+      });
+      this.videos.set(url, created);
+      video = created;
+    }
+    this.slotVideos[slot] = video;
+    const gl = this.gl;
+    const old = this.textureUnits[slot];
+    if (old) {
+      gl.deleteTexture(old);
+    }
+    const texture = this.blackTexture();
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    this.textureUnits[slot] = texture;
+  }
+
+  get hasVideos(): boolean {
+    return this.slotVideos.some(video => video !== null);
+  }
+
+  // Keeps the videos with the preview's time: see VideoTexture.follow.
+  followVideos(time: number, playing: boolean) {
+    this.slotVideos.forEach(video => video?.follow(time, playing));
+  }
+
+  // Moves every video to exactly its frame at `time`, for an export.
+  async seekVideos(time: number): Promise<void> {
+    await Promise.all([...new Set(this.slotVideos)].map(video => video ? video.seek(time) : Promise.resolve()));
+  }
+
+  // Whether every video has loaded, or failed to, and none is moving to another time.
+  get videosSettled(): boolean {
+    return this.slotVideos.every(video => !video || video.settled);
+  }
+
+  // Whether every paused video shows exactly its frame at `time`.
+  videosAt(time: number): boolean {
+    return this.slotVideos.every(video => !video || video.isAt(time));
+  }
+
+  // The frame each video slot shows now, for the Canvas2D layer.
+  videoFrames(): {slot: number; bitmap: ImageBitmap}[] {
+    return this.slotVideos.flatMap((video, slot) => video ? [{slot, bitmap: video.frame()}] : []);
+  }
+
+  // Gives each video slot its video's current frame.
+  private uploadVideos() {
+    const gl = this.gl;
+    this.slotVideos.forEach((video, slot) => {
+      if (video?.ready) {
+        gl.bindTexture(gl.TEXTURE_2D, this.textureUnits[slot]!);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video.video);
+      }
+    });
+  }
+
+  // Resolves once every texture slot's image or video has loaded or failed.
   async texturesReady(): Promise<void> {
-    await Promise.all(this.textureURLs.map(url => {
+    await Promise.all(this.textureURLs.map((url, i) => {
+      const video = this.slotVideos[i];
+      if (video) {
+        return video.whenLoaded();
+      }
       const image = this.images.get(url);
       if (!image || image.complete) {
         return Promise.resolve();
@@ -928,6 +1016,7 @@ export class Renderer {
     if (!this.program || !this.targets) {
       return;
     }
+    this.uploadVideos();
     const [input, output] = this.targets;
     for (const i of this.used) {
       const [latest, older] = this.bufferTargets.get(i)!;
@@ -993,6 +1082,9 @@ export class Renderer {
   }
 
   dispose() {
+    this.videos.forEach(video => video.dispose());
+    this.videos.clear();
+    this.slotVideos = [];
     this.gl.getExtension("WEBGL_lose_context")?.loseContext();
   }
 }

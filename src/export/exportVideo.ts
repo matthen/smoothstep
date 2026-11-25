@@ -156,8 +156,14 @@ export async function exportVideo(
         time: t, duration: doc.duration, frameIndex, variableValues: variableValues(doc.variables, t),
       }));
       for (const inputs of due.splice(0)) {
+        if (renderer.hasVideos) {
+          await Promise.race([renderer.seekVideos(inputs.time), cancelled]);
+        }
         if (layer) {
-          const drawn = layer.draw({time: inputs.time, frame: inputs.frameIndex, floats: inputs.variableValues});
+          const drawn = layer.draw({
+            time: inputs.time, frame: inputs.frameIndex, floats: inputs.variableValues,
+            videoFrames: layer.needsVideoFrames ? renderer.videoFrames() : undefined,
+          });
           // However long a step takes, cancelling still stops the export.
           renderer.setLayerFrame(await Promise.race([drawn.catch((error: unknown) => {
             throw new Error("The Canvas2D code has an error: " + (error instanceof Error ? error.message : String(error)));

@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { PNG } from 'pngjs';
 
 import {
-  dismissAlert, editorCode, expectCenter, fileMenu, MAGENTA, offline, setCode, solidPNG, TEXTURE_SHADER,
+  dismissAlert, editorCode, expectCenter, fileMenu, MAGENTA, offline, PIXEL_WAIT, setCode, solidPNG, TEXTURE_SHADER,
 } from './helpers';
 
 test.describe.configure({mode: "serial"});
@@ -84,7 +84,7 @@ test("first visit: make and save an animation with an uploaded texture", async (
   await page.getByRole("tab", {name: "Textures"}).click();
   await page.locator("div#textures .texture button").first().click();
   const picker = page.getByRole("dialog", {name: "iTexture0"});
-  await picker.getByRole("button", {name: "Add image"}).click();
+  await picker.getByRole("button", {name: "Add image or video"}).click();
   // Wider than 4096px, so it should be shrunk to 4096 x 3072.
   await picker.locator(".dropzone input[type=file]").setInputFiles(
     {name: "magenta.png", mimeType: "image/png", buffer: solidPNG(5000, 3750, MAGENTA)});
@@ -196,11 +196,11 @@ test("another fresh browser imports the single file, recognises bare JSON, and k
   await fileMenu(page, "New");
   await expect(page).toHaveURL(/#new$/);
   // The URL changes before the reload, so wait for the new page's code.
-  await expect.poll(() => editorCode(page)).toContain("Getting started");
+  await expect.poll(() => editorCode(page), PIXEL_WAIT).toContain("Getting started");
   await setCode(page, "// unsaved again");
   page.once("dialog", dialog => void dialog.accept());
   await fileMenu(page, "New");
-  await expect.poll(() => editorCode(page)).toContain("Getting started");
+  await expect.poll(() => editorCode(page), PIXEL_WAIT).toContain("Getting started");
   expect(errors).toEqual([]);
   await context.close();
 });

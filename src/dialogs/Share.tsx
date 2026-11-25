@@ -127,9 +127,9 @@ export default function Share({show, doc, source, onHide, onMessage, onDownload}
             />
             {shared.missing.length > 0 &&
               <Alert color="yellow">
-                A link can't carry the images you added yourself, so {shared.missing.join(", ")} will be empty
-                for anyone who opens it. To share those images too, put the animation file online and make a
-                link to it, below.
+                A link can't carry the images and videos you added yourself, so {shared.missing.join(", ")} will be
+                empty for anyone who opens it. To share those too, put the animation file online and make a link to
+                it, below.
               </Alert>}
             <Group>
               <Button
@@ -146,7 +146,7 @@ export default function Share({show, doc, source, onHide, onMessage, onDownload}
             <Title order={4}>Link to a file online</Title>
             <Text size="sm">
               A link can also open the animation file from somewhere online, such as a GitHub gist. The file keeps
-              the images you added, and a link to a gist opens its latest version, so you can edit the gist
+              the images and videos you added, and a link to a gist opens its latest version, so you can edit the gist
               without changing the link. Export the animation file, put it online, and paste its address here
               to make the link.
               {" "}<a href={docsSiteHref(DOC_SECTIONS.sharingFile)} target="_blank" rel="noreferrer">Sharing</a> in the docs has
@@ -179,7 +179,7 @@ export default function Share({show, doc, source, onHide, onMessage, onDownload}
               rightSection={<Copy value={shared.embed} />} onFocus={event => event.currentTarget.select()}
             />
             <Text size="sm">
-              Or download a player file. It's one web page that plays the animation, with its images inside, and
+              Or download a player file. It's one web page that plays the animation, with its images and videos inside, and
               it works offline or on any website.
             </Text>
             <Group>

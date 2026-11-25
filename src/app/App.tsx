@@ -1294,7 +1294,8 @@ export default function App() {
             ref={canvasRef}
             shaders={shaders} buildId={buildId} textureURLs={textureURLs}
             layerTextures={layerTextures} layerOverlay={layer?.overlay ?? true} onLayerStatus={onLayerStatus}
-            time={time} duration={doc.duration} stepClock={stepClock} variableValues={values}
+            time={time} playing={isPlaying && !scrubbing} duration={doc.duration} stepClock={stepClock}
+            variableValues={values}
             aspectRatio={doc.aspectRatio}
             onBuilt={onBuilt}
             onRestart={restartFrames} onLayout={setLayout}
