@@ -5,12 +5,16 @@ import { StreamLanguage, StringStream, type StreamParser } from '@codemirror/lan
 import { MAX_BUFFERS } from '../lib/document.ts';
 
 const KEYWORDS = (
-  'sampler1D sampler2D sampler3D samplerCube sampler1DShadow sampler2DShadow ' +
   'const attribute uniform varying break continue discard return ' +
-  'for while do if else struct in out inout'
+  'for while do if else struct in out inout highp mediump lowp precision'
 ).split(' ');
 
-const TYPES = 'float int bool void vec2 vec3 vec4 ivec2 ivec3 ivec4 bvec2 bvec3 bvec4 mat2 mat3 mat4'.split(' ');
+const TYPES = (
+  'float int uint bool void vec2 vec3 vec4 ivec2 ivec3 ivec4 uvec2 uvec3 uvec4 bvec2 bvec3 bvec4 ' +
+  'mat2 mat3 mat4 mat2x2 mat2x3 mat2x4 mat3x2 mat3x3 mat3x4 mat4x2 mat4x3 mat4x4 ' +
+  'sampler2D sampler3D samplerCube sampler2DShadow samplerCubeShadow sampler2DArray sampler2DArrayShadow ' +
+  'isampler2D isampler3D isamplerCube isampler2DArray usampler2D usampler3D usamplerCube usampler2DArray'
+).split(' ');
 
 const UNIFORMS = [
   'iFrame', 'iTime', 'iPrevFrame', 'iResolution', 'iDuration', 'iCanvas2D',
@@ -181,6 +185,7 @@ function tokenDirective(stream: StringStream, state: GlslState): GlslToken {
 // The macro's name after #define, #ifdef and the like. A function-like macro's parameters count for its lines.
 function tokenMacroName(stream: StringStream, state: GlslState, name: string): GlslToken {
   state.macroNameNext = false;
+  if (state.directive === 'undef') state.macros = state.macros.filter((m) => m !== name);
   if (state.directive !== 'define') return 'macroName';
   if (!state.macros.includes(name)) state.macros = [...state.macros, name];
   const params = stream.match(/^\(([^)]*)\)/, false) as RegExpMatchArray | null;
@@ -192,6 +197,8 @@ function tokenMacroName(stream: StringStream, state: GlslState, name: string): G
 function tokenIdentifier(stream: StringStream, state: GlslState, name: string): GlslToken {
   if (state.macroNameNext) return tokenMacroName(stream, state, name);
   if (state.directive !== null && name === 'defined') return 'meta';
+  // A field or swizzle.
+  if (state.prevToken === '.') return 'variableName';
   if (state.structNext) {
     if (!state.structs.includes(name)) state.structs = [...state.structs, name];
     return 'typeName';
@@ -287,6 +294,12 @@ function trackHeader(state: GlslState, style: GlslToken | null) {
   }
 }
 
+function endDirective(state: GlslState) {
+  state.directive = null;
+  state.macroNameNext = false;
+  state.macroParams = [];
+}
+
 // Resets curPunc here rather than in token(), where TS would then narrow it to null across the tokenizer call.
 function readToken(stream: StringStream, state: GlslState): GlslToken | null {
   curPunc = null;
@@ -315,6 +328,12 @@ const glslParser: StreamParser<GlslState> = {
     macroNameNext: false,
     continued: false,
   }),
+  // A blank line ends a preprocessor line, even after a `\`.
+  blankLine(state) {
+    state.continued = false;
+    if (state.tokenize === tokenPreprocessor) state.tokenize = null;
+    endDirective(state);
+  },
   copyState: (state) => {
     const copyContext = (c: Context | null): Context | null => c && { ...c, prev: copyContext(c.prev) };
     return { ...state, context: copyContext(state.context)! };
@@ -326,11 +345,7 @@ const glslParser: StreamParser<GlslState> = {
       state.indented = stream.indentation();
       state.startOfLine = true;
       if (state.continued) state.continued = false;
-      else if (state.directive !== null) {
-        state.directive = null;
-        state.macroNameNext = false;
-        state.macroParams = [];
-      }
+      else endDirective(state);
     }
     if (stream.eatSpace()) return null;
     const style = readToken(stream, state);

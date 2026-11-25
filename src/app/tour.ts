@@ -173,10 +173,12 @@ function phoneSteps({showPane}: TourOptions): DriveStep[] {
   ];
 }
 
-// The steps' <code> is all GLSL, coloured as in the editor.
+// The steps' <code> is all GLSL, coloured as in the editor. Its contents are HTML, so they're decoded first.
+const decodeHtml = (html: string) => new DOMParser().parseFromString(html, "text/html").documentElement.textContent;
 const highlightCode = (steps: DriveStep[]): DriveStep[] => steps.map(step => step.popover?.description ? {
   ...step,
-  popover: {...step.popover, description: step.popover.description.replace(/<code>([^<]*)<\/code>/g, (_, c: string) => glslCodeHtml(c))},
+  popover: {...step.popover, description: step.popover.description.replace(/<code>([^<]*)<\/code>/g,
+    (_, c: string) => glslCodeHtml(decodeHtml(c)))},
 } : step);
 
 export function startTour(options: TourOptions) {

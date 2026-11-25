@@ -50,6 +50,44 @@ test("Ctrl-click goes to a definition, and F12 to the one at the cursor", async 
   expect(errors).toEqual([]);
 });
 
+test("Ctrl-click on the right half of a name's last letter, and F12 at a name's end, go to its definition", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#new");
+  await setCode(page, "float wave(float t) {\n  return sin(t);\n}\n" +
+    "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  fragColor = vec4(wave(0.5));\n}");
+
+  // The click lands at the end of `wave`, where `(` starts.
+  const call = word(page, "wave", 1);
+  const box = (await call.boundingBox())!;
+  await call.click({modifiers: ["ControlOrMeta"], position: {x: box.width - 1, y: box.height / 2}});
+  await page.keyboard.type("ripple");
+  expect((await editorCode(page)).split("\n")[0]).toBe("float ripple(float t) {");
+
+  // The cursor at `sin(t|)`.
+  await word(page, "t", 1).click({position: {x: 1, y: 4}});
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("F12");
+  await page.keyboard.type("time");
+  expect((await editorCode(page)).split("\n")[0]).toBe("float ripple(float time) {");
+  expect(errors).toEqual([]);
+});
+
+test("Clicking a call to your own function shows its comment and signature, and goes to it", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#new");
+  await setCode(page, `// Ripples over time.\n${CODE}`);
+
+  await word(page, "wave", 1).click();
+  const popup = page.locator(".ss-popup");
+  await expect(popup).toContainText("Ripples over time.");
+  await expect(popup).toContainText("float wave(float t)");
+  await popup.getByRole("button", {name: "Go to definition"}).click();
+  await expect(popup).toHaveCount(0);
+  await page.keyboard.type("ripple");
+  expect((await editorCode(page)).split("\n")[1]).toBe("float ripple(float t) {");
+  expect(errors).toEqual([]);
+});
+
 test("Ctrl-click on a name from the shared code opens that tab at its definition", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./#new");

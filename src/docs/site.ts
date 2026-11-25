@@ -24,7 +24,7 @@ export const SITE_CSS = `:root {
     --code-bg: #f6f6f9; --inline-code: #0b6e99; --inline-code-bg: #f1f1f6;
     --tok-keyword: #2c4bbd; --tok-type: #b0337a; --tok-builtin: #1a7a35; --tok-number: #7a4cc7;
     --tok-comment: #6f7591; --tok-string: #8a6a00; --tok-operator: #b0337a; --tok-property: #a85a00;
-    --tok-function: #0a7aa6;
+    --tok-function: #08739d;
   }
 }
 * { box-sizing: border-box; }

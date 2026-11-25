@@ -127,12 +127,16 @@ export function goToDefinitionExtension(): Extension {
       mousedown: (e, view) => {
         if (e.button !== 0 || !isDefinitionClick(e)) return false;
         const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
-        // Otherwise the click adds a cursor, as usual.
+        // Otherwise the click places the cursor, as usual.
         if (pos === null || !goToDefinition(view, pos)) return false;
         e.preventDefault();
         return true;
       },
     }),
-    keymap.of([{ key: 'F12', run: (view) => goToDefinition(view, view.state.selection.main.head) }]),
+    // Handled even with nowhere to go, so the browser doesn't open its developer tools.
+    keymap.of([{ key: 'F12', preventDefault: true, run: (view) => {
+      goToDefinition(view, view.state.selection.main.head);
+      return true;
+    } }]),
   ];
 }

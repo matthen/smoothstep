@@ -143,7 +143,8 @@ export function analyse(code: string): Analysis {
 // The name at `pos`, or just before it as when the cursor is at a word's end, if it's one of the user's.
 export function nameAt(analysis: Analysis, pos: number): Tok | null {
   const { tokens } = analysis;
-  const i = tokens.findIndex((t) => t.from <= pos && pos <= t.to && (pos < t.to || !tokens.some((u) => u.from === pos)));
+  const at = tokens.findIndex((t) => t.from <= pos && pos < t.to);
+  const i = isName(tokens[at]) ? at : tokens.findIndex((t) => t.to === pos);
   const t = tokens[i];
   // A field or swizzle after a dot isn't declared on its own.
   return t && isName(t) && tokens[i - 1]?.text !== '.' ? t : null;
@@ -151,16 +152,19 @@ export function nameAt(analysis: Analysis, pos: number): Tok | null {
 
 const size = (r: Range) => r.to - r.from;
 
-// The declaration `pos` is in or refers to: the nearest enclosing one in scope, else the first in the code.
+// The declaration `pos` is in or refers to: the nearest enclosing one in scope, preferring a function's
+// body and then one before the use, else the first in the code. A prototype leads to its function's body.
 export function findDefinition(analysis: Analysis, pos: number): Declaration | null {
   const name = nameAt(analysis, pos);
   if (!name) return null;
   const same = analysis.declarations.filter((d) => d.name === name.text);
   const own = same.find((d) => d.from === name.from);
-  if (own) return own;
+  if (own) return own.kind === 'function' && !own.body ? same.find((d) => d.kind === 'function' && d.body) ?? own : own;
   const global = (d: Declaration) => size(d.scope) === analysis.length;
   const visible = same.filter((d) => d.scope.from <= pos && pos <= d.scope.to && (global(d) || d.from <= pos));
-  visible.sort((a, b) => size(a.scope) - size(b.scope) || Number(b.body) - Number(a.body) || b.from - a.from);
+  const before = (d: Declaration) => Number(d.from <= pos);
+  visible.sort((a, b) => size(a.scope) - size(b.scope) || Number(b.body) - Number(a.body) ||
+    before(b) - before(a) || Math.abs(a.from - pos) - Math.abs(b.from - pos));
   return visible[0] ?? topLevel(analysis, name.text) ?? same[0] ?? null;
 }
 
@@ -205,8 +209,12 @@ export function describe(analysis: Analysis, d: Declaration): Description | null
     const from = code.lastIndexOf('\n', to - 1) + 1;
     const line = code.slice(from, to).trim();
     if (!line.startsWith('//')) break;
-    comment.unshift(line.replace(/^\/\/\s?/, ''));
+    const text = line.replace(/^\/\/\s*/, '').trim();
+    if (!isCommentedCode(text) && /\w/.test(text)) comment.unshift(text);
     to = from - 1;
   }
   return { signature, comment: comment.join(' ') };
 }
+
+// Commented-out code, rather than words about the definition.
+const isCommentedCode = (text: string) => /[;{}]$/.test(text) || /\(.*\).*\{/.test(text);

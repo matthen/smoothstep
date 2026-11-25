@@ -105,6 +105,42 @@ describe('tokenizeGlsl', () => {
     ]);
   });
 
+  it('treats a name after a dot as a field or swizzle, not a parameter or macro', () => {
+    expect(typed('float f(float x) {\n  return v.x + x;\n}')[1]).toEqual([
+      ['return', 'keyword'], ['v', 'variableName'], ['x', 'variableName'], ['+', 'operator'], ['x', 'variableName.local'],
+    ]);
+    expect(typed('#define xy 1\nvec2 a = p.xy * xy;')[1]).toEqual([
+      ['vec2', 'typeName'], ['a', 'variableName'], ['=', 'operator'], ['p', 'variableName'], ['xy', 'variableName'],
+      ['*', 'operator'], ['xy', 'macroName'],
+    ]);
+  });
+
+  it('knows GLSL ES 3 types and qualifiers, as declarations and constructors', () => {
+    expect(typed('uint hash(in highp uint x) { return uint(x); }')[0]).toEqual([
+      ['uint', 'typeName'], ['hash', 'variableName.function'], ['in', 'keyword'], ['highp', 'keyword'],
+      ['uint', 'typeName'], ['x', 'variableName.local'], ['return', 'keyword'], ['uint', 'typeName'],
+      ['x', 'variableName.local'],
+    ]);
+    const types = 'mat2x2 mat4x3 uvec3 sampler2D samplerCube sampler2DArray isampler2D usampler3D sampler2DShadow';
+    expect(typed(types)[0]!.map(([, type]) => type)).toEqual(Array(9).fill('typeName'));
+    expect(typed('vec4 blur(sampler2D tex) { return mat2x2(1.)[0].xyxy; }')[0]!.slice(0, 5)).toEqual([
+      ['vec4', 'typeName'], ['blur', 'variableName.function'], ['sampler2D', 'typeName'], ['tex', 'variableName.local'],
+      ['return', 'keyword'],
+    ]);
+    expect(typed('return mat2x2(1.);')[0]![1]).toEqual(['mat2x2', 'typeName']);
+  });
+
+  it('ends a #define at a blank line after a \\, and forgets a macro at #undef', () => {
+    expect(typed('#define F(a) \\\n\na + N;\n#define N 1\n#undef N\nfloat y = N;')).toEqual([
+      [['#define', 'meta'], ['F', 'variableName.function'], ['a', 'variableName.local']],
+      [],
+      [['a', 'variableName'], ['+', 'operator'], ['N', 'variableName']],
+      [['#define', 'meta'], ['N', 'macroName'], ['1', 'number']],
+      [['#undef', 'meta'], ['N', 'macroName']],
+      [['float', 'typeName'], ['y', 'variableName'], ['=', 'operator'], ['N', 'variableName']],
+    ]);
+  });
+
   it('carries block comments across lines', () => {
     expect(typed('float a; /* one\ntwo */ float b; // three')).toEqual([
       [['float', 'typeName'], ['a', 'variableName'], ['/* one', 'comment']],
