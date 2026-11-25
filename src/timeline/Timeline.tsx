@@ -11,8 +11,8 @@ import {
   roundDSecs, roundDuration, rowAt, rulerTicks, timeAreaWidth, timeToX, xToTime,
 } from "./geometry";
 import {
-  extendCreating, liftGesture, moveGesture, newTransitionAt, NO_TOUCHES, shownCreating, startCreating, touchDown,
-  touchUp,
+  awaitingEnd, canHold, extendCreating, HOLD_MS, holdCreating, liftGesture, moveGesture, newTransitionAt, NO_TOUCHES,
+  shownCreating, startCreating, touchDown, touchUp,
 } from "./gestures";
 import type {Gesture, Rows, Span} from "./gestures";
 import {keyAction, shortcutsAllowed} from "./keys";
@@ -164,6 +164,15 @@ export default function Timeline(props: TimelineProps) {
     gestureRef.current = next;
     setGestureState(next);
   }
+
+  // A finger held still on a row drags out the transition from there.
+  useEffect(() => {
+    if (!canHold(gesture)) {
+      return;
+    }
+    const timer = setTimeout(() => setGesture(holdCreating(gestureRef.current)), HOLD_MS);
+    return () => clearTimeout(timer);
+  }, [gesture]);
 
   function select(next: Selection | null) {
     setSelection(next);
@@ -472,6 +481,12 @@ export default function Timeline(props: TimelineProps) {
     };
   });
   const onTouchMove = useEffectEvent((event: TouchEvent) => {
+    // A held finger drags out its transition, so the timeline doesn't scroll under it.
+    const current = gestureRef.current;
+    if (current.kind === "creating" && current.held && !current.released) {
+      event.preventDefault();
+      return;
+    }
     const pinch = pinchRef.current;
     if (!pinch || event.touches.length !== 2) {
       return;
@@ -558,8 +573,12 @@ export default function Timeline(props: TimelineProps) {
   }, []);
 
   const creating = shownCreating(gesture);
-  const pending = creating ? {row: creating.row, startDSecs: creating.startDSecs, endDSecs: creating.endDSecs as number | null} :
+  // A finger's transition with only its start shows open-ended, with what to do next.
+  const startOnly = awaitingEnd(gesture);
+  const pending = creating ?
+    {row: creating.row, startDSecs: creating.startDSecs, endDSecs: startOnly ? null : creating.endDSecs as number | null} :
     hover ? {...hover, endDSecs: null} : null;
+  const prompt = creating && startOnly ? (creating.released ? "Tap where it ends" : "Drag to where it ends") : null;
   const heading = selected && selection ? {row: selection.row, ...selected} : pending;
   const resizing = gesture.kind === "scrubbing" || gesture.kind === "duration" ||
     (gesture.kind === "dragging" && gesture.mode !== "move");
@@ -736,8 +755,19 @@ export default function Timeline(props: TimelineProps) {
                       />
                     );
                   })}
-                  {pending?.row === row &&
-                    <div className="transition hover" style={blockStyle(pending.startDSecs, pending.endDSecs ?? pending.startDSecs + 1)} />}
+                  {pending?.row === row && (prompt ?
+                    <>
+                      <div className="transitionStart" style={{left: pending.startDSecs * pxPerDSec}} />
+                      <div
+                        className="transitionPrompt" role="status"
+                        // Beside the start, or before it when there's no room after.
+                        style={pending.startDSecs * pxPerDSec > width - 210 ?
+                          {right: width - pending.startDSecs * pxPerDSec + 8} : {left: pending.startDSecs * pxPerDSec + 56}}
+                      >
+                        {prompt}
+                      </div>
+                    </> :
+                    <div className="transition hover" style={blockStyle(pending.startDSecs, pending.endDSecs ?? pending.startDSecs + 1)} />)}
                   {paths.curves.length > 0 &&
                     <svg className="curves" width={width} height={ROW_HEIGHT} aria-hidden>
                       <path className="held" d={paths.held} />

@@ -83,6 +83,41 @@ test("in browsers that shrink the page for the keyboard, the code keeps its room
   expect(errors).toEqual([]);
 });
 
+test("a tap shows a transition's open start and asks for its end, and hold and drag adds one", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#new");
+  const row = (await page.locator(".timeArea .variableRow").first().boundingBox())!;
+  const y = row.y + row.height / 2;
+  const at = (fraction: number) => row.x + row.width * fraction;
+
+  await page.touchscreen.tap(at(0.2), y);
+  await expect(page.locator(".transitionStart")).toBeVisible();
+  await expect(page.getByRole("status").filter({hasText: "Tap where it ends"})).toBeVisible();
+  await page.touchscreen.tap(at(0.4), y);
+  await expect(page.locator(".timeArea .transition")).toHaveCount(1);
+  await expect(page.locator(".transitionStart")).toHaveCount(0);
+
+  // The new transition is selected, and a tap in a row deselects it. Then a finger held still shows the
+  // start and drags out the end.
+  await page.touchscreen.tap(at(0.9), y);
+  await expect(page.locator(".timeArea .transition.selected")).toHaveCount(0);
+  const cdp = await context.newCDPSession(page);
+  const touch = (type: "touchStart" | "touchMove" | "touchEnd", x: number) => cdp.send("Input.dispatchTouchEvent", {
+    type, touchPoints: type === "touchEnd" ? [] : [{x, y}],
+  });
+  await touch("touchStart", at(0.6));
+  await expect(page.getByRole("status").filter({hasText: "Drag to where it ends"})).toBeVisible();
+  for (const fraction of [0.65, 0.7, 0.75, 0.8]) {
+    await touch("touchMove", at(fraction));
+  }
+  await expect(page.locator(".timeArea .transition.hover")).toBeVisible();
+  const dragged = await box(page, ".timeArea .transition.hover");
+  expect(dragged.width).toBeGreaterThan(row.width * 0.15);
+  await touch("touchEnd", at(0.8));
+  await expect(page.locator(".timeArea .transition")).toHaveCount(2);
+  expect(errors).toEqual([]);
+});
+
 test("the layout stays put for the title, and for a pinch zoom", async ({page, context}) => {
   const errors = await offline(context);
   await fakeViewport(page);
