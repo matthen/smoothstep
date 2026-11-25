@@ -20,7 +20,7 @@ import Share from '../dialogs/Share';
 import Splash from '../dialogs/Splash';
 import Textures from '../dialogs/Textures';
 import CodeEditor, { insertCode } from '../editor/CodeEditor';
-import type { EditorView } from '@codemirror/view';
+import { EditorView } from '@codemirror/view';
 import { DOC_SECTIONS, onOpenDocs, type DocTarget } from '../lib/docLinks';
 import ShaderTabs, { shaderCaption, shaderName, starterFunction } from '../editor/ShaderTabs';
 import * as archive from '../lib/archive';
@@ -194,7 +194,17 @@ export default function App() {
   }, [fullView]);
   const phone = usePhone();
   const touch = useTouch();
-  useKeyboardInset();
+  const keyboardOpen = useKeyboardInset();
+  // Where the on-screen keyboard is typing, so that area gets the room left above it.
+  const [typingIn, setTypingIn] = useState<"code" | "panel" | "other">("other");
+  useEffect(() => {
+    const onFocusIn = (event: FocusEvent) => {
+      const target = event.target as Element;
+      setTypingIn(target.closest(".editorPane") ? "code" : target.closest(".bottomPanel") ? "panel" : "other");
+    };
+    document.addEventListener("focusin", onFocusIn);
+    return () => document.removeEventListener("focusin", onFocusIn);
+  }, []);
   const [mobileTab, setMobileTab] = useState<MobileTab>(tutorialStart && phone ? "learn" : "code");
   const [panelTab, setPanelTab] = useState<PanelTab>("animation");
   const [tourTaken, setTourTaken] = useState(() => tourState() === "taken");
@@ -390,6 +400,17 @@ export default function App() {
       view.focus();
     }
   };
+
+  // The code shrinks to the space above the on-screen keyboard, so bring the cursor back into sight.
+  useEffect(() => {
+    const view = editorViews.current.get(codeTab);
+    if (!keyboardOpen || typingIn !== "code" || !view?.hasFocus) {
+      return;
+    }
+    const frame = requestAnimationFrame(() =>
+      view.dispatch({effects: EditorView.scrollIntoView(view.state.selection.main.head, {y: "center"})}));
+    return () => cancelAnimationFrame(frame);
+  }, [keyboardOpen, typingIn, codeTab]);
 
   // Shows a one-time tip for what just happened, unless something else has the user's attention.
   const showTip = (event: TipEvent) => {
@@ -963,6 +984,7 @@ export default function App() {
       data-full-view={fullView || undefined}
       data-mobile-tab={mobileTab} data-tutorial={tutorialOpen || undefined}
       data-side-panel={tutorialOpen || undefined}
+      data-keyboard={keyboardOpen ? typingIn : undefined}
     >
       <header className="appHeader">
         <a className="brand" href="./" aria-label="smoothstep.io home">
