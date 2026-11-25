@@ -46,12 +46,12 @@ The sample videos are cropped, trimmed and re-encoded from these clips on Wikime
 
 - [*Arrival of a Train at La Ciotat*](https://commons.wikimedia.org/wiki/File:Arrival_of_a_Train_at_La_Ciotat_(The_Lumi%C3%A8re_Brothers,_1895).webm)
   (1895), the Lumière brothers, public domain
-- [*Serpentine Dance*](https://commons.wikimedia.org/wiki/File:Serpentine_Dance_(1895)_-_yt.webm) (1895),
-  William K. L. Dickson and William Heise, public domain
+- [*Ap16 rover*](https://commons.wikimedia.org/wiki/File:Ap16_rover.ogv), John Young driving the
+  Lunar Roving Vehicle on Apollo 16 (1972), NASA, public domain
 - [*Flock of starlings (Sturnus vulgaris)*](https://commons.wikimedia.org/wiki/File:Flock_of_starlings_(Sturnus_vulgaris).webm),
   Karen Roe, [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/)
-- [*Feu*](https://commons.wikimedia.org/wiki/File:Feu.ogv), Thomas Bresson,
-  [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/)
+- [*Waves at Hikkaduwa beach, Sri Lanka*](https://commons.wikimedia.org/wiki/File:Waves_at_Hikkaduwa_beach,_Sri_Lanka.webm),
+  Jan Kranendonk, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
 - [*Clip of Timelapse of clouds over Arthur's Seat*](https://commons.wikimedia.org/wiki/File:Clip_of_Timelapse_of_clouds_over_Arthur_s_Seat_(Source).webm),
   Learning, Teaching and Web Services, the University of Edinburgh,
   [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/), also sped up to twice its speed

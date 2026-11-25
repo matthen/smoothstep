@@ -311,15 +311,9 @@
             "width": 360
         },
         {
-            "fname": "videos/bonfire.mp4",
+            "fname": "videos/moon.mp4",
             "height": 360,
-            "thumbnail_fname": "videos/bonfire_thumb.jpg",
-            "width": 360
-        },
-        {
-            "fname": "videos/dance.mp4",
-            "height": 360,
-            "thumbnail_fname": "videos/dance_thumb.jpg",
+            "thumbnail_fname": "videos/moon_thumb.jpg",
             "width": 360
         },
         {
@@ -332,6 +326,12 @@
             "fname": "videos/train.mp4",
             "height": 360,
             "thumbnail_fname": "videos/train_thumb.jpg",
+            "width": 360
+        },
+        {
+            "fname": "videos/waves.mp4",
+            "height": 360,
+            "thumbnail_fname": "videos/waves_thumb.jpg",
             "width": 360
         }
     ]

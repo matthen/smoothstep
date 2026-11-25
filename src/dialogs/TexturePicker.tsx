@@ -28,7 +28,7 @@ const TEXTURES: Record<string, BuiltInTexture[]> = TextureData;
 // The built-in textures' folders, in the order the picker lists them.
 const GROUPS: {key: string; title: string; caption: string}[] = [
   {key: "photos", title: "Photos", caption: "Photographs, and a painting."},
-  {key: "videos", title: "Videos", caption: "Short clips of old film, fire, birds and sky, that play along with your animation."},
+  {key: "videos", title: "Videos", caption: "Short clips of the Moon, the sea, birds, sky and an old film, that play along with your animation."},
   {key: "special", title: "Noise", caption: "Random values to read in your code: noise, smooth noise, clouds and plasma."},
   {key: "tiling", title: "Tiling surfaces", caption: "Stone, sand and rust that repeat without seams."},
   {
@@ -49,10 +49,10 @@ const CAPTIONS: Record<string, string> = {
   "photos/nickypainting.jpg": "Painting",
   "photos/tiles.jpg": "Tiles",
   "videos/arthursseat.mp4": "Clouds over Arthur's Seat",
-  "videos/bonfire.mp4": "Bonfire at night",
-  "videos/dance.mp4": "Serpentine dance, 1895",
+  "videos/moon.mp4": "Apollo 16: driving on the Moon",
   "videos/starlings.mp4": "Starlings at dusk",
   "videos/train.mp4": "Lumière: arrival of a train",
+  "videos/waves.mp4": "Waves at the beach",
   "special/clouds.png": "Clouds",
   "special/noise.png": "Noise",
   "special/noise_gauss.png": "Smooth noise",
