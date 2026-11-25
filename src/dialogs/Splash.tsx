@@ -78,7 +78,7 @@ export default function Splash({show, onHide, onTour, tourTaken}: SplashProps) {
           <Title order={1} size="h3" mb="xs">Animate with shaders and JavaScript</Title>
           <Text mb="xs">
             Write a GLSL shader, add JavaScript for text, shapes and physics, and animate them on a timeline.
-            Pickers set numbers and colours, buffers run simulations, your own images become textures, and
+            Pickers set numbers and colours, buffers run simulations, your own images and videos become textures, and
             Render makes a video.
           </Text>
           <Text c="dimmed" size="sm">

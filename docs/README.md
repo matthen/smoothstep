@@ -2,7 +2,7 @@
 
 You make animations in smoothstep.io by writing a fragment shader in the WebGL shader language
 (GLSL). A timeline lets you animate the shader's inputs visually, and you can give it the
-built-in textures or add your own images. When it's ready, you export it as video at any
+built-in textures or add your own images and videos. When it's ready, you export it as video at any
 frame rate and resolution. It all runs in your browser at [smoothstep.io](https://smoothstep.io).
 
 To draw text, shapes or physics simulations, add a [Canvas2D layer](canvas2d.md): JavaScript that draws
@@ -37,7 +37,7 @@ under Help → Documentation, as a tab beside your code.
 - [Keyboard shortcuts](keyboard-shortcuts.md)\
   For the code editor and playing the animation
 - [Coding specification](coding-specification.md)\
-  What your shaders can use: inputs, textures, buffers and shared code
+  What your shaders can use: inputs, textures, buffers and shared code, and how to check values
 - [The Canvas2D layer](canvas2d.md)\
   JavaScript that draws text, shapes and simulations over the image
 - [Reference](https://smoothstep.io/docs/reference.html)\
@@ -60,7 +60,7 @@ show tips" turns them off.
 
 ## Saving your work
 
-smoothstep.io saves your animations and the images you add in your browser. File → Save keeps the
+smoothstep.io saves your animations and the images and videos you add in your browser. File → Save keeps the
 animation you have open, and File → Open lists the animations saved there. Saving an example, or an
 animation someone shared with you, keeps a copy as one of your own and leaves the original as it is.
 Until you save it, a tag beside the title says it's an example or shared.

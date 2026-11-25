@@ -11,6 +11,14 @@ interface Timer {
   callback: () => void;
 }
 
+class FakeBitmap {
+  closed = false;
+  constructor(public name: string) {}
+  close() {
+    this.closed = true;
+  }
+}
+
 // Starts a worker running `code`, with the worker's own globals, a port and a fake clock.
 function startWorker(code: string) {
   let now = 0;
@@ -68,6 +76,7 @@ function startWorker(code: string) {
       }
     },
     createImageBitmap: () => Promise.resolve({}),
+    ImageBitmap: FakeBitmap,
   }) as Record<string, unknown>;
   vm.runInContext("globalThis.self = globalThis;", context);
   vm.runInContext(workerSource(code, []).source, context);
@@ -159,5 +168,36 @@ describe("workerRuntime", () => {
     expect(worker.sent.map(m => m.type)).toEqual(["ready", "error"]);
     worker.advance(6000);
     expect(worker.context.ran).toEqual([]);
+  });
+
+  it("gives setup and draw the frame's size in pixels as resolution", async () => {
+    const worker = startWorker([
+      "globalThis.seen = [];",
+      "function setup({resolution}) { seen.push(resolution.join(\"x\")); }",
+      "function draw(ctx, {resolution, width, height}) { seen.push(resolution.join(\"x\"), width + \"x\" + height); }",
+    ].join("\n"));
+    worker.givePort();
+    await worker.send({...INIT, width: 640, height: 360});
+    await worker.send(STEP);
+    expect(worker.context.seen).toEqual(["640x360", "640x360", "1920x1080"]);
+  });
+
+  it("puts each step's video frames in their texture slots, closing the frame before", async () => {
+    const worker = startWorker([
+      "globalThis.seen = [];",
+      "function draw(ctx, {textures}) { seen.push(textures.map(t => t && t.name).join(\",\")); }",
+    ].join("\n"));
+    const image = new FakeBitmap("image");
+    const [first, second] = [new FakeBitmap("video at 0"), new FakeBitmap("video at 1/60")];
+    const bitmap = (b: FakeBitmap) => b as unknown as ImageBitmap;
+    worker.givePort();
+    await worker.send({...INIT, textures: [bitmap(image), null]});
+    await worker.send({type: "steps", id: 1, steps: [
+      {time: 0, frame: 0, floats: [], videoFrames: [{slot: 1, bitmap: bitmap(first)}]},
+      {time: 1 / 60, frame: 1, floats: [], videoFrames: [{slot: 1, bitmap: bitmap(second)}]},
+      {time: 2 / 60, frame: 2, floats: []},
+    ]});
+    expect(worker.context.seen).toEqual(["image,video at 0", "image,video at 1/60", "image,video at 1/60"]);
+    expect([image.closed, first.closed, second.closed]).toEqual([false, true, false]);
   });
 });

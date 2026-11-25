@@ -18,6 +18,7 @@ import { lineErrors } from './lineErrors';
 import { links } from './links';
 import { minimap } from './minimap';
 import { clickHelpers } from './popups';
+import { showExpressionExtension, type ShowExpression } from './showExpression';
 import { referencesExtension } from './references';
 
 // Classes styled in editor.scss with the old Dracula colours.
@@ -50,6 +51,8 @@ export interface EditorCallbacks {
   onFixed?(): void;
   // For going to a definition in another tab.
   definitionElsewhere?: DefinitionElsewhere;
+  // For showing a selected expression on the canvas, in a shader tab.
+  onShowExpression?: ShowExpression;
   // The GLSL tabs, for finding and renaming a name's uses in all of them.
   codeTabs?: CodeTabs;
 }
@@ -102,6 +105,7 @@ export function editorExtensions(callbacks: EditorCallbacks, language: EditorLan
     language === "glsl" ? [
       glslLanguage, syntaxHighlighting(highlighter), clickHelpers(), goToDefinitionExtension(), referencesExtension(),
       callbacks.definitionElsewhere ? definitionElsewhere.of(callbacks.definitionElsewhere) : [],
+      callbacks.onShowExpression ? showExpressionExtension(callbacks.onShowExpression) : [],
       callbacks.codeTabs ? codeTabs.of(callbacks.codeTabs) : [],
     ] :
       javascriptCompartment.of(javascriptSupport ?? []),

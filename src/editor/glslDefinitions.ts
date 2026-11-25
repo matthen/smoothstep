@@ -175,6 +175,52 @@ export function nameAt(analysis: Analysis, pos: number): Tok | null {
   return t && isName(t) && tokens[i - 1]?.text !== '.' ? t : null;
 }
 
+const VALUE_TOKENS = new Set(['variableName', 'variableName.local', 'macroName']);
+const isValueToken = (t: Tok | undefined) => t !== undefined && VALUE_TOKENS.has(t.type ?? '');
+
+// The index of the bracket matching the one at `at`, searching in `step`'s direction, or -1.
+function matching(tokens: Tok[], at: number, step: 1 | -1): number {
+  const [open, close] = step === 1 ? ['[', ']'] : [']', '['];
+  for (let i = at, depth = 0; i >= 0 && i < tokens.length; i += step) {
+    if (tokens[i]!.text === open) depth++;
+    else if (tokens[i]!.text === close && --depth === 0) return i;
+  }
+  return -1;
+}
+
+// The value at `pos`, or just before it: a variable, parameter or macro with any fields, swizzles and
+// indexes after it, as in `uv.x` or `rays[i].d`. Null for functions, types, keywords and built-ins.
+export function valueAt(analysis: Analysis, pos: number): Range | null {
+  const { tokens } = analysis;
+  let at = tokens.findIndex((t) => t.from <= pos && pos < t.to);
+  if (!isValueToken(tokens[at])) at = tokens.findIndex((t) => t.to === pos);
+  if (!isValueToken(tokens[at])) return null;
+  // Back over `.field` and `[index]` to the name they're on.
+  let start = at;
+  while (tokens[start - 1]?.text === '.') {
+    let before = start - 2;
+    while (before >= 0 && tokens[before]?.text === ']') before = matching(tokens, before, -1) - 1;
+    if (before < 0 || !isValueToken(tokens[before])) return null;
+    start = before;
+  }
+  const base = tokens[start]!;
+  if (tokens[start + 1]?.text === '(') return null;
+  const kind = findDefinition(analysis, base.from)?.kind;
+  if (kind === 'function' || kind === 'struct') return null;
+  let end = start;
+  for (;;) {
+    const next = tokens[end + 1];
+    if (next?.text === '[') {
+      const close = matching(tokens, end + 1, 1);
+      if (close < 0) break;
+      end = close;
+    } else if (next?.text === '.' && isValueToken(tokens[end + 2])) {
+      end += 2;
+    } else break;
+  }
+  return { from: base.from, to: tokens[end]!.to };
+}
+
 const size = (r: Range) => r.to - r.from;
 
 // The declaration `pos` is in or refers to: the nearest enclosing one in scope, preferring a function's

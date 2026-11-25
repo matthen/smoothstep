@@ -15,7 +15,7 @@
 </p>
 
 smoothstep.io is a toolkit for making animations in the WebGL shader language. You write a
-GLSL fragment shader, animate its inputs on a timeline, give it image textures, and export
+GLSL fragment shader, animate its inputs on a timeline, give it image and video textures, and export
 the result as video. For text, shapes and physics, a Canvas2D layer adds JavaScript that draws on a
 2D canvas over the image. It all runs in your browser, with no server or sign-in.
 
@@ -40,12 +40,13 @@ fine here on GitHub.
 
 The editor highlights GLSL, shows compile errors on the line they occur, and gives you
 inline pickers for colours, numbers and vectors. It can go to where one of your names is defined, list
-its uses and rename it in every tab, and long code gets a minimap. The timeline drives 16 animated variables,
+its uses and rename it in every tab, and long code gets a minimap. Select part of a shader to show its value at every
+pixel on the canvas, and the pixel inspector reads the numbers under the pointer. The timeline drives 16 animated variables,
 `iFloat0` to `iFloat15`, each a sequence of transitions that step, move steadily, ease in or out,
 overshoot and settle, or grow exponentially for zooms. The Sliders tab has a slider for each one your code uses, to set it or try out
 values while you watch. You get 8
-texture slots, `iTexture0` to `iTexture7`, which take built-in photos, noise, tiling textures
-and font sheets, or your own images up to 4096px. Up to 4 buffers, `iBuffer0` to `iBuffer3`,
+texture slots, `iTexture0` to `iTexture7`, which take built-in photos, noise, tiling textures,
+font sheets and videos, or your own images up to 4096px and videos that play along with the animation. Up to 4 buffers, `iBuffer0` to `iBuffer3`,
 are extra shaders that draw before the image each frame and hold any numbers, so you can run
 simulations across frames. A Canvas2D layer is JavaScript that draws on a 2D canvas each step, with
 drawing helpers, fonts, and built-in physics, noise and triangulation libraries; its drawing goes
@@ -53,7 +54,7 @@ over the image, and every shader can read it as `iCanvas2D` ([docs/canvas2d.md](
 smoothstep.io exports WebM, MP4, animated GIFs and PNG frames, all made
 in your browser.
 
-smoothstep.io keeps your animations and the images you add in your browser's storage. You can download one
+smoothstep.io keeps your animations and the images and videos you add in your browser's storage. You can download one
 animation, or all of them as a zip, to back them up or move them to another computer, and add
 them again with File → Import.
 
@@ -112,7 +113,7 @@ Sass for the app's own styles, CodeMirror 6 for the code editor, and WebGL 2 for
 - `src/player/` is the bare player, without React, behind `embed.html` and the player files that
   Share downloads.
 - `src/render/` compiles and draws the buffers and the image, and maps compile errors back to
-  lines of your code.
+  lines of your code. `probe.ts` adds the code that shows a selected expression on the canvas.
 - `src/layer/` runs the Canvas2D layer: a worker inside a sandboxed iframe, with the drawing helpers
   (`helpers.ts`), the built-in libraries (`libraries.ts`) and fonts (`fonts.ts`).
 - `src/editor/` is the code editor, with GLSL highlighting, hints, the inline pickers and the

@@ -9,6 +9,8 @@ export interface LayerInputs {
   time: number;
   frame: number;
   floats: readonly number[];
+  // The frame each video texture shows at this step, which replaces the slot's last one.
+  videoFrames?: {slot: number; bitmap: ImageBitmap}[];
 }
 
 export type ToWorker =
@@ -177,6 +179,7 @@ export function workerRuntime(helpersFor: (env: HelperEnv) => Helpers) {
   let canvas: OffscreenCanvas | null = null;
   let ctx: OffscreenCanvasRenderingContext2D | null = null;
   let duration = 0;
+  let resolution: [number, number] = [0, 0];
   let textures: (ImageBitmap | null)[] = [];
   let data: unknown = undefined;
   let setupDone = false;
@@ -222,6 +225,7 @@ export function workerRuntime(helpersFor: (env: HelperEnv) => Helpers) {
       env.height = UNITS_TALL;
       env.width = UNITS_TALL * message.width / message.height;
       duration = message.duration;
+      resolution = [message.width, message.height];
       textures = message.textures;
       if (ctx) {
         ctx.font = "48px Inter, sans-serif";
@@ -251,8 +255,16 @@ export function workerRuntime(helpersFor: (env: HelperEnv) => Helpers) {
     for (const step of message.steps) {
       send({type: "drawing", frame: step.frame});
       stepTime = step.time;
+      for (const {slot, bitmap} of step.videoFrames ?? []) {
+        // A video's last frame is closed, so a long video doesn't fill the memory.
+        const old = textures[slot];
+        if (old instanceof ImageBitmap) {
+          old.close();
+        }
+        textures[slot] = bitmap;
+      }
       const floats = [...step.floats];
-      const size = {width: env.width, height: env.height, duration};
+      const size = {width: env.width, height: env.height, duration, resolution: [...resolution]};
       try {
         if (!setupDone) {
           setupDone = true;

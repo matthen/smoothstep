@@ -596,6 +596,165 @@ div#canvasContainer {
   .webglError {
     margin: auto;
   }
+
+  // An expression shown in place of the image.
+  canvas[data-probe] {
+    outline: 1px dashed rgba($dt-gray-light, 0.5);
+    outline-offset: 2px;
+  }
+
+  // The pixel inspector's button, which shows with the size and frame rate unless it's in use, and
+  // the bar saying which expression is shown.
+  div.canvasTools {
+    position: absolute;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
+
+    .inspectButton {
+      flex: none;
+      opacity: 0;
+      transition: opacity 150ms;
+    }
+  }
+
+  &:hover div.canvasTools .inspectButton, div.canvasTools[data-active] .inspectButton {
+    opacity: 1;
+  }
+
+  @media (hover: none) {
+    div.canvasTools:not([data-active]) .inspectButton {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    &[data-overlays] div.canvasTools .inspectButton {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+
+  // One row as tall as the inspector's button; the expression shortens first when it's narrow.
+  div.probeBar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    height: 28px;
+    padding: 0 3px 0 8px;
+    border-radius: 4px;
+    background: rgba($dt-gray-darker, 0.75);
+    backdrop-filter: blur(4px);
+    color: $dt-gray-light;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+
+    .probeIcon {
+      flex: none;
+      color: $dt-gray-medium;
+    }
+
+    .probeExpression {
+      flex: 0 1 auto;
+      font-size: 12px;
+    }
+
+    .probeType {
+      flex: none;
+      color: $dt-gray-medium;
+    }
+
+    .probeRange {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .probeRangeMode {
+      flex: none;
+      padding: 2px;
+      background: rgba($dt-gray, 0.45);
+
+      .mantine-SegmentedControl-label {
+        padding: 1px 7px;
+        font-size: 11px;
+        font-weight: 500;
+        line-height: 18px;
+        color: $dt-gray-medium;
+      }
+
+      .mantine-SegmentedControl-label[data-active] {
+        color: $dt-gray-light;
+      }
+
+      .mantine-SegmentedControl-indicator {
+        background: $dt-gray;
+        box-shadow: none;
+      }
+    }
+
+    .probeClose {
+      flex: none;
+      color: $dt-gray-medium;
+
+      &:hover {
+        color: $dt-gray-light;
+      }
+    }
+  }
+
+  .probeExpression {
+    min-width: 0;
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  div.pixelReadout {
+    position: absolute;
+    z-index: 5;
+    pointer-events: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba($dt-gray-darker, 0.9);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    color: $dt-gray-light;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+
+    p {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .readoutDim {
+      color: $dt-gray-medium;
+      font-size: 11px;
+    }
+
+    .readoutSwatch {
+      flex: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+      border: 1px solid $dt-gray-medium;
+    }
+  }
+
+  div.inspectPoint {
+    position: absolute;
+    pointer-events: none;
+    width: 18px;
+    height: 18px;
+    margin: -9px 0 0 -9px;
+    border-radius: 50%;
+    border: 2px solid $dt-gray-light;
+    box-shadow: 0 0 0 1px $dt-gray-darker;
+  }
 }
 
 div.playerButtons .aspectRatioPicker, div.playerButtons .fullViewButton {
@@ -673,7 +832,7 @@ div#textures {
         border-color: $dt-green;
       }
 
-      img {
+      img, video {
         width: 100%;
         height: 100%;
         object-fit: contain;
@@ -964,7 +1123,7 @@ div#textures .texturesHint {
     justify-content: center;
     gap: 8px;
     flex-wrap: wrap;
-    img {
+    img, video {
       max-width: 128px;
       max-height: 80px;
       border-radius: 4px;
@@ -1033,7 +1192,7 @@ div#textures .texturesHint {
       transition: outline-color 150ms;
       cursor: pointer;
 
-      img {
+      img, video {
         width: 100%;
         height: 100%;
         object-fit: contain;

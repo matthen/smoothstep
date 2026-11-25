@@ -18,6 +18,7 @@ These are also in the app, under Help → Keyboard shortcuts.
 | `F12`, or `Mod` and click a name | in a shader tab, go to where the name is defined |
 | `Shift + F12` | in a shader tab, list every use of the name at the cursor |
 | `F2` | in a shader tab, rename the name at the cursor everywhere it's used |
+| `Alt + Enter` | in a shader tab, show the value of the selection or the name at the cursor on the canvas, or the image again ([Checking values](coding-specification.md#checking-values)) |
 | `Mod + /` | comment or uncomment |
 | `Tab` | indent the selection, or insert two spaces; in a snippet, go to its next blank |
 | `Shift + Tab` | re-indent the line or selection; in a snippet, go back a blank |

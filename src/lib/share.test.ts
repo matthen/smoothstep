@@ -146,6 +146,17 @@ describe("readAnimationFile", () => {
     expect(textures[5]!.isUserUploaded).toBe(false);
   });
 
+  it("refuses a video too big to be a texture, and keeps an unrecognised video's type", () => {
+    const file = (data: string) => JSON.stringify({
+      format: ANIMATION_FORMAT, version: 1, document: withUserImage(),
+      images: {abc123: {filename: "clip", width: 64, height: 32, data}},
+    });
+    const big = "data:video/mp4;base64," + "A".repeat(Math.ceil(40 * 1024 * 1024 / 3) * 4);
+    expect(() => readAnimationFile(file(big))).toThrow(ShareError);
+    const {images} = readAnimationFile(file("data:video/x-m4v;base64," + btoa("not a known header")));
+    expect(images.get("abc123")!.type).toBe("video/x-m4v");
+  });
+
   it("says when a file isn't an animation", () => {
     expect(() => readAnimationFile("<html>")).toThrow("That isn't a smoothstep.io animation file.");
     expect(() => readAnimationFile('{"title": 1}')).toThrow(ShareError);

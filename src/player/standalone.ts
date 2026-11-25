@@ -3,6 +3,7 @@
 import { fetchedAssets } from '../layer/assets';
 import type { FontFile } from '../layer/fonts';
 import { parseDocument } from '../lib/document';
+import { playableURL } from '../lib/media';
 import { PLAYER_CSS, startPlayer } from './player';
 
 export interface PlayerData {
@@ -20,7 +21,7 @@ document.head.append(style);
 const data = JSON.parse(document.getElementById("animation")!.textContent) as PlayerData;
 startPlayer(document.getElementById("player")!, {
   doc: parseDocument(data.document),
-  textureURLs: data.textures,
+  textureURLs: data.textures.map(playableURL),
   link: data.link ? {href: data.link, text: "Open in smoothstep.io"} : undefined,
   // A file that's missing gets an address that fails to load.
   layerAssets: () => Promise.resolve(

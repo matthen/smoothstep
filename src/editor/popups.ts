@@ -1,6 +1,6 @@
 // Click helpers: inline pickers on values, definitions of built-ins, and underlining every use of a clicked variable.
 import { syntaxTree } from '@codemirror/language';
-import { Annotation, StateEffect, StateField, type EditorState, type Extension, type Line } from '@codemirror/state';
+import { Annotation, Facet, StateEffect, StateField, type EditorState, type Extension, type Line } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, showTooltip, type DecorationSet, type Tooltip } from '@codemirror/view';
 import { DOC_SECTIONS, docLinkElement, type DocTarget } from '../lib/docLinks';
 import { eachShaderInput } from '../lib/shaderInputs';
@@ -102,6 +102,13 @@ const popupField = StateField.define<Popup | null>({
   provide: (f) => showTooltip.from(f, (p) => p?.tooltip ?? null),
 });
 
+// Whether a popup is open, so other tooltips can keep out of its way.
+export const popupOpen = (state: EditorState) => state.field(popupField, false) != null;
+
+// A way to show the value clicked at `pos` on the canvas, where there is one.
+export type ShowValueAt = (view: EditorView, pos: number) => (() => void) | null;
+export const showValueAt = Facet.define<ShowValueAt, ShowValueAt | null>({ combine: (values) => values[0] ?? null });
+
 const close = (view: EditorView) => {
   if (view.state.field(popupField)) view.dispatch({ effects: setPopup.of(null) });
 };
@@ -182,9 +189,39 @@ function definitionDom(def: Definition, language: CodeLanguage) {
   return dom;
 }
 
+const SVG = 'http://www.w3.org/2000/svg';
+
+// The Show on canvas button: an eye, the label and its shortcut.
+export function showOnCanvasButton(): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'ss-show-expression';
+  button.setAttribute('aria-label', 'Show on canvas');
+  button.title = 'Show this value on the canvas (Alt + Enter)';
+  const icon = button.appendChild(document.createElementNS(SVG, 'svg'));
+  icon.setAttribute('viewBox', '0 0 24 24');
+  icon.setAttribute('aria-hidden', 'true');
+  for (const d of ['M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0', 'M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6']) {
+    icon.appendChild(document.createElementNS(SVG, 'path')).setAttribute('d', d);
+  }
+  button.append('Show on canvas');
+  button.appendChild(document.createElement('kbd')).textContent = 'Alt+Enter';
+  return button;
+}
+
+// The button a tapped value's popup has on its own.
+function showValueDom(view: EditorView, show: () => void) {
+  const button = showOnCanvasButton();
+  button.addEventListener('click', () => {
+    view.dispatch({ effects: setPopup.of(null) });
+    show();
+  });
+  return button;
+}
+
 // The user's own definition: how it's declared, the comment above it, and ways to go there, list its
-// uses or rename it.
-function userDefinitionDom(view: EditorView, def: UserDefinition, pos: number) {
+// uses, rename it, or show it on the canvas when it's a value.
+function userDefinitionDom(view: EditorView, def: UserDefinition, pos: number, show: (() => void) | null) {
   const dom = document.createElement('div');
   dom.className = 'ss-definition';
   if (def.description?.comment) {
@@ -209,6 +246,7 @@ function userDefinitionDom(view: EditorView, def: UserDefinition, pos: number) {
   if (def.go) action('Go to definition', goToDefinitionHint, def.go);
   action('Find references', findReferencesHint, () => findReferencesAt(view, pos));
   action('Rename', renameHint, () => startRename(view, pos));
+  if (show) action('Show on canvas', 'Alt+Enter', show);
   return dom;
 }
 
@@ -269,9 +307,12 @@ function onClick(view: EditorView, pos: number, touch: boolean, config: ClickCon
     view.dispatch({ effects: showPopup(definitionDom(def, config.language)) });
   } else if (config.illuminates(state, word.from)) {
     const own = config.userDefinitionAt?.(view, word.from);
+    // A mouse gets the button under the cursor instead, once it rests.
+    const show = view.state.facet(showValueAt)?.(view, pos) ?? null;
+    const dom = own ? userDefinitionDom(view, own, word.from, show) : show && touch ? showValueDom(view, show) : null;
     // Underlining every use of a one-letter name would mark most of the code.
     const illuminate = name.length > 1 ? [setIlluminated.of(name)] : [];
-    view.dispatch({ effects: [...illuminate, ...own ? [showPopup(userDefinitionDom(view, own, word.from))] : []] });
+    view.dispatch({ effects: [...illuminate, ...dom ? [showPopup(dom)] : []] });
   }
 }
 

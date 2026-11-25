@@ -2,6 +2,7 @@
 // the sandbox, sends it the steps to draw, and hands back the frames. A run that has drawn can't be
 // rewound, so restarting starts a new worker; one is kept waiting so that's quick.
 import { uses } from '../lib/glslCode';
+import { isVideoURL } from '../lib/media';
 import type { LineError } from '../lib/types';
 import type { LayerAssets } from './assets';
 import type { FontData } from './fonts';
@@ -18,7 +19,8 @@ export interface LayerConfig {
   width: number;
   height: number;
   duration: number;
-  // Each texture slot's image URL, or null for an empty slot.
+  // Each texture slot's image or video URL, or null for an empty slot. A video's frames come with
+  // each step's inputs.
   textures: readonly (string | null)[];
 }
 
@@ -81,6 +83,8 @@ export class CanvasLayer {
   private current: Run | null = null;
   private standby: Run | null = null;
   private waiting: LayerInputs[] = [];
+  // Whether the code reads textures and one is a video, so each step needs the video's frame.
+  private videos = false;
   // After an error, nothing runs until the next configure.
   private stopped = false;
   private errors: LineError[] = [];
@@ -112,7 +116,8 @@ export class CanvasLayer {
     this.stopRuns();
     this.stopped = false;
     this.prepared = null;
-    this.waiting = [];
+    this.dropWaiting();
+    this.videos = config.textures.some(isVideoURL) && uses(config.code, /\btextures\b/);
     void this.prepare(config).then(prepared => {
       if (generation !== this.generation || this.disposed) {
         return;
@@ -147,7 +152,7 @@ export class CanvasLayer {
         this.assets.fonts(),
         // Decoding images takes a while, so only for code that uses them.
         Promise.all(config.textures.map(url =>
-          url !== null && uses(config.code, /\btextures\b/) ? this.bitmap(url) : Promise.resolve(null))),
+          url !== null && !isVideoURL(url) && uses(config.code, /\btextures\b/) ? this.bitmap(url) : Promise.resolve(null))),
       ]);
       return {source: workerSource(imports.code, libraries), fonts, textures};
     } catch (error) {
@@ -303,7 +308,7 @@ export class CanvasLayer {
     this.stopRuns();
     this.stopped = true;
     this.errors = errors;
-    this.waiting = [];
+    this.dropWaiting();
     this.callbacks.onStatus(errors);
     const pending = this.pendingDraw;
     this.pendingDraw = null;
@@ -317,7 +322,7 @@ export class CanvasLayer {
   // Starts again from setup and frame 0. A run that hasn't been sent steps is already there, unless
   // its code is slow to start, which may never end, so it's replaced.
   restart() {
-    this.waiting = [];
+    this.dropWaiting();
     const run = this.current;
     if (this.stopped || !this.prepared || !run || (!run.stepped && !this.slowToStart(run))) {
       return;
@@ -328,6 +333,19 @@ export class CanvasLayer {
     this.use(next);
   }
 
+  // Steps that won't be drawn, with their video frames closed.
+  private dropWaiting() {
+    for (const step of this.waiting) {
+      step.videoFrames?.forEach(frame => frame.bitmap.close());
+    }
+    this.waiting = [];
+  }
+
+  // Whether each step pushed needs its video textures' frames, in `videoFrames`.
+  get needsVideoFrames(): boolean {
+    return this.videos && !this.stopped;
+  }
+
   // Whether to hold off pushing more steps, because the worker has fallen behind.
   get busy(): boolean {
     return !this.stopped && this.waiting.length >= MAX_WAITING;
@@ -336,6 +354,7 @@ export class CanvasLayer {
   // Queues a step to draw. Steps are drawn in order, and onFrame gets the latest frame.
   push(inputs: LayerInputs) {
     if (this.stopped || !this.config) {
+      inputs.videoFrames?.forEach(frame => frame.bitmap.close());
       return;
     }
     this.waiting.push(inputs);
@@ -350,7 +369,8 @@ export class CanvasLayer {
     const id = this.nextBatch++;
     run.inFlight = id;
     run.drawing = this.waiting[0]!.frame;
-    run.worker.port.postMessage({type: "steps", id, steps: this.waiting} satisfies ToWorker);
+    const frames = this.waiting.flatMap(step => (step.videoFrames ?? []).map(frame => frame.bitmap));
+    run.worker.port.postMessage({type: "steps", id, steps: this.waiting} satisfies ToWorker, frames);
     this.waiting = [];
     run.stepped = true;
     if (!this.busyShown) {
@@ -362,6 +382,7 @@ export class CanvasLayer {
   draw(inputs: LayerInputs): Promise<ImageBitmap> {
     return new Promise((resolve, reject) => {
       if (this.stopped) {
+        inputs.videoFrames?.forEach(frame => frame.bitmap.close());
         reject(this.error());
         return;
       }
@@ -372,6 +393,7 @@ export class CanvasLayer {
 
   dispose() {
     this.disposed = true;
+    this.dropWaiting();
     this.stopRuns();
     const pending = this.pendingDraw;
     this.pendingDraw = null;

@@ -11,7 +11,7 @@ import Textures from './Textures';
 // jsdom can't decode images, so uploads are stored directly.
 vi.mock('../lib/localStore', async importOriginal => {
   const actual = await importOriginal<typeof import('../lib/localStore')>();
-  return {...actual, addUploadedImage: vi.fn((file: File) => addImage("bbbb00000001", file.name))};
+  return {...actual, addUploadedImage: vi.fn((file: File) => addImage("bbbb00000001", file.name, Date.now(), file.type))};
 });
 
 afterEach(cleanup);
@@ -36,14 +36,14 @@ describe("Textures and TexturePicker", () => {
     const textures = emptyTextures();
     textures[1] = {id: "iTexture1", url: "fonts/1.png", isUserUploaded: false};
     renderTextures(textures);
-    expect(screen.getAllByRole("button", {name: /^iTexture\d is empty: choose an image$/}).length).toBe(7);
+    expect(screen.getAllByRole("button", {name: /^iTexture\d is empty: choose an image or video$/}).length).toBe(7);
     expect(screen.getByAltText("iTexture1 preview")).toBeTruthy();
   });
 
   it("shows only the first slots it's given, and a button to add the next", async () => {
     const props = renderTextures(emptyTextures(), 3);
     expect(screen.getAllByRole("button", {name: /is empty/}).map(b => b.getAttribute("aria-label"))).toEqual(
-      [0, 1, 2].map(i => `iTexture${i} is empty: choose an image`));
+      [0, 1, 2].map(i => `iTexture${i} is empty: choose an image or video`));
     await userEvent.click(screen.getByRole("button", {name: "Add a texture slot"}));
     expect(props.onAdd).toHaveBeenCalled();
   });
@@ -72,6 +72,21 @@ describe("Textures and TexturePicker", () => {
     expect(textures[1]).toEqual(emptyTextures()[1]);
   });
 
+  it("picks a built-in video, and the slot shows it as a video", async () => {
+    const props = renderTextures();
+    await openSlot("iTexture3");
+    const videos = within(picker()).getByRole("region", {name: "Videos"});
+    expect(within(videos).getAllByText(/^\d+ × \d+, video$/).length).toBeGreaterThan(0);
+    await userEvent.click(within(videos).getByAltText("videos/waves.mp4 preview"));
+    await userEvent.click(within(picker()).getByRole("button", {name: "Apply changes"}));
+    const textures = props.onChange.mock.calls[0]![0] as TextureSlot[];
+    expect(textures[3]).toEqual({id: "iTexture3", url: "videos/waves.mp4", isUserUploaded: false});
+
+    cleanup();
+    renderTextures(textures);
+    expect(screen.getByRole("img", {name: "iTexture3 preview"}).tagName).toBe("VIDEO");
+  });
+
   it("cancel leaves the textures alone", async () => {
     const props = renderTextures();
     await openSlot("iTexture0");
@@ -83,7 +98,7 @@ describe("Textures and TexturePicker", () => {
   it("adds an image and picks it", async () => {
     const props = renderTextures();
     await openSlot("iTexture0");
-    await userEvent.click(within(picker()).getByRole("button", {name: "Add image"}));
+    await userEvent.click(within(picker()).getByRole("button", {name: "Add image or video"}));
     expect(within(picker()).getByText("Images larger than 4096 px are scaled down.")).toBeTruthy();
     const input = picker().querySelector<HTMLInputElement>(".dropzone input")!;
     await userEvent.upload(input, new File(["x"], "photo.png", {type: "image/png"}));
@@ -95,6 +110,24 @@ describe("Textures and TexturePicker", () => {
     await userEvent.click(within(picker()).getByRole("button", {name: "Apply changes"}));
     const textures = props.onChange.mock.calls[0]![0] as TextureSlot[];
     expect(textures[0]).toEqual({id: "iTexture0", url: "bbbb00000001", isUserUploaded: true});
+  });
+
+  it("adds a video, shows its first frame and picks it", async () => {
+    const props = renderTextures();
+    await openSlot("iTexture1");
+    await userEvent.click(within(picker()).getByRole("button", {name: "Add image or video"}));
+    const input = picker().querySelector<HTMLInputElement>(".dropzone input")!;
+    await userEvent.upload(input, new File(["x"], "clip.mp4", {type: "video/mp4"}));
+    expect((await within(picker()).findByRole("img", {name: "clip.mp4"})).tagName).toBe("VIDEO");
+    await userEvent.click(within(picker()).getByRole("button", {name: "Add"}));
+    await waitFor(() => expect(props.onMessage).toHaveBeenCalledWith("Video added."));
+    const thumbnail = await within(picker()).findByRole("img", {name: "clip.mp4 preview"});
+    expect(thumbnail.tagName).toBe("VIDEO");
+    expect(within(picker()).getByText("64 × 32, video")).toBeTruthy();
+    await userEvent.click(thumbnail);
+    await userEvent.click(within(picker()).getByRole("button", {name: "Apply changes"}));
+    const textures = props.onChange.mock.calls[0]![0] as TextureSlot[];
+    expect(textures[1]).toEqual({id: "iTexture1", url: "bbbb00000001", isUserUploaded: true});
   });
 
   it("deletes an upload after confirming, but not the one in use", async () => {

@@ -21,7 +21,8 @@ export const WELCOME_TIPS: ReactNode[] = [
   <><GlslCode>iPrevFrame</GlslCode> is the frame drawn just before. Mix it into the new one for trails, or use it to run a simulation.</>,
   <>The ⊕ above the code can add a buffer: a shader that runs before the image shader. Every tab can read what it draws as <GlslCode>iBuffer0</GlslCode>, so buffers can run simulations.</>,
   <>The ⊕ above the code can also add the Canvas2D layer: JavaScript that draws text, shapes or a physics simulation over the image. Shaders can read its drawing as <GlslCode>iCanvas2D</GlslCode>.</>,
-  <>You can add your own images in the Textures tab. They stay in this browser, and images up to 4096 px across are kept at full size.</>,
+  <>The Textures tab has photos, noise and short videos, and you can add your own images and videos. Yours stay in this browser, and images up to 4096 px across are kept at full size.</>,
+  <>Put the cursor in a name like <GlslCode>d</GlslCode> or <GlslCode>uv.x</GlslCode>, or select an expression like <GlslCode>length(p) - r</GlslCode>, and press <Kbd>Alt</Kbd> + <Kbd>Enter</Kbd> to see its value at every pixel on the canvas. The pixel inspector, at the canvas's top left, shows the numbers.</>,
   <>Click a built-in function like <GlslCode>smoothstep</GlslCode> or <GlslCode>mix</GlslCode> in your code to see what it does.</>,
   <>In the Canvas2D.js tab, click a helper like <JsCode>Disk</JsCode> or a <JsCode>ctx</JsCode> method like <JsCode>fillText</JsCode> to see what it does, and a colour string like <JsCode>"#ffcc00"</JsCode> for a colour picker.</>,
   // Snippet names to type, rather than code.
