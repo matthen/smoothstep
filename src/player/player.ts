@@ -58,6 +58,11 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link, lay
   renderer.setTextures(textureURLs);
   // A texture that loads after the start changes what iPrevFrame holds, so start again.
   renderer.onTextureLoaded = () => restart();
+  // A paused video that has moved to its frame, to show.
+  let videoFrame = false;
+  renderer.onVideoFrame = () => {
+    videoFrame = true;
+  };
   const paused = document.createElement("span");
   paused.className = "paused";
   paused.textContent = "Paused";
@@ -161,7 +166,10 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link, lay
         }
       }
       // A layer that has fallen behind is waited for, which slows the animation rather than the page.
-      if (!layer?.steps.busy || steps.rendered < 0 || restarts(steps, stepClock)) {
+      // So are videos it reads, so it gets the same frames as the shaders.
+      renderer.followVideos(time, true);
+      if (!layer?.steps.waitingForVideos &&
+        (!layer?.steps.busy || steps.rendered < 0 || restarts(steps, stepClock))) {
         steps = renderSteps(layer?.steps ?? renderer, steps, stepClock, time, (t, frameIndex) => ({
           time: t, duration: doc.duration, frameIndex, variableValues: variableValues(doc.variables, t),
         }), 4);
@@ -175,11 +183,21 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link, lay
     } else {
       last = null;
       frames.idle();
-      if (layerFrame) {
+      renderer.followVideos(time, false);
+      if (videoFrame && !layer?.steps.waitingForVideos) {
+        // Drawn again at the same step, which gives the layer the videos' exact frames.
+        steps = renderSteps(layer?.steps ?? renderer, steps, stepClock, time, (t, frameIndex) => ({
+          time: t, duration: doc.duration, frameIndex, variableValues: variableValues(doc.variables, t),
+        }), 4);
+        videoFrame = false;
+      } else if (layerFrame) {
         renderer.refresh();
       }
     }
     layerFrame = false;
+    if (playing && visible) {
+      videoFrame = false;
+    }
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);

@@ -1,6 +1,7 @@
 // The embedded player, embed.html: plays the animation its hash names (an example, a share link,
 // a file's URL or a gist), for showing on other websites in an iframe.
 import { textureURL } from '../lib/config';
+import { mediaObjectURL } from '../lib/media';
 import { parseHash } from '../lib/routes';
 import { appLink, loadRoute, ShareError } from '../lib/share';
 import { PLAYER_CSS, showMessage, startPlayer } from './player';
@@ -19,7 +20,7 @@ async function main() {
   try {
     const {doc, images} = await loadRoute(route);
     document.title = doc.title + " - smoothstep.io";
-    const urls = new Map([...images].map(([id, blob]) => [id, URL.createObjectURL(blob)]));
+    const urls = new Map([...images].map(([id, blob]) => [id, mediaObjectURL(blob)]));
     const textureURLs = doc.textures.map(t => t.isUserUploaded ? urls.get(t.url) ?? textureURL(t) : textureURL(t));
     startPlayer(container, {
       doc, textureURLs,

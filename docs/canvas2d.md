@@ -28,12 +28,12 @@ The code has two functions:
 
 ```js
 // Runs once after each build, before the first draw. Optional.
-function setup({width, height, duration, floats, textures}) {
+function setup({width, height, resolution, duration, floats, textures}) {
   return {sides: 5};
 }
 
 // Runs once per step.
-function draw(ctx, {time, frame, duration, width, height, floats, textures, data}) {
+function draw(ctx, {time, frame, duration, width, height, resolution, floats, textures, data}) {
   clear(ctx);
   ctx.fillText("Time: " + time.toFixed(1), 60, 110);
 }
@@ -52,9 +52,16 @@ The snippets also include `drawList`, `planck`, `textures` and `trail`, from the
 | `frame` | The step number, the same as `iFrame`. |
 | `duration` | The length of the animation, in seconds. |
 | `width`, `height` | The canvas's size, in canvas units (see below). |
+| `resolution` | The frame's size in pixels, `[width, height]`, the same as `iResolution`. |
 | `floats` | An array of the 16 timeline values at this time, `floats[0]` being `iFloat0`. |
 | `textures` | The 8 texture slots, ready for `ctx.drawImage`, or `null` for an empty slot. |
 | `data` | Whatever `setup` returned. |
+
+`setup` gets the same values except `time`, `frame` and `data`.
+
+The layer draws before the shaders, and runs a few steps ahead of them while the animation plays, so
+it can't read what they draw: there's no `iPrevFrame`, `iBuffer0` or `iCanvas2D` for the layer. The
+canvas keeps its own drawing from the step before, which is the layer's own previous frame.
 
 ### Steps
 
@@ -90,6 +97,8 @@ Set them up again in `setup`, so they start fresh each time the layer restarts.
 The canvas is always 1080 units tall, and as wide as the aspect ratio makes it: 1920 for 16:9.
 The origin is at the top left, and y goes down, as usual for a canvas. A size like `48px` is in
 these units, so text and lines look the same in the small preview and in a 4K render.
+`resolution` gives the real size in pixels, so `height / resolution[1]` is one pixel in canvas
+units, for lines that should be exactly a pixel wide.
 
 Each `draw` starts with the font set to `48px Inter`, white fill and stroke, and a line width of 2.
 
@@ -135,7 +144,7 @@ The fonts are part of smoothstep.io, so they work offline and in player files.
 
 ## Textures
 
-`textures` holds the images in the 8 texture slots, so you can draw them on the canvas:
+`textures` holds the images and videos in the 8 texture slots, so you can draw them on the canvas:
 
 ```js
 function draw(ctx, {width, height, textures}) {
@@ -144,6 +153,10 @@ function draw(ctx, {width, height, textures}) {
   }
 }
 ```
+
+A slot holding a video has the video's frame at each step's `time`, the same frame the shaders
+see. Each step's frame replaces the one before, which can't be drawn after that, so read the frame
+from `textures` in each `draw` rather than keeping it.
 
 ## drawList
 
