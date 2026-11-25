@@ -97,7 +97,7 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
 
   // The expression the canvas is showing in place of the image.
   .cm-shown-expression {
-    border-bottom: 2px dashed $dt-orange;
+    border-bottom: 1px dashed rgba($dt-gray-light, 0.7);
   }
 
   // Search, replace and go-to-line panels.
@@ -297,17 +297,18 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
 // The button under a selection that shows it on the canvas.
 .cm-tooltip.ss-show-expression {
   z-index: 150;
-  border: 1px solid $dt-orange;
-  border-radius: 12px;
-  background-color: $dt-gray-darker;
-  color: $dt-orange;
-  font: 600 11.5px/1 var(--mantine-font-family);
-  padding: 5px 10px;
+  border: 1px solid rgba($dt-gray-light, 0.25);
+  border-radius: 4px;
+  background-color: $dt-gray-dark;
+  color: $dt-gray-light;
+  font: 500 11.5px/1 var(--mantine-font-family);
+  padding: 4px 8px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 
   &:hover {
     background-color: $dt-gray;
+    border-color: rgba($dt-gray-light, 0.45);
   }
 
   @media (pointer: coarse) {

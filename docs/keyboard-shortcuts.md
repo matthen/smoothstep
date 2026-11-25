@@ -16,7 +16,7 @@ These are also in the app, under Help → Keyboard shortcuts.
 | `Shift + Ctrl + R` (Mac: `Shift + Cmd + Alt + F`) | replace all |
 | `Alt + G` | go to a line |
 | `F12`, or `Mod` and click a name | in a shader tab, go to where the name is defined |
-| `Alt + Enter` | in a shader tab, show the selection's value on the canvas, or the image again ([Checking values](coding-specification.md#checking-values)) |
+| `Alt + Enter` | in a shader tab, show the value of the selection or the name at the cursor on the canvas, or the image again ([Checking values](coding-specification.md#checking-values)) |
 | `Mod + /` | comment or uncomment |
 | `Tab` | indent the selection, or insert two spaces; in a snippet, go to its next blank |
 | `Shift + Tab` | re-indent the line or selection; in a snippet, go back a blank |

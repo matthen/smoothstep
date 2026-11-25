@@ -7,6 +7,7 @@ import type { LineError } from '../lib/types';
 import { useLatest } from '../lib/useLatest';
 import { CanvasTools, PixelReadout, type ShownProbe } from './CanvasTools';
 import { pixelAt } from './inspect';
+import type { FoundRange, RangeMode } from './probeRange';
 import { LayerSteps } from './layerSteps';
 import { drawingSize, fitCanvas, SlowFrames } from './layout';
 import { Renderer, type CompileResult, type PixelReading, type ProbeRequest, type ProbeResult } from './Renderer';
@@ -96,7 +97,10 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
   const marginSide = Math.max(0, (container[0] - width) / 2);
 
   const [probe, setProbe] = useState<ShownProbe | null>(null);
-  const [signed, setSigned] = useState(false);
+  const [rangeMode, setRangeMode] = useState<RangeMode>("auto");
+  // What Auto found, as last shown in the bar.
+  const [found, setFound] = useState<FoundRange>(null);
+  const foundRef = useRef<FoundRange>(null);
   // The inspector's point, in CSS pixels from the canvas's top left, and what it read there.
   const [point, setPoint] = useState<{x: number; y: number; touch: boolean} | null>(null);
   const [reading, setReading] = useState<PixelReading | null>(null);
@@ -283,11 +287,8 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
   }, [props.probe, props.shaders, props.buildId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (rendererRef.current) {
-      rendererRef.current.probeSigned = signed;
-      needsPresent.current = true;
-    }
-  }, [signed]);
+    rendererRef.current?.setRangeMode(rangeMode);
+  }, [rangeMode]);
 
   // The Canvas2D layer: started when a build has one, and again when what it runs with changes.
   const layerCode = props.shaders === null ? undefined : props.shaders.canvas;
@@ -391,6 +392,15 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
         }
       } else {
         frames.current.idle();
+        // While nothing new draws, Auto catches up with the last frame.
+        if (rendererRef.current?.findRange(now, true)) {
+          rendererRef.current.present();
+        }
+      }
+      const nextFound = rendererRef.current?.foundRange ?? null;
+      if (nextFound?.[0] !== foundRef.current?.[0] || nextFound?.[1] !== foundRef.current?.[1]) {
+        foundRef.current = nextFound;
+        setFound(nextFound);
       }
       if (pointRef.current && needsRead.current && now - lastRead.current > READ_INTERVAL_MS) {
         readPoint();
@@ -430,7 +440,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
           <CanvasTools
             style={{top: marginTop + 8, left: marginSide + 8, maxWidth: Math.max(0, width - 16 - 88)}}
             inspect={props.inspect} onInspectChange={props.onInspectChange}
-            probe={probe} signed={signed} onSignedChange={setSigned} onProbeOff={props.onProbeOff}
+            probe={probe} rangeMode={rangeMode} onRangeModeChange={setRangeMode} found={found} onProbeOff={props.onProbeOff}
           />
           {point && reading &&
             <PixelReadout

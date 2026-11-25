@@ -599,7 +599,7 @@ div#canvasContainer {
 
   // An expression shown in place of the image.
   canvas[data-probe] {
-    outline: 2px dashed $dt-orange;
+    outline: 1px dashed rgba($dt-gray-light, 0.5);
     outline-offset: 2px;
   }
 
@@ -643,19 +643,23 @@ div#canvasContainer {
     min-width: 0;
     padding: 3px 4px 3px 8px;
     border-radius: 4px;
-    border: 1px solid rgba($dt-orange, 0.6);
+    border: 1px solid rgba($dt-gray-light, 0.2);
     background: rgba($dt-gray-darker, 0.88);
     color: $dt-gray-light;
     font-size: 12px;
 
     .probeIcon {
       flex: none;
-      color: $dt-orange;
+      color: $dt-gray-medium;
     }
 
     .probeType {
       color: $dt-gray-medium;
       white-space: nowrap;
+    }
+
+    .probeRange {
+      font-variant-numeric: tabular-nums;
     }
   }
 

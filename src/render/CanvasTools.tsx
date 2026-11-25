@@ -7,6 +7,7 @@ import { TbColorPicker, TbEye } from 'react-icons/tb';
 import { shaderName } from '../editor/ShaderTabs';
 import { GlslCode } from '../editor/InlineCode';
 import { formatNumber, formatValue, hexColor } from './inspect';
+import { describeRange, type FoundRange, type RangeMode } from './probeRange';
 import type { PixelReading, ProbeResult, ShaderId } from './Renderer';
 
 export type ShownProbe = Extract<ProbeResult, {ok: true}> & {tab: ShaderId};
@@ -16,12 +17,15 @@ interface ToolsProps {
   inspect: boolean;
   onInspectChange(on: boolean): void;
   probe: ShownProbe | null;
-  signed: boolean;
-  onSignedChange(signed: boolean): void;
+  rangeMode: RangeMode;
+  onRangeModeChange(mode: RangeMode): void;
+  found: FoundRange;
   onProbeOff(): void;
 }
 
-export function CanvasTools({style, inspect, onInspectChange, probe, signed, onSignedChange, onProbeOff}: ToolsProps) {
+export function CanvasTools({
+  style, inspect, onInspectChange, probe, rangeMode, onRangeModeChange, found, onProbeOff,
+}: ToolsProps) {
   const where = probe && (probe.tab === "shared" ? `in ${shaderName(probe.shader)}` : probe.tab !== "image" ?
     `in ${shaderName(probe.tab)}` : "");
   return (
@@ -43,13 +47,14 @@ export function CanvasTools({style, inspect, onInspectChange, probe, signed, onS
             <Tooltip label="This device stores values as bytes, so pixels where the line doesn't run can't be striped.">
               <span className="probeType">skipped pixels not marked</span>
             </Tooltip>}
-          <Tooltip label="The range of values shown from black to full colour. Others clip.">
+          <Tooltip label="The range of values shown from black to full colour. Auto uses the lowest and highest on the canvas.">
             <SegmentedControl
-              size="xs" value={signed ? "signed" : "unit"} onChange={value => onSignedChange(value === "signed")}
-              data={[{value: "unit", label: "0 to 1"}, {value: "signed", label: "-1 to 1"}]}
+              size="xs" value={rangeMode} onChange={value => onRangeModeChange(value)}
+              data={[{value: "auto", label: "Auto"}, {value: "unit", label: "0 to 1"}, {value: "signed", label: "-1 to 1"}]}
               aria-label="Range shown"
             />
           </Tooltip>
+          {rangeMode === "auto" && <span className="probeType probeRange" aria-label="Range found">{describeRange(found)}</span>}
           <CloseButton size="sm" aria-label="Show the image" title="Show the image" onClick={onProbeOff} />
         </div>}
     </div>

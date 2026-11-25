@@ -9,6 +9,7 @@ import {
   PROBE_DECLARATIONS, PROBE_MAIN, planProbe, probeComponents, sharedCallers, typeFromError, UNREACHED, withProbe,
   type ProbeType, type Site,
 } from './probe';
+import { combineBlocks, rangeFor, type FoundRange, type RangeMode } from './probeRange';
 
 const VERTEX_SHADER = `#version 300 es
 in vec4 a_position;
@@ -27,26 +28,68 @@ void main() {
 }
 `;
 
+// Whether a probe never ran for a pixel. Bytes clip the marker to 0, so only a value with an alpha of 1
+// can be told from it.
+const UNREACHED_GLSL = `bool unreached(vec4 v) {
+  return iBytes ? iCount < 4 && v.a == 0. : all(equal(v, vec4(${UNREACHED}.)));
+}`;
+
+// Finds the lowest and highest finite component in each block of the probe's values, as
+// (lowest, highest, 1 if any, 0), for Auto's range.
+const PROBE_RANGE_SHADER = `#version 300 es
+precision highp float;
+uniform sampler2D iTexture;
+uniform int iCount;
+uniform bool iBytes;
+uniform ivec2 iBlock;
+out vec4 fragColor;
+${UNREACHED_GLSL}
+void main() {
+  ivec2 size = textureSize(iTexture, 0);
+  ivec2 start = ivec2(gl_FragCoord.xy) * iBlock;
+  ivec2 end = min(start + iBlock, size);
+  float lo = 0.;
+  float hi = 0.;
+  bool found = false;
+  for (int y = start.y; y < end.y; y++) {
+    for (int x = start.x; x < end.x; x++) {
+      vec4 v = texelFetch(iTexture, ivec2(x, y), 0);
+      if (unreached(v)) continue;
+      for (int i = 0; i < iCount; i++) {
+        float c = v[i];
+        if (isnan(c) || isinf(c)) continue;
+        lo = found ? min(lo, c) : c;
+        hi = found ? max(hi, c) : c;
+        found = true;
+      }
+    }
+  }
+  fragColor = vec4(lo, hi, found ? 1. : 0., 0.);
+}
+`;
+
+// Auto's range looks again at most this often while playing, over blocks of a grid this many across.
+const RANGE_INTERVAL_MS = 250;
+const RANGE_BLOCKS = 64;
+
 // Shows the value a probe kept for each pixel: a float as grey, a vec2 as red and green, and so on.
 // Pixels it never ran for are striped, and a vec4's alpha shows over a checkerboard.
 const SHOW_PROBE_SHADER = `#version 300 es
 precision highp float;
 uniform sampler2D iTexture;
 uniform int iCount;
-uniform bool iSigned;
+uniform vec2 iRange;
 uniform bool iBytes;
 out vec4 fragColor;
+${UNREACHED_GLSL}
 void main() {
   vec4 v = texelFetch(iTexture, ivec2(gl_FragCoord.xy), 0);
-  // Bytes clip the marker to 0, so only a value with an alpha of 1 can be told from it.
-  if (iBytes ? iCount < 4 && v.a == 0. : all(equal(v, vec4(${UNREACHED}.)))) {
+  if (unreached(v)) {
     float stripe = mod(floor((gl_FragCoord.x + gl_FragCoord.y) / 8.), 2.);
     fragColor = vec4(mix(vec3(0.16, 0.16, 0.21), vec3(0.27, 0.28, 0.35), stripe), 1.);
     return;
   }
-  if (iSigned) {
-    v = v * 0.5 + 0.5;
-  }
+  v = (v - iRange.x) / (iRange.y - iRange.x);
   vec3 c = clamp(iCount == 1 ? v.rrr : iCount == 2 ? vec3(v.rg, 0.) : v.rgb, 0., 1.);
   if (iCount == 4) {
     vec2 cell = floor(gl_FragCoord.xy / 8.);
@@ -237,8 +280,14 @@ export class Renderer {
   private probeTarget: (Target & {width: number; height: number}) | null = null;
   // The probe's values as 32-bit floats where they can be drawn and read back, else half floats or bytes.
   private probeFormat: "float" | "half" | "byte";
-  // Whether the probe's values are shown from -1 to 1 rather than 0 to 1.
-  probeSigned = false;
+  private probeRangeProgram: Program;
+  // The range the probe's values are shown from black to full colour, and what Auto last found.
+  private rangeMode: RangeMode = "auto";
+  private found: FoundRange = null;
+  private rangeTarget: (Target & {width: number; height: number}) | null = null;
+  // Set when the probe has drawn since Auto last looked, and when it last did.
+  private rangeStale = false;
+  private rangeAt = -Infinity;
   // Off while a thumbnail is taken.
   showProbe = true;
   // The code as last built, and the buffers the image needs without the probe.
@@ -282,6 +331,11 @@ export class Renderer {
       throw new Error("Couldn't build the probe shader: " + show.log);
     }
     this.showProbeProgram = show.program;
+    const range = this.link(PROBE_RANGE_SHADER);
+    if (!range.program) {
+      throw new Error("Couldn't build the probe range shader: " + range.log);
+    }
+    this.probeRangeProgram = range.program;
     // Some phones can only render to half floats, which is all the buffers need.
     const floats = gl.getExtension("EXT_color_buffer_float") !== null;
     this.floatBuffers = (floats || gl.getExtension("EXT_color_buffer_half_float") !== null) &&
@@ -505,6 +559,8 @@ export class Renderer {
       this.deleteProgram(this.probe.program);
     }
     this.probe = probe;
+    this.found = null;
+    this.rangeAt = -Infinity;
     // A probed buffer draws each frame, with the buffers it reads, even if the image doesn't read them.
     const {buffers, shared} = this.sources;
     const needs = probe ? buffersUsed((probe.shader === "image" ? "" : `iBuffer${probe.shader} `) + probe.code,
@@ -537,6 +593,7 @@ export class Renderer {
     if (this.lastInputs) {
       this.drawProbe(this.lastInputs);
     }
+    this.findRange(performance.now(), true);
     this.present();
   }
 
@@ -556,6 +613,67 @@ export class Renderer {
     }
     const shader = this.probe.shader;
     this.draw(this.probe.program, this.probeTarget, inputs, this.targets[1], shader === "image" ? undefined : shader);
+    this.rangeStale = true;
+  }
+
+  // The range the probe's values show from black to full colour: 0 to 1, -1 to 1, or Auto.
+  setRangeMode(mode: RangeMode) {
+    this.rangeMode = mode;
+    this.findRange(performance.now(), true);
+    this.present();
+  }
+
+  // What Auto last found, while it's on and a probe shows.
+  get foundRange(): FoundRange {
+    return this.probe && this.rangeMode === "auto" ? this.found : null;
+  }
+
+  // Finds Auto's range again if the probe has drawn since, at most every RANGE_INTERVAL_MS unless
+  // `now` is forced. Returns whether it changed, so the canvas should show it again.
+  findRange(now: number, force = false): boolean {
+    if (!this.probe || !this.probeTarget || this.rangeMode !== "auto" || !this.rangeStale ||
+        (!force && now - this.rangeAt < RANGE_INTERVAL_MS)) {
+      return false;
+    }
+    const gl = this.gl;
+    const block = [Math.ceil(this.width / RANGE_BLOCKS), Math.ceil(this.height / RANGE_BLOCKS)];
+    const [w, h] = [Math.ceil(this.width / block[0]!), Math.ceil(this.height / block[1]!)];
+    if (this.rangeTarget?.width !== w || this.rangeTarget.height !== h) {
+      if (this.rangeTarget) {
+        this.deleteTarget(this.rangeTarget);
+      }
+      const target = this.probeFormat === "float" ? this.target(false, "float", w, h) :
+        this.target(this.probeFormat === "half", undefined, w, h);
+      this.rangeTarget = {...target, width: w, height: h};
+    }
+    const program = this.probeRangeProgram;
+    gl.useProgram(program);
+    gl.bindVertexArray(program.vao);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.rangeTarget.framebuffer);
+    gl.activeTexture(gl.TEXTURE0 + PREV_FRAME_UNIT);
+    gl.bindTexture(gl.TEXTURE_2D, this.probeTarget.texture);
+    gl.uniform1i(this.uniform(program, "iTexture"), PREV_FRAME_UNIT);
+    gl.uniform1i(this.uniform(program, "iCount"), probeComponents(this.probe.type));
+    gl.uniform1i(this.uniform(program, "iBytes"), Number(this.probeFormat === "byte"));
+    gl.uniform2i(this.uniform(program, "iBlock"), block[0]!, block[1]!);
+    gl.viewport(0, 0, w, h);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    let blocks: ArrayLike<number>;
+    if (this.probeFormat === "byte") {
+      const bytes = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, bytes);
+      blocks = Array.from(bytes, b => b / 255);
+    } else {
+      blocks = new Float32Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, blocks as Float32Array);
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    this.rangeStale = false;
+    this.rangeAt = now;
+    const found = combineBlocks(blocks);
+    const changed = found?.[0] !== this.found?.[0] || found?.[1] !== this.found?.[1];
+    this.found = found;
+    return changed;
   }
 
   // The colour shown at a pixel, counted from the bottom left, and the probe's value there.
@@ -658,17 +776,17 @@ export class Renderer {
     this.gl.deleteTexture(target.texture);
   }
 
-  private target(isBuffer: boolean, format?: "float"): Target {
+  private target(isBuffer: boolean, format?: "float", width = this.width, height = this.height): Target {
     const gl = this.gl;
     const texture = gl.createTexture();
     gl.activeTexture(gl.TEXTURE0 + PREV_FRAME_UNIT);
     gl.bindTexture(gl.TEXTURE_2D, texture);
     if (format === "float") {
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, this.width, this.height, 0, gl.RGBA, gl.FLOAT, null);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width, height, 0, gl.RGBA, gl.FLOAT, null);
     } else if (isBuffer && this.floatBuffers) {
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, this.width, this.height, 0, gl.RGBA, gl.HALF_FLOAT, null);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, width, height, 0, gl.RGBA, gl.HALF_FLOAT, null);
     } else {
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.width, this.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     }
     // Buffers blend between pixels when read between them, which simulations rely on; iPrevFrame doesn't.
     const filter = isBuffer ? gl.LINEAR : gl.NEAREST;
@@ -820,6 +938,7 @@ export class Renderer {
     this.targets = [output, input];
     this.lastInputs = inputs;
     this.drawProbe(inputs);
+    this.findRange(performance.now());
     this.present();
   }
 
@@ -838,7 +957,8 @@ export class Renderer {
       gl.bindTexture(gl.TEXTURE_2D, this.probeTarget.texture);
       gl.uniform1i(this.uniform(program, "iTexture"), PREV_FRAME_UNIT);
       gl.uniform1i(this.uniform(program, "iCount"), probeComponents(this.probe.type));
-      gl.uniform1i(this.uniform(program, "iSigned"), Number(this.probeSigned));
+      const [lo, hi] = rangeFor(this.rangeMode, this.found);
+      gl.uniform2f(this.uniform(program, "iRange"), lo, hi);
       gl.uniform1i(this.uniform(program, "iBytes"), Number(this.probeFormat === "byte"));
       gl.viewport(0, 0, this.width, this.height);
       gl.drawArrays(gl.TRIANGLES, 0, 6);

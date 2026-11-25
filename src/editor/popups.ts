@@ -1,6 +1,6 @@
 // Click helpers: inline pickers on values, definitions of built-ins, and underlining every use of a clicked variable.
 import { syntaxTree } from '@codemirror/language';
-import { Annotation, StateEffect, StateField, type EditorState, type Extension, type Line } from '@codemirror/state';
+import { Annotation, Facet, StateEffect, StateField, type EditorState, type Extension, type Line } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, showTooltip, type DecorationSet, type Tooltip } from '@codemirror/view';
 import { DOC_SECTIONS, docLinkElement, type DocTarget } from '../lib/docLinks';
 import { eachShaderInput } from '../lib/shaderInputs';
@@ -102,6 +102,13 @@ const popupField = StateField.define<Popup | null>({
   provide: (f) => showTooltip.from(f, (p) => p?.tooltip ?? null),
 });
 
+// Whether a popup is open, so other tooltips can keep out of its way.
+export const popupOpen = (state: EditorState) => state.field(popupField, false) != null;
+
+// A way to show the value clicked at `pos` on the canvas, where there is one.
+export type ShowValueAt = (view: EditorView, pos: number) => (() => void) | null;
+export const showValueAt = Facet.define<ShowValueAt, ShowValueAt | null>({ combine: (values) => values[0] ?? null });
+
 const close = (view: EditorView) => {
   if (view.state.field(popupField)) view.dispatch({ effects: setPopup.of(null) });
 };
@@ -182,8 +189,37 @@ function definitionDom(def: Definition, language: CodeLanguage) {
   return dom;
 }
 
-// The user's own definition: how it's declared, the comment above it, and a way to go there.
-function userDefinitionDom(view: EditorView, def: Description & { go(): void }) {
+// A row in a popup: a link-like button and the key that does the same.
+function actionRow(view: EditorView, label: string, keys: string, run: () => void) {
+  const row = document.createElement('p');
+  row.className = 'ss-go-to-definition';
+  const button = row.appendChild(document.createElement('button'));
+  button.type = 'button';
+  button.textContent = label;
+  button.addEventListener('click', () => {
+    view.dispatch({ effects: setPopup.of(null) });
+    run();
+  });
+  row.appendChild(document.createElement('kbd')).textContent = keys;
+  return row;
+}
+
+// The button a tapped value's popup has on its own.
+function showValueDom(view: EditorView, show: () => void) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'ss-show-expression';
+  button.textContent = 'Show on canvas';
+  button.addEventListener('click', () => {
+    view.dispatch({ effects: setPopup.of(null) });
+    show();
+  });
+  return button;
+}
+
+// The user's own definition: how it's declared, the comment above it, a way to go there, and one to
+// show it on the canvas when it's a value.
+function userDefinitionDom(view: EditorView, def: Description & { go(): void }, show: (() => void) | null) {
   const dom = document.createElement('div');
   dom.className = 'ss-definition';
   if (def.comment) {
@@ -192,16 +228,8 @@ function userDefinitionDom(view: EditorView, def: Description & { go(): void }) 
     p.append(def.comment);
   }
   dom.append(highlightedCodeElement([def.signature], 'glsl'));
-  const go = dom.appendChild(document.createElement('p'));
-  go.className = 'ss-go-to-definition';
-  const button = go.appendChild(document.createElement('button'));
-  button.type = 'button';
-  button.textContent = 'Go to definition';
-  button.addEventListener('click', () => {
-    view.dispatch({ effects: setPopup.of(null) });
-    def.go();
-  });
-  go.appendChild(document.createElement('kbd')).textContent = goToDefinitionHint;
+  dom.append(actionRow(view, 'Go to definition', goToDefinitionHint, def.go));
+  if (show) dom.append(actionRow(view, 'Show on canvas', 'Alt + Enter', show));
   return dom;
 }
 
@@ -260,9 +288,13 @@ function onClick(view: EditorView, pos: number, touch: boolean, config: ClickCon
   };
   if (def) {
     view.dispatch({ effects: showPopup(definitionDom(def, config.language)) });
-  } else if (config.illuminates(state, word.from) && name.length > 1) {
-    const own = config.userDefinitionAt?.(view, word.from);
-    view.dispatch({ effects: [setIlluminated.of(name), ...own ? [showPopup(userDefinitionDom(view, own))] : []] });
+  } else if (config.illuminates(state, word.from)) {
+    const long = name.length > 1;
+    const own = long ? config.userDefinitionAt?.(view, word.from) : null;
+    // A mouse gets the button under the cursor instead, once it rests.
+    const show = view.state.facet(showValueAt)?.(view, pos) ?? null;
+    const dom = own ? userDefinitionDom(view, own, show) : show && touch ? showValueDom(view, show) : null;
+    view.dispatch({ effects: [...long ? [setIlluminated.of(name)] : [], ...dom ? [showPopup(dom)] : []] });
   }
 }
 

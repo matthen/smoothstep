@@ -91,18 +91,26 @@ details.
 
 To see what a part of your code works out, select it in a shader tab and click **Show on canvas**
 under the selection, or press `Alt + Enter`. It can be a name like `d`, a part like `uv.x`, or a
-calculation like `length(p) - r`. With nothing selected, `Alt + Enter` shows the name at the cursor.
+calculation like `length(p) - r`. You don't have to select a name: click in it, and **Show on
+canvas** appears under the cursor once it stops moving, or press `Alt + Enter`. That takes the name
+with any fields and swizzles after it, so a click in `uv.x` shows `uv.x`. On a touch screen, tap the
+name and choose **Show on canvas** in the box that opens.
 The canvas then shows that value at every pixel, at the current time, in place of the image:
 
 | type | shown as |
 |---|---|
-| `float`, `int`, `bool` | grey, from black at 0 to white at 1 |
+| `float`, `int`, `bool` | grey, from black to white |
 | `vec2` | red and green |
 | `vec3` | red, green and blue |
 | `vec4` | red, green and blue, over a checkerboard where alpha is below 1 |
 
-Values below 0 show as 0, and values above 1 as 1. Choose **-1 to 1** in the bar above the canvas
-to show -1 as black and 1 as full colour instead. A value in a buffer's tab shows that buffer's
+The switch in the bar above the canvas sets the range shown from black to full colour. **Auto**, the
+first choice, finds the lowest and highest value on the canvas, over all of a vector's parts, and
+shows the lowest as black and the highest as full colour. The bar shows what it found, such as
+`-3.2 to 7.5`. It ignores pixels where the code never runs, and values that are NaN or infinite. A
+value that's the same everywhere shows as it would from 0 to 1. While the animation plays, Auto
+checks again a few times a second. **0 to 1** and **-1 to 1** fix the range instead, and values
+outside it show as its ends. A value in a buffer's tab shows that buffer's
 value, and one in shared.glsl shows in the image, or in the first buffer that calls its function,
 directly or through other functions there. Showing a buffer that the image doesn't read starts the
 simulation again from frame 0, so the buffer is set up as usual. The value is the one from just before its line runs, so
@@ -111,7 +119,7 @@ sets shows its new value. Pixels where the code never runs, such as inside an `i
 there, are striped. If it runs more than once for a pixel, as in a loop, the canvas shows the last
 value.
 
-The selected code is marked with a dashed line. It stays on the canvas as you edit and build, until
+The code shown is marked with a dashed line. It stays on the canvas as you edit and build, until
 you click the × in the bar above the canvas, or press `Alt + Enter` on it again. While you drag a
 picker, the canvas shows the image until you let go. Your code, your saved animation and anything
 you render stay as they are.
@@ -119,7 +127,7 @@ you render stay as they are.
 The pixel inspector shows the numbers. Click its button at the top left of the canvas, then point
 at the canvas, or touch it on a touch screen. It shows the pixel's colour from 0 to 1 and as a hex
 code, its `fragCoord`, and its `uv`, which is `fragCoord / iResolution`. While the canvas shows a value
-from your code, the inspector shows that value itself, beyond 0 to 1 too.
+from your code, the inspector shows that value itself, whatever the range.
 
 ## Coming from Shadertoy
 
