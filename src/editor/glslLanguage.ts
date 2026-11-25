@@ -5,12 +5,16 @@ import { StreamLanguage, StringStream, type StreamParser } from '@codemirror/lan
 import { MAX_BUFFERS } from '../lib/document.ts';
 
 const KEYWORDS = (
-  'sampler1D sampler2D sampler3D samplerCube sampler1DShadow sampler2DShadow ' +
   'const attribute uniform varying break continue discard return ' +
-  'for while do if else struct in out inout'
+  'for while do if else struct in out inout highp mediump lowp precision'
 ).split(' ');
 
-const TYPES = 'float int bool void vec2 vec3 vec4 ivec2 ivec3 ivec4 bvec2 bvec3 bvec4 mat2 mat3 mat4'.split(' ');
+const TYPES = (
+  'float int uint bool void vec2 vec3 vec4 ivec2 ivec3 ivec4 uvec2 uvec3 uvec4 bvec2 bvec3 bvec4 ' +
+  'mat2 mat3 mat4 mat2x2 mat2x3 mat2x4 mat3x2 mat3x3 mat3x4 mat4x2 mat4x3 mat4x4 ' +
+  'sampler2D sampler3D samplerCube sampler2DShadow samplerCubeShadow sampler2DArray sampler2DArrayShadow ' +
+  'isampler2D isampler3D isamplerCube isampler2DArray usampler2D usampler3D usamplerCube usampler2DArray'
+).split(' ');
 
 const UNIFORMS = [
   'iFrame', 'iTime', 'iPrevFrame', 'iResolution', 'iDuration', 'iCanvas2D',
@@ -48,10 +52,30 @@ const builtinSet = new Set(BUILTINS);
 const atomSet = new Set(ATOMS);
 const blockKeywords = new Set('for while do if else struct'.split(' '));
 
-// Token names are CodeMirror highlight tag names, so syntax nodes carry them too.
+// Token names are CodeMirror highlight tag names, so syntax nodes carry them too. `meta` is a
+// preprocessor directive, and `variableName.local` a function's or macro's parameter.
 export type GlslToken =
   | 'keyword' | 'typeName' | 'variableName.standard' | 'atom' | 'number' | 'comment' | 'string'
-  | 'meta' | 'operator' | 'variableName';
+  | 'meta' | 'operator' | 'variableName' | 'variableName.function' | 'variableName.local' | 'macroName';
+
+// The class each token is coloured with, in the editor, the tutorial and the docs.
+export const GLSL_TOKEN_CLASSES: Record<GlslToken, string> = {
+  keyword: 'tok-keyword', typeName: 'tok-type', 'variableName.standard': 'tok-builtin', variableName: 'tok-variable',
+  'variableName.function': 'tok-function', 'variableName.local': 'tok-parameter', macroName: 'tok-macro',
+  atom: 'tok-atom', number: 'tok-number', comment: 'tok-comment', string: 'tok-string', meta: 'tok-meta',
+  operator: 'tok-operator',
+};
+
+// The user's own names, which can be clicked through to where they're declared.
+export const USER_NAME_TOKENS: ReadonlySet<string> =
+  new Set<GlslToken>(['variableName', 'variableName.function', 'variableName.local', 'macroName']);
+
+export const isBuiltinType = (name: string) => typeSet.has(name);
+
+// Directives whose whole line is one token.
+const plainDirectives = new Set(['version', 'extension', 'pragma', 'line', 'error']);
+// Directives followed by a macro's name.
+const namingDirectives = new Set(['define', 'undef', 'ifdef', 'ifndef']);
 
 const INDENT_UNIT = 2;
 const number = /^(?:0x[a-f\d]+|0b[01]+|(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?)(u|ll?|l|f)?/i;
@@ -76,6 +100,23 @@ export interface GlslState {
   indented: number;
   startOfLine: boolean;
   prevToken: string | null;
+  // Names #defined so far, and struct types declared so far. Replaced, never mutated, so copies can share them.
+  macros: readonly string[];
+  structs: readonly string[];
+  // The enclosing function's parameters, and a function-like macro's on its own lines.
+  params: readonly string[];
+  macroParams: readonly string[];
+  // How far through a function definition: its name, its parameter list, between `)` and `{`, or its body.
+  header: 'none' | 'name' | 'params' | 'after' | 'body';
+  headerParams: readonly string[];
+  bodyDepth: number;
+  braceDepth: number;
+  parenDepth: number;
+  structNext: boolean;
+  // On a preprocessor line: its directive, whether the macro's name comes next, and whether it ends in `\`.
+  directive: string | null;
+  macroNameNext: boolean;
+  continued: boolean;
 }
 
 let curPunc: string | null = null;
@@ -131,9 +172,55 @@ function tokenPreprocessor(stream: StringStream, state: GlslState): GlslToken {
   return 'meta';
 }
 
+// The `#directive` starting a preprocessor line. The rest of the line is code, except after a plain directive.
+function tokenDirective(stream: StringStream, state: GlslState): GlslToken {
+  stream.eatSpace();
+  const directive = stream.match(/^\w*/) as RegExpMatchArray;
+  state.directive = directive[0];
+  if (plainDirectives.has(state.directive)) return tokenPreprocessor(stream, state);
+  state.macroNameNext = namingDirectives.has(state.directive);
+  return 'meta';
+}
+
+// The macro's name after #define, #ifdef and the like. A function-like macro's parameters count for its lines.
+function tokenMacroName(stream: StringStream, state: GlslState, name: string): GlslToken {
+  state.macroNameNext = false;
+  if (state.directive === 'undef') state.macros = state.macros.filter((m) => m !== name);
+  if (state.directive !== 'define') return 'macroName';
+  if (!state.macros.includes(name)) state.macros = [...state.macros, name];
+  const params = stream.match(/^\(([^)]*)\)/, false) as RegExpMatchArray | null;
+  if (!params) return 'macroName';
+  state.macroParams = params[1]!.split(',').map((p) => p.trim()).filter(Boolean);
+  return 'variableName.function';
+}
+
+function tokenIdentifier(stream: StringStream, state: GlslState, name: string): GlslToken {
+  if (state.macroNameNext) return tokenMacroName(stream, state, name);
+  if (state.directive !== null && name === 'defined') return 'meta';
+  // A field or swizzle.
+  if (state.prevToken === '.') return 'variableName';
+  if (state.structNext) {
+    if (!state.structs.includes(name)) state.structs = [...state.structs, name];
+    return 'typeName';
+  }
+  if (state.params.includes(name) || state.macroParams.includes(name)) return 'variableName.local';
+  if (state.header === 'params' && state.prevToken === 'typeName') {
+    state.headerParams = [...state.headerParams, name];
+    return 'variableName.local';
+  }
+  if (state.structs.includes(name)) return 'typeName';
+  // A function-like macro's call has no space before its `(`.
+  if (state.macros.includes(name)) return stream.match(/^\(/, false) ? 'variableName.function' : 'macroName';
+  return stream.match(/^\s*\(/, false) ? 'variableName.function' : 'variableName';
+}
+
 function tokenBase(stream: StringStream, state: GlslState): GlslToken | null {
   const ch = stream.next() ?? '';
-  if (ch === '#' && state.startOfLine) return tokenPreprocessor(stream, state);
+  if (ch === '#' && state.startOfLine) return tokenDirective(stream, state);
+  if (ch === '\\' && state.directive !== null) {
+    state.continued = stream.eol();
+    return null;
+  }
   if (ch === '"' || ch === "'") {
     state.tokenize = tokenString(ch);
     return state.tokenize(stream, state);
@@ -172,7 +259,45 @@ function tokenBase(stream: StringStream, state: GlslState): GlslToken | null {
   if (typeSet.has(cur)) return 'typeName';
   if (builtinSet.has(cur)) return 'variableName.standard';
   if (atomSet.has(cur)) return 'atom';
-  return 'variableName';
+  return tokenIdentifier(stream, state, cur);
+}
+
+// Follows function definitions, so their parameters are known in their bodies.
+function trackHeader(state: GlslState, style: GlslToken | null) {
+  switch (state.header) {
+    case 'name':
+      state.header = curPunc === '(' ? 'params' : 'none';
+      break;
+    case 'params':
+      if (curPunc === ')' && state.parenDepth === 0) state.header = 'after';
+      else if (curPunc === '{' || curPunc === ';') state.header = 'none';
+      break;
+    case 'after':
+      if (curPunc === '{') {
+        state.header = 'body';
+        state.params = state.headerParams;
+        state.bodyDepth = state.braceDepth - 1;
+      } else state.header = 'none';
+      break;
+    case 'body':
+      if (curPunc === '}' && state.braceDepth === state.bodyDepth) {
+        state.header = 'none';
+        state.params = [];
+      }
+      break;
+  }
+  // mainImage is a built-in name, but the user defines it.
+  const named = style === 'variableName.function' || style === 'variableName.standard';
+  if (named && state.prevToken === 'typeName' && state.braceDepth === 0) {
+    state.header = 'name';
+    state.headerParams = [];
+  }
+}
+
+function endDirective(state: GlslState) {
+  state.directive = null;
+  state.macroNameNext = false;
+  state.macroParams = [];
 }
 
 // Resets curPunc here rather than in token(), where TS would then narrow it to null across the tokenizer call.
@@ -189,7 +314,26 @@ const glslParser: StreamParser<GlslState> = {
     indented: 0,
     startOfLine: true,
     prevToken: null,
+    macros: [],
+    structs: [],
+    params: [],
+    macroParams: [],
+    header: 'none',
+    headerParams: [],
+    bodyDepth: 0,
+    braceDepth: 0,
+    parenDepth: 0,
+    structNext: false,
+    directive: null,
+    macroNameNext: false,
+    continued: false,
   }),
+  // A blank line ends a preprocessor line, even after a `\`.
+  blankLine(state) {
+    state.continued = false;
+    if (state.tokenize === tokenPreprocessor) state.tokenize = null;
+    endDirective(state);
+  },
   copyState: (state) => {
     const copyContext = (c: Context | null): Context | null => c && { ...c, prev: copyContext(c.prev) };
     return { ...state, context: copyContext(state.context)! };
@@ -200,11 +344,29 @@ const glslParser: StreamParser<GlslState> = {
       if (ctx.align == null) ctx.align = false;
       state.indented = stream.indentation();
       state.startOfLine = true;
+      if (state.continued) state.continued = false;
+      else endDirective(state);
     }
     if (stream.eatSpace()) return null;
     const style = readToken(stream, state);
-    if (style === 'comment' || style === 'meta') return style;
+    if (style === 'comment') return style;
+    // Preprocessor lines don't open blocks or statements.
+    if (state.directive !== null) {
+      state.startOfLine = false;
+      state.prevToken = style ?? curPunc;
+      return style;
+    }
+    if (style === 'meta') return style;
     if (ctx.align == null) ctx.align = true;
+
+    // Brackets left open by half-typed code are forgotten at the next brace.
+    if (curPunc === '{' || curPunc === '}') state.parenDepth = 0;
+    if (curPunc === '{') state.braceDepth++;
+    else if (curPunc === '}') state.braceDepth = Math.max(0, state.braceDepth - 1);
+    else if (curPunc === '(') state.parenDepth++;
+    else if (curPunc === ')') state.parenDepth = Math.max(0, state.parenDepth - 1);
+    trackHeader(state, style);
+    state.structNext = style === 'keyword' && stream.current() === 'struct';
 
     if (curPunc === ';' || curPunc === ':' || (curPunc === ',' && stream.match(/^\s*(?:\/\/.*)?$/, false))) {
       while (state.context.type === 'statement') popContext(state);

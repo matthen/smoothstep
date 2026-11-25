@@ -32,6 +32,10 @@ $bg: $dt-gray;
       color: $dt-cyan;
     }
 
+    code.ss-code {
+      color: $dt-gray-light;
+    }
+
     kbd {
       color: $dt-gray-light;
       border: 1px solid $dt-gray-medium;

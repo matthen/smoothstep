@@ -1,12 +1,9 @@
 // Turns the Markdown in docs/ into pages for the docs site and the app's Docs tab, at build
 // time. Links between the Markdown files become links between pages, other files in the repository
 // link to GitHub, and code blocks are highlighted with the editor's colours.
-import { highlightCode } from '@lezer/highlight';
-import { parser as jsParser } from '@lezer/javascript';
 import { Marked, type Tokens } from 'marked';
 
-import { tokenizeGlsl, type GlslToken } from '../editor/glslLanguage.ts';
-import { jsHighlighter } from '../editor/jsHighlighter.ts';
+import { glslCodeHtml, highlightHtml, looksLikeGlsl } from '../editor/highlight.ts';
 
 export interface DocFile {
   // Its path in docs/, like "canvas2d.md" or "tutorial/README.md".
@@ -59,14 +56,6 @@ const plainText = (html: string) =>
   html.replace(/<button[^>]*>[^<]*<\/button>/g, ' ').replace(/<\/?(?:p|li|ul|ol|h\d|t[dhr]|table|pre|div|br)\b[^>]*>/g, ' ').replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
 
-const GLSL_CLASSES: Record<GlslToken, string> = {
-  keyword: 'tok-keyword', typeName: 'tok-type', 'variableName.standard': 'tok-builtin', variableName: 'tok-variable',
-  atom: 'tok-atom', number: 'tok-number', comment: 'tok-comment', string: 'tok-string', meta: 'tok-meta',
-  operator: 'tok-operator',
-};
-
-const span = (text: string, cls: string) => cls ? `<span class="${cls}">${escapeHtml(text)}</span>` : escapeHtml(text);
-
 type CodeLanguage = 'glsl' | 'js' | '';
 
 function codeLanguage(lang: string | undefined): CodeLanguage {
@@ -74,18 +63,7 @@ function codeLanguage(lang: string | undefined): CodeLanguage {
   return name === 'glsl' ? 'glsl' : name === 'js' || name === 'javascript' ? 'js' : '';
 }
 
-function highlight(code: string, language: CodeLanguage): string {
-  if (language === 'glsl') {
-    return tokenizeGlsl(code).map((line) => line.map((tok) => span(tok.text, tok.type ? GLSL_CLASSES[tok.type] : ''))
-      .join('')).join('\n');
-  }
-  if (language === 'js') {
-    let out = '';
-    highlightCode(code, jsParser.parse(code), jsHighlighter, (text, cls) => out += span(text, cls), () => out += '\n');
-    return out;
-  }
-  return escapeHtml(code);
-}
+const highlight = (code: string, language: CodeLanguage) => language ? highlightHtml(code, language) : escapeHtml(code);
 
 function posixJoin(dir: string, href: string): string {
   const parts = dir ? dir.split('/') : [];
@@ -167,6 +145,9 @@ export function renderDocs(files: readonly DocFile[], options: RenderOptions): D
             : '<button type="button" class="doc-copy">Copy</button>';
           return `<div class="doc-code" data-lang="${language}">${buttons}` +
             `<pre><code>${highlight(text.replace(/\n$/, ''), language)}</code></pre></div>\n`;
+        },
+        codespan({ text }: Tokens.Codespan) {
+          return looksLikeGlsl(text) ? glslCodeHtml(text) : false;
         },
         // A list whose items each start with a link and a line break, like the index's contents, is a
         // list of entries: the link as a title, and the rest as its description.

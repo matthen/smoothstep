@@ -730,7 +730,7 @@ div#textures .texturesHint {
   code {
     font-family: var(--mantine-font-family-monospace);
     font-size: 12px;
-    color: $dt-cyan;
+    @include inline-code-colour;
   }
 }
 
@@ -1079,7 +1079,12 @@ div#textures .texturesHint {
   padding: 1px 4px;
   border-radius: 3px;
   background: $dt-gray-darker;
-  color: $dt-cyan;
+  @include inline-code-colour;
+}
+
+// Code quoted in the app's text, coloured as in the editor (editor/highlight.ts).
+code.ss-code {
+  @include code-tokens;
 }
 
 // "Did you know?" on the welcome dialog.

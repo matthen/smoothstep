@@ -5,6 +5,10 @@ import { Decoration, EditorView, ViewPlugin, showTooltip, type DecorationSet, ty
 import { DOC_SECTIONS, docLinkElement, type DocTarget } from '../lib/docLinks';
 import { eachShaderInput } from '../lib/shaderInputs';
 import glslFunctions from './glslFunctions.json';
+import type { Description } from './glslDefinitions';
+import { USER_NAME_TOKENS } from './glslLanguage';
+import { highlightedCodeElement, type CodeLanguage } from './highlight';
+import { goToDefinitionHint, isDefinitionClick, userDefinitionAt } from './goToDefinition';
 import {
   createColorPicker, createDirectionPicker, createFloatPicker, createVec2Picker, type PickerWidget,
 } from './pickers';
@@ -37,12 +41,16 @@ function glslDocs(name: string): DocTarget | undefined {
 
 // What a click finds, in one language.
 export interface ClickConfig {
+  // How definitions' signatures are coloured.
+  language: CodeLanguage;
   // The value at column `ch` of `line` to open a picker on, if it can have one there.
   pickerAt(state: EditorState, line: Line, ch: number): PickerMatch | null;
   // The definition to show for the word at from..to.
   definitionAt(state: EditorState, from: number, name: string): Definition | null;
   // Whether a click on the word at `from` underlines its other uses.
   illuminates(state: EditorState, from: number): boolean;
+  // How the user's own function, macro, struct or global at `from` is declared, with a way to go there.
+  userDefinitionAt?(view: EditorView, from: number): (Description & { go(): void }) | null;
 }
 
 // Built-in functions from the GLSL reference, and the inputs as the docs' Reference page has them.
@@ -54,13 +62,15 @@ const glslDefinitions = new Map([
 ]);
 
 const glslClicks: ClickConfig = {
+  language: 'glsl',
   pickerAt(state, line, ch) {
     const match = findPickerMatch(line.text, ch);
     return match && nodeNameAt(state, line.from + match.from) !== 'comment' ? match : null;
   },
   definitionAt: (state, from, name) =>
     nodeNameAt(state, from) === 'variableName.standard' ? glslDefinitions.get(name) ?? null : null,
-  illuminates: (state, from) => nodeNameAt(state, from) === 'variableName',
+  illuminates: (state, from) => USER_NAME_TOKENS.has(nodeNameAt(state, from)),
+  userDefinitionAt,
 };
 
 interface Popup {
@@ -150,7 +160,7 @@ function openPicker(view: EditorView, from: number, to: number, kind: PickerKind
   view.dispatch({ effects: setPopup.of({ from, to, anchor, tooltip }) });
 }
 
-function definitionDom(def: Definition) {
+function definitionDom(def: Definition, language: CodeLanguage) {
   const dom = document.createElement('div');
   dom.className = 'ss-definition';
   const p = dom.appendChild(document.createElement('p'));
@@ -168,11 +178,30 @@ function definitionDom(def: Definition) {
   if (def.docs) {
     p.append(' ', docLinkElement('In the docs', def.docs), '.');
   }
-  const code = dom.appendChild(document.createElement('code'));
-  def.signatures.forEach((sig, i) => {
-    if (i) code.append(document.createElement('br'));
-    code.append(sig);
+  dom.append(highlightedCodeElement(def.signatures, language));
+  return dom;
+}
+
+// The user's own definition: how it's declared, the comment above it, and a way to go there.
+function userDefinitionDom(view: EditorView, def: Description & { go(): void }) {
+  const dom = document.createElement('div');
+  dom.className = 'ss-definition';
+  if (def.comment) {
+    const p = dom.appendChild(document.createElement('p'));
+    p.className = 'oneLiner';
+    p.append(def.comment);
+  }
+  dom.append(highlightedCodeElement([def.signature], 'glsl'));
+  const go = dom.appendChild(document.createElement('p'));
+  go.className = 'ss-go-to-definition';
+  const button = go.appendChild(document.createElement('button'));
+  button.type = 'button';
+  button.textContent = 'Go to definition';
+  button.addEventListener('click', () => {
+    view.dispatch({ effects: setPopup.of(null) });
+    def.go();
   });
+  go.appendChild(document.createElement('kbd')).textContent = goToDefinitionHint;
   return dom;
 }
 
@@ -225,12 +254,15 @@ function onClick(view: EditorView, pos: number, touch: boolean, config: ClickCon
   if (!word) return;
   const name = state.sliceDoc(word.from, word.to);
   const def = config.definitionAt(state, word.from, name);
+  const showPopup = (dom: HTMLElement) => {
+    const tooltip: Tooltip = { pos: word.from, above: false, create: () => ({ dom: popupDom(dom), offset: { x: 0, y: 8 } }) };
+    return setPopup.of({ from: word.from, to: word.to, anchor: 0, tooltip });
+  };
   if (def) {
-    const create = () => ({ dom: popupDom(definitionDom(def)), offset: { x: 0, y: 8 } });
-    const tooltip: Tooltip = { pos: word.from, above: false, create };
-    view.dispatch({ effects: setPopup.of({ from: word.from, to: word.to, anchor: 0, tooltip }) });
+    view.dispatch({ effects: showPopup(definitionDom(def, config.language)) });
   } else if (config.illuminates(state, word.from) && name.length > 1) {
-    view.dispatch({ effects: setIlluminated.of(name) });
+    const own = config.userDefinitionAt?.(view, word.from);
+    view.dispatch({ effects: [setIlluminated.of(name), ...own ? [showPopup(userDefinitionDom(view, own))] : []] });
   }
 }
 
@@ -266,6 +298,8 @@ export function clickHelpers(config: ClickConfig = glslClicks): Extension {
         return false;
       },
       click: (e, view) => {
+        // That goes to a definition, or adds a cursor.
+        if (isDefinitionClick(e)) return false;
         const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
         if (pos !== null) onClick(view, pos, pointerType !== 'mouse', config);
         return false;

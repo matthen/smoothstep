@@ -21,6 +21,9 @@ import Share from '../dialogs/Share';
 import Splash from '../dialogs/Splash';
 import Textures from '../dialogs/Textures';
 import CodeEditor, { insertCode } from '../editor/CodeEditor';
+import { describe, topLevel } from '../editor/glslDefinitions';
+import { GlslCode } from '../editor/InlineCode';
+import { analysisOf, selectDefinition } from '../editor/goToDefinition';
 import { EditorView } from '@codemirror/view';
 import { DOC_SECTIONS, onOpenDocs, type DocTarget } from '../lib/docLinks';
 import ShaderTabs, { shaderCaption, shaderName, starterFunction } from '../editor/ShaderTabs';
@@ -75,9 +78,9 @@ const TutorialPanel = lazy(() => import('../tutorial/TutorialPanel'));
 const ReferencePanel = lazy(() => import('../reference/ReferencePanel'));
 type Dialog = "open" | "import" | "saveCopy" | "share" | "export" | "splash";
 
-// Text with `code` in backticks.
+// Text with GLSL `code` in backticks.
 function withCode(text: string) {
-  return text.split("`").map((part, i) => i % 2 ? <code key={i}>{part}</code> : part);
+  return text.split("`").map((part, i) => i % 2 ? <GlslCode key={i}>{part}</GlslCode> : part);
 }
 
 function showMessage(text: string, loading = false) {
@@ -406,6 +409,23 @@ export default function App() {
     if (!phone) {
       view.focus();
     }
+  };
+
+  // Goes from a name in another shader tab to its definition in the shared code.
+  const sharedDefinition = (name: string) => {
+    const view = editorViews.current.get("shared");
+    const analysis = view && analysisOf(view.state.doc);
+    const found = analysis && topLevel(analysis, name);
+    if (!view || !found) {
+      return null;
+    }
+    return {
+      go: () => {
+        flushSync(() => showCodeTab("shared"));
+        selectDefinition(view, found);
+      },
+      description: describe(analysis, found),
+    };
   };
 
   // The code shrinks to the space above the on-screen keyboard, so bring the cursor back into sight.
@@ -1166,6 +1186,7 @@ export default function App() {
               autoFocus={tab === justAdded}
               skeleton={starterFunction(tab)} onFixed={() => setBuildQueued(true)}
               lastFrame={typeof tab === "number" ? "iBuffer" + tab : "iPrevFrame"}
+              definitionElsewhere={tab === "shared" || tab === "canvas" ? undefined : sharedDefinition}
               onView={view => {
                 if (view) {
                   editorViews.current.set(tab, view);

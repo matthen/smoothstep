@@ -20,6 +20,10 @@
     white-space: nowrap;
   }
 
+  code.ss-code {
+    color: $dt-gray-light;
+  }
+
   kbd {
     color: $dt-gray-light;
     border: 1px solid $dt-gray;
@@ -230,14 +234,7 @@
 
 // The editor's colours, in code blocks and in lines quoted in the text.
 .learnCode, .learnProse {
-  .tok-keyword { color: $dt-cyan; }
-  .tok-type { color: $dt-pink; }
-  .tok-builtin { color: $dt-green; }
-  .tok-atom, .tok-number { color: $dt-purple; }
-  .tok-comment { color: $dt-blue; }
-  .tok-string { color: $dt-yellow; }
-  .tok-operator { color: $dt-pink; }
-  .tok-property { color: $dt-orange; }
+  @include code-tokens;
 }
 
 .learnHints {

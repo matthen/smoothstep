@@ -22,6 +22,35 @@ $dt-pink: #ff79c6;
 $dt-purple: #bd93f9;
 $dt-red: #ff5555;
 $dt-yellow: #f1fa8c;
+// Not Dracula's: user-defined functions in code, apart from the green built-ins, and keywords.
+$code-function: #9ad4ff;
+$code-keyword: #82aaff;
+
+// The editor's syntax colours, for code shown outside it too.
+@mixin code-tokens {
+  .tok-keyword { color: $code-keyword; }
+  .tok-type { color: $dt-pink; }
+  .tok-builtin { color: $dt-green; }
+  .tok-variable { color: $dt-gray-light; }
+  .tok-function { color: $code-function; }
+  .tok-parameter { color: $dt-orange; font-style: italic; }
+  .tok-macro { color: $dt-purple; }
+  .tok-atom, .tok-number { color: $dt-purple; }
+  .tok-comment { color: $dt-blue; }
+  .tok-string { color: $dt-yellow; }
+  .tok-meta { color: $dt-pink; }
+  .tok-operator { color: $dt-pink; }
+  .tok-property { color: $dt-orange; }
+}
+
+// Inline code: cyan, or the editor's text colour when it's highlighted code (class `ss-code`).
+@mixin inline-code-colour {
+  color: $dt-cyan;
+
+  &.ss-code {
+    color: $dt-gray-light;
+  }
+}
 
 // Mantine's "sm" breakpoint (48em). Phones in landscape are short, and get the desktop layout.
 $phone-breakpoint: 767.98px;

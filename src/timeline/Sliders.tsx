@@ -1,6 +1,7 @@
 import { Slider, Text, TextInput } from '@mantine/core';
 import { useState } from 'react';
 
+import { GlslCode } from '../editor/InlineCode';
 import { sliderRange, type Variable } from '../lib/document';
 
 interface SlidersProps {
@@ -102,7 +103,7 @@ export default function Sliders({variables, values, names, code, held, onVariabl
   if (used.length === 0) {
     return (
       <Text className="hint" size="sm" p="md">
-        Use <code>iFloat0</code> to <code>iFloat15</code> in your code to get a slider for each one here.
+        Use <GlslCode>iFloat0</GlslCode> to <GlslCode>iFloat15</GlslCode> in your code to get a slider for each one here.
       </Text>
     );
   }

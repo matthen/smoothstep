@@ -13,6 +13,7 @@ import {
 import { tagHighlighter, tags as t } from '@lezer/highlight';
 import { glslCompletionSource } from './completion';
 import { glslLanguage } from './glslLanguage';
+import { definitionElsewhere, goToDefinitionExtension, type DefinitionElsewhere } from './goToDefinition';
 import { lineErrors } from './lineErrors';
 import { links } from './links';
 import { clickHelpers } from './popups';
@@ -22,6 +23,9 @@ const highlighter = tagHighlighter([
   { tag: t.keyword, class: 'tok-keyword' },
   { tag: t.typeName, class: 'tok-type' },
   { tag: t.standard(t.variableName), class: 'tok-builtin' },
+  { tag: t.function(t.variableName), class: 'tok-function' },
+  { tag: t.local(t.variableName), class: 'tok-parameter' },
+  { tag: t.macroName, class: 'tok-macro' },
   { tag: t.variableName, class: 'tok-variable' },
   { tag: t.atom, class: 'tok-atom' },
   { tag: t.number, class: 'tok-number' },
@@ -42,6 +46,8 @@ export interface EditorCallbacks {
   onSave(): void;
   // After an error's button inserts the missing draw or mainImage.
   onFixed?(): void;
+  // For going to a definition in another tab.
+  definitionElsewhere?: DefinitionElsewhere;
 }
 
 // What a tab's code is written in: the shader language, or JavaScript for the Canvas2D layer.
@@ -89,7 +95,10 @@ export function editorExtensions(callbacks: EditorCallbacks, language: EditorLan
     drawSelection(),
     indentOnInput(),
     // JavaScript brings its own highlighting and click helpers.
-    language === "glsl" ? [glslLanguage, syntaxHighlighting(highlighter), clickHelpers()] :
+    language === "glsl" ? [
+      glslLanguage, syntaxHighlighting(highlighter), clickHelpers(), goToDefinitionExtension(),
+      callbacks.definitionElsewhere ? definitionElsewhere.of(callbacks.definitionElsewhere) : [],
+    ] :
       javascriptCompartment.of(javascriptSupport ?? []),
     bracketMatching(),
     closeBrackets(),
