@@ -1,7 +1,7 @@
 // The phone layout: the canvas on top, and a switch between the code, timeline and textures.
 import { devices, expect, test } from '@playwright/test';
 
-import { docsPanel, docsTab, offline, OPEN_EDITOR, skipTour, transitionTimes } from './helpers';
+import { blankTimeline, docsPanel, docsTab, offline, OPEN_EDITOR, skipTour, transitionTimes } from './helpers';
 
 test.use(devices['Pixel 7']);
 
@@ -69,6 +69,7 @@ test("on a phone, the panes switch and a transition can be added with two taps",
   const panes = page.locator(".mobileTabs");
   await panes.getByText("Timeline", {exact: true}).tap();
   await expect(page.locator(".cm-content")).toBeHidden();
+  await blankTimeline(page);
   const grid = page.locator(".gridContainer");
   const timeArea = page.locator(".timeArea");
   const scale = async () => Number(await timeArea.getAttribute("data-px-per-second"));

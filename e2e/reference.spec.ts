@@ -80,7 +80,7 @@ test("Help → Documentation opens the Docs tab, to search and insert from", asy
 test("a popup's docs link and a missing-function error open the right section", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./#new");
-  await page.locator(OPEN_EDITOR).getByText("iTime", {exact: true}).first().click();
+  await page.locator(OPEN_EDITOR).getByText("iResolution", {exact: true}).first().click();
   const popup = page.locator(".cm-tooltip.ss-popup");
   await popup.getByRole("link", {name: "In the docs"}).click();
   const panel = docsPanel(page);

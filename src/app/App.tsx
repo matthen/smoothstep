@@ -34,7 +34,7 @@ import ShaderTabs, { shaderCaption, shaderName, starterFunction } from '../edito
 import * as archive from '../lib/archive';
 import { asset, documentHref, REPO_URL, textureURL, TUTORIAL_HREF } from '../lib/config';
 import {
-  bufferCodes, canvasLayer, DEFAULT_TITLE, EMPTY_TEXTURE, MAX_TITLE_LENGTH, NEW_CANVAS_CODE, newBufferCode, newDocument,
+  bufferCodes, canvasLayer, DEFAULT_TITLE, EMPTY_TEXTURE, MAX_TITLE_LENGTH, NEW_CANVAS_CODE, newBufferCode, newDocument, tutorialDocument,
   parseDocument, sameExtras, shaderExtras, SHARED_PLACEHOLDER, variableValues, withCanvasLayer, type ShaderExtras,
   type AnimationDocument, type AspectRatio, type TextureSlot, type Variable,
 } from '../lib/document';
@@ -521,7 +521,7 @@ export default function App() {
       try {
         if (route.kind === "tutorial") {
           // A new animation, so the tutorial never changes a saved one.
-          loadDocument({...newDocument(), title: lessonTitle(tutorialStart?.lesson ?? 0)});
+          loadDocument({...tutorialDocument(), title: lessonTitle(tutorialStart?.lesson ?? 0)});
         } else if (route.kind === "anim") {
           const record = await localStore.getDocument(route.id);
           if (!record) {

@@ -73,7 +73,8 @@ function desktopSteps({showPane}: TourOptions): DriveStep[] {
         title: "The timeline",
         description: "Each row is a number you can animate, <code>iFloat0</code> to <code>iFloat15</code>. " +
           "Click or drag in a row to add a transition, then set the values it moves between. Use them in " +
-          "your code like any other number. A line like <code>#define size iFloat0</code> names the <code>iFloat0</code> row <code>size</code>. " +
+          "your code like any other number. A line like <code>#define phase iFloat0</code> names the <code>iFloat0</code> row " +
+          "<code>phase</code>: in a new animation, one transition takes it from 0 to 2π. " +
           "<kbd>Ctrl</kbd> and scroll, or pinch, to zoom in.",
         side: "top",
       },

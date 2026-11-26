@@ -2,7 +2,7 @@
 // animated one until the animation plays. And the timeline's rows, which grow as they're needed.
 import { expect, test } from '@playwright/test';
 
-import { expectCenter, offline, setCode, skipTour } from './helpers';
+import { blankTimeline, expectCenter, offline, setCode, skipTour } from './helpers';
 
 const GREY = "#define brightness iFloat0\n#define unused iFloat5\n" +
   "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  fragColor = vec4(vec3(brightness), 1.);\n}";
@@ -15,6 +15,7 @@ test("a slider sets an iFloat, with a range of its own, and both are saved", asy
   const errors = await offline(context);
   await page.goto("./");
   await page.getByRole("button", {name: "Continue"}).click();
+  await blankTimeline(page);
   await setCode(page, GREY.replace("#define unused iFloat5\n", ""));
   await page.keyboard.press("Shift+Enter");
   await page.getByRole("tab", {name: "Sliders"}).click();
