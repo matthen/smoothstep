@@ -73,6 +73,13 @@ const STORAGE_BLOCKED = "This browser isn't letting smoothstep.io store data, so
 const RESTART_MERGE_MS = 500;
 // A build that takes longer than this says how long in the console.
 const SLOW_BUILD_MS = 100;
+// A restart of the Canvas2D code this soon after the animation loops is the loop's.
+const LOOP_RESTART_MS = 1000;
+
+function buildLineText(errors: number, ms: number): string {
+  return errors > 0 ? `Build failed: ${errors} ${errors === 1 ? "error" : "errors"}` :
+    ms > SLOW_BUILD_MS ? `Built in ${Math.round(ms)} ms` : "Built";
+}
 
 // How long after a picker's last change the canvas shows the expression again.
 const PROBE_HOLD_MS = 250;
@@ -137,8 +144,9 @@ export default function App() {
   const [appConsole] = useState(() => new ConsoleStore());
   // The build the console last started afresh for; a picker drag recompiles without a new build.
   const [consoleBuild, setConsoleBuild] = useState(-1);
-  // Whether the animation last went back to the start by looping, and the console's last restart line.
-  const looped = useRef(false);
+  // When the animation last looped, the console's line for the latest build, and its last restart line.
+  const loopedAt = useRef(-Infinity);
+  const buildLine = useRef<{id: number; shaderErrors: number; ms: number} | null>(null);
   const lastRestart = useRef<{id: number; at: number} | null>(null);
   // The code the editor shows, or showed before the Docs tab, and the one whose code didn't build.
   const [codeTab, setCodeTab] = useState<ShaderId>("image");
@@ -585,7 +593,7 @@ export default function App() {
         const elapsed = Math.max(0, (now - last) / 1000);
         const next = timeRef.current + elapsed;
         if (next > doc.duration) {
-          looped.current = true;
+          loopedAt.current = performance.now();
           setTime(0);
           restartFrames();
         } else {
@@ -604,7 +612,7 @@ export default function App() {
     setTime(t);
     setHeld(new Map());  // Moving the playhead shows the timeline's values again.
     if (t === 0) {
-      looped.current = false;
+      loopedAt.current = -Infinity;
       restartFrames();
     }
   }, [restartFrames]);
@@ -776,9 +784,14 @@ export default function App() {
     }
   };
 
-  const onLayerStatus = (errors: LineError[]) => {
+  const onLayerStatus = (errors: LineError[], loading = false) => {
     setLayerErrors(errors);
     errors.forEach(error => appConsole.add({level: "error", text: error.message, tab: "canvas", line: error.line}));
+    // Code that doesn't load counts towards the build's errors.
+    const line = buildLine.current;
+    if (loading && errors.length > 0 && line) {
+      appConsole.update(line.id, buildLineText(line.shaderErrors + errors.length, line.ms));
+    }
     // Show the code with the error, unless the docs are open: its tab shows the error.
     if (errors.length > 0 && errorShader === null && canvasLayer(docRef.current) && !docsShownRef.current) {
       setCodeTab("canvas");
@@ -791,12 +804,8 @@ export default function App() {
     if (buildId !== consoleBuild) {
       setConsoleBuild(buildId);
       appConsole.clear();
-      appConsole.add({
-        level: "note",
-        // The time only once it's long enough to matter.
-        text: result.ok ? (ms > SLOW_BUILD_MS ? `Built in ${Math.round(ms)} ms` : "Built") :
-          `Build failed: ${errors.length} ${errors.length === 1 ? "error" : "errors"}`,
-      });
+      appConsole.add({level: "note", text: buildLineText(errors.length, ms)});
+      buildLine.current = {id: appConsole.last()!.id, shaderErrors: errors.length, ms};
       if (!result.ok) {
         errors.forEach(error => appConsole.add({level: "error", text: error.message, tab: result.shader, line: error.line}));
       }
@@ -815,6 +824,10 @@ export default function App() {
   };
 
   const addLayerLogs = (logs: LayerLog[], dropped: number, render = false) => {
+    // The preview's lines would break up the render's, so they're left out while it runs.
+    if (!render && exportAbort.current) {
+      return;
+    }
     for (const log of logs) {
       appConsole.add({
         level: log.level, text: log.text, tab: "canvas", line: log.line, frame: log.frame, time: log.time,
@@ -829,10 +842,13 @@ export default function App() {
   // A line saying the Canvas2D code started again, so its setup's lines showing again make sense.
   // A resize restarts it twice in quick succession, which counts as once.
   const onLayerRestart = () => {
-    const text = looped.current ? "Looped to the start" : "Restarted";
-    looped.current = false;
-    const last = appConsole.last();
+    if (exportAbort.current) {
+      return;
+    }
     const now = performance.now();
+    const text = now - loopedAt.current < LOOP_RESTART_MS ? "Looped to the start" : "Restarted";
+    loopedAt.current = -Infinity;
+    const last = appConsole.last();
     if (last && last.level === "note" && last.text === text && lastRestart.current?.id === last.id &&
         now - lastRestart.current.at < RESTART_MERGE_MS) {
       return;
@@ -847,7 +863,7 @@ export default function App() {
   });
 
   // Shows a tab's code with the cursor at the start of a line, from the console.
-  const goToLine = (tab: ShaderId, line: number | null) => {
+  const goToLineRef = useLatest((tab: ShaderId, line: number | null) => {
     const exists = tab === "image" || (tab === "shared" ? doc.shared !== undefined :
       tab === "canvas" ? layer !== undefined : tab < (doc.buffers?.length ?? 0));
     if (!exists) {
@@ -868,7 +884,9 @@ export default function App() {
     if (!phone) {
       view.focus();
     }
-  };
+  });
+  // Stable, so the console's entries don't re-render on every frame the app does.
+  const goToLine = useCallback((tab: ShaderId, line: number | null) => goToLineRef.current(tab, line), [goToLineRef]);
 
   // The console counts its errors as seen while it shows.
   const consoleShown = phone ? mobileTab === "console" : panelTab === "console" && showFooter;
@@ -1082,11 +1100,11 @@ export default function App() {
     exportAbort.current = controller;
     setExportError(null);
     setExportProgress({stage: "rendering", fraction: 0});
+    const started = performance.now();
+    appConsole.add({level: "note", text: `Rendering ${EXPORT_NAMES[exportOptions.type]}`});
     try {
       // Loaded on first export, since the encoders are a large part of the app's size.
       const {exportVideo} = await import('../export/exportVideo');
-      const started = performance.now();
-      appConsole.add({level: "note", text: `Rendering ${EXPORT_NAMES[exportOptions.type]}`});
       archive.download(await exportVideo(doc, exportOptions, setExportProgress, controller.signal, {
         layer: (logs, dropped) => addLayerLogs(logs, dropped, true),
         layerErrors: errors => errors.forEach(error =>
@@ -1097,9 +1115,13 @@ export default function App() {
       setDialog(null);
       showMessage("Video rendered.");
     } catch (error) {
-      if (!controller.signal.aborted) {
+      if (controller.signal.aborted) {
+        appConsole.add({level: "note", text: "Render cancelled"});
+      } else {
         console.error(error);
-        setExportError(error instanceof Error ? error.message : String(error));
+        const message = error instanceof Error ? error.message : String(error);
+        appConsole.add({level: "error", text: `Render failed: ${message}`});
+        setExportError(message);
       }
     } finally {
       // A cancelled run can finish after a new one has started; leave the new one's state alone.

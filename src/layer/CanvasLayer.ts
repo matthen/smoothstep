@@ -30,7 +30,8 @@ export interface LayerCallbacks {
   // A new frame, to draw with. Whoever takes it closes it.
   onFrame(bitmap: ImageBitmap): void;
   // The layer's errors, on lines of its code; none once a run draws its first frame.
-  onStatus(errors: LineError[]): void;
+  // `loading` says the code didn't get through loading and its top-level run, as for a syntax error.
+  onStatus(errors: LineError[], loading?: boolean): void;
   // The step the layer has been drawing for a while, "starting" while its code's first run takes a
   // while, or null once it's done.
   onBusy?(frame: number | "starting" | null): void;
@@ -140,7 +141,7 @@ export class CanvasLayer {
         return;
       }
       if ("errors" in prepared) {
-        this.fail(prepared.errors);
+        this.fail(prepared.errors, true);
         return;
       }
       this.prepared = prepared;
@@ -197,7 +198,7 @@ export class CanvasLayer {
     const run: Run = {
       worker: this.sandbox.spawn(prepared.source.source, error => {
         if (run === this.current) {
-          this.fail([errorFromEvent(error, prepared.source)]);
+          this.fail([errorFromEvent(error, prepared.source)], !run.ready);
         } else {
           this.discardStandby();
         }
@@ -260,7 +261,7 @@ export class CanvasLayer {
         if (message.registered === true && message.hasDraw !== true) {
           // Under the last line, where the editor's fix puts one.
           const lastLine = (this.config?.code ?? "").split("\n").length - 1;
-          this.fail([{line: lastLine, message: NO_DRAW, missing: "draw"}]);
+          this.fail([{line: lastLine, message: NO_DRAW, missing: "draw"}], true);
           return;
         }
         if (message.registered !== true) {
@@ -309,7 +310,7 @@ export class CanvasLayer {
           message: typeof message.message === "string" ? message.message.slice(0, 500) : "",
           stack: typeof message.stack === "string" ? message.stack.slice(0, 5000) : "",
           line: typeof message.line === "number" ? message.line : null,
-        }, prepared.source)]);
+        }, prepared.source)], !run.ready);
       } else {
         this.discardStandby();
       }
@@ -347,12 +348,12 @@ export class CanvasLayer {
     this.standby = null;
   }
 
-  private fail(errors: LineError[]) {
+  private fail(errors: LineError[], loading = false) {
     this.stopRuns();
     this.stopped = true;
     this.errors = errors;
     this.dropWaiting();
-    this.callbacks.onStatus(errors);
+    this.callbacks.onStatus(errors, loading);
     const pending = this.pendingDraw;
     this.pendingDraw = null;
     pending?.reject(this.error());

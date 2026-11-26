@@ -1,9 +1,9 @@
 // Puts together the script a Canvas2D layer's worker runs: the runtime, the helpers, the libraries
 // the code imports, then the code itself. It also maps errors in that script back to lines of the code.
 import type { LineError } from '../lib/types';
-import { formatLog } from './formatLog';
+import { FORMAT_LIMITS, formatLogWithin } from './formatLog';
 import { HELPER_NAMES, makeHelpers } from './helpers';
-import { workerRuntime, type LogLevel, type WorkerLog } from './runtime';
+import { MAX_WORKER_LOGS, workerRuntime, type LogLevel, type WorkerLog } from './runtime';
 
 export interface WorkerSource {
   source: string;
@@ -16,7 +16,8 @@ export interface WorkerSource {
 export function workerSource(code: string, libraries: readonly {name: string; code: string}[]): WorkerSource {
   const helpers = HELPER_NAMES.map(name => "__smoothstep.helpers." + name).join(", ");
   const prefix =
-    `const __smoothstep = (${workerRuntime.toString()})(${makeHelpers.toString()}, ${formatLog.toString()});\n` +
+    `const __smoothstep = (${workerRuntime.toString()})(${makeHelpers.toString()}, ` +
+    `args => (${formatLogWithin.toString()})(args, ${JSON.stringify(FORMAT_LIMITS)}), ${MAX_WORKER_LOGS});\n` +
     libraries.map(library =>
       `__smoothstep.define(${JSON.stringify(library.name)}, function (module, exports) {\n${library.code}\n});\n`).join("") +
     // The runtime runs the code once it has its port. The helpers are parameters of an outer function,

@@ -311,6 +311,8 @@ export class Renderer {
   private height = 1;
   private textureUnits: WebGLTexture[] = [];
   private images = new Map<string, HTMLImageElement>();
+  // Whether each image's first load worked, as `complete` and `naturalWidth` can't tell a failure from an SVG with no size.
+  private imageStates = new Map<string, "loading" | "loaded" | "failed">();
   private textureURLs: string[] = [];
   // Each slot's video, or null for an image; slots with the same video share it.
   private slotVideos: (VideoTexture | null)[] = [];
@@ -831,36 +833,39 @@ export class Renderer {
         return;
       }
       const cached = this.images.get(url);
-      if (cached?.complete && cached.naturalWidth) {
+      const state = this.imageStates.get(url);
+      if (cached && state === "loaded") {
         this.upload(i, cached);
         return;
       }
       this.upload(i, null);
-      const image = cached ?? new Image();
-      if (!cached) {
-        image.crossOrigin = "anonymous";
-        image.src = url;
-        this.images.set(url, image);
+      if (state === "failed") {
+        this.onTextureFailed(i, false);
       }
-      const loaded = () => {
-        image.removeEventListener("error", failed);
-        if (this.textureURLs[i] === url) {
-          this.upload(i, image);
+      if (cached) {
+        return;  // Its one pair of listeners fills every slot that shows it.
+      }
+      const image = new Image();
+      image.crossOrigin = "anonymous";
+      this.images.set(url, image);
+      this.imageStates.set(url, "loading");
+      const settle = (ok: boolean) => {
+        this.imageStates.set(url, ok ? "loaded" : "failed");
+        const slots = this.textureURLs.flatMap((slotURL, slot) => slotURL === url && !this.slotVideos[slot] ? [slot] : []);
+        for (const slot of slots) {
+          if (ok) {
+            this.upload(slot, image);
+          } else {
+            this.onTextureFailed(slot, false);
+          }
+        }
+        if (ok && slots.length > 0) {
           this.onTextureLoaded();
         }
       };
-      const failed = () => {
-        image.removeEventListener("load", loaded);
-        if (this.textureURLs[i] === url) {
-          this.onTextureFailed(i, false);
-        }
-      };
-      if (cached?.complete) {
-        failed();  // It already failed: a loaded one was uploaded above.
-      } else {
-        image.addEventListener("load", loaded, {once: true});
-        image.addEventListener("error", failed, {once: true});
-      }
+      image.addEventListener("load", () => settle(true), {once: true});
+      image.addEventListener("error", () => settle(false), {once: true});
+      image.src = url;
     });
     // Videos no slot shows any more stop playing.
     for (const [url, video] of this.videos) {

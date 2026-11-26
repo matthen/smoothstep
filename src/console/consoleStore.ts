@@ -30,8 +30,8 @@ export interface ConsoleSnapshot {
   unseenErrors: boolean;
 }
 
-// Entries kept before the oldest go.
-const MAX_ENTRIES = 500;
+// Entries kept before the oldest go, console.log lines first.
+export const MAX_ENTRIES = 500;
 
 const sameEntry = (a: ConsoleEntry, b: NewEntry) =>
   a.level === b.level && a.text === b.text && a.tab === b.tab && (a.line ?? null) === (b.line ?? null) &&
@@ -48,7 +48,8 @@ function nextFrame(callback: () => void) {
 export class ConsoleStore {
   private entries: ConsoleEntry[] = [];
   private nextId = 1;
-  private unseenErrors = false;
+  // The listed errors that arrived while the console was out of view.
+  private unseen = new Set<number>();
   private viewing = false;
   private snapshot: ConsoleSnapshot = {entries: [], unseenErrors: false};
   private listeners = new Set<() => void>();
@@ -61,19 +62,39 @@ export class ConsoleStore {
   add(entry: NewEntry) {
     const count = entry.count ?? 1;
     const last = this.entries[this.entries.length - 1];
+    let id = last?.id ?? 0;
     if (last && sameEntry(last, entry)) {
       // The latest step's frame and time, with the count so far.
-      this.entries[this.entries.length - 1] = {...last, ...entry, id: last.id, count: last.count + count};
+      this.entries[this.entries.length - 1] = {...last, ...entry, id, count: last.count + count};
     } else {
-      this.entries.push({...entry, id: this.nextId++, count});
-      if (this.entries.length > this.max) {
-        this.entries.splice(0, this.entries.length - this.max);
-      }
+      id = this.nextId++;
+      this.entries.push({...entry, id, count});
     }
     if (entry.level === "error" && !this.viewing) {
-      this.unseenErrors = true;
+      this.unseen.add(id);
+    }
+    if (this.entries.length > this.max) {
+      this.evict();
     }
     this.changed();
+  }
+
+  // Drops the oldest console.log or info line before the newest, or else the oldest entry, so errors,
+  // warnings and the app's notes outlast a draw function's logging.
+  private evict() {
+    const newest = this.entries.length - 1;
+    const index = this.entries.findIndex((entry, i) => i < newest && (entry.level === "log" || entry.level === "info"));
+    const [gone] = this.entries.splice(Math.max(0, index), 1);
+    this.unseen.delete(gone!.id);
+  }
+
+  // Changes an entry's text, if it's still listed.
+  update(id: number, text: string) {
+    const index = this.entries.findIndex(entry => entry.id === id);
+    if (index >= 0) {
+      this.entries[index] = {...this.entries[index]!, text};
+      this.changed();
+    }
   }
 
   // The newest entry, up to date even before listeners hear of it.
@@ -83,15 +104,15 @@ export class ConsoleStore {
 
   clear() {
     this.entries = [];
-    this.unseenErrors = false;
+    this.unseen.clear();
     this.changed();
   }
 
   // Whether the console is in view, which counts its errors as seen.
   setViewing(viewing: boolean) {
     this.viewing = viewing;
-    if (viewing && this.unseenErrors) {
-      this.unseenErrors = false;
+    if (viewing && this.unseen.size > 0) {
+      this.unseen.clear();
       this.changed();
     }
   }
@@ -112,7 +133,7 @@ export class ConsoleStore {
     this.due = true;
     this.schedule(() => {
       this.due = false;
-      this.snapshot = {entries: [...this.entries], unseenErrors: this.unseenErrors};
+      this.snapshot = {entries: [...this.entries], unseenErrors: this.unseen.size > 0};
       this.listeners.forEach(listener => listener());
     });
   }

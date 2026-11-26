@@ -1,14 +1,9 @@
 // Turns the arguments of a console.log call into one line of text, roughly as a browser's devtools
 // would: strings as they are, and numbers, arrays and objects as short readable text. It runs inside
 // the Canvas2D layer's worker, which gets it as source text, so it must not use anything from outside
-// its own body.
-export function formatLog(args: readonly unknown[]): string {
-  // Longer lines are cut off; arrays, objects and nesting are shortened before that.
-  const MAX_LENGTH = 1000;
-  const MAX_ITEMS = 20;
-  const MAX_KEYS = 12;
-  const MAX_DEPTH = 2;
-  const MAX_STRING = 200;
+// its own body, and gets its limits as an argument.
+export function formatLogWithin(args: readonly unknown[], limits: FormatLimits): string {
+  const {length: MAX_LENGTH, items: MAX_ITEMS, keys: MAX_KEYS, depth: MAX_DEPTH, string: MAX_STRING} = limits;
 
   const typeName = (value: object): string => {
     try {
@@ -149,4 +144,19 @@ export function formatLog(args: readonly unknown[]): string {
   }
   const text = parts.join(" ");
   return text.length > MAX_LENGTH ? text.slice(0, MAX_LENGTH) + "…" : text;
+}
+
+// Longer lines are cut off; arrays, objects and nesting are shortened before that.
+export interface FormatLimits {
+  length: number;
+  items: number;
+  keys: number;
+  depth: number;
+  string: number;
+}
+
+export const FORMAT_LIMITS: FormatLimits = {length: 1000, items: 20, keys: 12, depth: 2, string: 200};
+
+export function formatLog(args: readonly unknown[]): string {
+  return formatLogWithin(args, FORMAT_LIMITS);
 }

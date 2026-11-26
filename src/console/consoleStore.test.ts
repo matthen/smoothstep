@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ConsoleStore } from './consoleStore';
+import { ConsoleStore, MAX_ENTRIES } from './consoleStore';
 
 // A store whose updates run when the test says, as the next animation frame would.
 function store(max?: number) {
@@ -51,15 +51,38 @@ describe("ConsoleStore", () => {
   });
 
   it("keeps only the newest entries past its cap", () => {
-    const s = store(500);
-    for (let i = 0; i < 2000; i++) {
+    const s = store();
+    const total = MAX_ENTRIES * 4;
+    for (let i = 0; i < total; i++) {
       s.console.add({level: "log", text: String(i)});
     }
     s.frame();
     const texts = s.texts();
-    expect(texts).toHaveLength(500);
-    expect(texts[0]).toBe("1500");
-    expect(texts.at(-1)).toBe("1999");
+    expect(texts).toHaveLength(MAX_ENTRIES);
+    expect(texts[0]).toBe(String(total - MAX_ENTRIES));
+    expect(texts.at(-1)).toBe(String(total - 1));
+  });
+
+  it("drops logged lines before errors, warnings and notes when full, and the dot only counts errors still listed", () => {
+    const s = store(10);
+    s.console.add({level: "note", text: "Built"});
+    s.console.add({level: "error", text: "broken", tab: "image", line: 2});
+    s.console.add({level: "warn", text: "black texture"});
+    for (let frame = 0; frame < 100; frame++) {
+      s.console.add({level: "log", text: `tick ${frame}`, tab: "canvas", line: 3, frame});
+    }
+    s.frame();
+    expect(s.texts()).toEqual(["Built", "broken", "black texture", ...Array.from({length: 7}, (_, i) => `tick ${93 + i}`)]);
+    expect(s.console.getSnapshot().unseenErrors).toBe(true);
+
+    // With nothing logged left to drop, the oldest goes, and an unseen error with it.
+    for (let i = 0; i < 10; i++) {
+      s.console.add({level: "note", text: `Restarted ${i}`});
+    }
+    s.frame();
+    expect(s.texts()).toHaveLength(10);
+    expect(s.texts()).not.toContain("broken");
+    expect(s.console.getSnapshot().unseenErrors).toBe(false);
   });
 
   it("tells listeners once a frame, however many entries arrive", () => {

@@ -41,8 +41,8 @@ interface CanvasProps {
   layerTextures: readonly (string | null)[];
   // Whether the Canvas2D layer is drawn over the image.
   layerOverlay: boolean;
-  // The Canvas2D layer's errors; none once it draws.
-  onLayerStatus(errors: LineError[]): void;
+  // The Canvas2D layer's errors, and whether its code failed to load; none once it draws.
+  onLayerStatus(errors: LineError[], loading?: boolean): void;
   // The Canvas2D code's console calls, from runs of the latest build.
   onLayerLog(logs: LayerLog[], dropped: number): void;
   // The Canvas2D layer started its code again, other than for a build.
@@ -337,9 +337,13 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
               renderer.setLayerFrame(bitmap);
               needsPresent.current = true;
             },
-            onStatus: errors => propsRef.current.onLayerStatus(errors),
+            // A run of the code before the latest build may still fail or log until the layer takes the new code.
+            onStatus: (errors, loading) => {
+              if (layerBuildId.current === propsRef.current.buildId) {
+                propsRef.current.onLayerStatus(errors, loading);
+              }
+            },
             onBusy: setLayerBusy,
-            // A run of the code before the latest build may still log until the layer takes the new code.
             onLog: (logs, dropped) => {
               if (layerBuildId.current === propsRef.current.buildId) {
                 propsRef.current.onLayerLog(logs, dropped);
@@ -360,7 +364,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
         }
       }).catch((error: unknown) => {
         console.error(error);
-        propsRef.current.onLayerStatus([{line: 0, message: "Couldn't load the Canvas2D layer. Check your connection and build again."}]);
+        propsRef.current.onLayerStatus([{line: 0, message: "Couldn't load the Canvas2D layer. Check your connection and build again."}], true);
       });
     }, force || !layerRef.current ? 0 : LAYER_SETTLE_MS);
     return () => window.clearTimeout(timer);

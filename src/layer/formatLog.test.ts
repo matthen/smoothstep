@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatLog } from './formatLog';
+import { FORMAT_LIMITS, formatLog } from './formatLog';
 
 describe("formatLog", () => {
   it("prints strings as they are and joins arguments with spaces", () => {
@@ -37,10 +37,11 @@ describe("formatLog", () => {
   });
 
   it("shortens long arrays, many keys and deep nesting", () => {
-    const long = Array.from({length: 100}, (_, i) => i);
-    expect(formatLog([long])).toBe(`[${long.slice(0, 20).join(", ")}, …80 more]`);
-    const many = Object.fromEntries(Array.from({length: 15}, (_, i) => ["k" + i, i]));
-    expect(formatLog([many])).toMatch(/k11: 11, …3 more\}$/);
+    const {items, keys} = FORMAT_LIMITS;
+    const long = Array.from({length: items + 80}, (_, i) => i);
+    expect(formatLog([long])).toBe(`[${long.slice(0, items).join(", ")}, …80 more]`);
+    const many = Object.fromEntries(Array.from({length: keys + 3}, (_, i) => ["k" + i, i]));
+    expect(formatLog([many])).toMatch(new RegExp(`k${keys - 1}: ${keys - 1}, …3 more\\}$`));
     expect(formatLog([{a: {b: {c: {d: 1}}}}])).toBe("{a: {b: {…}}}");
     expect(formatLog([[[[1]]]])).toBe("[[[…]]]");
   });
@@ -52,9 +53,8 @@ describe("formatLog", () => {
   });
 
   it("cuts off very long output", () => {
-    const text = formatLog(["x".repeat(5000)]);
-    expect(text.length).toBeLessThan(1100);
-    expect(text.endsWith("…")).toBe(true);
+    const text = formatLog(["x".repeat(FORMAT_LIMITS.length * 5)]);
+    expect(text).toBe("x".repeat(FORMAT_LIMITS.length) + "…");
   });
 
   it("fills format specifiers from the arguments after the first", () => {

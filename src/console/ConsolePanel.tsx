@@ -1,7 +1,7 @@
 // The bottom panel's Console tab: the Canvas2D code's console calls, errors from every tab, a line
 // for each build and the app's own warnings. Clicking an entry with a line goes to it in the code.
 import { Button } from '@mantine/core';
-import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
+import { memo, useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 
 import { shaderName } from '../editor/ShaderTabs';
 import type { ShaderId } from '../render/Renderer';
@@ -36,7 +36,8 @@ function place(entry: ConsoleEntry): string | null {
   return shaderName(entry.tab) + (entry.line === undefined || entry.line === null ? "" : `:${entry.line + 1}`);
 }
 
-function Entry({entry, onGoToLine}: {entry: ConsoleEntry; onGoToLine: Props["onGoToLine"]}) {
+// Memoised, so only new and changed entries draw again as more arrive.
+const Entry = memo(function Entry({entry, onGoToLine}: {entry: ConsoleEntry; onGoToLine: Props["onGoToLine"]}) {
   const step = stepLabel(entry);
   // A console call from the code, which has a step, even if it's null for code that ran before any.
   const isCall = entry.frame !== undefined;
@@ -54,9 +55,9 @@ function Entry({entry, onGoToLine}: {entry: ConsoleEntry; onGoToLine: Props["onG
   return go
     ? <button type="button" className="consoleEntry" data-level={entry.level} onClick={go} title="Go to this line">{body}</button>
     : <div className="consoleEntry" data-level={entry.level}>{body}</div>;
-}
+});
 
-export default function ConsolePanel({store, active, phone, onGoToLine}: Props) {
+export default memo(function ConsolePanel({store, active, phone, onGoToLine}: Props) {
   const {entries} = useSyncExternalStore(store.subscribe, store.getSnapshot);
   const scroller = useRef<HTMLDivElement>(null);
   const atBottom = useRef(true);
@@ -89,7 +90,7 @@ export default function ConsolePanel({store, active, phone, onGoToLine}: Props) 
       </div>
     </div>
   );
-}
+});
 
 // Empties the console. On a computer it sits in the tabs' row, and on a phone above the entries.
 export function ConsoleClear({store}: {store: ConsoleStore}) {

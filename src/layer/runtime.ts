@@ -54,7 +54,12 @@ interface WorkerScope {
 
 type Callback = (...args: unknown[]) => void;
 
-export function workerRuntime(helpersFor: (env: HelperEnv) => Helpers, formatLog: (args: readonly unknown[]) => string) {
+// The most console calls a worker holds between messages to the app; past it they're only counted.
+export const MAX_WORKER_LOGS = 200;
+
+export function workerRuntime(
+  helpersFor: (env: HelperEnv) => Helpers, formatLog: (args: readonly unknown[]) => string, maxLogs: number,
+) {
   const scope = self as unknown as WorkerScope;
   // Drawing units: the canvas is always this many tall, so sizes look the same at any resolution.
   const UNITS_TALL = 1080;
@@ -201,8 +206,7 @@ export function workerRuntime(helpersFor: (env: HelperEnv) => Helpers, formatLog
   let failed = false;
 
   // Console calls wait here and go to the app together, ahead of any other message, so they arrive
-  // in order. A run of the same call is kept as one with a count, and past MAX_LOGS they're only counted.
-  const MAX_LOGS = 200;
+  // in order. A run of the same call is kept as one with a count, and past maxLogs they're only counted.
   const ErrorType = Error;
   let logs: WorkerLog[] = [];
   let droppedLogs = 0;
@@ -254,7 +258,7 @@ export function workerRuntime(helpersFor: (env: HelperEnv) => Helpers, formatLog
           last.count++;
           last.frame = stepFrame;
           last.time = time;
-        } else if (logs.length >= MAX_LOGS) {
+        } else if (logs.length >= maxLogs) {
           droppedLogs++;
         } else {
           logs.push({level, text, frame: stepFrame, time, lines, count: 1});
@@ -272,9 +276,20 @@ export function workerRuntime(helpersFor: (env: HelperEnv) => Helpers, formatLog
   global.console = consoleObject;
   ([["log", "log"], ["debug", "log"], ["dir", "log"], ["trace", "log"], ["info", "info"], ["warn", "warn"],
     ["error", "error"]] as const).forEach(([name, level]) => {
-    consoleObject[name] = (...args: unknown[]) => log(level, args);
+    // The browser's own console still gets each call, so devtools shows it even from a loop that never ends.
+    const original = consoleObject[name];
+    consoleObject[name] = (...args: unknown[]) => {
+      if (typeof original === "function") {
+        apply(original as Callback, consoleObject, args);
+      }
+      log(level, args);
+    };
   });
+  const originalAssert = consoleObject.assert;
   consoleObject.assert = (condition: unknown, ...args: unknown[]) => {
+    if (typeof originalAssert === "function") {
+      apply(originalAssert as Callback, consoleObject, [condition, ...args]);
+    }
     if (!condition) {
       log("error", ["Assertion failed" + (args.length > 0 ? ":" : ""), ...args]);
     }
@@ -398,7 +413,12 @@ export function workerRuntime(helpersFor: (env: HelperEnv) => Helpers, formatLog
       }]);
       const code = body;
       body = null;
-      code?.();
+      // An uncaught error goes to the app another way, which may not wait for the logs before it.
+      try {
+        code?.();
+      } finally {
+        sendLogs();
+      }
     }
   }, {capture: true});
   scope.addEventListener("unhandledrejection", event => fail(event.reason));

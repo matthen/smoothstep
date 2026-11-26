@@ -57,13 +57,15 @@ test("console.log in the Canvas2D code prints in the Console, with a repeated li
   const ticks = entries(page).filter({hasText: "tick"});
   await expect(ticks.locator(".consoleCount")).toHaveText(/^×\d{2,}$/, {timeout: 30_000});
   await page.getByRole("button", {name: "Pause"}).click();
-  // Folded, so one line however many steps have drawn.
-  await expect(ticks).toHaveCount(1);
-  await expect(ticks).toContainText(/frame \d+/);
+  // Folded, so one line however many steps have drawn, unless a restart or loop line splits them.
+  const texts = await entries(page).allTextContents();
+  const isTick = (text: string | undefined) => text?.includes("tick") ?? false;
+  expect(texts.filter((text, i) => isTick(text) && isTick(texts[i + 1]))).toEqual([]);
+  await expect(ticks.last()).toContainText(/frame \d+/);
 
   // Its place goes to the line that printed it.
   await page.getByRole("tab", {name: /^Image\.glsl/}).click();
-  await ticks.click();
+  await ticks.last().click();
   await expect(page.getByRole("tab", {name: /^Canvas2D\.js/})).toHaveAttribute("aria-selected", "true");
   await expect.poll(() => cursorLine(page)).toBe("  console.log(\"tick\");");
   expect(errors).toEqual([]);
@@ -92,4 +94,16 @@ test("a shader error is listed with its tab and line, and clicking it goes there
   await error.click();
   await expect(page.getByRole("tab", {name: /^Image\.glsl/})).toHaveAttribute("aria-selected", "true");
   await expect.poll(() => cursorLine(page)).toBe("  fragColor = vec4(uv, missing, 1.0);");
+});
+
+test("Canvas2D code with a syntax error makes the build line say it failed", async ({page, context}) => {
+  await offline(context);
+  await page.goto("./");
+  await page.getByRole("button", {name: "Continue"}).click();
+  await consoleTab(page).click();
+  await addTab(page, "Add the Canvas2D layer");
+  await setCode(page, "function draw(ctx) {\n  clear(ctx;\n}");
+  await page.keyboard.press("Shift+Enter");
+  await expect(entries(page).first()).toHaveText("Build failed: 1 error");
+  await expect(entries(page).filter({hasText: /^Canvas2D\.js, line \d+: /})).toHaveCount(1);
 });
