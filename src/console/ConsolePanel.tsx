@@ -2,6 +2,7 @@
 // for each build and the app's own warnings. Clicking an entry with a line goes to it in the code.
 import { Button } from '@mantine/core';
 import { memo, useLayoutEffect, useRef, useSyncExternalStore } from 'react';
+import { TbTerminal2 } from 'react-icons/tb';
 
 import { shaderName } from '../editor/ShaderTabs';
 import type { ShaderId } from '../render/Renderer';
@@ -105,11 +106,12 @@ export function ConsoleClear({store}: {store: ConsoleStore}) {
   );
 }
 
-// The tab's name, with a dot while it has errors that haven't been seen.
+// The tab's name after an icon, red while the console lists errors, with a dot while some haven't been seen.
 export function ConsoleLabel({store}: {store: ConsoleStore}) {
-  const {unseenErrors} = useSyncExternalStore(store.subscribe, store.getSnapshot);
+  const {entries, unseenErrors} = useSyncExternalStore(store.subscribe, store.getSnapshot);
   return (
     <span className="consoleLabel">
+      <TbTerminal2 className="consoleIcon" aria-hidden data-errors={entries.some(e => e.level === "error") || undefined} />
       Console{unseenErrors && <span className="consoleDot" role="img" aria-label="new errors" />}
     </span>
   );

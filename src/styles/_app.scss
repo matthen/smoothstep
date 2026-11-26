@@ -417,6 +417,10 @@ a {
   &[data-crowded] .mantine-SegmentedControl-label {
     font-size: 12px;
   }
+  // No room for the Console's icon beside five other names.
+  .consoleIcon {
+    display: none;
+  }
 
   // A tick on Learn when the tutorial step is done, so you know to go back for the next one.
   .learnTabLabel {

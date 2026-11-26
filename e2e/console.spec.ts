@@ -85,6 +85,8 @@ test("a shader error is listed with its tab and line, and clicking it goes there
   await expect(consoleTab(page).getByRole("img", {name: "new errors"})).toBeVisible();
   await consoleTab(page).click();
   await expect(consoleTab(page).getByRole("img", {name: "new errors"})).toHaveCount(0);
+  // Its icon stays red while errors are listed.
+  await expect(consoleTab(page).locator(".consoleIcon")).toHaveAttribute("data-errors");
   await expect(entries(page).first()).toHaveText("Build failed: 1 error");
   const error = entries(page).filter({hasText: /^Image\.glsl, line 3: .*missing/});
   await expect(error).toHaveCount(1);

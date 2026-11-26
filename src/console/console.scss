@@ -154,3 +154,12 @@ $console-red: #ff8a8a;
   border-radius: 50%;
   background: $dt-red;
 }
+
+.consoleIcon {
+  flex: none;
+  color: $dt-gray-medium;
+
+  &[data-errors] {
+    color: $console-red;
+  }
+}
