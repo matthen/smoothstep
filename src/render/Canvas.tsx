@@ -45,6 +45,8 @@ interface CanvasProps {
   onLayerStatus(errors: LineError[]): void;
   // The Canvas2D code's console calls, from runs of the latest build.
   onLayerLog(logs: LayerLog[], dropped: number): void;
+  // The Canvas2D layer started its code again, other than for a build.
+  onLayerRestart(): void;
   // A texture slot whose image or video didn't load.
   onTextureFailed(slot: number, video: boolean): void;
   time: number;
@@ -341,6 +343,11 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
             onLog: (logs, dropped) => {
               if (layerBuildId.current === propsRef.current.buildId) {
                 propsRef.current.onLayerLog(logs, dropped);
+              }
+            },
+            onRestart: () => {
+              if (layerBuildId.current === propsRef.current.buildId) {
+                propsRef.current.onLayerRestart();
               }
             },
           });

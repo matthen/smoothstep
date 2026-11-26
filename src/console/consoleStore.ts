@@ -76,6 +76,11 @@ export class ConsoleStore {
     this.changed();
   }
 
+  // The newest entry, up to date even before listeners hear of it.
+  last(): ConsoleEntry | undefined {
+    return this.entries[this.entries.length - 1];
+  }
+
   clear() {
     this.entries = [];
     this.unseenErrors = false;

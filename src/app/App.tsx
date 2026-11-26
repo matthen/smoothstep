@@ -69,6 +69,11 @@ import { usePhone, useTouch } from './usePhone';
 const STORAGE_BLOCKED = "This browser isn't letting smoothstep.io store data, so animations can't be saved here. " +
   "Private browsing can cause this.";
 
+// Restarts of the Canvas2D code this close together, as for a resize, make one line in the console.
+const RESTART_MERGE_MS = 500;
+// A build that takes longer than this says how long in the console.
+const SLOW_BUILD_MS = 100;
+
 // How long after a picker's last change the canvas shows the expression again.
 const PROBE_HOLD_MS = 250;
 
@@ -132,6 +137,9 @@ export default function App() {
   const [appConsole] = useState(() => new ConsoleStore());
   // The build the console last started afresh for; a picker drag recompiles without a new build.
   const [consoleBuild, setConsoleBuild] = useState(-1);
+  // Whether the animation last went back to the start by looping, and the console's last restart line.
+  const looped = useRef(false);
+  const lastRestart = useRef<{id: number; at: number} | null>(null);
   // The code the editor shows, or showed before the Docs tab, and the one whose code didn't build.
   const [codeTab, setCodeTab] = useState<ShaderId>("image");
   const [errorShader, setErrorShader] = useState<ShaderId | null>(null);
@@ -577,6 +585,7 @@ export default function App() {
         const elapsed = Math.max(0, (now - last) / 1000);
         const next = timeRef.current + elapsed;
         if (next > doc.duration) {
+          looped.current = true;
           setTime(0);
           restartFrames();
         } else {
@@ -595,6 +604,7 @@ export default function App() {
     setTime(t);
     setHeld(new Map());  // Moving the playhead shows the timeline's values again.
     if (t === 0) {
+      looped.current = false;
       restartFrames();
     }
   }, [restartFrames]);
@@ -783,7 +793,8 @@ export default function App() {
       appConsole.clear();
       appConsole.add({
         level: "note",
-        text: result.ok ? `Built in ${Math.max(1, Math.round(ms))} ms` :
+        // The time only once it's long enough to matter.
+        text: result.ok ? (ms > SLOW_BUILD_MS ? `Built in ${Math.round(ms)} ms` : "Built") :
           `Build failed: ${errors.length} ${errors.length === 1 ? "error" : "errors"}`,
       });
       if (!result.ok) {
@@ -813,6 +824,21 @@ export default function App() {
     if (dropped > 0) {
       appConsole.add({level: "note", text: `${dropped.toLocaleString("en-GB")} more lines weren't kept`});
     }
+  };
+
+  // A line saying the Canvas2D code started again, so its setup's lines showing again make sense.
+  // A resize restarts it twice in quick succession, which counts as once.
+  const onLayerRestart = () => {
+    const text = looped.current ? "Looped to the start" : "Restarted";
+    looped.current = false;
+    const last = appConsole.last();
+    const now = performance.now();
+    if (last && last.level === "note" && last.text === text && lastRestart.current?.id === last.id &&
+        now - lastRestart.current.at < RESTART_MERGE_MS) {
+      return;
+    }
+    appConsole.add({level: "note", text});
+    lastRestart.current = {id: appConsole.last()!.id, at: now};
   };
 
   const onTextureFailed = (slot: number, video: boolean) => appConsole.add({
@@ -1377,7 +1403,7 @@ export default function App() {
             ref={canvasRef}
             shaders={shaders} buildId={buildId} textureURLs={textureURLs}
             layerTextures={layerTextures} layerOverlay={layer?.overlay ?? true} onLayerStatus={onLayerStatus}
-            onLayerLog={addLayerLogs} onTextureFailed={onTextureFailed}
+            onLayerLog={addLayerLogs} onLayerRestart={onLayerRestart} onTextureFailed={onTextureFailed}
             time={time} playing={isPlaying && !scrubbing} duration={doc.duration} stepClock={stepClock}
             variableValues={values}
             aspectRatio={doc.aspectRatio}
@@ -1413,7 +1439,7 @@ export default function App() {
 
       <nav className="mobileTabs" data-crowded={tutorialOpen || undefined}>
         <SegmentedControl
-          fullWidth size="sm" value={mobileTab} onChange={value => chooseMobileTab(value as MobileTab)}
+          fullWidth size="sm" withItemsBorders={false} value={mobileTab} onChange={value => chooseMobileTab(value as MobileTab)}
           data={[
             {value: "code", label: "Code"}, {value: "animation", label: "Timeline"}, {value: "sliders", label: "Sliders"},
             {value: "textures", label: "Textures"},

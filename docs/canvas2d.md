@@ -320,7 +320,9 @@ as `[1, 2, 3]` or `{x: 0.5, y: 2}`, and very long output is cut off. `console.wa
 
 `draw` runs 60 times a second, so a line that's the same as the one before it shows once, with a
 count such as ×240. The Console keeps the last 500 lines, and each build starts it empty with a
-line saying how long the build took. While a render runs, what the code prints goes there too,
+"Built" line. When the code starts again from `setup`, as it does when the animation loops, goes
+back to the start or changes size, a "Restarted" or "Looped to the start" line says so, so you can
+tell why `setup`'s lines print again. While a render runs, what the code prints goes there too,
 marked "render".
 
 ## Errors

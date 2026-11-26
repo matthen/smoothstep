@@ -407,10 +407,12 @@ a {
     display: none;
   }
 
-  // Five panes share a phone's width, and six with the tutorial's.
+  // Five panes share a phone's width, and six with the tutorial's, so they go without lines
+  // between them and with less room around each name.
   .mantine-SegmentedControl-label {
-    padding-inline: 2px;
+    padding-inline: 0;
     font-size: 13px;
+    font-weight: 500;
   }
   &[data-crowded] .mantine-SegmentedControl-label {
     font-size: 12px;

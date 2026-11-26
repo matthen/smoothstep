@@ -50,7 +50,7 @@ test("console.log in the Canvas2D code prints in the Console, with a repeated li
   await addTab(page, "Add the Canvas2D layer");
   await setCode(page, LOGGING);
   await page.keyboard.press("Shift+Enter");
-  await expect(entries(page).first()).toHaveText(/^Built in \d+ ms$/);
+  await expect(entries(page).first()).toHaveText(/^Built( in \d+ ms)?$/);
   await expect(entries(page).filter({hasText: "loaded"})).toContainText('loaded [1, 2] {a: "b"}');
 
   await page.getByRole("button", {name: "Play"}).click();

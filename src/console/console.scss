@@ -66,9 +66,6 @@ $console-red: #ff8a8a;
     color: $dt-gray-medium;
     opacity: 0.8;
   }
-  &[data-level="info"] .consoleText {
-    color: $dt-cyan;
-  }
   &[data-level="warn"] {
     color: $console-amber;
     background: rgba($console-amber, 0.05);

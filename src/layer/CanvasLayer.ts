@@ -37,6 +37,8 @@ export interface LayerCallbacks {
   // The code's console calls, in order, and how many more there were than the worker kept. Without
   // it, they go to the browser's console.
   onLog?(logs: LayerLog[], dropped: number): void;
+  // A run that had drawn is replaced by one starting again from setup, other than for a build.
+  onRestart?(): void;
 }
 
 // How long a step takes before the layer says it's still drawing it.
@@ -124,6 +126,10 @@ export class CanvasLayer {
     }
     this.config = config;
     const generation = ++this.generation;
+    // A build (`force`) says so itself; a new size or texture starts the code again.
+    if (!force && this.current?.stepped) {
+      this.callbacks.onRestart?.();
+    }
     this.stopRuns();
     this.stopped = false;
     this.prepared = null;
@@ -365,6 +371,9 @@ export class CanvasLayer {
       return;
     }
     this.stopRun(run);
+    if (run.stepped) {
+      this.callbacks.onRestart?.();
+    }
     const next = this.standby ?? this.spawn(this.prepared);
     this.standby = null;
     this.use(next);
