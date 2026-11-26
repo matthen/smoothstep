@@ -26,7 +26,12 @@ async function waitForWorker(page: Page) {
   });
 }
 
-const MAGENTA_HALF = "function draw(ctx, {width, height}) {\n  clear(ctx);\n" +
+// Clicks the page, so a new version asks before reloading instead of taking over a page nobody has used.
+async function touchPage(page: Page) {
+  await page.locator(".appHeader").click({position: {x: 4, y: 4}});
+}
+
+const MAGENTA_HALF ="function draw(ctx, {width, height}) {\n  clear(ctx);\n" +
   "  ctx.fillStyle = \"rgb(220, 20, 200)\";\n  ctx.fillRect(0, 0, width, height);\n}";
 const BLUE_IMAGE = "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  fragColor = vec4(0., 0., 1., 1.);\n}";
 
@@ -225,6 +230,7 @@ test("a new version waits for Reload, which asks before losing unsaved changes",
   try {
     await page.goto(site.url + "#new");
     await waitForWorker(page);
+    await touchPage(page);
     const notice = page.locator(".mantine-Notification-root").filter({hasText: "A new version of smoothstep.io is ready"});
 
     const v2 = site.publish();
@@ -259,12 +265,36 @@ test("a new version waits for Reload, which asks before losing unsaved changes",
   }
 });
 
+test("reloading with a new version waiting switches to it without asking", async ({page, context}) => {
+  const errors = await offline(context);
+  const site = await serveCopy();
+  let loads = 0;
+  page.on("load", () => loads++);
+  try {
+    await page.goto(site.url + "#new");
+    await waitForWorker(page);
+    await touchPage(page);
+    const v2 = site.publish();
+    expect(await installUpdate(page)).toBe("installed");
+    await page.reload();
+    // The fresh page takes the waiting version and reloads once more into it.
+    await expect.poll(() => loads).toBe(3);
+    await expect(page.locator(OPEN_EDITOR)).toBeVisible();
+    expect(await activeVersion(page)).toBe(v2);
+    await expect(page.locator(".mantine-Notification-root").filter({hasText: "A new version"})).toHaveCount(0);
+    expect(errors).toEqual([]);
+  } finally {
+    site.close();
+  }
+});
+
 test("an update that changes a chunk keeps the last version's copy, and drops older ones", async ({page, context}) => {
   const errors = await offline(context);
   const site = await serveCopy();
   const notice = page.locator(".mantine-Notification-root").filter({hasText: "A new version of smoothstep.io is ready"});
   const update = async (text: string) => {
     site.publish((plan, app) => rewrite(plan, app, REFERENCE_CHUNK, readFileSync(join("dist", REFERENCE_CHUNK), "utf8") + text));
+    await touchPage(page);
     expect(await installUpdate(page)).toBe("installed");
     await expect(notice).toBeVisible();
     await Promise.all([page.waitForEvent("load"), notice.getByRole("button", {name: "Reload"}).click()]);
@@ -302,6 +332,7 @@ test("a page still on the last version loads its chunks after the next takes ove
   try {
     await page.goto(site.url + "#new");
     await waitForWorker(page);
+    await touchPage(page);
     // The next version renamed the chunk, so the server answers for the old name with its home page.
     const v2 = site.publish((plan, app) => {
       rmSync(join(app, REFERENCE_CHUNK));
