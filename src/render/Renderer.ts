@@ -6,6 +6,7 @@ import { MAX_BUFFERS, NUM_TEXTURES, NUM_VARIABLES } from '../lib/document';
 import type { LineError } from '../lib/types';
 import { uses } from '../lib/glslCode';
 import { isVideoURL } from '../lib/media';
+import { bracketError } from './brackets';
 import { VideoTexture } from './videoTexture';
 import {
   PROBE_DECLARATIONS, PROBE_MAIN, planProbe, probeComponents, sharedCallers, typeFromError, UNREACHED, withProbe,
@@ -185,14 +186,27 @@ export function buffersUsed(code: string, buffers: readonly string[]): number[] 
   return [...used].sort((a, b) => a - b);
 }
 
+export const PAST_END_ERROR = "The code ends before something in it is finished, such as a missing ; or }.";
+
 // Turns a WebGL info log into errors on lines of the user's code (0-based, clamped to the code).
+// Errors in the app's code after it say so plainly, once, on the code's last line that isn't blank.
 export function parseErrors(log: string, code: string): LineError[] {
   const offset = shaderPrefix().split("\n").length;  // 1-based line number of the code's first line
-  const lastLine = code.split("\n").length - 1;
+  const lines = code.split("\n");
+  const lastLine = lines.length - 1;
+  const lastFilled = Math.max(0, lines.findLastIndex(line => line.trim() !== ""));
   const errors: LineError[] = [];
   for (const match of log.matchAll(/ERROR:\s*\d+:(\d+):\s*(.*)/g)) {
     const line = Number(match[1]) - offset;
-    errors.push({line: Math.max(0, Math.min(line, lastLine)), message: (match[2] ?? "").trim()});
+    const message = (match[2] ?? "").trim();
+    // A call to a missing mainImage is in the app's code too; markMissingMainImage explains that one.
+    if (line > lastLine && !message.includes("mainImage")) {
+      if (!errors.some(e => e.message === PAST_END_ERROR)) {
+        errors.push({line: lastFilled, message: PAST_END_ERROR});
+      }
+    } else {
+      errors.push({line: Math.max(0, Math.min(line, lastLine)), message});
+    }
   }
   if (errors.length === 0 && log.trim()) {
     errors.push({line: 0, message: log.trim()});
@@ -467,6 +481,12 @@ export class Renderer {
   // Builds the image's shader and the buffers'. If any fails, the previous ones keep rendering.
   setCode(code: string, buffers: readonly string[] = [], shared = ""): CompileResult {
     const sources: [ShaderId, string][] = [["image", code], ...buffers.map((c, i): [ShaderId, string] => [i, c])];
+    for (const [shader, source] of [["shared", shared] as [ShaderId, string], ...sources]) {
+      const error = bracketError(source);
+      if (error) {
+        return {ok: false, shader, errors: [error]};
+      }
+    }
     const programs: Program[] = [];
     for (const [shader, source] of sources) {
       const result = this.link(fragmentSource(source, buffers.length, shader !== "image", shared));

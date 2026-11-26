@@ -107,3 +107,14 @@ test("Canvas2D code with a syntax error makes the build line say it failed", asy
   await expect(entries(page).first()).toHaveText("Build failed: 1 error");
   await expect(entries(page).filter({hasText: /^Canvas2D\.js, line \d+: /})).toHaveCount(1);
 });
+
+test("a missing closing brace is one error on the line of the { it should close", async ({page, context}) => {
+  await offline(context);
+  await page.goto("./");
+  await page.getByRole("button", {name: "Continue"}).click();
+  await setCode(page, "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  fragColor = vec4(1.0);\n");
+  await page.keyboard.press("Shift+Enter");
+  await consoleTab(page).click();
+  await expect(entries(page).first()).toHaveText("Build failed: 1 error");
+  await expect(entries(page).nth(1)).toHaveText("Image.glsl, line 1: This { is never closed. Add a } to end it.");
+});
