@@ -127,6 +127,9 @@ export function near(color: number[], target: number[], tolerance = 40): boolean
 
 // How long checks of the canvas's pixels wait: CI's software WebGL can take seconds to draw.
 export const PIXEL_WAIT = {timeout: 30_000};
+// How long checks wait for the page to show a change while software WebGL is busy, as during a render:
+// the page gets no new frames until the GPU process finishes its work, which can take seconds.
+export const FRAME_WAIT = {timeout: 30_000};
 
 // Waits until the middle of the canvas, or of `selector`, is near `color`; with `not`, until it isn't.
 export async function expectCenter(page: Page, color: number[], {tolerance = 40, selector = "#canvas", not = false} = {}) {

@@ -4,7 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 import * as net from 'node:net';
 import { PNG } from 'pngjs';
 
-import { addTab, expectCenter, MAGENTA, near, offline, OPEN_EDITOR, PIXEL_WAIT, setCode, skipTour } from './helpers';
+import { addTab, expectCenter, FRAME_WAIT, MAGENTA, near, offline, OPEN_EDITOR, PIXEL_WAIT, setCode, skipTour } from './helpers';
 
 const BLUE: [number, number, number] = [0, 0, 255];
 
@@ -324,32 +324,32 @@ test("a draw that never finishes doesn't freeze the page, and building fixed cod
   await expect(page.getByRole("status").filter({hasText: /^Drawing step 11…$/})).toBeVisible({timeout: 10_000});
   await expect(page.locator(".ss-line-error")).toHaveCount(0);
   // The page keeps drawing frames while the Canvas2D code is stuck; a frozen page draws none.
-  const frames = await page.evaluate(() => new Promise<number>(resolve => {
+  const drewFrames = page.evaluate(() => new Promise<boolean>(resolve => {
     let count = 0;
-    const end = performance.now() + 3000;
     const tick = () => {
       count++;
-      if (performance.now() < end) {
-        requestAnimationFrame(tick);
+      if (count > 3) {
+        resolve(true);
       } else {
-        resolve(count);
+        requestAnimationFrame(tick);
       }
     };
     requestAnimationFrame(tick);
   }));
-  expect(frames).toBeGreaterThan(3);
+  expect(await Promise.race([drewFrames, new Promise(resolve => setTimeout(() => resolve(false), FRAME_WAIT.timeout))]))
+    .toBe(true);
 
   // A render waits for the step too, and can still be cancelled.
   await page.getByRole("button", {name: "Render"}).click();
   const modal = page.getByRole("dialog", {name: /Render/});
   await modal.getByRole("button", {name: "Render"}).click();
   await page.waitForTimeout(1500);
-  await expect(modal.getByRole("progressbar")).toBeVisible();
+  await expect(modal.getByRole("progressbar")).toBeVisible(FRAME_WAIT);
   await modal.getByRole("button", {name: "Cancel"}).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("dialog")).toHaveCount(0, FRAME_WAIT);
   // Cancelled, so the next render can start.
   await page.getByRole("button", {name: "Render"}).click();
-  await expect(modal.getByRole("button", {name: "Render"})).toBeEnabled();
+  await expect(modal.getByRole("button", {name: "Render"})).toBeEnabled(FRAME_WAIT);
   await modal.getByRole("button", {name: "Cancel"}).click();
 
   // Building again stops it and runs the new code.
