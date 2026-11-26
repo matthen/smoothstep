@@ -97,7 +97,7 @@ export const DEFAULT_MAIN_IMAGE = `void mainImage(out vec4 fragColor, in vec2 fr
 
 export const DEFAULT_CODE = `// Getting started? Try the tutorial in [Help → Tutorial].
 
-// phase is iFloat0, which its row in the timeline takes from 0 to 2π (6.283) as the animation plays.
+// phase is iFloat0. Its row in the timeline eases it from 0 to 2π (6.283) with a smoothstep transition.
 #define phase iFloat0
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -207,7 +207,7 @@ export function emptyVariables(): Variable[] {
 export function newDocument(): AnimationDocument {
   const variables = emptyVariables();
   variables[0] = {transitions: [
-    {startDSecs: 0, endDSecs: DEFAULT_DURATION * 10, startValue: 0, endValue: TWO_PI, type: "linear"},
+    {startDSecs: 0, endDSecs: DEFAULT_DURATION * 10, startValue: 0, endValue: TWO_PI, type: "smoothstep"},
   ]};
   return {
     title: DEFAULT_TITLE,
