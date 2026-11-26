@@ -124,3 +124,42 @@ export function startServiceWorker() {
 export function appUpdates(): Updates | null {
   return updates;
 }
+
+// How long after loading a page counts as just opened, if nobody has clicked, tapped or typed.
+export const FRESH_FOR = 10_000;
+const AUTO_KEY = "smoothstep.autoUpdated";
+
+// True while nothing could be lost by reloading: the page has just opened, nobody has used it yet,
+// and this tab didn't already reload for an update in the last minute (so a failed update can't loop).
+export function canUpdateAtOnce(sinceLoad: number, used: boolean, unsaved: boolean, lastAuto: number | null, now: number): boolean {
+  return sinceLoad < FRESH_FOR && !used && !unsaved && (lastAuto === null || now - lastAuto > 60_000);
+}
+
+let used = false;
+if (typeof window !== "undefined") {
+  const markUsed = () => { used = true; };
+  for (const type of ["pointerdown", "keydown", "wheel"]) {
+    window.addEventListener(type, markUsed, {capture: true, once: true});
+  }
+}
+
+// Applies a waiting update straight away if the page is fresh, and says whether it did.
+export function updateIfFresh(unsaved: boolean): boolean {
+  let lastAuto: number | null = null;
+  try {
+    const stored = window.sessionStorage.getItem(AUTO_KEY);
+    lastAuto = stored === null ? null : Number(stored);
+  } catch {
+    // No storage: treat it as never auto-updated.
+  }
+  if (!updates || !canUpdateAtOnce(performance.now(), used, unsaved, lastAuto, Date.now())) {
+    return false;
+  }
+  try {
+    window.sessionStorage.setItem(AUTO_KEY, String(Date.now()));
+  } catch {
+    return false;
+  }
+  updates.apply();
+  return true;
+}

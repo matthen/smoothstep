@@ -62,7 +62,7 @@ import { MOD_KEY } from './platform';
 import { chooseTip, markTipSeen, seenTips, tipContent, tipsFor, turnOffTips, type TipEvent } from './tips';
 import { confirmLeaving, hasConfirmedLeaving, openHash, parseHash, useHashLinks } from './routing';
 import { install, onLaunchFiles, useCanInstall } from '../pwa/install';
-import { appUpdates } from '../pwa/updates';
+import { appUpdates, updateIfFresh } from '../pwa/updates';
 import { useKeyboardInset } from './useKeyboardInset';
 import { usePhone, useTouch } from './usePhone';
 
@@ -553,9 +553,13 @@ export default function App() {
     return unsubscribe;
   }, [initialRoute, loadDocument, offerTourRef, tutorialStart]);
 
-  // A new version installed in the background. Reloading into it asks first, as leaving the page does.
+  // A new version installed in the background. A page that has only just opened reloads into it at
+  // once; otherwise reloading asks first, as leaving the page does.
   const unsavedRef = useLatest(hasUnsavedChanges);
   useEffect(() => appUpdates()?.onReady(() => {
+    if (updateIfFresh(unsavedRef.current)) {
+      return;
+    }
     notifications.show({
       id: "update", autoClose: false, title: "A new version of smoothstep.io is ready",
       message: (
