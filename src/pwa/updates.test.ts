@@ -1,6 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { Updates, type ContainerLike } from './updates';
+import { canUpdateAtOnce, FRESH_FOR, Updates, type ContainerLike } from './updates';
+
+describe("canUpdateAtOnce", () => {
+  const now = 1_000_000;
+  it("updates a page that has just opened and nobody has used", () => {
+    expect(canUpdateAtOnce(0, false, false, null, now)).toBe(true);
+  });
+  it("asks first once the page has been used, has unsaved work, or has been open a while", () => {
+    expect(canUpdateAtOnce(0, true, false, null, now)).toBe(false);
+    expect(canUpdateAtOnce(0, false, true, null, now)).toBe(false);
+    expect(canUpdateAtOnce(FRESH_FOR, false, false, null, now)).toBe(false);
+  });
+  it("doesn't reload again soon after its last update, so a failing update can't loop", () => {
+    expect(canUpdateAtOnce(0, false, false, now - 1000, now)).toBe(false);
+    expect(canUpdateAtOnce(0, false, false, now - 10 * 60_000, now)).toBe(true);
+  });
+});
 
 class FakeWorker extends EventTarget {
   messages: unknown[] = [];
