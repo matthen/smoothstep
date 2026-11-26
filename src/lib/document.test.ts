@@ -6,6 +6,20 @@ import {
   type Transition,
 } from './document';
 
+describe("newDocument", () => {
+  it("turns its phase once round over the animation, so the colours loop without a jump", () => {
+    const doc = newDocument();
+    expect(doc.code).toMatch(/#define phase iFloat0\b/);
+    const [start] = variableValues(doc.variables, 0);
+    const [middle] = variableValues(doc.variables, doc.duration / 2);
+    const [end] = variableValues(doc.variables, doc.duration);
+    expect(start).toBe(0);
+    expect(middle).toBeCloseTo(Math.PI, 2);
+    expect(Math.cos(end!)).toBeCloseTo(Math.cos(start!), 6);
+    expect(Math.sin(end!)).toBeCloseTo(Math.sin(start!), 3);
+  });
+});
+
 describe("parseDocument", () => {
   it("accepts a new document and returns an equal copy", () => {
     const doc = newDocument();
@@ -59,8 +73,8 @@ describe("parseDocument", () => {
   it("drops unknown fields, like the old editor's transition state", () => {
     const doc = newDocument();
     const t = {startDSecs: 0, endDSecs: 10, startValue: 0, endValue: 1, type: "linear", row: 0, isHover: false};
-    (doc.variables[0]!.transitions as unknown[]).push(t);
-    expect(parseDocument(doc).variables[0]!.transitions[0]).toEqual(
+    (doc.variables[1]!.transitions as unknown[]).push(t);
+    expect(parseDocument(doc).variables[1]!.transitions[0]).toEqual(
       {startDSecs: 0, endDSecs: 10, startValue: 0, endValue: 1, type: "linear"});
   });
 
@@ -77,17 +91,17 @@ describe("parseDocument", () => {
 
   it("reads the old timeline's blank and string values as numbers", () => {
     const doc = newDocument();
-    (doc.variables[0]!.transitions as unknown[]).push(
+    (doc.variables[1]!.transitions as unknown[]).push(
       {startDSecs: 0, endDSecs: 10, startValue: "", endValue: "2.5", type: "linear"});
-    const t = parseDocument(doc).variables[0]!.transitions[0]!;
+    const t = parseDocument(doc).variables[1]!.transitions[0]!;
     expect([t.startValue, t.endValue]).toEqual([0, 2.5]);
   });
 
   it("keeps transition times to a hundredth of a second", () => {
     const doc = newDocument();
-    (doc.variables[0]!.transitions as unknown[]).push(
+    (doc.variables[1]!.transitions as unknown[]).push(
       {startDSecs: 12.5, endDSecs: 20.04, startValue: 0, endValue: 1, type: "linear"});
-    const t = parseDocument(doc).variables[0]!.transitions[0]!;
+    const t = parseDocument(doc).variables[1]!.transitions[0]!;
     expect([t.startDSecs, t.endDSecs]).toEqual([12.5, 20]);
   });
 

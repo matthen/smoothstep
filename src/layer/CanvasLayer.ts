@@ -9,9 +9,11 @@ import type { FontData } from './fonts';
 import { parseImports } from './libraries';
 import type { FromWorker, LayerInputs, ToWorker } from './runtime';
 import { Sandbox, type SandboxWorker } from './sandbox';
-import { errorFromEvent, errorFromStack, workerSource, type WorkerSource } from './workerSource';
+import {
+  errorFromEvent, errorFromStack, logsFromWorker, workerSource, type LayerLog, type WorkerSource,
+} from './workerSource';
 
-export type { LayerInputs };
+export type { LayerInputs, LayerLog };
 
 export interface LayerConfig {
   code: string;
@@ -28,10 +30,16 @@ export interface LayerCallbacks {
   // A new frame, to draw with. Whoever takes it closes it.
   onFrame(bitmap: ImageBitmap): void;
   // The layer's errors, on lines of its code; none once a run draws its first frame.
-  onStatus(errors: LineError[]): void;
+  // `loading` says the code didn't get through loading and its top-level run, as for a syntax error.
+  onStatus(errors: LineError[], loading?: boolean): void;
   // The step the layer has been drawing for a while, "starting" while its code's first run takes a
   // while, or null once it's done.
   onBusy?(frame: number | "starting" | null): void;
+  // The code's console calls, in order, and how many more there were than the worker kept. Without
+  // it, they go to the browser's console.
+  onLog?(logs: LayerLog[], dropped: number): void;
+  // A run that had drawn is replaced by one starting again from setup, other than for a build.
+  onRestart?(): void;
 }
 
 // How long a step takes before the layer says it's still drawing it.
@@ -60,7 +68,13 @@ interface Run {
   drawing: number;
   // When it started, by performance.now().
   started: number;
+  // A spare's console calls, from code outside setup and draw, held until it's used.
+  heldLogs: LayerLog[];
+  heldDropped: number;
 }
+
+// The most a spare holds before it only counts them.
+const MAX_HELD_LOGS = 200;
 
 async function loadBitmap(url: string): Promise<ImageBitmap | null> {
   try {
@@ -113,6 +127,10 @@ export class CanvasLayer {
     }
     this.config = config;
     const generation = ++this.generation;
+    // A build (`force`) says so itself; a new size or texture starts the code again.
+    if (!force && this.current?.stepped) {
+      this.callbacks.onRestart?.();
+    }
     this.stopRuns();
     this.stopped = false;
     this.prepared = null;
@@ -123,7 +141,7 @@ export class CanvasLayer {
         return;
       }
       if ("errors" in prepared) {
-        this.fail(prepared.errors);
+        this.fail(prepared.errors, true);
         return;
       }
       this.prepared = prepared;
@@ -135,6 +153,11 @@ export class CanvasLayer {
   // Makes `run` the one that draws, and watches how long it takes to start.
   private use(run: Run) {
     this.current = run;
+    if (run.heldLogs.length > 0 || run.heldDropped > 0) {
+      this.log(run.heldLogs, run.heldDropped);
+      run.heldLogs = [];
+      run.heldDropped = 0;
+    }
     if (!this.busyShown) {
       this.watchBusy();
     }
@@ -175,12 +198,13 @@ export class CanvasLayer {
     const run: Run = {
       worker: this.sandbox.spawn(prepared.source.source, error => {
         if (run === this.current) {
-          this.fail([errorFromEvent(error, prepared.source)]);
+          this.fail([errorFromEvent(error, prepared.source)], !run.ready);
         } else {
           this.discardStandby();
         }
       }),
       ready: false, inFlight: null, stepped: false, drawn: false, drawing: 0, started: performance.now(),
+      heldLogs: [], heldDropped: 0,
     };
     run.worker.port.onmessage = (event: MessageEvent<FromWorker>) => this.receive(run, prepared, event.data);
     // Each worker gets its own copies of the fonts and images.
@@ -222,13 +246,22 @@ export class CanvasLayer {
     if (run !== this.current && run !== this.standby) {
       return;
     }
-    if (message?.type === "ready") {
+    if (message?.type === "logs") {
+      const {logs, dropped} = logsFromWorker(message, prepared.source);
+      if (run === this.current) {
+        this.log(logs, dropped);
+      } else {
+        const room = Math.max(0, MAX_HELD_LOGS - run.heldLogs.length);
+        run.heldLogs.push(...logs.slice(0, room));
+        run.heldDropped += dropped + Math.max(0, logs.length - room);
+      }
+    } else if (message?.type === "ready") {
       run.ready = true;
       if (run === this.current) {
         if (message.registered === true && message.hasDraw !== true) {
           // Under the last line, where the editor's fix puts one.
           const lastLine = (this.config?.code ?? "").split("\n").length - 1;
-          this.fail([{line: lastLine, message: NO_DRAW, missing: "draw"}]);
+          this.fail([{line: lastLine, message: NO_DRAW, missing: "draw"}], true);
           return;
         }
         if (message.registered !== true) {
@@ -277,10 +310,21 @@ export class CanvasLayer {
           message: typeof message.message === "string" ? message.message.slice(0, 500) : "",
           stack: typeof message.stack === "string" ? message.stack.slice(0, 5000) : "",
           line: typeof message.line === "number" ? message.line : null,
-        }, prepared.source)]);
+        }, prepared.source)], !run.ready);
       } else {
         this.discardStandby();
       }
+    }
+  }
+
+  private log(logs: LayerLog[], dropped: number) {
+    if (this.callbacks.onLog) {
+      this.callbacks.onLog(logs, dropped);
+      return;
+    }
+    for (const log of logs) {
+      console[log.level]("Canvas2D.js" + (log.line === null ? "" : `:${log.line + 1}`) + ":", log.text +
+        (log.count > 1 ? ` (×${log.count})` : ""));
     }
   }
 
@@ -304,12 +348,12 @@ export class CanvasLayer {
     this.standby = null;
   }
 
-  private fail(errors: LineError[]) {
+  private fail(errors: LineError[], loading = false) {
     this.stopRuns();
     this.stopped = true;
     this.errors = errors;
     this.dropWaiting();
-    this.callbacks.onStatus(errors);
+    this.callbacks.onStatus(errors, loading);
     const pending = this.pendingDraw;
     this.pendingDraw = null;
     pending?.reject(this.error());
@@ -328,6 +372,9 @@ export class CanvasLayer {
       return;
     }
     this.stopRun(run);
+    if (run.stepped) {
+      this.callbacks.onRestart?.();
+    }
     const next = this.standby ?? this.spawn(this.prepared);
     this.standby = null;
     this.use(next);

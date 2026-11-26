@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { exportSize, frameCount } from '../export/exportVideo';
 import { drawingSize, fitCanvas, SlowFrames } from './layout';
-import { buffersUsed, fragmentSource, locateErrors, markMissingMainImage, parseErrors } from './Renderer';
+import { buffersUsed, fragmentSource, locateErrors, markMissingMainImage, PAST_END_ERROR, parseErrors } from './Renderer';
 
 describe("parseErrors", () => {
   const code = "void mainImage(out vec4 c, in vec2 p) {\n  c = vec4(1.);\n  oops;\n}";
@@ -15,9 +15,17 @@ describe("parseErrors", () => {
   });
 
   it("clamps lines outside the code, and keeps logs it can't parse", () => {
-    expect(parseErrors("ERROR: 0:999: 'x' : bad\n", code)[0]!.line).toBe(3);
     expect(parseErrors("ERROR: 0:1: '' : too early\n", code)[0]!.line).toBe(0);
     expect(parseErrors("Something odd", code)).toEqual([{line: 0, message: "Something odd"}]);
+  });
+
+  it("puts errors in the app's code after the user's on its last line that isn't blank, as one plain error", () => {
+    const end = fragmentSource(code + "\n\n").split("\n").length;
+    const log = `ERROR: 0:${end - 1}: 'out' : invalid qualifier combination\nERROR: 0:${end}: '{' : syntax error\n`;
+    expect(parseErrors(log, code + "\n\n")).toEqual([{line: 3, message: PAST_END_ERROR}]);
+    // Except a call to a missing mainImage, which has an error of its own.
+    expect(parseErrors(`ERROR: 0:${end}: 'mainImage' : no matching overloaded function found\n`, code)[0]!.message)
+      .toMatch(/mainImage/);
   });
 });
 

@@ -2,7 +2,7 @@
 import vm from 'node:vm';
 import { describe, expect, it } from 'vitest';
 
-import type { ToWorker } from './runtime';
+import { MAX_WORKER_LOGS, type ToWorker, type WorkerLog } from './runtime';
 import { workerSource } from './workerSource';
 
 interface Timer {
@@ -20,7 +20,7 @@ class FakeBitmap {
 }
 
 // Starts a worker running `code`, with the worker's own globals, a port and a fake clock.
-function startWorker(code: string) {
+function startWorker(code: string, console?: Record<string, (...args: unknown[]) => void>) {
   let now = 0;
   let nextTimer = 1;
   const timers = new Map<number, Timer>();
@@ -77,6 +77,7 @@ function startWorker(code: string) {
     },
     createImageBitmap: () => Promise.resolve({}),
     ImageBitmap: FakeBitmap,
+    ...console && {console},
   }) as Record<string, unknown>;
   vm.runInContext("globalThis.self = globalThis;", context);
   vm.runInContext(workerSource(code, []).source, context);
@@ -117,6 +118,11 @@ function startWorker(code: string) {
       now = to;
     },
   };
+}
+
+// The console calls in the messages a worker sent.
+function sentLogs(sent: {type: string}[]): WorkerLog[] {
+  return sent.flatMap(m => m.type === "logs" ? (m as {type: string; logs: WorkerLog[]}).logs : []);
 }
 
 const INIT: ToWorker = {type: "init", width: 4, height: 4, duration: 1, fonts: [], textures: []};
@@ -168,6 +174,62 @@ describe("workerRuntime", () => {
     expect(worker.sent.map(m => m.type)).toEqual(["ready", "error"]);
     worker.advance(6000);
     expect(worker.context.ran).toEqual([]);
+  });
+
+  it("sends console calls with their step, folding repeats and sending them before the frame", async () => {
+    const worker = startWorker([
+      "console.log(\"loaded\", {n: 1});",
+      "function setup() { console.info(\"setup\"); }",
+      "function draw(ctx, {frame}) { console.log(\"tick\"); if (frame === 2) console.warn(\"frame\", frame); }",
+    ].join("\n"));
+    worker.givePort();
+    await worker.send(INIT);
+    await worker.send({type: "steps", id: 1, steps: [0, 1, 2].map(frame => ({time: frame / 60, frame, floats: []}))});
+    const types = worker.sent.map(m => m.type);
+    expect(types.indexOf("logs")).toBeLessThan(types.indexOf("ready"));
+    expect(types.lastIndexOf("logs")).toBeLessThan(types.indexOf("frame"));
+    expect(sentLogs(worker.sent).map(({level, text, frame}) => `${level} ${text} @${frame}`)).toEqual([
+      "log loaded {n: 1} @null", "info setup @0", "log tick @0", "log tick @1", "log tick @2", "warn frame 2 @2",
+    ]);
+  });
+
+  it("sends what the code logged at the top level before it threw", () => {
+    const worker = startWorker("console.log(\"before\");\nmissing();");
+    expect(() => worker.givePort()).toThrow(/missing/);
+    expect(sentLogs(worker.sent).map(log => log.text)).toEqual(["before"]);
+  });
+
+  it("still passes each console call to the worker's own console, for devtools", async () => {
+    const seen: unknown[][] = [];
+    const worker = startWorker("function draw() { console.log(\"tick\", 1); console.warn(\"careful\"); }", {
+      log: (...args: unknown[]) => seen.push(["log", ...args]),
+      warn: (...args: unknown[]) => seen.push(["warn", ...args]),
+    });
+    worker.givePort();
+    await worker.send(INIT);
+    await worker.send(STEP);
+    expect(seen).toEqual([["log", "tick", 1], ["warn", "careful"]]);
+  });
+
+  it("folds a line logged again and again into one with a count", async () => {
+    const worker = startWorker("function draw() { for (let i = 0; i < 100; i++) console.log(\"same\"); }");
+    worker.givePort();
+    await worker.send(INIT);
+    await worker.send(STEP);
+    expect(sentLogs(worker.sent).map(({text, count}) => `${text} ×${count}`)).toEqual(["same ×100"]);
+  });
+
+  it("keeps a code's flood of different lines to a limit, counting the rest", async () => {
+    const total = MAX_WORKER_LOGS * 25;
+    const worker = startWorker(`function draw() { for (let i = 0; i < ${total}; i++) console.log(i); }`);
+    worker.givePort();
+    await worker.send(INIT);
+    await worker.send(STEP);
+    const messages = worker.sent.filter(m => m.type === "logs") as unknown as {logs: WorkerLog[]; dropped: number}[];
+    const kept = messages.reduce((sum, m) => sum + m.logs.length, 0);
+    const dropped = messages.reduce((sum, m) => sum + m.dropped, 0);
+    expect(kept).toBeLessThanOrEqual(MAX_WORKER_LOGS);
+    expect(kept + dropped).toBe(total);
   });
 
   it("gives setup and draw the frame's size in pixels as resolution", async () => {

@@ -5,7 +5,10 @@ export const NUM_VARIABLES = 16;
 export const MAX_BUFFERS = 4;
 export const DEFAULT_TITLE = "Untitled animation";
 export const MAX_TITLE_LENGTH = 32;
-const DEFAULT_DURATION = 12;
+// The tutorial's animation is longer than a new one, which loops quickly to show its phase going round.
+const TUTORIAL_DURATION = 12;
+const DEFAULT_DURATION = 4;
+const TWO_PI = 6.283;
 
 export const ASPECT_RATIOS: readonly AspectRatio[] = [[1, 1], [4, 3], [16, 9], [3, 4], [9, 16]];
 // A custom ratio is two whole numbers up to this, no wider or taller than 10:1.
@@ -80,7 +83,7 @@ export interface AnimationDocument {
   variables: Variable[];
 }
 
-// The image's starter mainImage, also what a missing one's error offers to insert.
+// The mainImage a missing one's error offers to insert.
 export const DEFAULT_MAIN_IMAGE = `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // Compute coordinates that range from x = 0 to 1 and y = 0 to 1.
   vec2 uv = fragCoord / iResolution.xy;
@@ -94,7 +97,19 @@ export const DEFAULT_MAIN_IMAGE = `void mainImage(out vec4 fragColor, in vec2 fr
 
 export const DEFAULT_CODE = `// Getting started? Try the tutorial in [Help → Tutorial].
 
-` + DEFAULT_MAIN_IMAGE;
+// phase is iFloat0, which its row in the timeline takes from 0 to 2π (6.283) as the animation plays.
+#define phase iFloat0
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  // Compute coordinates that range from x = 0 to 1 and y = 0 to 1.
+  vec2 uv = fragCoord / iResolution.xy;
+
+  // Compute a color that varies with uv.x, uv.y and phase. cos repeats every 2π, so it loops smoothly.
+  vec3 col = 0.5 + 0.5 * cos(phase + 2.0 * uv.xyx + vec3(0, 2, 4));
+
+  // Output the colour for this pixel.
+  fragColor = vec4(col, 1.0);
+}`;
 
 // The built-in image an empty texture slot holds.
 export const EMPTY_TEXTURE = "special/black.png";
@@ -188,15 +203,25 @@ export function emptyVariables(): Variable[] {
   return Array.from({length: NUM_VARIABLES}, () => ({transitions: []}));
 }
 
+// What a new visitor sees first, and File → New: phase goes once round on the timeline, and loops.
 export function newDocument(): AnimationDocument {
+  const variables = emptyVariables();
+  variables[0] = {transitions: [
+    {startDSecs: 0, endDSecs: DEFAULT_DURATION * 10, startValue: 0, endValue: TWO_PI, type: "linear"},
+  ]};
   return {
     title: DEFAULT_TITLE,
     code: DEFAULT_CODE,
     duration: DEFAULT_DURATION,
     aspectRatio: [1, 1],
     textures: emptyTextures(),
-    variables: emptyVariables(),
+    variables,
   };
+}
+
+// The tutorial's animation, with an empty timeline, as its lessons fill it.
+export function tutorialDocument(): AnimationDocument {
+  return {...newDocument(), duration: TUTORIAL_DURATION, variables: emptyVariables()};
 }
 
 export class InvalidDocumentError extends Error {

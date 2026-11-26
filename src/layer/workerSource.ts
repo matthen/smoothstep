@@ -1,8 +1,9 @@
 // Puts together the script a Canvas2D layer's worker runs: the runtime, the helpers, the libraries
 // the code imports, then the code itself. It also maps errors in that script back to lines of the code.
 import type { LineError } from '../lib/types';
+import { FORMAT_LIMITS, formatLogWithin } from './formatLog';
 import { HELPER_NAMES, makeHelpers } from './helpers';
-import { workerRuntime } from './runtime';
+import { MAX_WORKER_LOGS, workerRuntime, type LogLevel, type WorkerLog } from './runtime';
 
 export interface WorkerSource {
   source: string;
@@ -15,7 +16,8 @@ export interface WorkerSource {
 export function workerSource(code: string, libraries: readonly {name: string; code: string}[]): WorkerSource {
   const helpers = HELPER_NAMES.map(name => "__smoothstep.helpers." + name).join(", ");
   const prefix =
-    `const __smoothstep = (${workerRuntime.toString()})(${makeHelpers.toString()});\n` +
+    `const __smoothstep = (${workerRuntime.toString()})(${makeHelpers.toString()}, ` +
+    `args => (${formatLogWithin.toString()})(args, ${JSON.stringify(FORMAT_LIMITS)}), ${MAX_WORKER_LOGS});\n` +
     libraries.map(library =>
       `__smoothstep.define(${JSON.stringify(library.name)}, function (module, exports) {\n${library.code}\n});\n`).join("") +
     // The runtime runs the code once it has its port. The helpers are parameters of an outer function,
@@ -30,6 +32,47 @@ export function workerSource(code: string, libraries: readonly {name: string; co
 function codeLine(scriptLine: number, source: WorkerSource): number | null {
   const line = scriptLine - source.firstLine;
   return line >= 0 && line < source.lines ? line : null;
+}
+
+// A console call from the layer's code, or a run of the same one, on its line of the code.
+export interface LayerLog {
+  level: LogLevel;
+  text: string;
+  // The step and its time, or null for code outside setup and draw that ran before the first step.
+  frame: number | null;
+  time: number | null;
+  line: number | null;
+  count: number;
+}
+
+const LEVELS: readonly LogLevel[] = ["log", "info", "warn", "error"];
+const MAX_TEXT = 2000;
+
+// The console calls in a message from the worker, which runs the user's code, so each is checked.
+// A call inside a library or helper is on the line of the code that called it.
+export function logsFromWorker(
+  message: {logs?: unknown; dropped?: unknown}, source: WorkerSource,
+): {logs: LayerLog[]; dropped: number} {
+  const number = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value : null;
+  const logs = (Array.isArray(message.logs) ? message.logs as unknown[] : []).slice(0, 1000).flatMap(item => {
+    const log = item as Partial<Record<keyof WorkerLog, unknown>> | null;
+    if (!log || typeof log.text !== "string" || !LEVELS.includes(log.level as LogLevel)) {
+      return [];
+    }
+    const lines = Array.isArray(log.lines) ? (log.lines as unknown[]).slice(0, 50) : [];
+    let line: number | null = null;
+    for (const scriptLine of lines) {
+      line = typeof scriptLine === "number" ? codeLine(scriptLine, source) : null;
+      if (line !== null) {
+        break;
+      }
+    }
+    return [{
+      level: log.level as LogLevel, text: log.text.slice(0, MAX_TEXT), frame: number(log.frame), time: number(log.time),
+      line, count: Math.max(1, Math.floor(number(log.count) ?? 1)),
+    }];
+  });
+  return {logs, dropped: Math.max(0, Math.floor(number(message.dropped) ?? 0))};
 }
 
 function tidy(message: string): string {

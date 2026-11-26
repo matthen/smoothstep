@@ -10,7 +10,8 @@ import {
 import { exportSize, frameCount, type ExportOptions, type ExportProgress } from '../dialogs/exportTypes';
 import { safeFilename, type DownloadableFile } from '../lib/archive';
 import { textureURL } from '../lib/config';
-import type { CanvasLayer } from '../layer/CanvasLayer';
+import type { CanvasLayer, LayerLog } from '../layer/CanvasLayer';
+import type { LineError } from '../lib/types';
 import { bufferCodes, canvasLayer, EMPTY_TEXTURE, variableValues, type AnimationDocument } from '../lib/document';
 import { Renderer, type FrameInputs } from '../render/Renderer';
 import { renderSteps, RESTART, type StepRenderer } from '../render/steps';
@@ -20,6 +21,18 @@ export { exportSize, frameCount };
 
 class ExportCancelled extends Error {}
 
+// Where an export reports the Canvas2D code's console calls and errors, and anything that didn't
+// go quite as asked.
+export interface ExportLog {
+  layer(logs: LayerLog[], dropped: number): void;
+  layerErrors(errors: LineError[]): void;
+  warn(text: string): void;
+}
+
+const CODEC_NAMES: Record<VideoCodec, string> = {
+  avc: "H.264", hevc: "H.265", vp9: "VP9", vp8: "VP8", av1: "AV1", prores: "ProRes",
+};
+
 interface Encoder {
   addFrame(index: number): Promise<void>;
   finish(): Promise<Blob>;
@@ -28,6 +41,7 @@ interface Encoder {
 
 async function videoEncoder(
   canvas: HTMLCanvasElement, type: "webm" | "mp4", fps: number, width: number, height: number,
+  warn: (text: string) => void,
 ): Promise<Encoder> {
   const noVideo = noVideoReason();
   if (noVideo) {
@@ -37,6 +51,10 @@ async function videoEncoder(
   const codec = await getFirstEncodableVideoCodec(candidates, {width, height});
   if (!codec) {
     throw new Error(`This browser can't encode ${type.toUpperCase()} video at ${width}×${height}.`);
+  }
+  if (codec !== candidates[0]) {
+    warn(`This browser can't encode ${CODEC_NAMES[candidates[0]!]} at ${width}×${height}, so the ` +
+      `${type.toUpperCase()} video uses ${CODEC_NAMES[codec]}, which some players can't play.`);
   }
   const target = new BufferTarget();
   const output = new Output({format: type === "mp4" ? new Mp4OutputFormat() : new WebMOutputFormat(), target});
@@ -95,7 +113,7 @@ const EXTENSIONS = {webm: ".webm", mp4: ".mp4", gif: ".gif", png: ".zip"};
 // Throws ExportCancelled when `signal` aborts.
 export async function exportVideo(
   doc: AnimationDocument, options: ExportOptions,
-  onProgress: (progress: ExportProgress) => void, signal: AbortSignal,
+  onProgress: (progress: ExportProgress) => void, signal: AbortSignal, log?: ExportLog,
 ): Promise<DownloadableFile> {
   const [width, height] = exportSize(options, doc.aspectRatio);
   const fps = Math.max(1, Math.round(options.fps));
@@ -119,12 +137,22 @@ export async function exportVideo(
       throw new Error("The shader doesn't compile: " + (compiled.errors[0]?.message ?? ""));
     }
     renderer.setSize(width, height);
+    renderer.onTextureFailed = (slot, video) =>
+      log?.warn(`iTexture${slot}'s ${video ? "video" : "image"} couldn't be loaded, so it's black in the render.`);
     renderer.setTextures(doc.textures.map(textureURL));
     await renderer.texturesReady();
     const layerDoc = canvasLayer(doc);
     if (layerDoc) {
       const {CanvasLayer, bundledAssets} = await import('../layer/bundled');
-      layer = new CanvasLayer(bundledAssets, {onFrame: bitmap => bitmap.close(), onStatus: () => {}}, false);
+      layer = new CanvasLayer(bundledAssets, {
+        onFrame: bitmap => bitmap.close(),
+        onStatus: errors => {
+          if (errors.length > 0) {
+            log?.layerErrors(errors);
+          }
+        },
+        ...log && {onLog: (logs: LayerLog[], dropped: number) => log.layer(logs, dropped)},
+      }, false);
       renderer.setLayer(true);
       renderer.layerOverlay = layerDoc.overlay;
       layer.configure({
@@ -134,7 +162,7 @@ export async function exportVideo(
     }
     encoder = options.type === "gif" ? gifEncoder(frameCanvas, fps) :
       options.type === "png" ? pngEncoder(frameCanvas) :
-      await videoEncoder(frameCanvas, options.type, fps, width, height);
+      await videoEncoder(frameCanvas, options.type, fps, width, height, text => log?.warn(text));
     let steps = RESTART;
     // The steps a frame takes are listed first, as each waits for the Canvas2D layer to draw it.
     const due: FrameInputs[] = [];

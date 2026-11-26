@@ -1,7 +1,7 @@
 // A tablet in landscape: the desktop layout, with an on-screen keyboard covering the bottom of the page.
 import { expect, test, type Page } from '@playwright/test';
 
-import { offline, OPEN_EDITOR } from './helpers';
+import { blankTimeline, offline, OPEN_EDITOR } from './helpers';
 
 const VISIBLE_HEIGHT = 420;
 
@@ -71,7 +71,8 @@ test("with the keyboard up, the code or the bottom panel fills the space above i
 test("in browsers that shrink the page for the keyboard, the code keeps its room and its cursor", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./#new");
-  await page.locator(".cm-line").nth(10).tap();
+  const tapped = page.locator(".cm-line", {hasText: "fragColor = vec4(col"});
+  await tapped.tap();
   await page.setViewportSize({width: 1180, height: VISIBLE_HEIGHT});
   await expect(page.locator(".bottomPanel")).toBeHidden();
   const editor = await box(page, ".editorPane");
@@ -80,7 +81,7 @@ test("in browsers that shrink the page for the keyboard, the code keeps its room
   // The cursor is on the tapped line, still in sight.
   const cursor = page.locator(".cm-cursor-primary");
   await expect(cursor).toBeInViewport();
-  const line = (await page.locator(".cm-line").nth(10).boundingBox())!;
+  const line = (await tapped.boundingBox())!;
   const caret = (await cursor.boundingBox())!;
   expect(caret.y + caret.height / 2).toBeGreaterThan(line.y);
   expect(caret.y + caret.height / 2).toBeLessThan(line.y + line.height);
@@ -92,6 +93,7 @@ test("in browsers that shrink the page for the keyboard, the code keeps its room
 test("a tap shows a transition's open start and asks for its end, and hold and drag adds one", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./#new");
+  await blankTimeline(page);
   const row = (await page.locator(".timeArea .variableRow").first().boundingBox())!;
   const y = row.y + row.height / 2;
   const at = (fraction: number) => row.x + row.width * fraction;

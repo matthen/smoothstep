@@ -1,7 +1,7 @@
 import { Alert } from '@mantine/core';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type PointerEvent } from 'react';
 
-import type { CanvasLayer } from '../layer/CanvasLayer';
+import type { CanvasLayer, LayerLog } from '../layer/CanvasLayer';
 import type { AspectRatio, ShaderExtras } from '../lib/document';
 import type { LineError } from '../lib/types';
 import { useLatest } from '../lib/useLatest';
@@ -41,8 +41,14 @@ interface CanvasProps {
   layerTextures: readonly (string | null)[];
   // Whether the Canvas2D layer is drawn over the image.
   layerOverlay: boolean;
-  // The Canvas2D layer's errors; none once it draws.
-  onLayerStatus(errors: LineError[]): void;
+  // The Canvas2D layer's errors, and whether its code failed to load; none once it draws.
+  onLayerStatus(errors: LineError[], loading?: boolean): void;
+  // The Canvas2D code's console calls, from runs of the latest build.
+  onLayerLog(logs: LayerLog[], dropped: number): void;
+  // The Canvas2D layer started its code again, other than for a build.
+  onLayerRestart(): void;
+  // A texture slot whose image or video didn't load.
+  onTextureFailed(slot: number, video: boolean): void;
   time: number;
   // Whether time is moving on by itself, so videos play along rather than seek to each frame.
   playing: boolean;
@@ -50,7 +56,8 @@ interface CanvasProps {
   stepClock: number;  // seconds played since the simulation restarted
   variableValues: number[];
   aspectRatio: AspectRatio;
-  onBuilt(result: CompileResult): void;
+  // What the shaders' code built to, and how long that took.
+  onBuilt(result: CompileResult, ms: number): void;
   // The previous frame was cleared (new build, size or textures), so iFrame should restart at 0.
   onRestart(): void;
   onLayout(layout: CanvasLayout): void;
@@ -207,6 +214,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
       const renderer = new Renderer(canvasRef.current!);
       renderer.onTextureLoaded = () => {needsRender.current = true;};
       renderer.onVideoFrame = () => {needsRender.current = true;};
+      renderer.onTextureFailed = (slot, video) => propsRef.current.onTextureFailed(slot, video);
       rendererRef.current = renderer;
       // No dispose(): StrictMode remounts with the same canvas, and a lost context can't be reused.
       return () => {
@@ -217,7 +225,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
       setError("smoothstep.io needs WebGL 2, which this browser or device doesn't support.");
       return undefined;
     }
-  }, []);
+  }, [propsRef]);
 
   useEffect(() => {
     const element = containerRef.current!;
@@ -256,9 +264,10 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     if (!renderer || props.shaders === null) {
       return;
     }
+    const started = performance.now();
     const result = renderer.setCode(props.shaders.code, props.shaders.buffers, props.shaders.shared);
     built.current = result.ok;
-    props.onBuilt(result);
+    props.onBuilt(result, performance.now() - started);
     if (result.ok) {
       restart();
     }
@@ -328,8 +337,23 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
               renderer.setLayerFrame(bitmap);
               needsPresent.current = true;
             },
-            onStatus: errors => propsRef.current.onLayerStatus(errors),
+            // A run of the code before the latest build may still fail or log until the layer takes the new code.
+            onStatus: (errors, loading) => {
+              if (layerBuildId.current === propsRef.current.buildId) {
+                propsRef.current.onLayerStatus(errors, loading);
+              }
+            },
             onBusy: setLayerBusy,
+            onLog: (logs, dropped) => {
+              if (layerBuildId.current === propsRef.current.buildId) {
+                propsRef.current.onLayerLog(logs, dropped);
+              }
+            },
+            onRestart: () => {
+              if (layerBuildId.current === propsRef.current.buildId) {
+                propsRef.current.onLayerRestart();
+              }
+            },
           });
           layerRef.current = {layer, steps: new LayerSteps(renderer, layer)};
         }
@@ -340,7 +364,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
         }
       }).catch((error: unknown) => {
         console.error(error);
-        propsRef.current.onLayerStatus([{line: 0, message: "Couldn't load the Canvas2D layer. Check your connection and build again."}]);
+        propsRef.current.onLayerStatus([{line: 0, message: "Couldn't load the Canvas2D layer. Check your connection and build again."}], true);
       });
     }, force || !layerRef.current ? 0 : LAYER_SETTLE_MS);
     return () => window.clearTimeout(timer);

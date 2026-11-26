@@ -22,7 +22,22 @@ export type FromWorker =
   | {type: "ready"; registered: boolean; hasDraw: boolean}
   | {type: "drawing"; frame: number}
   | {type: "frame"; id: number; bitmap: ImageBitmap}
-  | {type: "error"; message: string; stack: string; line: number | null};
+  | {type: "error"; message: string; stack: string; line: number | null}
+  | {type: "logs"; logs: WorkerLog[]; dropped: number};
+
+export type LogLevel = "log" | "info" | "warn" | "error";
+
+// A console call from the layer's code, or several the same in a row.
+export interface WorkerLog {
+  level: LogLevel;
+  text: string;
+  // The step it was drawing and its time, or null before the first step.
+  frame: number | null;
+  time: number | null;
+  // The lines of the worker's script in the call's stack, innermost first.
+  lines: number[];
+  count: number;
+}
 
 type UserSetup = (inputs: Record<string, unknown>) => unknown;
 type UserDraw = (ctx: OffscreenCanvasRenderingContext2D, inputs: Record<string, unknown>) => void;
@@ -39,7 +54,12 @@ interface WorkerScope {
 
 type Callback = (...args: unknown[]) => void;
 
-export function workerRuntime(helpersFor: (env: HelperEnv) => Helpers) {
+// The most console calls a worker holds between messages to the app; past it they're only counted.
+export const MAX_WORKER_LOGS = 200;
+
+export function workerRuntime(
+  helpersFor: (env: HelperEnv) => Helpers, formatLog: (args: readonly unknown[]) => string, maxLogs: number,
+) {
   const scope = self as unknown as WorkerScope;
   // Drawing units: the canvas is always this many tall, so sizes look the same at any resolution.
   const UNITS_TALL = 1080;
@@ -185,9 +205,93 @@ export function workerRuntime(helpersFor: (env: HelperEnv) => Helpers) {
   let setupDone = false;
   let failed = false;
 
+  // Console calls wait here and go to the app together, ahead of any other message, so they arrive
+  // in order. A run of the same call is kept as one with a count, and past maxLogs they're only counted.
+  const ErrorType = Error;
+  let logs: WorkerLog[] = [];
+  let droppedLogs = 0;
+  let logsDue = false;
+  let logging = false;
+  let stepFrame: number | null = null;
+  let stepStarted = false;
+  const sendLogs = () => {
+    logsDue = false;
+    if (port && (logs.length > 0 || droppedLogs > 0)) {
+      const message: FromWorker = {type: "logs", logs, dropped: droppedLogs};
+      logs = [];
+      droppedLogs = 0;
+      apply(postMessage, port, [message, []]);
+    }
+  };
   const send = (message: FromWorker, transfer: Transferable[] = []) => {
+    sendLogs();
     if (port) {
       apply(postMessage, port, [message, transfer]);
+    }
+  };
+  const stackLines = (): number[] => {
+    try {
+      const stack = new ErrorType().stack ?? "";
+      return stack.split("\n").flatMap(frame => {
+        const match = /:(\d+):\d+\)?\s*$/.exec(frame);
+        return match ? [Number(match[1])] : [];
+      });
+    } catch {
+      return [];
+    }
+  };
+  const log = (level: LogLevel, args: unknown[]) => {
+    // Formatting can run the code's own getters, which may log too.
+    if (logging) {
+      return;
+    }
+    logging = true;
+    try {
+      const last = logs[logs.length - 1];
+      if (droppedLogs > 0) {
+        droppedLogs++;
+      } else {
+        const text = formatLog(args);
+        const lines = stackLines();
+        const time = stepStarted ? stepTime : null;
+        if (last && last.level === level && last.text === text && last.lines.join() === lines.join()) {
+          last.count++;
+          last.frame = stepFrame;
+          last.time = time;
+        } else if (logs.length >= maxLogs) {
+          droppedLogs++;
+        } else {
+          logs.push({level, text, frame: stepFrame, time, lines, count: 1});
+        }
+      }
+      if (!logsDue) {
+        logsDue = true;
+        nativeSetTimeout(sendLogs, 0);
+      }
+    } finally {
+      logging = false;
+    }
+  };
+  const consoleObject = (global.console ?? {}) as Record<string, unknown>;
+  global.console = consoleObject;
+  ([["log", "log"], ["debug", "log"], ["dir", "log"], ["trace", "log"], ["info", "info"], ["warn", "warn"],
+    ["error", "error"]] as const).forEach(([name, level]) => {
+    // The browser's own console still gets each call, so devtools shows it even from a loop that never ends.
+    const original = consoleObject[name];
+    consoleObject[name] = (...args: unknown[]) => {
+      if (typeof original === "function") {
+        apply(original as Callback, consoleObject, args);
+      }
+      log(level, args);
+    };
+  });
+  const originalAssert = consoleObject.assert;
+  consoleObject.assert = (condition: unknown, ...args: unknown[]) => {
+    if (typeof originalAssert === "function") {
+      apply(originalAssert as Callback, consoleObject, [condition, ...args]);
+    }
+    if (!condition) {
+      log("error", ["Assertion failed" + (args.length > 0 ? ":" : ""), ...args]);
     }
   };
   const fail = (error: unknown) => {
@@ -255,6 +359,8 @@ export function workerRuntime(helpersFor: (env: HelperEnv) => Helpers) {
     for (const step of message.steps) {
       send({type: "drawing", frame: step.frame});
       stepTime = step.time;
+      stepFrame = step.frame;
+      stepStarted = true;
       for (const {slot, bitmap} of step.videoFrames ?? []) {
         // A video's last frame is closed, so a long video doesn't fill the memory.
         const old = textures[slot];
@@ -307,7 +413,12 @@ export function workerRuntime(helpersFor: (env: HelperEnv) => Helpers) {
       }]);
       const code = body;
       body = null;
-      code?.();
+      // An uncaught error goes to the app another way, which may not wait for the logs before it.
+      try {
+        code?.();
+      } finally {
+        sendLogs();
+      }
     }
   }, {capture: true});
   scope.addEventListener("unhandledrejection", event => fail(event.reason));

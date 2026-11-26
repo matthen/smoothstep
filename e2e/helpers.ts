@@ -138,3 +138,14 @@ export async function transitionTimes(page: Page): Promise<string> {
   const time = async (id: string) => (await page.locator(id).inputValue()).replace(/ s$/, "");
   return `${await time("#startTimeInput")} — ${await time("#endTimeInput")}`;
 }
+
+// Makes a new animation 12 seconds long with nothing on its timeline, in place of iFloat0's phase.
+// The timeline must be in sight.
+export async function blankTimeline(page: Page) {
+  await page.locator(".timeArea .variableRow").first().locator(".transition").click();
+  await page.keyboard.press("Delete");
+  await expect(page.locator(".timeArea .transition")).toHaveCount(0);
+  await page.locator(".durationInput").fill("12");
+  await page.locator(".durationInput").press("Enter");
+  await expect(page.locator(".durationInput")).toHaveValue("12 s");
+}

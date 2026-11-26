@@ -9,7 +9,7 @@ const MENU_PATHS = [
 // The panels under the canvas, and the code tabs. "Animation" is the Timeline tab's old name, and the code
 // tabs' names without extensions, "Shared GLSL", "Shared" and "Canvas" are theirs, kept so old comments still link.
 const TABS = [
-  "Timeline", "Animation", "Sliders", "Textures",
+  "Timeline", "Animation", "Sliders", "Textures", "Console",
   "Image.glsl", "shared.glsl", "Canvas2D.js", "iBuffer0.glsl", "iBuffer1.glsl", "iBuffer2.glsl", "iBuffer3.glsl",
   "Image", "Shared GLSL", "Shared", "Canvas2D", "Canvas", "iBuffer0", "iBuffer1", "iBuffer2", "iBuffer3",
 ] as const;

@@ -1,7 +1,7 @@
 // The timeline on a desktop: fitting the animation to the panel, zooming, and editing transitions.
 import { expect, test, type Page } from '@playwright/test';
 
-import { offline, transitionTimes } from './helpers';
+import { blankTimeline, offline, transitionTimes } from './helpers';
 
 const scale = async (page: Page) => Number(await page.locator(".timeArea").getAttribute("data-px-per-second"));
 
@@ -19,6 +19,7 @@ async function scrubberTime(page: Page): Promise<number> {
 test("the timeline fits the animation to its width, and zooms in and back out", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./#new");
+  await blankTimeline(page);
   const grid = page.locator(".gridContainer");
   const fits = () => grid.evaluate(e => e.scrollWidth <= e.clientWidth);
 
@@ -72,6 +73,7 @@ test("the timeline fits the animation to its width, and zooms in and back out", 
 test("the ruler seeks, and dragging the end changes the length", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./#new");
+  await blankTimeline(page);
   const ruler = (await page.locator(".header").boundingBox())!;
   const fitted = await scale(page);
   await page.mouse.click(ruler.x + 3 * fitted, ruler.y + 12);
@@ -99,6 +101,7 @@ test("the ruler seeks, and dragging the end changes the length", async ({page, c
 test("transitions are dragged out, drawn with their curve, moved, resized and deleted", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./#new");
+  await blankTimeline(page);
   const h4 = page.locator(".properties h4");
   await expect(page.locator(".properties .hint").first()).toHaveText("Click or drag in a row to add a transition.");
 
@@ -165,6 +168,31 @@ test("transitions are dragged out, drawn with their curve, moved, resized and de
   await page.locator(".timeArea .transition").click();
   await page.keyboard.press("Delete");
   await expect(page.locator(".timeArea .transition")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("a transition clicked twice keeps its start while the pointer wanders over the ruler and out of the timeline", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#new");
+  await blankTimeline(page);
+  const ruler = (await page.locator(".header").boundingBox())!;
+  const start = await at(page, 1, 1.05);
+  await page.mouse.click(start.x, start.y);
+  const back = await at(page, 1, 3.05);
+  await page.mouse.move(back.x, ruler.y + 10, {steps: 4});
+  await page.mouse.move(back.x, 5, {steps: 4});
+  await page.mouse.move(back.x, back.y, {steps: 4});
+  await page.mouse.click(back.x, back.y);
+  await expect(page.locator(".timeArea .transition.selected")).toHaveCount(1);
+  await expect.poll(() => transitionTimes(page)).toBe("1 — 3");
+
+  // A second click on the ruler sets the end there, rather than seeking.
+  const next = await at(page, 2, 4.05);
+  await page.mouse.click(next.x, next.y);  // Deselects the first.
+  await page.mouse.click(next.x, next.y);
+  const end = await at(page, 2, 6.05);
+  await page.mouse.click(end.x, ruler.y + 10);
+  await expect.poll(() => transitionTimes(page)).toBe("4 — 6");
   expect(errors).toEqual([]);
 });
 

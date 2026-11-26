@@ -6,6 +6,7 @@ import { MAX_BUFFERS, NUM_TEXTURES, NUM_VARIABLES } from '../lib/document';
 import type { LineError } from '../lib/types';
 import { uses } from '../lib/glslCode';
 import { isVideoURL } from '../lib/media';
+import { bracketError } from './brackets';
 import { VideoTexture } from './videoTexture';
 import {
   PROBE_DECLARATIONS, PROBE_MAIN, planProbe, probeComponents, sharedCallers, typeFromError, UNREACHED, withProbe,
@@ -185,14 +186,27 @@ export function buffersUsed(code: string, buffers: readonly string[]): number[] 
   return [...used].sort((a, b) => a - b);
 }
 
+export const PAST_END_ERROR = "The code ends before something in it is finished, such as a missing ; or }.";
+
 // Turns a WebGL info log into errors on lines of the user's code (0-based, clamped to the code).
+// Errors in the app's code after it say so plainly, once, on the code's last line that isn't blank.
 export function parseErrors(log: string, code: string): LineError[] {
   const offset = shaderPrefix().split("\n").length;  // 1-based line number of the code's first line
-  const lastLine = code.split("\n").length - 1;
+  const lines = code.split("\n");
+  const lastLine = lines.length - 1;
+  const lastFilled = Math.max(0, lines.findLastIndex(line => line.trim() !== ""));
   const errors: LineError[] = [];
   for (const match of log.matchAll(/ERROR:\s*\d+:(\d+):\s*(.*)/g)) {
     const line = Number(match[1]) - offset;
-    errors.push({line: Math.max(0, Math.min(line, lastLine)), message: (match[2] ?? "").trim()});
+    const message = (match[2] ?? "").trim();
+    // A call to a missing mainImage is in the app's code too; markMissingMainImage explains that one.
+    if (line > lastLine && !message.includes("mainImage")) {
+      if (!errors.some(e => e.message === PAST_END_ERROR)) {
+        errors.push({line: lastFilled, message: PAST_END_ERROR});
+      }
+    } else {
+      errors.push({line: Math.max(0, Math.min(line, lastLine)), message});
+    }
   }
   if (errors.length === 0 && log.trim()) {
     errors.push({line: 0, message: log.trim()});
@@ -311,6 +325,8 @@ export class Renderer {
   private height = 1;
   private textureUnits: WebGLTexture[] = [];
   private images = new Map<string, HTMLImageElement>();
+  // Whether each image's first load worked, as `complete` and `naturalWidth` can't tell a failure from an SVG with no size.
+  private imageStates = new Map<string, "loading" | "loaded" | "failed">();
   private textureURLs: string[] = [];
   // Each slot's video, or null for an image; slots with the same video share it.
   private slotVideos: (VideoTexture | null)[] = [];
@@ -318,6 +334,8 @@ export class Renderer {
   onTextureLoaded: () => void = () => {};
   // A paused video has a new frame to show, so draw again.
   onVideoFrame: () => void = () => {};
+  // A slot's image or video couldn't be loaded or decoded, so it stays black.
+  onTextureFailed: (slot: number, video: boolean) => void = () => {};
 
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext("webgl2", {antialias: false, preserveDrawingBuffer: false});
@@ -463,6 +481,12 @@ export class Renderer {
   // Builds the image's shader and the buffers'. If any fails, the previous ones keep rendering.
   setCode(code: string, buffers: readonly string[] = [], shared = ""): CompileResult {
     const sources: [ShaderId, string][] = [["image", code], ...buffers.map((c, i): [ShaderId, string] => [i, c])];
+    for (const [shader, source] of [["shared", shared] as [ShaderId, string], ...sources]) {
+      const error = bracketError(source);
+      if (error) {
+        return {ok: false, shader, errors: [error]};
+      }
+    }
     const programs: Program[] = [];
     for (const [shader, source] of sources) {
       const result = this.link(fragmentSource(source, buffers.length, shader !== "image", shared));
@@ -829,23 +853,39 @@ export class Renderer {
         return;
       }
       const cached = this.images.get(url);
-      if (cached?.complete && cached.naturalWidth) {
+      const state = this.imageStates.get(url);
+      if (cached && state === "loaded") {
         this.upload(i, cached);
         return;
       }
       this.upload(i, null);
-      const image = cached ?? new Image();
-      if (!cached) {
-        image.crossOrigin = "anonymous";
-        image.src = url;
-        this.images.set(url, image);
+      if (state === "failed") {
+        this.onTextureFailed(i, false);
       }
-      image.addEventListener("load", () => {
-        if (this.textureURLs[i] === url) {
-          this.upload(i, image);
+      if (cached) {
+        return;  // Its one pair of listeners fills every slot that shows it.
+      }
+      const image = new Image();
+      image.crossOrigin = "anonymous";
+      this.images.set(url, image);
+      this.imageStates.set(url, "loading");
+      const settle = (ok: boolean) => {
+        this.imageStates.set(url, ok ? "loaded" : "failed");
+        const slots = this.textureURLs.flatMap((slotURL, slot) => slotURL === url && !this.slotVideos[slot] ? [slot] : []);
+        for (const slot of slots) {
+          if (ok) {
+            this.upload(slot, image);
+          } else {
+            this.onTextureFailed(slot, false);
+          }
+        }
+        if (ok && slots.length > 0) {
           this.onTextureLoaded();
         }
-      }, {once: true});
+      };
+      image.addEventListener("load", () => settle(true), {once: true});
+      image.addEventListener("error", () => settle(false), {once: true});
+      image.src = url;
     });
     // Videos no slot shows any more stop playing.
     for (const [url, video] of this.videos) {
@@ -861,7 +901,13 @@ export class Renderer {
     if (!video) {
       const created = new VideoTexture(url, () => this.onVideoFrame());
       void created.whenLoaded().then(() => {
-        if (this.slotVideos.includes(created)) {
+        if (created.failed) {
+          this.slotVideos.forEach((video, i) => {
+            if (video === created) {
+              this.onTextureFailed(i, true);
+            }
+          });
+        } else if (this.slotVideos.includes(created)) {
           this.onTextureLoaded();
         }
       });

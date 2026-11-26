@@ -26,6 +26,7 @@ export const WELCOME_TIPS: ReactNode[] = [
   <>Click a built-in function like <GlslCode>smoothstep</GlslCode> or <GlslCode>mix</GlslCode> in your code to see what it does.</>,
   <>Click one of your own functions or variables to go to where it's defined, list everywhere it's used, or rename it in every tab. <Kbd>F12</Kbd>, <Kbd>Shift</Kbd> + <Kbd>F12</Kbd> and <Kbd>F2</Kbd> do the same for the name at the cursor.</>,
   <>In the Canvas2D.js tab, click a helper like <JsCode>Disk</JsCode> or a <JsCode>ctx</JsCode> method like <JsCode>fillText</JsCode> to see what it does, and a colour string like <JsCode>"#ffcc00"</JsCode> for a colour picker.</>,
+  <><JsCode>console.log</JsCode> in the Canvas2D.js tab prints in the Console tab under the canvas, which also lists the errors in every tab. Click a line there to go to it in the code.</>,
   // Snippet names to type, rather than code.
   <>Type <code>raymarch</code> or <code>feedback</code> in a shader, or <code>drawList</code> in the Canvas2D.js tab, and pick it from Snippets at the end of the completions for code to start from. <Kbd>Tab</Kbd> moves between its blanks.</>,
   <><Kbd>Space</Kbd> plays and pauses, and the number keys jump through the animation: <Kbd>5</Kbd> goes halfway.</>,

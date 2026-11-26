@@ -2,14 +2,14 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { parseHash } from '../app/routing';
 import { EXAMPLES } from '../lib/config';
-import { DEFAULT_CODE, NEW_CANVAS_CODE, newDocument, type Transition } from '../lib/document';
+import { DEFAULT_CODE, NEW_CANVAS_CODE, tutorialDocument, type Transition } from '../lib/document';
 import { uses } from '../lib/glslCode';
 import { floatsUsed, LESSONS, stepCode, type Step, type TutorialState } from './lessons';
 import * as shaders from './shaders';
 import { loadProgress, openingProgress, saveProgress } from './progress';
 
 function state(change: Partial<TutorialState> = {}): TutorialState {
-  const doc = newDocument();
+  const doc = tutorialDocument();
   return {
     code: DEFAULT_CODE, builtCode: DEFAULT_CODE, built: true, isPlaying: false, time: 0,
     shared: "", buffers: [], builtShared: "", builtBuffers: [], canvas: null, builtCanvas: null, canvasOverlay: true,
@@ -55,7 +55,7 @@ function check(id: string, now: TutorialState, atStart: TutorialState = state())
 }
 
 function withTransition(row: number, transition: Partial<Transition>): TutorialState["variables"] {
-  const variables = newDocument().variables;
+  const variables = tutorialDocument().variables;
   variables[row] = {transitions: [
     {startDSecs: 10, endDSecs: 30, startValue: 0, endValue: 0, type: "smoothstep", ...transition},
   ]};
@@ -115,7 +115,7 @@ describe("shaders", () => {
   });
 
   it("every step with code passes its own check once built, played and set up", () => {
-    const textures = newDocument().textures;
+    const textures = tutorialDocument().textures;
     textures[0] = {...textures[0]!, url: "photos/a.jpg"};
     const variables = withTransition(0, {endValue: 1});
     variables[1] = withTransition(1, {endValue: 1})[1]!;
@@ -198,7 +198,7 @@ describe("lesson 4: the timeline", () => {
   });
 
   it("slider: a value set for an iFloat the code uses", () => {
-    const variables = newDocument().variables;
+    const variables = tutorialDocument().variables;
     expect(check("slider", builtWith(code, {variables}))).toBe(false);
     variables[2] = {transitions: [], value: 0.5};
     expect(check("slider", builtWith(code, {variables}))).toBe(false);
@@ -243,10 +243,10 @@ describe("lesson 5: patterns", () => {
 describe("lesson 6: textures", () => {
   it("a texture the code reads has an image", () => {
     expect(check("texture", builtWith(shaders.TEXTURE))).toBe(false);
-    const textures = newDocument().textures;
+    const textures = tutorialDocument().textures;
     textures[0] = {...textures[0]!, url: "photos/sunflower.jpg"};
     expect(check("texture", builtWith(shaders.TEXTURE, {textures}))).toBe(true);
-    const uploaded = newDocument().textures;
+    const uploaded = tutorialDocument().textures;
     uploaded[0] = {...uploaded[0]!, url: "abc123", isUserUploaded: true};
     expect(check("texture", builtWith(shaders.TEXTURE, {textures: uploaded}))).toBe(true);
     // An image in a slot the code doesn't read.
