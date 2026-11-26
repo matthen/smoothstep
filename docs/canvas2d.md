@@ -300,10 +300,34 @@ function draw(ctx) {
 
 The physics world uses the same coordinates as `drawList`, so drawing it is easy.
 
+## Printing values
+
+`console.log` prints in the Console tab under the canvas, so you can check values while the
+animation plays.
+
+```js
+function draw(ctx, {frame, floats}) {
+  if (frame % 60 === 0) {
+    console.log("size", floats[0], [frame, frame / 60]);
+  }
+}
+```
+
+Each line shows the step it was printed on, the animation's time then, and the line of your code
+that printed it. Click it to go to that line. Numbers, arrays and objects print as short text, such
+as `[1, 2, 3]` or `{x: 0.5, y: 2}`, and very long output is cut off. `console.warn` and
+`console.error` print in amber and red, and what the libraries you import print shows too.
+
+`draw` runs 60 times a second, so a line that's the same as the one before it shows once, with a
+count such as ×240. The Console keeps the last 500 lines, and each build starts it empty with a
+line saying how long the build took. While a render runs, what the code prints goes there too,
+marked "render".
+
 ## Errors
 
-Errors show under the line they're on, the way shader errors do. While there's an error, the layer
-keeps the last frame that drew without one.
+Errors show under the line they're on, the way shader errors do, and in the Console tab, which lists
+the errors in every tab. Click one to go to its line. While there's an error, the layer keeps the
+last frame that drew without one.
 
 If the code has no `draw` function, the error shows a short one to start from, and **Insert a draw
 function** adds it after the rest of your code and builds.

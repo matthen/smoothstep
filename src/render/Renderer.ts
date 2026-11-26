@@ -318,6 +318,8 @@ export class Renderer {
   onTextureLoaded: () => void = () => {};
   // A paused video has a new frame to show, so draw again.
   onVideoFrame: () => void = () => {};
+  // A slot's image or video couldn't be loaded or decoded, so it stays black.
+  onTextureFailed: (slot: number, video: boolean) => void = () => {};
 
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext("webgl2", {antialias: false, preserveDrawingBuffer: false});
@@ -840,12 +842,25 @@ export class Renderer {
         image.src = url;
         this.images.set(url, image);
       }
-      image.addEventListener("load", () => {
+      const loaded = () => {
+        image.removeEventListener("error", failed);
         if (this.textureURLs[i] === url) {
           this.upload(i, image);
           this.onTextureLoaded();
         }
-      }, {once: true});
+      };
+      const failed = () => {
+        image.removeEventListener("load", loaded);
+        if (this.textureURLs[i] === url) {
+          this.onTextureFailed(i, false);
+        }
+      };
+      if (cached?.complete) {
+        failed();  // It already failed: a loaded one was uploaded above.
+      } else {
+        image.addEventListener("load", loaded, {once: true});
+        image.addEventListener("error", failed, {once: true});
+      }
     });
     // Videos no slot shows any more stop playing.
     for (const [url, video] of this.videos) {
@@ -861,7 +876,13 @@ export class Renderer {
     if (!video) {
       const created = new VideoTexture(url, () => this.onVideoFrame());
       void created.whenLoaded().then(() => {
-        if (this.slotVideos.includes(created)) {
+        if (created.failed) {
+          this.slotVideos.forEach((video, i) => {
+            if (video === created) {
+              this.onTextureFailed(i, true);
+            }
+          });
+        } else if (this.slotVideos.includes(created)) {
           this.onTextureLoaded();
         }
       });

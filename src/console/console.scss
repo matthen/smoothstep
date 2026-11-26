@@ -1,0 +1,159 @@
+@use "../styles/theme" as *;
+
+$console-amber: #e9c46a;
+$console-red: #ff8a8a;
+
+.consolePanel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+
+  @include phone {
+    height: calc(#{$phone-pane-height} - 16px);
+  }
+}
+
+.consoleEntries {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 0 8px;
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 12px;
+  line-height: 1.5;
+  color: $dt-gray-light;
+}
+
+.consoleEntry {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 2px 16px;
+  border: none;
+  border-bottom: 1px solid rgba($dt-gray, 0.35);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+
+  // A phone puts the step, count and place on a line above the text.
+  @include phone {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 8px;
+    padding: 3px 12px;
+
+    .consoleText {
+      order: 1;
+      flex-basis: 100%;
+    }
+  }
+
+  &:is(button) {
+    cursor: pointer;
+    &:hover {
+      background: rgba($dt-gray, 0.35);
+    }
+    &:focus-visible {
+      outline: 1px solid $dt-gray-medium;
+      outline-offset: -1px;
+    }
+  }
+
+  &[data-level="note"] {
+    color: $dt-gray-medium;
+    opacity: 0.8;
+  }
+  &[data-level="info"] .consoleText {
+    color: $dt-cyan;
+  }
+  &[data-level="warn"] {
+    color: $console-amber;
+    background: rgba($console-amber, 0.05);
+  }
+  &[data-level="error"] {
+    color: $console-red;
+    background: rgba($dt-red, 0.06);
+  }
+}
+
+.consoleStep {
+  flex-shrink: 0;
+  min-width: 19ch;
+
+  @include phone {
+    min-width: 0;
+  }
+  color: $dt-gray-medium;
+  opacity: 0.7;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.consoleText {
+  flex: 1;
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.consoleCount {
+  flex-shrink: 0;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: rgba($dt-gray, 0.8);
+  color: $dt-gray-light;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.consolePlace {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: $dt-gray-medium;
+  opacity: 0.7;
+  font-size: 11px;
+  text-decoration: underline;
+  text-decoration-color: rgba($dt-gray-medium, 0.4);
+  text-underline-offset: 2px;
+}
+
+.consoleHint {
+  padding: 4px 16px;
+  color: $dt-gray-medium;
+  font-family: var(--mantine-font-family);
+  font-size: 13px;
+}
+
+// In the tabs' row, before the button that folds the panel away.
+.consoleClear {
+  margin: auto 4px auto auto;
+  color: $dt-gray-medium;
+  font-weight: 500;
+
+  & + .toggleFooter {
+    margin-left: 0;
+  }
+}
+
+.consolePhoneBar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 12px 4px;
+}
+
+.consoleLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+// Errors since the console was last looked at.
+.consoleDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: $dt-red;
+}

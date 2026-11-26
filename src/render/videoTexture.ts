@@ -33,7 +33,8 @@ function apart(a: number, b: number, duration: number): number {
 export class VideoTexture {
   readonly video: HTMLVideoElement;
   private loaded: Promise<void>;
-  private failed = false;
+  // Whether the video couldn't be loaded or decoded.
+  failed = false;
   // Where the video was last sent while paused, or null while it plays.
   private sought: number | null = null;
   private seekStarted = 0;

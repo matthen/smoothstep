@@ -12,6 +12,8 @@ import {
   TbShare, TbVideo,
 } from 'react-icons/tb';
 
+import ConsolePanel, { ConsoleClear, ConsoleLabel } from '../console/ConsolePanel';
+import { ConsoleStore } from '../console/consoleStore';
 import DocumentBrowser from '../dialogs/DocumentBrowser';
 import ExportSettings from '../dialogs/ExportSettings';
 import type { ExportOptions, ExportProgress } from '../dialogs/exportTypes';
@@ -38,6 +40,7 @@ import {
 } from '../lib/document';
 import * as localStore from '../lib/localStore';
 import { onAppLink, type AppLink } from '../lib/appLinks';
+import type { LayerLog } from '../layer/CanvasLayer';
 import { isBrokenShareLink, routeHash, type Route } from '../lib/routes';
 import { loadRoute, ShareError } from '../lib/share';
 import type { LineError } from '../lib/types';
@@ -74,8 +77,10 @@ function windowTitle(title: string) {
 }
 
 // Which pane fills the screen below the canvas on a phone.
-type MobileTab = "code" | "animation" | "sliders" | "textures" | "learn";
-type PanelTab = "animation" | "sliders" | "textures";
+type MobileTab = "code" | "animation" | "sliders" | "textures" | "console" | "learn";
+type PanelTab = "animation" | "sliders" | "textures" | "console";
+const PANEL_TABS: readonly string[] = ["animation", "sliders", "textures", "console"] satisfies PanelTab[];
+const EXPORT_NAMES: Record<ExportOptions["type"], string> = {webm: "a WebM video", mp4: "an MP4 video", gif: "a GIF", png: "PNG frames"};
 
 // Loaded when the tutorial opens, with its lessons.
 const TutorialPanel = lazy(() => import('../tutorial/TutorialPanel'));
@@ -123,6 +128,10 @@ export default function App() {
   const [inspect, setInspect] = useState(false);
   const [buildId, setBuildId] = useState(0);
   const [lineErrors, setLineErrors] = useState<LineError[]>([]);
+  // The Console tab's entries, kept outside React's state so code that logs doesn't re-render the app.
+  const [appConsole] = useState(() => new ConsoleStore());
+  // The build the console last started afresh for; a picker drag recompiles without a new build.
+  const [consoleBuild, setConsoleBuild] = useState(-1);
   // The code the editor shows, or showed before the Docs tab, and the one whose code didn't build.
   const [codeTab, setCodeTab] = useState<ShaderId>("image");
   const [errorShader, setErrorShader] = useState<ShaderId | null>(null);
@@ -328,7 +337,7 @@ export default function App() {
 
   const chooseMobileTab = (tab: MobileTab) => {
     setMobileTab(tab);
-    if (tab === "animation" || tab === "sliders" || tab === "textures") {
+    if (tab !== "code" && tab !== "learn") {
       setPanelTab(tab);
     }
   };
@@ -759,14 +768,28 @@ export default function App() {
 
   const onLayerStatus = (errors: LineError[]) => {
     setLayerErrors(errors);
+    errors.forEach(error => appConsole.add({level: "error", text: error.message, tab: "canvas", line: error.line}));
     // Show the code with the error, unless the docs are open: its tab shows the error.
     if (errors.length > 0 && errorShader === null && canvasLayer(docRef.current) && !docsShownRef.current) {
       setCodeTab("canvas");
     }
   };
 
-  const onBuilt = (result: CompileResult) => {
+  const onBuilt = (result: CompileResult, ms: number) => {
     const errors = result.ok ? [] : result.errors;
+    // Each build starts the console afresh, with a line saying how it went.
+    if (buildId !== consoleBuild) {
+      setConsoleBuild(buildId);
+      appConsole.clear();
+      appConsole.add({
+        level: "note",
+        text: result.ok ? `Built in ${Math.max(1, Math.round(ms))} ms` :
+          `Build failed: ${errors.length} ${errors.length === 1 ? "error" : "errors"}`,
+      });
+      if (!result.ok) {
+        errors.forEach(error => appConsole.add({level: "error", text: error.message, tab: result.shader, line: error.line}));
+      }
+    }
     setLineErrors(errors);
     setErrorShader(result.ok ? null : result.shader);
     if (!result.ok && !docsShownRef.current) {
@@ -779,6 +802,51 @@ export default function App() {
       showTip({kind: "built", ok: result.ok, code, edited: builtCode !== openedCode.current});
     }
   };
+
+  const addLayerLogs = (logs: LayerLog[], dropped: number, render = false) => {
+    for (const log of logs) {
+      appConsole.add({
+        level: log.level, text: log.text, tab: "canvas", line: log.line, frame: log.frame, time: log.time,
+        count: log.count, render,
+      });
+    }
+    if (dropped > 0) {
+      appConsole.add({level: "note", text: `${dropped.toLocaleString("en-GB")} more lines weren't kept`});
+    }
+  };
+
+  const onTextureFailed = (slot: number, video: boolean) => appConsole.add({
+    level: "warn",
+    text: `iTexture${slot}'s ${video ? "video couldn't be loaded or played" : "image couldn't be loaded"}, so it reads as black.`,
+  });
+
+  // Shows a tab's code with the cursor at the start of a line, from the console.
+  const goToLine = (tab: ShaderId, line: number | null) => {
+    const exists = tab === "image" || (tab === "shared" ? doc.shared !== undefined :
+      tab === "canvas" ? layer !== undefined : tab < (doc.buffers?.length ?? 0));
+    if (!exists) {
+      return;
+    }
+    flushSync(() => {
+      showCodeTab(tab);
+      if (phone) {
+        setMobileTab("code");
+      }
+    });
+    const view = editorViews.current.get(tab);
+    if (!view) {
+      return;
+    }
+    const at = view.state.doc.line(Math.min(Math.max(1, (line ?? 0) + 1), view.state.doc.lines)).from;
+    view.dispatch({selection: {anchor: at}, effects: EditorView.scrollIntoView(at, {y: "center"})});
+    if (!phone) {
+      view.focus();
+    }
+  };
+
+  // The console counts its errors as seen while it shows.
+  const consoleShown = phone ? mobileTab === "console" : panelTab === "console" && showFooter;
+  useEffect(() => appConsole.setViewing(consoleShown), [appConsole, consoleShown]);
 
   // Each tab has its own editor, hidden unless it's open, so it keeps its undo history and cursor.
   const codeTabs: {tab: ShaderId; code: string}[] = [
@@ -934,6 +1002,7 @@ export default function App() {
       "Animation": () => showPanel("animation"),
       "Sliders": () => showPanel("sliders"),
       "Textures": () => showPanel("textures"),
+      "Console": () => showPanel("console"),
       "Image.glsl": () => showCode("image"),
       "Image": () => showCode("image"),
       "shared.glsl": () => showCode("shared"),
@@ -990,7 +1059,15 @@ export default function App() {
     try {
       // Loaded on first export, since the encoders are a large part of the app's size.
       const {exportVideo} = await import('../export/exportVideo');
-      archive.download(await exportVideo(doc, exportOptions, setExportProgress, controller.signal));
+      const started = performance.now();
+      appConsole.add({level: "note", text: `Rendering ${EXPORT_NAMES[exportOptions.type]}`});
+      archive.download(await exportVideo(doc, exportOptions, setExportProgress, controller.signal, {
+        layer: (logs, dropped) => addLayerLogs(logs, dropped, true),
+        layerErrors: errors => errors.forEach(error =>
+          appConsole.add({level: "error", text: error.message, tab: "canvas", line: error.line, render: true})),
+        warn: text => appConsole.add({level: "warn", text}),
+      }));
+      appConsole.add({level: "note", text: `Rendered in ${((performance.now() - started) / 1000).toFixed(1)} s`});
       setDialog(null);
       showMessage("Video rendered.");
     } catch (error) {
@@ -1300,6 +1377,7 @@ export default function App() {
             ref={canvasRef}
             shaders={shaders} buildId={buildId} textureURLs={textureURLs}
             layerTextures={layerTextures} layerOverlay={layer?.overlay ?? true} onLayerStatus={onLayerStatus}
+            onLayerLog={addLayerLogs} onTextureFailed={onTextureFailed}
             time={time} playing={isPlaying && !scrubbing} duration={doc.duration} stepClock={stepClock}
             variableValues={values}
             aspectRatio={doc.aspectRatio}
@@ -1333,12 +1411,13 @@ export default function App() {
         </section>
       </main>
 
-      <nav className="mobileTabs">
+      <nav className="mobileTabs" data-crowded={tutorialOpen || undefined}>
         <SegmentedControl
           fullWidth size="sm" value={mobileTab} onChange={value => chooseMobileTab(value as MobileTab)}
           data={[
             {value: "code", label: "Code"}, {value: "animation", label: "Timeline"}, {value: "sliders", label: "Sliders"},
             {value: "textures", label: "Textures"},
+            {value: "console", label: <ConsoleLabel store={appConsole} />},
             ...(tutorialOpen ? [{
               value: "learn",
               label: tutorialStepDone && mobileTab !== "learn"
@@ -1362,7 +1441,7 @@ export default function App() {
         <Tabs
           value={panelTab} keepMounted
           onChange={value => {
-            setPanelTab(value === "textures" || value === "sliders" ? value : "animation");
+            setPanelTab(value !== null && PANEL_TABS.includes(value) ? value as PanelTab : "animation");
             setShowFooter(true);
           }}
         >
@@ -1370,6 +1449,8 @@ export default function App() {
             <Tabs.Tab value="animation">Timeline</Tabs.Tab>
             <Tabs.Tab value="sliders">Sliders</Tabs.Tab>
             <Tabs.Tab value="textures">Textures</Tabs.Tab>
+            <Tabs.Tab value="console"><ConsoleLabel store={appConsole} /></Tabs.Tab>
+            {consoleShown && !phone && <ConsoleClear store={appConsole} />}
             <ActionIcon
               variant="subtle" color="gray" className="toggleFooter" aria-label="Toggle footer"
               onClick={() => setShowFooter(s => !s)}
@@ -1402,6 +1483,9 @@ export default function App() {
               count={slotCount} onAdd={() => setMinSlots(slotCount + 1)}
               onMessage={setAlert}
             />
+          </Tabs.Panel>
+          <Tabs.Panel value="console">
+            <ConsolePanel store={appConsole} active={consoleShown} phone={phone} onGoToLine={goToLine} />
           </Tabs.Panel>
         </Tabs>
       </section>

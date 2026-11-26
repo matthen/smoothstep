@@ -53,6 +53,11 @@ popups and errors open the Docs tab at the right section.
 
 New animations start with the Docs tab. Close it with its × and they start without it.
 
+Under the canvas are the Timeline, Sliders, Textures and Console tabs. The Console lists the errors in
+every code tab, and clicking one goes to its line. It also shows what your
+[Canvas2D code prints](canvas2d.md#printing-values) with `console.log`, and problems such as a
+texture that couldn't be loaded. A red dot on its name means it has errors you haven't seen yet.
+
 The Help menu also has the tutorial, the tour and the welcome dialog. The welcome dialog
 shows a different tip each visit. While you work, smoothstep.io shows a short tip the first time some
 things happen, such as your first compile error or your first save. Each tip shows once, and "Don't

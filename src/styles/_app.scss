@@ -407,6 +407,15 @@ a {
     display: none;
   }
 
+  // Five panes share a phone's width, and six with the tutorial's.
+  .mantine-SegmentedControl-label {
+    padding-inline: 2px;
+    font-size: 13px;
+  }
+  &[data-crowded] .mantine-SegmentedControl-label {
+    font-size: 12px;
+  }
+
   // A tick on Learn when the tutorial step is done, so you know to go back for the next one.
   .learnTabLabel {
     display: inline-flex;

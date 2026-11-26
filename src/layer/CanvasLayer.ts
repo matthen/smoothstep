@@ -9,9 +9,11 @@ import type { FontData } from './fonts';
 import { parseImports } from './libraries';
 import type { FromWorker, LayerInputs, ToWorker } from './runtime';
 import { Sandbox, type SandboxWorker } from './sandbox';
-import { errorFromEvent, errorFromStack, workerSource, type WorkerSource } from './workerSource';
+import {
+  errorFromEvent, errorFromStack, logsFromWorker, workerSource, type LayerLog, type WorkerSource,
+} from './workerSource';
 
-export type { LayerInputs };
+export type { LayerInputs, LayerLog };
 
 export interface LayerConfig {
   code: string;
@@ -32,6 +34,9 @@ export interface LayerCallbacks {
   // The step the layer has been drawing for a while, "starting" while its code's first run takes a
   // while, or null once it's done.
   onBusy?(frame: number | "starting" | null): void;
+  // The code's console calls, in order, and how many more there were than the worker kept. Without
+  // it, they go to the browser's console.
+  onLog?(logs: LayerLog[], dropped: number): void;
 }
 
 // How long a step takes before the layer says it's still drawing it.
@@ -60,7 +65,13 @@ interface Run {
   drawing: number;
   // When it started, by performance.now().
   started: number;
+  // A spare's console calls, from code outside setup and draw, held until it's used.
+  heldLogs: LayerLog[];
+  heldDropped: number;
 }
+
+// The most a spare holds before it only counts them.
+const MAX_HELD_LOGS = 200;
 
 async function loadBitmap(url: string): Promise<ImageBitmap | null> {
   try {
@@ -135,6 +146,11 @@ export class CanvasLayer {
   // Makes `run` the one that draws, and watches how long it takes to start.
   private use(run: Run) {
     this.current = run;
+    if (run.heldLogs.length > 0 || run.heldDropped > 0) {
+      this.log(run.heldLogs, run.heldDropped);
+      run.heldLogs = [];
+      run.heldDropped = 0;
+    }
     if (!this.busyShown) {
       this.watchBusy();
     }
@@ -181,6 +197,7 @@ export class CanvasLayer {
         }
       }),
       ready: false, inFlight: null, stepped: false, drawn: false, drawing: 0, started: performance.now(),
+      heldLogs: [], heldDropped: 0,
     };
     run.worker.port.onmessage = (event: MessageEvent<FromWorker>) => this.receive(run, prepared, event.data);
     // Each worker gets its own copies of the fonts and images.
@@ -222,7 +239,16 @@ export class CanvasLayer {
     if (run !== this.current && run !== this.standby) {
       return;
     }
-    if (message?.type === "ready") {
+    if (message?.type === "logs") {
+      const {logs, dropped} = logsFromWorker(message, prepared.source);
+      if (run === this.current) {
+        this.log(logs, dropped);
+      } else {
+        const room = Math.max(0, MAX_HELD_LOGS - run.heldLogs.length);
+        run.heldLogs.push(...logs.slice(0, room));
+        run.heldDropped += dropped + Math.max(0, logs.length - room);
+      }
+    } else if (message?.type === "ready") {
       run.ready = true;
       if (run === this.current) {
         if (message.registered === true && message.hasDraw !== true) {
@@ -281,6 +307,17 @@ export class CanvasLayer {
       } else {
         this.discardStandby();
       }
+    }
+  }
+
+  private log(logs: LayerLog[], dropped: number) {
+    if (this.callbacks.onLog) {
+      this.callbacks.onLog(logs, dropped);
+      return;
+    }
+    for (const log of logs) {
+      console[log.level]("Canvas2D.js" + (log.line === null ? "" : `:${log.line + 1}`) + ":", log.text +
+        (log.count > 1 ? ` (×${log.count})` : ""));
     }
   }
 

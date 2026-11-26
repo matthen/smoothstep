@@ -95,7 +95,8 @@ function draw(ctx, {time, frame, duration, width, height, resolution, floats, te
 \`\`\`
 
 The canvas is 1080 units tall whatever its real size, with y down from the top left. It keeps what's drawn
-until you \`clear(ctx)\`. Variables outside the functions keep their values between steps.
+until you \`clear(ctx)\`. Variables outside the functions keep their values between steps. \`console.log\`
+prints in the Console tab under the canvas, with the step it was printed on.
 
 | type | name | what it is |
 |---|---|---|

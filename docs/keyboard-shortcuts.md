@@ -83,7 +83,7 @@ see what it does.
 Links in comments are underlined, and you can click them. A web address opens in a new tab. A menu
 item or tab named in square brackets, like `[Help → Tutorial]` or `the [Sliders] tab`, opens that
 menu item or tab. The names that work are the File and Help menu items, `[Timeline]`, `[Sliders]`,
-`[Textures]`, and the code tabs `[Image.glsl]`, `[shared.glsl]`, `[Canvas2D.js]` and `[iBuffer0.glsl]`
+`[Textures]`, `[Console]`, and the code tabs `[Image.glsl]`, `[shared.glsl]`, `[Canvas2D.js]` and `[iBuffer0.glsl]`
 to `[iBuffer3.glsl]`, with or without the extension. A link to `[shared.glsl]` adds that tab if the
 animation doesn't have it yet.
 
