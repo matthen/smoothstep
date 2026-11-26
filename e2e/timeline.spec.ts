@@ -168,6 +168,30 @@ test("transitions are dragged out, drawn with their curve, moved, resized and de
   expect(errors).toEqual([]);
 });
 
+test("a transition clicked twice keeps its start while the pointer wanders over the ruler and out of the timeline", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#new");
+  const ruler = (await page.locator(".header").boundingBox())!;
+  const start = await at(page, 1, 1.05);
+  await page.mouse.click(start.x, start.y);
+  const back = await at(page, 1, 3.05);
+  await page.mouse.move(back.x, ruler.y + 10, {steps: 4});
+  await page.mouse.move(back.x, 5, {steps: 4});
+  await page.mouse.move(back.x, back.y, {steps: 4});
+  await page.mouse.click(back.x, back.y);
+  await expect(page.locator(".timeArea .transition.selected")).toHaveCount(1);
+  await expect.poll(() => transitionTimes(page)).toBe("1 — 3");
+
+  // A second click on the ruler sets the end there, rather than seeking.
+  const next = await at(page, 2, 4.05);
+  await page.mouse.click(next.x, next.y);  // Deselects the first.
+  await page.mouse.click(next.x, next.y);
+  const end = await at(page, 2, 6.05);
+  await page.mouse.click(end.x, ruler.y + 10);
+  await expect.poll(() => transitionTimes(page)).toBe("4 — 6");
+  expect(errors).toEqual([]);
+});
+
 test("a transition's start and end times can be typed, to a hundredth of a second", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./#example/f9ad362373e4");

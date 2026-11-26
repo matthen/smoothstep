@@ -381,8 +381,9 @@ export default function Timeline(props: TimelineProps) {
     if (event.pointerType === "touch") {
       return;
     }
-    const {kind} = gestureRef.current;
-    if (kind === "idle" || kind === "creating") {
+    // A transition waiting for its end click keeps waiting, wherever the pointer goes.
+    const current = gestureRef.current;
+    if (current.kind === "idle" || (current.kind === "creating" && !current.released)) {
       cancelCreating();
     }
   }
@@ -417,7 +418,14 @@ export default function Timeline(props: TimelineProps) {
       return;
     }
     event.stopPropagation();
-    if (gestureRef.current.kind === "creating") {
+    const current = gestureRef.current;
+    // A click on the ruler or playhead ends a transition waiting for its end there.
+    if (current.kind === "creating" && current.released && event.pointerType !== "touch") {
+      setGesture(extendCreating(current, rows, position(event).x));
+      capture(event);  // So the rows hear the lift, which adds it.
+      return;
+    }
+    if (current.kind === "creating") {
       cancelCreating();
     }
     setHover(null);
