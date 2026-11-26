@@ -126,7 +126,7 @@ export function appUpdates(): Updates | null {
 }
 
 // How long after loading a page counts as just opened, if nobody has clicked, tapped or typed.
-export const FRESH_FOR = 10_000;
+export const FRESH_FOR = 3_000;
 const AUTO_KEY = "smoothstep.autoUpdated";
 
 // True while nothing could be lost by reloading: the page has just opened, nobody has used it yet,
