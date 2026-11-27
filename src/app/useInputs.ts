@@ -30,7 +30,7 @@ export function useInputs(doc: AnimationDocument, imagesVersion: number) {
     ];
     return Math.min(doc.textures.length, Math.max(minSlots, ...needed.map(i => i + 1)));
   }, [allCode, doc.textures, minSlots]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- imagesVersion isn't read, but a changed stored image means new URLs
   const textureURLs = useMemo(() => doc.textures.map(textureURL), [doc.textures, imagesVersion]);
   // The Canvas2D layer gets null for an empty slot, in place of the black image shaders read.
   const layerTextures = useMemo(

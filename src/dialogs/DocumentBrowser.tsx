@@ -43,7 +43,7 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
     if (show) {
       updateList();
     }
-  }, [show, version]);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [show, version]);  // eslint-disable-line react-hooks/exhaustive-deps -- lists again on opening or a new version, not when updateList's identity changes
 
   const handleDownload = async (document: DocumentSummary) => {
     try {

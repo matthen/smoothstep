@@ -43,8 +43,7 @@ export function useEasedRanges(targets: readonly ValueRange[]): readonly ValueRa
     };
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
-    // `key` stands for `targets`, which is a new array each render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` stands for `targets`, which is a new array each render
   }, [key]);
 
   // Rows added or removed since the last change are drawn at their own range.

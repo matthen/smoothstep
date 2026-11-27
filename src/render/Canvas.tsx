@@ -250,7 +250,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     }
     needsRender.current = true;
     props.onLayout({width, height, top: container[2] + marginTop + height, containerWidth: container[0]});
-  }, [width, height, pixelWidth, pixelHeight, marginTop, container[0], container[2]]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [width, height, pixelWidth, pixelHeight, marginTop, container[0], container[2]]); // eslint-disable-line react-hooks/exhaustive-deps -- runs on a change of size, not of the callbacks
 
   // Each build gets another try at full resolution, watched afresh.
   const frames = useRef(new SlowFrames());
@@ -272,7 +272,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
       restart();
     }
     needsRender.current = true;
-  }, [props.shaders, props.buildId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [props.shaders, props.buildId]); // eslint-disable-line react-hooks/exhaustive-deps -- builds only on new code or a build, not when callbacks change
 
   // After a build that failed, the probe shown stays, with the code that built.
   const built = useRef(true);
@@ -298,7 +298,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     }
     renderer.redrawProbe();
     needsRead.current = true;
-  }, [props.probe, props.shaders, props.buildId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [props.probe, props.shaders, props.buildId]); // eslint-disable-line react-hooks/exhaustive-deps -- sets the probe on a new request or build; the probe shown and callbacks mustn't retrigger it
 
   useEffect(() => {
     rendererRef.current?.setRangeMode(rangeMode);

@@ -7,7 +7,7 @@ import { parseImports } from './libraries';
 function run(code: string, names: string[]): Record<string, unknown> {
   const parsed = parseImports(code);
   const lib = (name: string, byDefault = false) => ({name, byDefault, Vec2: "Vec2 of " + name});
-  // eslint-disable-next-line @typescript-eslint/no-implied-eval
+  // eslint-disable-next-line @typescript-eslint/no-implied-eval -- the test runs generated code, as the worker does
   const body = new Function("__smoothstep", parsed.code + "\nreturn {" + names.join(", ") + "};") as
     (smoothstep: unknown) => Record<string, unknown>;
   return body({lib});
