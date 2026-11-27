@@ -1,6 +1,6 @@
 // Files for moving animations in and out of the browser (formats in FILE_FORMATS.md):
 // one animation as `<title>.smoothstep.json` with its uploads embedded, or everything as a zip.
-import { strFromU8, strToU8, unzip, zip, type Unzipped } from 'fflate';
+import { strFromU8, strToU8, unzip, type Unzipped } from 'fflate';
 
 import { canonicalJSON, parseDocument, type AnimationDocument } from './document';
 import * as localStore from './localStore';
@@ -88,6 +88,77 @@ function validThumbnail(value: unknown): string | null {
   return typeof value === "string" && value.startsWith("data:image/png;base64,") ? value : null;
 }
 
+const CRC_TABLE = Array.from({length: 256}, (_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+
+function crc32(bytes: Uint8Array): number {
+  let c = 0xFFFFFFFF;
+  for (const b of bytes) c = CRC_TABLE[(c ^ b) & 0xFF]! ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+// The zip fields shared by a file's local header (from `version needed`) and its central directory entry.
+function zipFileFields(view: DataView, at: number, name: Uint8Array, size: number, crc: number, dosTime: number) {
+  view.setUint16(at, 20, true);
+  view.setUint16(at + 2, 0x800, true);  // UTF-8 names
+  view.setUint16(at + 4, 0, true);  // stored
+  view.setUint32(at + 6, dosTime, true);
+  view.setUint32(at + 10, crc, true);
+  view.setUint32(at + 14, size, true);
+  view.setUint32(at + 18, size, true);
+  view.setUint16(at + 22, name.length, true);
+}
+
+// A zip of stored files, written as each is added so its bytes needn't be held until the end. Each local
+// header has the file's size and CRC, which strict and streaming unzip tools need.
+export function zipWriter() {
+  const parts: Blob[] = [];
+  const central: Uint8Array<ArrayBuffer>[] = [];
+  const now = new Date();
+  const dosTime = ((now.getFullYear() - 1980) << 25 | (now.getMonth() + 1) << 21 | now.getDate() << 16 |
+    now.getHours() << 11 | now.getMinutes() << 5 | now.getSeconds() >> 1) >>> 0;
+  let offset = 0;
+  return {
+    add(path: string, bytes: Uint8Array) {
+      const name = strToU8(path);
+      // Without zip64, sizes, offsets and the file count must fit the classic format's fields.
+      if (offset + 30 + name.length + bytes.length > 0xFFFFFFFF || central.length === 0xFFFF) {
+        throw new Error("The zip would be over 4 GB. Try fewer frames or a smaller size.");
+      }
+      const crc = crc32(bytes);
+      const local = new Uint8Array(30 + name.length);
+      const view = new DataView(local.buffer);
+      view.setUint32(0, 0x04034B50, true);
+      zipFileFields(view, 4, name, bytes.length, crc, dosTime);
+      local.set(name, 30);
+      const entry = new Uint8Array(46 + name.length);
+      const entryView = new DataView(entry.buffer);
+      entryView.setUint32(0, 0x02014B50, true);
+      entryView.setUint16(4, 20, true);
+      zipFileFields(entryView, 6, name, bytes.length, crc, dosTime);
+      entryView.setUint32(42, offset, true);
+      entry.set(name, 46);
+      central.push(entry);
+      parts.push(new Blob([local, bytes as Uint8Array<ArrayBuffer>]));
+      offset += local.length + bytes.length;
+    },
+    finish(): Blob {
+      const size = central.reduce((sum, entry) => sum + entry.length, 0);
+      const end = new Uint8Array(22);
+      const view = new DataView(end.buffer);
+      view.setUint32(0, 0x06054B50, true);
+      view.setUint16(8, central.length, true);
+      view.setUint16(10, central.length, true);
+      view.setUint32(12, size, true);
+      view.setUint32(16, offset, true);
+      return new Blob([...parts, ...central, end], {type: "application/zip"});
+    },
+  };
+}
+
 export function download({blob, filename}: DownloadableFile): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -130,7 +201,7 @@ export async function animationFile(record: StoredDocument): Promise<Downloadabl
 export async function exportAll(): Promise<DownloadableFile & {count: number}> {
   const docs = (await localStore.allDocuments()).sort((a, b) => b.modified - a.modified);
   const images = await localStore.listImages();
-  const files: Record<string, Uint8Array> = {};
+  const files = zipWriter();
   const manifest = {
     format: EXPORT_FORMAT, version: VERSION, exported: new Date().toISOString(),
     animations: [] as Record<string, string>[],
@@ -141,28 +212,26 @@ export async function exportAll(): Promise<DownloadableFile & {count: number}> {
       id: doc.id, title: doc.title, created: iso(doc.created), modified: iso(doc.modified),
       file: "animations/" + doc.id + ".json",
     };
-    files[entry.file!] = strToU8(JSON.stringify(doc.json, null, 1));
+    files.add(entry.file!, strToU8(JSON.stringify(doc.json, null, 1)));
     const thumbnail = validThumbnail(doc.thumbnail);
     if (thumbnail) {
       entry.thumbnail = "thumbnails/" + doc.id + ".png";
-      files[entry.thumbnail] = dataURLBytes(thumbnail);
+      files.add(entry.thumbnail, dataURLBytes(thumbnail));
     }
     manifest.animations.push(entry);
   }
   for (const image of images) {
     const file = "images/" + image.id + "." + mediaExtension(image.blob.type);
-    files[file] = new Uint8Array(await image.blob.arrayBuffer());
+    files.add(file, new Uint8Array(await image.blob.arrayBuffer()));
     manifest.images.push({
       id: image.id, filename: image.filename, width: image.width, height: image.height,
       created: iso(image.created), file, type: image.blob.type,
       ...(image.duration === undefined ? {} : {duration: image.duration}),
     });
   }
-  files["manifest.json"] = strToU8(JSON.stringify(manifest, null, 1));
-  const bytes = await new Promise<Uint8Array>((resolve, reject) =>
-    zip(files, {level: 0}, (err, data) => err ? reject(err) : resolve(data)));
+  files.add("manifest.json", strToU8(JSON.stringify(manifest, null, 1)));
   return {
-    blob: new Blob([bytes as Uint8Array<ArrayBuffer>], {type: "application/zip"}),
+    blob: files.finish(),
     filename: "smoothstep-animations-" + new Date().toISOString().slice(0, 10) + ".zip",
     count: docs.length,
   };

@@ -1,9 +1,13 @@
 // Turns the Markdown in docs/ into pages for the docs site and the app's Docs tab, at build
 // time. Links between the Markdown files become links between pages, other files in the repository
 // link to GitHub, and code blocks are highlighted with the editor's colours.
+import { parser as jsParser } from '@lezer/javascript';
 import { Marked, type Tokens } from 'marked';
 
-import { glslCodeHtml, highlightHtml, looksLikeGlsl } from '../editor/highlight.ts';
+import { glslCodeHtml, highlightHtml, looksLikeGlsl, setJsParser } from '../editor/highlight.ts';
+
+// The docs build at once, so they take the JavaScript parser now rather than loading it.
+setJsParser(jsParser);
 
 export interface DocFile {
   // Its path in docs/, like "canvas2d.md" or "tutorial/README.md".

@@ -35,7 +35,8 @@ export interface FontData extends Omit<FontFile, "file"> {
   data: ArrayBuffer;
 }
 
-// The files for the families the code names, and the default one. A player file carries only these.
+// The files for the families the code names, in any case as CSS allows, and the default one. Only these load.
 export function fontFilesUsed(code: string): FontFile[] {
-  return FONT_FILES.filter(font => font.family === DEFAULT_FONT_FAMILY || code.includes(font.family));
+  const lower = code.toLowerCase();
+  return FONT_FILES.filter(font => font.family === DEFAULT_FONT_FAMILY || lower.includes(font.family.toLowerCase()));
 }

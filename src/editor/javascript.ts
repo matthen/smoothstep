@@ -8,10 +8,14 @@ import { Decoration, ViewPlugin, type DecorationSet, type EditorView, type ViewU
 
 import { DOC_SECTIONS, type DocTarget } from '../lib/docLinks';
 import { CANVAS2D_REFERENCE, type Canvas2DEntry } from './canvas2dReference';
+import { loadJsHighlighting } from './highlight';
 import { jsHighlighter } from './jsHighlighter';
 import { clickHelpers, type ClickConfig, type Definition } from './popups';
 import { findJsPickerMatch } from './pickerValues';
 import { canvas2dSnippetCompletions } from './snippets';
+
+// So the definition popups colour their JavaScript.
+void loadJsHighlighting();
 
 const MDN = 'https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/';
 // The section of the docs about each of the layer's own names; the context's members have MDN's.

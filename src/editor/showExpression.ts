@@ -70,11 +70,11 @@ const restTimer = ViewPlugin.define((view) => {
 function showable(state: EditorState, at: number | null = null): Range | null {
   const main = state.selection.main;
   if (at === null && (state.selection.ranges.length > 1 || !state.field(focused, false) || popupOpen(state))) return null;
+  // Checked before the analysis, which reads the whole tab, as an empty cursor that hasn't rested shows nothing.
+  const atCursor = at !== null || main.empty;
+  if (atCursor ? at === null && !state.field(rested, false) : main.to - main.from > MAX_LENGTH) return null;
   const analysis = analysisOf(state.doc);
-  let range: Range | null = { from: main.from, to: main.to };
-  if (at !== null || main.empty) {
-    range = at !== null || state.field(rested, false) ? valueAt(analysis, at ?? main.head) : null;
-  }
+  const range = atCursor ? valueAt(analysis, at ?? main.head) : { from: main.from, to: main.to };
   if (!range || range.to - range.from > MAX_LENGTH) return null;
   const shown = state.field(shownExpression, false);
   const plan = planProbe(state.doc.toString(), range.from, range.to, analysis);

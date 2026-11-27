@@ -10,7 +10,7 @@ import Splash from '../dialogs/Splash';
 import { routeHash } from '../lib/routes';
 import AppModal from './AppModal';
 import type { useDocument } from './document/useDocument';
-import type { useExport } from '../export/useExport';
+import type { Preview, useExport } from '../export/useExport';
 import type { useLibrary } from './document/useLibrary';
 
 export type Dialog = "open" | "import" | "saveCopy" | "share" | "export" | "splash";
@@ -21,6 +21,7 @@ interface Props {
   docState: ReturnType<typeof useDocument>;
   library: ReturnType<typeof useLibrary>;
   exporter: ReturnType<typeof useExport>;
+  preview: Preview;
   onTour: () => void;
   tourTaken: boolean;
   alert: string | null;
@@ -29,7 +30,7 @@ interface Props {
 
 // The File and Help menus' dialogs, the hidden file input for imports, and the alert.
 export default function AppDialogs(
-  {dialog, setDialog, docState, library, exporter, onTour, tourTaken, alert, setAlert}: Props,
+  {dialog, setDialog, docState, library, exporter, preview, onTour, tourTaken, alert, setAlert}: Props,
 ) {
   const {doc, documentId, sharedFrom, hasUnsavedChanges, dispatch} = docState;
   const {fileInput, save, download} = library;
@@ -71,7 +72,7 @@ export default function AppDialogs(
       <ExportSettings
         show={dialog === "export"} duration={doc.duration} aspectRatio={doc.aspectRatio}
         options={exporter.exportOptions} onOptionsChange={exporter.setExportOptions}
-        onExport={() => void exporter.startExport()} onCancel={exporter.cancelExport}
+        onExport={() => void exporter.startExport(preview)} onCancel={exporter.cancelExport}
         progress={exporter.exportProgress} error={exporter.exportError}
       />
       <Splash show={dialog === "splash"} onHide={closeDialog} onTour={onTour} tourTaken={tourTaken} />

@@ -4,7 +4,7 @@ import 'fake-indexeddb/auto';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { animationFile, exportAll, importDocument, importFiles, importMessage } from './archive';
+import { animationFile, exportAll, importDocument, importFiles, importMessage, zipWriter } from './archive';
 import { newDocument, type AnimationDocument } from './document';
 import * as localStore from './localStore';
 import { mediaType } from './media';
@@ -264,5 +264,21 @@ describe("mediaType", () => {
     expect(mediaType(new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, 1, 2]))).toBe("video/webm");
     expect(mediaType(strToU8("\0\0\0\x20ftypisom...."))).toBe("video/mp4");
     expect(mediaType(strToU8("\0\0\0\x14ftypqt  ...."))).toBe("video/quicktime");
+  });
+});
+
+describe("zipWriter", () => {
+  it("writes files that unzip to the same names, order and bytes, with each size in its local header", async () => {
+    const files: [string, Uint8Array][] = [["frames/0001.png", PNG], ["frames/0002.png", JPEG], ["naïve.txt", strToU8("")]];
+    const writer = zipWriter();
+    files.forEach(([name, bytes]) => writer.add(name, bytes));
+    const zip = new Uint8Array(await writer.finish().arrayBuffer());
+    const unzipped = unzipSync(zip);
+    expect(Object.keys(unzipped)).toEqual(files.map(([name]) => name));
+    files.forEach(([name, bytes]) => expect(unzipped[name]).toEqual(bytes));
+    // Streaming readers need the sizes up front, not in a descriptor after the data.
+    const first = new DataView(zip.buffer);
+    expect(first.getUint16(6, true) & 0x8).toBe(0);
+    expect(first.getUint32(22, true)).toBe(PNG.length);
   });
 });
