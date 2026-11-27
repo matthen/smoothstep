@@ -71,6 +71,11 @@ function withTabCode(doc: AnimationDocument, tab: ShaderId, code: string): Anima
     {...doc, buffers: (doc.buffers ?? []).map((buffer, i) => i === tab ? {code} : buffer)};
 }
 
+export function tabCode(doc: AnimationDocument, tab: ShaderId): string | undefined {
+  return tab === "image" ? doc.code : tab === "shared" ? doc.shared : tab === "canvas" ? canvasLayer(doc)?.code :
+    doc.buffers?.[tab]?.code;
+}
+
 // Whether the animation has a code tab.
 export function hasTab(doc: AnimationDocument, tab: ShaderId): boolean {
   return tab === "image" || (tab === "shared" ? doc.shared !== undefined :

@@ -1,19 +1,22 @@
 import type { EditorView } from '@codemirror/view';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 
 import type { Range } from '../../editor/glslDefinitions';
 import { canvasLayer } from '../../lib/document';
 import type { LineError } from '../../lib/types';
 import { useLatest } from '../../lib/useLatest';
+import type { CanvasHandle } from '../../render/Canvas';
 import type { CompileResult, ShaderId } from '../../render/Renderer';
 import { markTipSeen, type TipEvent } from '../onboarding/tips';
 import type { useCodeTabs } from '../layout/useCodeTabs';
 import type { useConsoleLog } from '../../console/useConsoleLog';
 import type { useDocument } from './useDocument';
 import type { useProbe } from '../../render/useProbe';
+import { usePickerDrag } from './usePickerDrag';
 
 interface Options {
   docState: ReturnType<typeof useDocument>;
+  canvasRef: RefObject<CanvasHandle | null>;
   tabs: ReturnType<typeof useCodeTabs>;
   probe: ReturnType<typeof useProbe>;
   log: ReturnType<typeof useConsoleLog>;
@@ -58,9 +61,10 @@ function useLiveBuild(dispatch: Options["docState"]["dispatch"], allBuilt: boole
 }
 
 // Building the code, and what the editor and canvas report as it's edited and built.
-export function useBuilds({docState, tabs, probe, log, showTip}: Options) {
+export function useBuilds({docState, canvasRef, tabs, probe, log, showTip}: Options) {
   const {dispatch, builtCode, builtExtras, buildId, allBuilt} = docState;
   const liveBuild = useLiveBuild(dispatch, allBuilt);
+  const pickerDrag = usePickerDrag({docState, canvasRef, probe});
   const {setCodeTab, docsShownRef} = tabs;
   const docRef = useLatest(docState.doc);
 
@@ -130,5 +134,6 @@ export function useBuilds({docState, tabs, probe, log, showTip}: Options) {
 
   return {
     build, queueBuild: () => setBuildQueued(true), showExpression, onCodeChange, onEditorView, onLayerStatus, onBuilt,
+    ...pickerDrag,
   };
 }

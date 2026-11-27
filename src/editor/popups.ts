@@ -158,10 +158,35 @@ function popupDom(content: HTMLElement) {
   return dom;
 }
 
+// Told when a picker is let go after a press, or closes during one.
+export const pickerReleased = Facet.define<(view: EditorView) => void>();
+
+// Where the value the open picker edits is now.
+export function pickerRange(state: EditorState): { from: number; to: number } | null {
+  const popup = state.field(popupField, false);
+  return popup ? { from: popup.from, to: popup.to } : null;
+}
+
 function openPicker(view: EditorView, from: number, to: number, kind: PickerKind, text: string, anchor: number) {
   const create = () => {
     const widget = pickerWidget(view, kind, text);
-    return { dom: popupDom(widget.dom), offset: { x: -widget.width / 2, y: 8 }, destroy: widget.destroy };
+    const dom = popupDom(widget.dom);
+    let pressed = false;
+    const release = () => {
+      if (pressed) {
+        pressed = false;
+        for (const released of view.state.facet(pickerReleased)) released(view);
+      }
+    };
+    // A captured pointer's events still bubble up here from the picker's canvas.
+    dom.addEventListener('pointerdown', () => { pressed = true; });
+    dom.addEventListener('pointerup', release);
+    dom.addEventListener('pointercancel', release);
+    const destroy = () => {
+      widget.destroy?.();
+      release();
+    };
+    return { dom, offset: { x: -widget.width / 2, y: 8 }, destroy };
   };
   const tooltip = { pos: from + anchor, above: false, create };
   view.dispatch({ effects: setPopup.of({ from, to, anchor, tooltip }) });

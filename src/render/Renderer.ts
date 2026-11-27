@@ -12,6 +12,7 @@ import {
   PROBE_DECLARATIONS, PROBE_MAIN, planProbe, probeComponents, sharedCallers, typeFromError, UNREACHED, withProbe,
   type ProbeType, type Site,
 } from './probe';
+import { PICK_UNIFORM, pickedRequest, pickedSources, pickRange, type Pick, type PickType, type Sources } from './pick';
 import { ProgramCache } from './programCache';
 import { combineBlocks, rangeFor, type FoundRange, type RangeMode } from './probeRange';
 
@@ -103,9 +104,9 @@ void main() {
 }
 `;
 
-// Everything before the user's code, with an iBuffer uniform for each of the animation's buffers.
-// It's always three lines, so error line numbers are offset by the same amount.
-function shaderPrefix(numBuffers = 0): string {
+// Everything before the user's code, with an iBuffer uniform for each of the animation's buffers, and a
+// dragged picker's uniform. It's always three lines, so error line numbers are offset by the same amount.
+function shaderPrefix(numBuffers = 0, pick: PickType | null = null): string {
   let uniforms = "uniform vec2 iResolution; uniform float iTime; uniform float iDuration; uniform int iFrame; ";
   uniforms += "uniform sampler2D iPrevFrame; uniform sampler2D iCanvas2D; ";
   for (let i = 0; i < NUM_TEXTURES; i++) {
@@ -116,6 +117,9 @@ function shaderPrefix(numBuffers = 0): string {
   }
   for (let i = 0; i < numBuffers; i++) {
     uniforms += `uniform sampler2D iBuffer${i}; `;
+  }
+  if (pick) {
+    uniforms += `uniform ${pick} ${PICK_UNIFORM}; `;
   }
   return "#version 300 es\nprecision highp float;\n" + uniforms + "\n";
 }
@@ -131,13 +135,15 @@ function userCode(code: string, shared: string): string {
   return shared ? shared + "\n" + code : code;
 }
 
-export function fragmentSource(code: string, numBuffers = 0, isBuffer = false, shared = ""): string {
-  return shaderPrefix(numBuffers) + userCode(code, shared) + shaderSuffix(isBuffer);
+export function fragmentSource(
+  code: string, numBuffers = 0, isBuffer = false, shared = "", pick: PickType | null = null,
+): string {
+  return shaderPrefix(numBuffers, pick) + userCode(code, shared) + shaderSuffix(isBuffer);
 }
 
 // A shader that outputs the value its probe kept in place of its colour.
-function probeFragmentSource(code: string, numBuffers: number, shared: string): string {
-  return shaderPrefix(numBuffers).slice(0, -1) + PROBE_DECLARATIONS + "\n" + userCode(code, shared) +
+function probeFragmentSource(code: string, numBuffers: number, shared: string, pick: PickType | null): string {
+  return shaderPrefix(numBuffers, pick).slice(0, -1) + PROBE_DECLARATIONS + "\n" + userCode(code, shared) +
     "\nout vec4 smoothstepColor;\n" + PROBE_MAIN + "\n";
 }
 
@@ -311,7 +317,10 @@ export class Renderer {
   // Off while a thumbnail is taken.
   showProbe = true;
   // The code as last built, and the buffers the image needs without the probe.
-  private sources: {code: string; buffers: readonly string[]; shared: string} = {code: "", buffers: [], shared: ""};
+  private sources: Sources = {code: "", buffers: [], shared: ""};
+  // The literal a picker drags, built as a uniform, and its value; the expression shown, as asked for.
+  private pick: {pick: Pick; values: number[]} | null = null;
+  private probeRequest: ProbeRequest | null = null;
   private imageUsed: number[] = [];
   // The buffers drawn only for the probe, and whether they've just started.
   private probeBuffers: number[] = [];
@@ -511,24 +520,19 @@ export class Renderer {
         return {ok: false, shader, errors: [error]};
       }
     }
-    const programs: Program[] = [];
-    for (const [shader, source] of sources) {
-      const result = this.cachedLink(fragmentSource(source, buffers.length, shader !== "image", shared));
-      if (!result.program) {
-        this.programs.prune();
-        if (result.stage === "link") {
-          return {ok: false, shader, errors: [{line: 0, message: result.log.trim() || "Couldn't link the shader."}]};
-        }
-        const located = locateErrors(parseErrors(result.log, userCode(source, shared)), shared);
-        return located.inShared ? {ok: false, shader: "shared", errors: located.errors} :
-          {ok: false, shader, errors: markMissingMainImage(located.errors, source, shared)};
+    const linked = this.linkShaders({code, buffers, shared}, null);
+    if ("failed" in linked) {
+      const {failed: shader, result} = linked;
+      const source = shader === "image" ? code : buffers[shader]!;
+      if (result.stage === "link") {
+        return {ok: false, shader, errors: [{line: 0, message: result.log.trim() || "Couldn't link the shader."}]};
       }
-      programs.push(result.program);
+      const located = locateErrors(parseErrors(result.log, userCode(source, shared)), shared);
+      return located.inShared ? {ok: false, shader: "shared", errors: located.errors} :
+        {ok: false, shader, errors: markMissingMainImage(located.errors, source, shared)};
     }
-    const slots = Math.max(programs.length, this.bufferPrograms.length + 1);
-    this.programs.use(Array.from({length: slots}, (_, i) => [i === 0 ? "image" : `buffer${i - 1}`, programs[i] ?? null]));
-    this.program = programs[0]!;
-    this.bufferPrograms = programs.slice(1);
+    this.usePrograms(linked.programs);
+    this.pick = null;
     this.sources = {code, buffers, shared};
     this.imageUsed = buffersUsed(userCode(code, shared), buffers.map(b => userCode(b, shared)));
     this.used = this.imageUsed;
@@ -539,23 +543,104 @@ export class Renderer {
     return {ok: true};
   }
 
+  // Links the image's program and each buffer's, the picked literal as a uniform in the shaders it's in,
+  // or names the first that fails.
+  private linkShaders(sources: Sources, pick: Pick | null):
+      {programs: Program[]} | {failed: "image" | number; result: ReturnType<Renderer["link"]>} {
+    const {code, buffers, shared} = pickedSources(sources, pick);
+    const programs: Program[] = [];
+    for (const [shader, source] of [["image", code] as const, ...buffers.map((c, i) => [i, c] as const)]) {
+      const declares = pick && (pick.tab === "shared" || pick.tab === shader) ? pick.type : null;
+      const result = this.cachedLink(fragmentSource(source, buffers.length, shader !== "image", shared, declares));
+      if (!result.program) {
+        this.programs.prune();
+        return {failed: shader, result};
+      }
+      programs.push(result.program);
+    }
+    return {programs};
+  }
+
+  private usePrograms(programs: Program[]) {
+    const slots = Math.max(programs.length, this.bufferPrograms.length + 1);
+    this.programs.use(Array.from({length: slots}, (_, i) => [i === 0 ? "image" : `buffer${i - 1}`, programs[i] ?? null]));
+    this.program = programs[0]!;
+    this.bufferPrograms = programs.slice(1);
+  }
+
+  // A shader tab's code as last built.
+  private builtCode(tab: ShaderId): string | null {
+    const {code, buffers, shared} = this.sources;
+    return tab === "image" ? code : tab === "shared" ? shared : tab === "canvas" ? null : buffers[tab] ?? null;
+  }
+
+  // Builds the code last built with the literal a picker is dragging, edited[from..to] in `tab`, as a
+  // uniform, so moves set it without building. The frames so far stay. False if it doesn't build there.
+  startPick(tab: ShaderId, edited: string, from: number, to: number, type: PickType, values: number[]): boolean {
+    const built = this.builtCode(tab);
+    const range = built === null || !this.program ? null : pickRange(built, edited, from, to);
+    if (!range) {
+      return false;
+    }
+    const pick = {tab, ...range, type};
+    const linked = this.linkShaders(this.sources, pick);
+    if ("failed" in linked) {
+      return false;
+    }
+    this.usePrograms(linked.programs);
+    this.pick = {pick, values};
+    this.reprobe();
+    return true;
+  }
+
+  // The dragged literal's value, as the uniform's components.
+  setPickValues(values: number[]) {
+    if (this.pick) {
+      this.pick.values = values;
+    }
+  }
+
+  // Goes back to the code last built, as at the end of a drag that left it unchanged.
+  endPick() {
+    const linked = this.pick && this.linkShaders(this.sources, null);
+    if (!linked || "failed" in linked) {
+      return;
+    }
+    this.usePrograms(linked.programs);
+    this.pick = null;
+    this.reprobe();
+  }
+
+  // Builds the expression shown again, for a pick's start or end, keeping what it found works.
+  private reprobe() {
+    if (this.probe && this.probeRequest) {
+      const cache = this.probeCache;
+      this.setProbe(this.probeRequest);
+      this.probeCache = cache;
+    }
+  }
+
   // Shows the expression `request` selects in place of the image, or the image again for null. The
   // probe's tab uses the request's code; the others, the code last built. Builds the expression at
   // each place it could go and as each type it could be, until one works.
-  setProbe(request: ProbeRequest | null): ProbeResult | null {
-    if (!request) {
+  setProbe(asked: ProbeRequest | null): ProbeResult | null {
+    this.probeRequest = asked;
+    if (!asked) {
       this.useProbe(null);
       this.freeProbeTargets();
       return null;
     }
-    if (request.tab === "canvas") {
+    if (asked.tab === "canvas") {
       return {ok: false, message: "Select an expression in a shader tab."};
     }
+    // While a picker drags, the expression is built with its uniform too, so it changes with it.
+    const pick = this.pick?.pick ?? null;
+    const request = {...pick ? pickedRequest(asked, pick, this.builtCode(pick.tab) ?? "") : asked, tab: asked.tab};
     const plan = planProbe(request.code, request.from, request.to);
     if (!plan.ok) {
       return plan;
     }
-    const {code, buffers, shared} = this.sources;
+    const {code, buffers, shared} = pickedSources(this.sources, pick);
     // Shared code shows in the image if it reaches the function, or else the first buffer that does.
     const calls = new RegExp(`\\b(?:${sharedCallers(shared, plan.functionName).join("|")})\\s*\\(`);
     const caller = buffers.findIndex(b => uses(b, calls));
@@ -566,7 +651,7 @@ export class Renderer {
       const variant = withProbe(request.code, site, plan.expression, type);
       const [c, s] = request.tab === "shared" ? [own, variant] : [variant, shared];
       // A build with no type only tests that some type works, so it isn't kept.
-      const source = probeFragmentSource(c, buffers.length, s);
+      const source = probeFragmentSource(c, buffers.length, s, pick?.type ?? null);
       const result = type === null ? this.link(source) : this.cachedLink(source);
       if (type === null) {
         reason ||= /ERROR:\s*\d+:\d+:\s*(.*)/.exec(result.log)?.[1]?.trim() ?? "";
@@ -1123,6 +1208,11 @@ export class Renderer {
     inputs.variableValues.forEach((value, i) => {
       gl.uniform1f(this.uniform(program, "iFloat" + i), value);
     });
+    const pickLocation = this.pick && this.uniform(program, PICK_UNIFORM);
+    if (this.pick && pickLocation) {
+      const set = [gl.uniform1fv, gl.uniform2fv, gl.uniform3fv, gl.uniform4fv][this.pick.values.length - 1];
+      set?.call(gl, pickLocation, this.pick.values);
+    }
     gl.bindFramebuffer(gl.FRAMEBUFFER, output.framebuffer);
     gl.viewport(0, 0, this.width, this.height);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
