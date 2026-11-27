@@ -1,3 +1,4 @@
+import { undo } from '@codemirror/commands';
 import { EditorView } from '@codemirror/view';
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -50,6 +51,21 @@ describe("CodeEditor", () => {
     expect(viewIn(container).state.doc.toString()).toBe(code + "\n\n" + skeleton + "\n");
     expect(onFixed).toHaveBeenCalledOnce();
     expect(container.querySelector(".ss-line-error")).toBeNull();
+  });
+
+  it("fixes a common GLSL mistake in one undo step, then asks to build", () => {
+    const onFixed = vi.fn();
+    const code = "void mainImage(out vec4 c, in vec2 p) {\n  float x = 1;\n  c = vec4(x);\n}";
+    const errors = [{line: 1, message: "'=' : cannot convert from 'const int' to 'highp float'"}];
+    const {container} = render(<CodeEditor {...props} value={code} lineErrors={errors} onFixed={onFixed} />);
+    const button = container.querySelector<HTMLButtonElement>(".ss-line-error button")!;
+    expect(button.textContent).toBe("Change 1 to 1.0");
+    button.click();
+    const view = viewIn(container);
+    expect(view.state.doc.toString()).toBe(code.replace("= 1;", "= 1.0;"));
+    expect(onFixed).toHaveBeenCalledOnce();
+    undo(view);
+    expect(view.state.doc.toString()).toBe(code);
   });
 
   it("shows other errors without a button", () => {

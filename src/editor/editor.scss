@@ -304,6 +304,12 @@ $modal-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.25);
     }
   }
 
+  // A fix for a GLSL mistake goes on its own line, under the error's message.
+  .ss-line-error-quick-fix {
+    display: block;
+    margin-top: 4px;
+  }
+
   // Syntax colours: CodeMirror 5's Dracula theme with smoothstep.io's overrides.
   @include code-tokens;
   // The Canvas2D tab marks its helpers and inputs around or inside the highlighter's own span.

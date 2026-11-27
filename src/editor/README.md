@@ -14,6 +14,9 @@ and `CodeEditor` hands them to `onPickerEdit`. When it can, the app then shows e
 uniform without building. In that case the new code reaches the app once the picker is let go, through
 `onPickerRelease`.
 
+`lineErrors.ts` shows compile errors under their lines. For some common GLSL mistakes, `quickFixes.ts` works out
+the edit that fixes one from the error's message and line, and the error gets a button that makes it.
+
 `highlight.ts` colours code outside the editor with the editor's `tok-*` classes, for the docs, the tutorial and code
 quoted in the app. The docs build also reads `canvas2dReference.ts` to write the Reference page. That build runs in
 Node, so the files it imports use `.ts` in their import paths. `tools/buildFunctions.py` makes `glslFunctions.json`,

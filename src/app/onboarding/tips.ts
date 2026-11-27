@@ -26,7 +26,7 @@ export function tipContent(id: TipId, phone: boolean): Tip {
       return {
         title: "Your code didn't build",
         message: "The error is shown under the line it's on, and the canvas keeps the last version that built. " +
-          "Fix it and build again.",
+          "Fix it and build again. For some common mistakes, a button under the error fixes it for you.",
       };
     case "prevFrame":
       return {
