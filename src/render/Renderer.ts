@@ -161,14 +161,26 @@ export function locateErrors(errors: LineError[], shared: string): {inShared: bo
 
 const DECLARED_TYPE = String.raw`\b(?:void|bool|int|uint|float|[biu]?vec[234]|mat[234](?:x[234])?|\w*sampler\w*)\s+`;
 
-// Where an error with no line number comes from, such as a link error or a call to a function declared but
-// never defined: the first name in the log declared in the shared code or the shader's own, else line 0.
-export function locateUnplacedError(log: string, code: string, shared: string): {inShared: boolean; errors: LineError[]} {
-  const message = log.trim() || "Couldn't link the shader.";
-  for (const name of log.match(/\b[A-Za-z_]\w*\b/g) ?? []) {
+// The logs with no line number that name what they're about, as Chrome gives them.
+const UNPLACED_NAME = /\bFunction (\w+)\(.*\bis undefined|\bvarying (\w+) does not match/;
+
+// Code with its comments blanked out, each line staying where it was.
+function blankComments(code: string): string {
+  return code.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, comment => comment.replace(/[^\n]/g, " "));
+}
+
+// Where an error with no line number comes from: the declaration of the function or varying it names, in the
+// shared code or the shader's own, else line 0.
+export function locateUnplacedError(
+  log: string, code: string, shared: string, stage: "compile" | "link",
+): {inShared: boolean; errors: LineError[]} {
+  const message = log.trim() || (stage === "link" ? "Couldn't link the shader." : "Couldn't compile the shader.");
+  const match = UNPLACED_NAME.exec(log);
+  const name = match?.[1] ?? match?.[2];
+  if (name) {
     const declaration = new RegExp(DECLARED_TYPE + name + String.raw`\b`);
     for (const [inShared, source] of [[true, shared], [false, code]] as const) {
-      const line = source.split("\n").findIndex(text => declaration.test(text));
+      const line = blankComments(source).split("\n").findIndex(text => declaration.test(text));
       if (line >= 0) {
         return {inShared, errors: [{line, message}]};
       }
@@ -551,7 +563,7 @@ export class Renderer {
       const {failed: shader, result} = linked;
       const source = shader === "image" ? code : buffers[shader]!;
       if (result.stage === "link" || !/ERROR:\s*\d+:\d+:/.test(result.log)) {
-        const located = locateUnplacedError(result.log, source, shared);
+        const located = locateUnplacedError(result.log, source, shared, result.stage);
         return {ok: false, shader: located.inShared ? "shared" : shader, errors: located.errors};
       }
       const located = locateErrors(parseErrors(result.log, userCode(source, shared)), shared);
