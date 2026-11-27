@@ -5,6 +5,7 @@ import type { LayerAssets } from './assets';
 import { CanvasLayer, type LayerConfig, type LayerInputs, type LayerLog } from './CanvasLayer';
 import { FakeBitmap, FakeHost, type FakeWorker } from './fakeHost';
 import type { WorkerLog } from './runtime';
+import type { BitmapLoader } from './textureBitmaps';
 
 const CONFIG: LayerConfig = {code: "function draw(ctx) {}", width: 8, height: 4, duration: 1, textures: []};
 const ASSETS: LayerAssets = {library: () => Promise.resolve(""), fonts: () => Promise.resolve([])};
@@ -29,7 +30,7 @@ async function settle() {
   }
 }
 
-function makeLayer(keepStandby = true) {
+function makeLayer(keepStandby = true, loader: BitmapLoader = () => Promise.resolve(new FakeBitmap(1, 1))) {
   const host = new FakeHost();
   const seen = {
     frames: [] as FakeBitmap[], statuses: [] as {errors: LineError[]; loading?: boolean}[],
@@ -44,7 +45,7 @@ function makeLayer(keepStandby = true) {
       seen.dropped += dropped;
     },
     onRestart: () => seen.restarts++,
-  }, keepStandby, host);
+  }, keepStandby, host, loader);
   const worker = (i: number): FakeWorker => host.workers[i]!;
   return {host, layer, seen, worker};
 }
@@ -212,6 +213,51 @@ describe("CanvasLayer", () => {
     const drawn = layer.draw(step(0));
     interrupt(layer, worker(0));
     await expect(drawn).rejects.toThrow();
+  });
+
+  it("rejects a draw still waiting when another is asked for, and resolves the other with its own frame", async () => {
+    const {layer, seen, worker} = makeLayer(false);
+    layer.configure(CONFIG);
+    await settle();
+    worker(0).ready();
+    const first = layer.draw(step(0));
+    const second = layer.draw(step(1));
+    await expect(first).rejects.toThrow();
+    const firstFrame = worker(0).frame(CONFIG.width, CONFIG.height);
+    const secondFrame = worker(0).frame(CONFIG.width, CONFIG.height);
+    await expect(second).resolves.toBe(secondFrame);
+    expect(seen.frames).toEqual([firstFrame]);
+  });
+
+  it("closes a frame from a run it has replaced, or for a batch it isn't waiting on", async () => {
+    const {layer, seen, worker} = await drawnLayer();
+    const stale = worker(0).frame(CONFIG.width, CONFIG.height);
+    expect(stale.closed).toBe(true);
+    worker(1).ready();
+    layer.restart();
+    const replaced = worker(0).frame(CONFIG.width, CONFIG.height);
+    expect(replaced.closed).toBe(true);
+    expect(seen.frames).toHaveLength(1);
+  });
+
+  it("says in the console when an image the code reads couldn't be loaded, on every configuration that has it", async () => {
+    const {layer, seen} = makeLayer(true, () => Promise.resolve(null));
+    const config = {...CONFIG, code: "function draw(ctx, {textures}) {}", textures: [null, "broken.png"]};
+    layer.configure(config);
+    await settle();
+    expect(seen.logs.map(log => [log.level, log.text])).toEqual([["warn", expect.stringContaining("textures[1]")]]);
+    layer.configure(config, true);
+    await settle();
+    expect(seen.logs).toHaveLength(2);
+  });
+
+  it("doesn't load images for code that doesn't read textures", async () => {
+    const loader = vi.fn(() => Promise.resolve(null));
+    const {layer, seen} = makeLayer(true, loader);
+    layer.configure({...CONFIG, textures: ["broken.png"]});
+    await settle();
+    expect(loader).not.toHaveBeenCalled();
+    expect(seen.logs).toEqual([]);
   });
 
   it("stops on a frame of the wrong size, closing it", async () => {
