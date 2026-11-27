@@ -1,11 +1,13 @@
 import { useState } from 'react';
 
 import { TUTORIAL_HREF } from '../lib/config';
-import { canvasLayer, newBufferCode, type AnimationDocument } from '../lib/document';
+import { bufferCodes, canvasLayer, newBufferCode, type AnimationDocument } from '../lib/document';
 import type { ShaderId } from '../render/Renderer';
-import { lessonTitle, type TabCode } from '../tutorial/lessons';
+import { lessonTitle, type TabCode, type TutorialState } from '../tutorial/lessons';
 import type { TutorialProgress } from '../tutorial/progress';
+import type { useDocument } from './useDocument';
 import type { MobileTab } from './useLayout';
+import type { usePlayback } from './usePlayback';
 
 interface Options {
   // Where the tutorial opens, or null if the app opened without it.
@@ -77,4 +79,19 @@ export function useTutorial(
   };
 
   return {tutorialOpen, tutorialStepDone, setTutorialStepDone, putTutorialCode, changeTutorialLesson, closeTutorial};
+}
+
+// What the tutorial's steps check: the animation, what's built, and how it's playing.
+export function tutorialState(
+  docState: ReturnType<typeof useDocument>, playback: ReturnType<typeof usePlayback>,
+): TutorialState {
+  const {doc, builtCode, builtExtras, layer} = docState;
+  return {
+    code: doc.code, builtCode: builtCode ?? "",
+    shared: doc.shared ?? "", buffers: bufferCodes(doc), builtShared: builtExtras.shared, builtBuffers: builtExtras.buffers,
+    canvas: layer?.code ?? null, builtCanvas: builtExtras.canvas, canvasOverlay: layer?.overlay ?? true,
+    built: docState.buildState === "built" && docState.compiled?.ok === true && docState.compiled.code === builtCode,
+    isPlaying: playback.isPlaying, time: playback.time, variables: doc.variables, textures: doc.textures, duration: doc.duration,
+    aspectRatio: doc.aspectRatio,
+  };
 }

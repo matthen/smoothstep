@@ -1,13 +1,15 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import { textureURL } from '../lib/config';
+import { useImagesChanged } from '../dialogs/useImagesChanged';
 import { bufferCodes, EMPTY_TEXTURE, type AnimationDocument } from '../lib/document';
 import { floatNames } from '../timeline/names';
 import { floatsInCode, inputsInCode } from '../timeline/Sliders';
 
 // The timeline's rows and the texture slots the panels show, from what the code uses and the
-// animation sets. `imagesVersion` changes when the browser's stored images do.
-export function useInputs(doc: AnimationDocument, imagesVersion: number) {
+// animation sets.
+export function useInputs(doc: AnimationDocument) {
+  const imagesVersion = useImagesChanged();
   // Every tab's code, the image's first, so its #define names win.
   const allCode = useMemo(() => [doc.code, doc.shared ?? "", ...bufferCodes(doc)].join("\n"), [doc]);
   const floatNameList = useMemo(() => floatNames(allCode), [allCode]);
