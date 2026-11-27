@@ -98,26 +98,34 @@ test("a shader error is listed with its tab and line, and clicking it goes there
   await expect.poll(() => cursorLine(page)).toBe("  fragColor = vec4(uv, missing, 1.0);");
 });
 
-test("reading an empty texture slot or an iFloat that's always 0 warns once, until it changes", async ({page, context}) => {
+test("each build warns once about every empty texture slot and always-0 iFloat its code reads", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./");
   await page.getByRole("button", {name: "Continue"}).click();
   await consoleTab(page).click();
-  const shader = (input: string) =>
-    `void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  fragColor = texture(iTexture2, fragCoord) + ${input};\n}`;
-  await setCode(page, shader("iFloat3"));
-  await page.keyboard.press("Shift+Enter");
+  const shader = (value: string) =>
+    `void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  fragColor = vec4(${value});\n}`;
   const texture = entries(page).filter({hasText: "iTexture2 is empty, so it reads as black."});
   const float3 = entries(page).filter({hasText: "iFloat3 is always 0"});
+  const float4 = entries(page).filter({hasText: "iFloat4 is always 0"});
+  await setCode(page, shader("texture(iTexture2, fragCoord).rgb, iFloat3"));
+  await page.keyboard.press("Shift+Enter");
   await expect(texture).toHaveCount(1);
   await expect(float3).toHaveCount(1);
 
-  // The next build lists only the warning that's new.
-  await setCode(page, shader("iFloat3 + iFloat4"));
+  // Warnings still true show again on the next build.
+  await setCode(page, shader("texture(iTexture2, fragCoord).rgb + iFloat4, iFloat3"));
   await page.keyboard.press("Shift+Enter");
-  await expect(entries(page).filter({hasText: "iFloat4 is always 0"})).toHaveCount(1);
+  await expect(float4).toHaveCount(1);
+  await expect(texture).toHaveCount(1);
+  await expect(float3).toHaveCount(1);
+
+  // One that's fixed goes.
+  await setCode(page, shader("vec3(iFloat4), iFloat3"));
+  await page.keyboard.press("Shift+Enter");
   await expect(texture).toHaveCount(0);
-  await expect(float3).toHaveCount(0);
+  await expect(float3).toHaveCount(1);
+  await expect(float4).toHaveCount(1);
   expect(errors).toEqual([]);
 });
 

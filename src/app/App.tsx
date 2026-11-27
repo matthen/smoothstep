@@ -67,9 +67,7 @@ export default function App() {
   const exporter = useExport(appConsole, doc, closeDialog);
   const log = useConsoleLog(appConsole, exporter.exporting, consoleShown);
   const playback = usePlayback(doc.duration, doc.variables, log.looped, log.rewound);
-  const {clampTime, releaseHolds} = playback;
-  const {forgetWarnings} = log;
-  const probe = useProbe(tabs.editorViews);
+  const {clampTime, releaseHolds} = playback;  const probe = useProbe(tabs.editorViews);
   const {clear: clearProbe} = probe;
   const inputs = useInputs(doc);
   const {resetRows} = inputs;
@@ -100,8 +98,7 @@ export default function App() {
     showCodeTab("image");
     releaseHolds();
     resetRows();
-    forgetWarnings();
-  }, [openDocument, clearProbe, showCodeTab, releaseHolds, resetRows, forgetWarnings]);
+  }, [openDocument, clearProbe, showCodeTab, releaseHolds, resetRows]);
   useStartup({initialRoute, tutorialStart, loadDocument, openFailed, setAlert, onFinished: offerTour});
 
   const library = useLibrary({
