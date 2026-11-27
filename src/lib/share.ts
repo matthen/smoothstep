@@ -1,6 +1,6 @@
 // Sharing without a server: an animation compressed into the link itself, or an animation file
 // that anyone can download (a GitHub gist, or any URL that lets other websites read it).
-import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
+import { deflateSync, Inflate, strFromU8, strToU8 } from 'fflate';
 
 import { ANIMATION_FORMAT, readMediaDataURL } from './archive';
 import { asset } from './config';
@@ -54,11 +54,45 @@ export function encodeDocument(doc: AnimationDocument): string {
   return toBase64URL(deflateSync(strToU8(JSON.stringify(shared)), {level: 9}));
 }
 
+// A link carries no images, only code and timelines, and the largest example is about 10 kB of it.
+const MAX_LINK_ANIMATION_BYTES = 10_000_000;
+// Inflated a slice at a time, so a link that would expand hugely is stopped before it takes much memory.
+const INFLATE_SLICE = 16_384;
+
+class TooBigError extends Error {}
+
+function inflateCapped(bytes: Uint8Array): Uint8Array {
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  const inflate = new Inflate(chunk => {
+    total += chunk.length;
+    if (total > MAX_LINK_ANIMATION_BYTES) {
+      throw new TooBigError();
+    }
+    chunks.push(chunk);
+  });
+  let i = 0;
+  do {
+    inflate.push(bytes.subarray(i, i + INFLATE_SLICE), i + INFLATE_SLICE >= bytes.length);
+    i += INFLATE_SLICE;
+  } while (i < bytes.length);
+  const out = new Uint8Array(total);
+  let at = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, at);
+    at += chunk.length;
+  }
+  return out;
+}
+
 export function decodeDocument(data: string): AnimationDocument {
   let json: unknown;
   try {
-    json = JSON.parse(strFromU8(inflateSync(fromBase64URL(data))));
-  } catch {
+    json = JSON.parse(strFromU8(inflateCapped(fromBase64URL(data))));
+  } catch (error) {
+    if (error instanceof TooBigError) {
+      throw new ShareError("This link is too big to be a smoothstep.io animation.");
+    }
     throw new ShareError("This link is incomplete. Check that the whole link was copied.");
   }
   return parseShared(json);

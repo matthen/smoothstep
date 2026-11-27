@@ -47,6 +47,16 @@ describe("share links", () => {
     expect(() => decodeDocument(data.slice(0, data.length / 2))).toThrow(ShareError);
   });
 
+  it("open an animation with long code, and refuse one that would expand to too much to hold", () => {
+    // A table of numbers, which compresses to many inflate slices.
+    const table = Array.from({length: 100_000}, (_, i) => (i * 7919) % 100_003).join(", ");
+    const long = {...newDocument(), code: `const float table[] = float[](${table});`};
+    expect(encodeDocument(long).length).toBeGreaterThan(100_000);
+    expect(decodeDocument(encodeDocument(long)).code).toBe(long.code);
+    const huge = {...newDocument(), code: " ".repeat(20_000_000)};
+    expect(() => decodeDocument(encodeDocument(huge))).toThrow(/too big/);
+  });
+
   it("round-trip through the hash", () => {
     const data = encodeDocument(newDocument());
     expect(parseHash("#share/" + data)).toEqual({kind: "share", data});
