@@ -83,6 +83,8 @@ export function usePixelInspector({rendererRef, width, height, pixels, inspect, 
     onPointerLeave: (event: PointerEvent<HTMLCanvasElement>) => {
       if (event.pointerType === "mouse") {
         setPoint(null);
+        // Or it shows at the next point until that's read.
+        setReading(null);
       }
     },
   };
