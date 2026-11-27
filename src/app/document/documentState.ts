@@ -58,7 +58,9 @@ export type DocumentAction =
   | {type: "saved"; id: string; doc: AnimationDocument}
   // The animation was deleted from the browser's animations, leaving it open as a new one.
   | {type: "deleted"}
-  | {type: "layerErrors"; errors: LineError[]};
+  | {type: "layerErrors"; errors: LineError[]}
+  // The layer's errors still stand, as when its code went back to what it's already running.
+  | {type: "layerSettled"};
 
 export function initialDocumentState(route: Route | null): DocumentState {
   const doc = newDocument();
@@ -158,5 +160,7 @@ export function documentReducer(s: DocumentState, action: DocumentAction): Docum
       return {...s, documentId: null, hasUnsavedChanges: true};
     case "layerErrors":
       return {...s, layerErrors: action.errors, layerSettled: true};
+    case "layerSettled":
+      return s.layerSettled ? s : {...s, layerSettled: true};
   }
 }

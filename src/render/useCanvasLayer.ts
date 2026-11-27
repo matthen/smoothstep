@@ -24,6 +24,7 @@ interface LayerCallbacks {
   shaders: {canvas?: string | null} | null;
   buildId: number;
   onLayerStatus(errors: LineError[], loading?: boolean): void;
+  onLayerSettled(): void;
   onLayerLog(logs: LayerLog[], dropped: number): void;
   onLayerRestart(): void;
 }
@@ -63,6 +64,8 @@ export function useCanvasLayer({refs, restart, code, buildId, duration, textures
       return undefined;
     }
     if (width === 0 || height === 0) {
+      // A preview that has never been shown runs no layer, so nothing should wait for one.
+      propsRef.current.onLayerSettled();
       return undefined;
     }
     const force = layerBuildId.current !== buildId;
@@ -100,9 +103,13 @@ export function useCanvasLayer({refs, restart, code, buildId, duration, textures
           layerRef.current = {layer, steps: new LayerSteps(renderer, layer)};
         }
         layerBuildId.current = buildId;
-        if (layerRef.current.layer.configure(config, force)) {
+        const {layer} = layerRef.current;
+        if (layer.configure(config, force)) {
           restart();
           needsRenderRef.current = true;
+        } else if (layer.settled) {
+          // Back to what's already running, as when an edit is undone quickly: its status still holds.
+          propsRef.current.onLayerSettled();
         }
       }).catch((error: unknown) => {
         console.error(error);

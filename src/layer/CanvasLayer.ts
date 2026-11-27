@@ -101,6 +101,7 @@ export class CanvasLayer {
   // A draw's promise, and the batch its step went in once it's sent.
   private pendingDraw: {resolve(bitmap: ImageBitmap): void; reject(error: Error): void; batch?: number} | null = null;
   private busyWatch: BusyWatch;
+  private reported = false;
 
   constructor(
     private assets: LayerAssets, private callbacks: LayerCallbacks,
@@ -125,6 +126,11 @@ export class CanvasLayer {
     return this.phase.kind === "running" ? this.phase.standby : null;
   }
 
+  // Whether the configuration has sent its status: an error, or none once it drew.
+  get settled(): boolean {
+    return this.reported;
+  }
+
   // Whether steps pushed now will be drawn.
   private get accepting(): boolean {
     return this.phase.kind === "preparing" || this.phase.kind === "running";
@@ -137,6 +143,7 @@ export class CanvasLayer {
       return false;
     }
     this.config = config;
+    this.reported = false;
     this.bitmaps.keepOnly(config.textures);
     // A build (`force`) says so itself; a new size or texture starts the code again.
     if (!force && this.current?.stepped) {
@@ -281,6 +288,7 @@ export class CanvasLayer {
     }
     if (!run.drawn) {
       run.drawn = true;
+      this.reported = true;
       this.callbacks.onStatus([]);
       if (this.keepStandby && this.phase.kind === "running" && !this.phase.standby) {
         this.phase.standby = this.spawn(prepared);
@@ -340,6 +348,7 @@ export class CanvasLayer {
     this.stopRuns();
     this.phase = {kind: "stopped", errors};
     this.waiting.drop();
+    this.reported = true;
     this.callbacks.onStatus(errors, loading);
     this.rejectPending(this.error());
   }
