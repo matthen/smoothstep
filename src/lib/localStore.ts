@@ -91,9 +91,17 @@ export function newId(): string {
   return Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
 }
 
+// Once something is saved, asks the browser not to evict it under storage pressure (best effort; there's no
+// navigator.storage on http or in jsdom).
+let persistAsked = false;
+function askToPersist() {
+  if (!persistAsked) {
+    persistAsked = true;
+    (navigator.storage as StorageManager | undefined)?.persist().catch(() => {});
+  }
+}
+
 export async function init(): Promise<void> {
-  // Ask the browser not to evict our data under storage pressure (best effort; no navigator.storage on http or jsdom).
-  (navigator.storage as StorageManager | undefined)?.persist().catch(() => {});
   const images = await values<StoredImage>(store("images"));
   images.forEach(cacheImageURL);
   imagesChanged();
@@ -186,11 +194,13 @@ export async function saveDocument(
     thumbnail: frameDataURL ? await thumbnailDataURL(frameDataURL) : (existing?.thumbnail ?? null),
   };
   await write(() => set(record.id, record, store("documents")));
+  askToPersist();
   return record.id;
 }
 
 export async function putDocument(record: StoredDocument): Promise<void> {
   await write(() => set(record.id, record, store("documents")));
+  askToPersist();
 }
 
 export async function deleteDocument(id: string): Promise<void> {
