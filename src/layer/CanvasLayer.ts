@@ -7,8 +7,9 @@ import type { LineError } from '../lib/types';
 import type { LayerAssets } from './assets';
 import type { FontData } from './fonts';
 import { parseImports } from './libraries';
-import type { FromWorker, LayerInputs, ToWorker } from './runtime';
-import { Sandbox, type SandboxWorker } from './sandbox';
+import type { LayerWorker, WorkerHost } from './host';
+import type { FromWorker, LayerInputs } from './runtime';
+import { Sandbox } from './sandbox';
 import {
   errorFromEvent, errorFromStack, logsFromWorker, workerSource, type LayerLog, type WorkerSource,
 } from './workerSource';
@@ -82,7 +83,7 @@ type RunPhase =
   | {kind: "threw"};
 
 interface Run {
-  worker: SandboxWorker;
+  worker: LayerWorker;
   phase: RunPhase;
   // Whether it has been sent any steps, and has sent back a frame.
   stepped: boolean;
@@ -126,7 +127,6 @@ function sameConfig(a: LayerConfig | null, b: LayerConfig): boolean {
 }
 
 export class CanvasLayer {
-  private sandbox = new Sandbox();
   private config: LayerConfig | null = null;
   private phase: LayerPhase = {kind: "unconfigured"};
   private waiting: LayerInputs[] = [];
@@ -142,6 +142,7 @@ export class CanvasLayer {
     private assets: LayerAssets, private callbacks: LayerCallbacks,
     // A spare worker makes restarts quick; an export restarts only once, so it goes without.
     private keepStandby = true,
+    private host: WorkerHost = new Sandbox(),
   ) {}
 
   private get current(): Run | null {
@@ -244,7 +245,7 @@ export class CanvasLayer {
   private spawn(prepared: Prepared): Run {
     const config = this.config!;
     const run: Run = {
-      worker: this.sandbox.spawn(prepared.source.source, error => {
+      worker: this.host.spawn(prepared.source.source, error => {
         if (run === this.current) {
           this.fail([errorFromEvent(error, prepared.source)], !this.loaded(run));
         } else {
@@ -254,12 +255,12 @@ export class CanvasLayer {
       phase: {kind: "starting"}, stepped: false, drawn: false, drawing: 0, started: performance.now(),
       heldLogs: [], heldDropped: 0,
     };
-    run.worker.port.onmessage = (event: MessageEvent<FromWorker>) => this.receive(run, prepared, event.data);
+    run.worker.onMessage = data => this.receive(run, prepared, data as Partial<FromWorker> | null);
     // Each worker gets its own copies of the fonts and images.
-    run.worker.port.postMessage({
+    run.worker.post({
       type: "init", width: config.width, height: config.height, duration: config.duration,
       fonts: prepared.fonts, textures: prepared.textures,
-    } satisfies ToWorker);
+    });
     return run;
   }
 
@@ -500,7 +501,7 @@ export class CanvasLayer {
     run.phase = {kind: "drawing", batch: id};
     run.drawing = this.waiting[0]!.frame;
     const frames = this.waiting.flatMap(step => (step.videoFrames ?? []).map(frame => frame.bitmap));
-    run.worker.port.postMessage({type: "steps", id, steps: this.waiting} satisfies ToWorker, frames);
+    run.worker.post({type: "steps", id, steps: this.waiting}, frames);
     this.waiting = [];
     run.stepped = true;
     if (!this.busyShown) {
@@ -526,7 +527,7 @@ export class CanvasLayer {
     this.stopRuns();
     this.phase = {kind: "disposed"};
     this.rejectPending(new Error("The Canvas2D layer was closed."));
-    this.sandbox.dispose();
+    this.host.dispose();
     this.dropBitmaps([]);
   }
 }

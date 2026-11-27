@@ -2,6 +2,7 @@
 // origin, so the code can't reach the app's storage or pages, and its policy lets nothing load from
 // the network. The page holding it must forbid frames from loading URLs (frame-src 'none'), so the
 // iframe can't send anything out by navigating itself.
+import type { LayerWorker, WorkerHost } from './host';
 
 const POLICY = "default-src 'none'; script-src 'unsafe-inline' blob:; worker-src blob:";
 
@@ -44,12 +45,7 @@ function frameMain() {
   parent.postMessage({ready: true}, "*");
 }
 
-export interface SandboxWorker {
-  port: MessagePort;
-  kill(): void;
-}
-
-export class Sandbox {
+export class Sandbox implements WorkerHost {
   private frame: HTMLIFrameElement;
   private ready: Promise<void>;
   private nextId = 1;
@@ -87,8 +83,7 @@ export class Sandbox {
     document.body.append(frame);
   }
 
-  // Starts a worker running `source`. `onError` gets errors it didn't catch, such as syntax errors.
-  spawn(source: string, onError: (error: {message: string; line: number}) => void): SandboxWorker {
+  spawn(source: string, onError: (error: {message: string; line: number}) => void): LayerWorker {
     const id = this.nextId++;
     const channel = new MessageChannel();
     let killed = false;
@@ -98,8 +93,9 @@ export class Sandbox {
         this.frame.contentWindow?.postMessage({spawn: id, source, port: channel.port2} satisfies ToFrame, "*", [channel.port2]);
       }
     });
-    return {
-      port: channel.port1,
+    const worker: LayerWorker = {
+      post: (message, transfer = []) => channel.port1.postMessage(message, transfer),
+      onMessage: null,
       kill: () => {
         killed = true;
         this.errorListeners.delete(id);
@@ -107,6 +103,8 @@ export class Sandbox {
         this.frame.contentWindow?.postMessage({kill: id} satisfies ToFrame, "*");
       },
     };
+    channel.port1.onmessage = (event: MessageEvent) => worker.onMessage?.(event.data);
+    return worker;
   }
 
   dispose() {
