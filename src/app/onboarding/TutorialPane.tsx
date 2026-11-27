@@ -1,3 +1,4 @@
+// Connects the tutorial's Learn panel to the open animation and the playhead.
 import { lazy } from 'react';
 
 import type { TutorialPanelProps } from '../../tutorial/TutorialPanel';

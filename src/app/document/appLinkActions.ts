@@ -1,3 +1,4 @@
+// What each link in a code comment, like "[Help → Tutorial]" or "[Sliders]", does.
 import type { AppLink } from '../../lib/appLinks';
 import { DOC_SECTIONS, type DocTarget } from '../../lib/docLinks';
 import { REPO_URL } from '../../lib/config';
@@ -18,7 +19,6 @@ export interface AppActions {
   showCode: (tab: ShaderId) => void;
 }
 
-// What each link in a code comment, like "[Help → Tutorial]" or "[Sliders]", does.
 export function appLinkActions(app: AppActions): Record<AppLink, () => void> {
   return {
     "File → New": app.newAnimation,

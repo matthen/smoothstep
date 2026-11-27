@@ -1,3 +1,5 @@
+// The canvas and its play bar filling the screen. The browser's own full screen hides its bars too where it's
+// allowed, but iPhones only allow it for videos, so there the page alone fills it.
 import { useEffect, useState } from 'react';
 
 import { anyModalOpen } from '../AppModal';
@@ -12,8 +14,6 @@ function browserFullScreen(on: boolean) {
   }
 }
 
-// The canvas and its play bar filling the screen. The browser's own full screen hides its bars
-// too where it's allowed; iPhones only allow it for videos, so there the page alone fills it.
 export function useFullView() {
   const [fullView, setFullView] = useState(false);
   const setFull = (on: boolean) => {

@@ -1,3 +1,4 @@
+// The completion list in the shader tabs, with GLSL's built-ins, words from nearby code and the snippets.
 import type { Completion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
 import { Facet } from '@codemirror/state';
 import { HINT_WORDS } from './glslLanguage';

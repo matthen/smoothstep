@@ -1,3 +1,4 @@
+// Helpers the end-to-end tests share, for running offline, driving the editor and checking the canvas's colours.
 import { expect, type BrowserContext, type Page } from '@playwright/test';
 import { PNG } from 'pngjs';
 

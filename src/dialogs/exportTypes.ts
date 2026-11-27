@@ -1,3 +1,4 @@
+// A render's settings and progress, for the Render dialog and the exporter, and the frame size and count they give.
 export type ExportType = "webm" | "mp4" | "gif" | "png";
 
 export interface ExportOptions {

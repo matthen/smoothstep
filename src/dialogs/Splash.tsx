@@ -1,3 +1,4 @@
+// The welcome dialog, with recent animations, a tip, the examples, and ways into the tutorial and the tour.
 import { Button, FocusTrap, Group, Menu, SimpleGrid, Text, Title } from '@mantine/core';
 import { useEffect, useState, type ReactNode } from 'react';
 import { TbBulb, TbRoute, TbSchool } from 'react-icons/tb';

@@ -1,3 +1,4 @@
+// The editor app, which connects the hooks for the open animation, the layout and onboarding to the panes and dialogs.
 import { Loader } from '@mantine/core';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';

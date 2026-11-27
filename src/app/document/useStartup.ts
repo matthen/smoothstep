@@ -1,3 +1,4 @@
+// Opens the browser's storage, then the animation the URL names.
 import { useEffect } from 'react';
 
 import { parseDocument, tutorialDocument, type AnimationDocument } from '../../lib/document';
@@ -21,7 +22,6 @@ interface Options {
   onFinished: () => void;
 }
 
-// Opens the browser's storage, then the animation the URL names.
 export function useStartup({initialRoute, tutorialStart, loadDocument, openFailed, setAlert, onFinished}: Options) {
   useEffect(() => {
     const route = initialRoute;

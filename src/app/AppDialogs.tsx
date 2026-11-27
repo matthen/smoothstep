@@ -1,3 +1,4 @@
+// The File and Help menus' dialogs, the hidden file input for imports, and the alert.
 import { Button, Group } from '@mantine/core';
 import { useCallback } from 'react';
 
@@ -28,7 +29,6 @@ interface Props {
   setAlert: (text: string | null) => void;
 }
 
-// The File and Help menus' dialogs, the hidden file input for imports, and the alert.
 export default function AppDialogs(
   {dialog, setDialog, docState, library, exporter, preview, onTour, tourTaken, alert, setAlert}: Props,
 ) {

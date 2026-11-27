@@ -1,3 +1,4 @@
+// The Open dialog, which lists the animations saved in this browser to open, download or delete, above the examples.
 import { ActionIcon, Alert, Button, Group, ScrollArea, Table, Text, Title } from '@mantine/core';
 import { useEffect, useState } from 'react';
 import { TbDownload, TbFileImport, TbTrash } from 'react-icons/tb';

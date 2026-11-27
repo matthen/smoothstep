@@ -1,3 +1,4 @@
+// The pane with the code tabs, each tab's editor, and the docs.
 import { Button, Switch, Text, Tooltip } from '@mantine/core';
 import type { EditorView } from '@codemirror/view';
 import { lazy, Suspense } from 'react';
@@ -28,7 +29,6 @@ interface Props {
   onPickerRelease: (tab: ShaderId, code: string | null) => void;
 }
 
-// The code tabs, each tab's editor, and the docs.
 export default function EditorPane({
   docState, tabs, onBuild, onSave, onFixed, onCodeChange, onShowExpression, onView, onPickerEdit, onPickerRelease,
 }: Props) {

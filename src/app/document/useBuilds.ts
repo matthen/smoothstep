@@ -1,3 +1,4 @@
+// Building the code, and what the editor and canvas report as it's edited and built.
 import type { EditorView } from '@codemirror/view';
 import { useState, type RefObject } from 'react';
 
@@ -23,7 +24,6 @@ interface Options {
   showTip: (event: TipEvent) => void;
 }
 
-// Building the code, and what the editor and canvas report as it's edited and built.
 export function useBuilds({docState, canvasRef, tabs, probe, log, showTip}: Options) {
   const {dispatch, builtCode, builtExtras, buildId, allBuilt} = docState;
   const pickerDrag = usePickerDrag({docState, canvasRef, probe});

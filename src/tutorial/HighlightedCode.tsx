@@ -1,9 +1,9 @@
+// A tutorial step's code block, or a few lines quoted in its text, coloured as in the editor.
 import { Fragment, useMemo } from 'react';
 
 import { highlightLines, LAYER_NAMES } from '../editor/highlight';
 import { useJsHighlighting } from '../editor/InlineCode';
 
-// Code coloured as in the editor: a step's code block, or a few lines quoted in its text.
 export default function HighlightedCode({code, javascript, className = "learnCodeText"}: {
   code: string; javascript: boolean; className?: string;
 }) {

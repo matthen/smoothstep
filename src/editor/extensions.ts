@@ -1,3 +1,4 @@
+// The CodeMirror extensions that make up each code tab's editor, with its key bindings, for GLSL or JavaScript.
 import {
   acceptCompletion, autocompletion, closeBrackets, closeBracketsKeymap, nextSnippetField, prevSnippetField,
 } from '@codemirror/autocomplete';

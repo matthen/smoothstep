@@ -1,3 +1,4 @@
+// The parts of the timeline that move with the playhead, each re-rendering on its own as the animation plays.
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
 
 import { usePlayheadSelect, type Playhead } from './playhead';

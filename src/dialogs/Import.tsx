@@ -1,3 +1,5 @@
+// The Import dialog, which adds animations to this browser from files, or from a smoothstep.io link, a GitHub
+// gist, or the address of an animation file.
 import { Button, Divider, Group, Stack, Text, TextInput } from '@mantine/core';
 import { useState, type SubmitEvent } from 'react';
 import { TbFileImport } from 'react-icons/tb';
@@ -13,8 +15,6 @@ interface ImportProps {
   onImportLink(route: Route): Promise<void>;
 }
 
-// Adds animations to this browser from files, or from a smoothstep.io link, a GitHub gist, or the
-// address of an animation file.
 export default function Import({show, onHide, onChooseFiles, onImportLink}: ImportProps) {
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);

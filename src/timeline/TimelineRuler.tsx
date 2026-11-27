@@ -1,3 +1,4 @@
+// The ruler over the timeline's rows, with the duration's handle and the playhead.
 import type { PointerEvent as ReactPointerEvent } from 'react';
 
 import type { Ruler } from './geometry';
@@ -17,7 +18,6 @@ interface Props {
   onDurationPointerDown: (event: ReactPointerEvent) => void;
 }
 
-// The ruler over the rows, with the duration's handle and the playhead.
 export default function TimelineRuler(
   {x, width, ruler, duration, playhead, postDuration, onScrubberPointerDown, onDurationPointerDown}: Props,
 ) {

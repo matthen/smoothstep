@@ -1,3 +1,4 @@
+// Writes the Console tab's lines about builds and the Canvas2D code, from the preview and from renders.
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { ConsoleStore } from './consoleStore';

@@ -1,3 +1,4 @@
+// The device's layout, and the panes' sizes and tabs.
 import { useMediaQuery } from '@mantine/hooks';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -9,7 +10,7 @@ import { usePhone, useTouch } from './usePhone';
 export type MobileTab = "code" | "animation" | "sliders" | "textures" | "console" | "learn";
 export type PanelTab = "animation" | "sliders" | "textures" | "console";
 
-// The device's layout and the panes' sizes and tabs. `learnFirst` shows the tutorial first on a phone.
+// `learnFirst` shows the tutorial first on a phone.
 export function useLayout(learnFirst: boolean) {
   const phone = usePhone();
   const touch = useTouch();

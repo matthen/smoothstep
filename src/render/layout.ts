@@ -1,3 +1,4 @@
+// How big the preview canvas is and how many pixels it draws, dropping to 1× when frames stay slow.
 import type { AspectRatio } from '../lib/document';
 
 const MAX_RESOLUTION = 1280;

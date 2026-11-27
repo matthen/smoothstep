@@ -1,3 +1,5 @@
+// What pointers do on the timeline's rows, ruler, playhead and duration handle. They make, select and drag
+// transitions, scrub, and change the duration.
 import { useRef, type PointerEvent as ReactPointerEvent } from 'react';
 
 import { clampTime, grabMode, roundDuration, rowAt, xToTime } from './geometry';
@@ -18,8 +20,6 @@ interface Options {
   onDurationChange(duration: number): void;
 }
 
-// What pointers do on the rows, the ruler, the playhead and the duration handle: making, picking and
-// dragging transitions, scrubbing, and changing the duration.
 export function useTimelinePointer({gestures, editor, rows, duration, onSeek, onDurationChange}: Options) {
   const {gestureRef, setGesture, hover, setHover, cancelCreating} = gestures;
   const {selection, selected, selectedIndex, select} = editor;

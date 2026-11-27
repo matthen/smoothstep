@@ -1,3 +1,4 @@
+// The playhead, playing it, and the values the animation's variables have at a time.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { variableValues, type Variable } from '../lib/document';
@@ -15,7 +16,6 @@ function lastAnswer(values: (time: number) => number[]): (time: number) => numbe
   };
 }
 
-// The playhead, playing it, and the values the animation's variables have at a time.
 // `onLoop` hears when playing wraps back to the start, and `onRewind` when the playhead is put there.
 export function usePlayback(duration: number, variables: Variable[], onLoop: () => void, onRewind: () => void) {
   const [playhead] = useState(() => new Playhead());

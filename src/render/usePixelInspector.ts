@@ -1,3 +1,4 @@
+// The point the pixel inspector reads, in CSS pixels from the canvas's top left, and the values it read there.
 import { useCallback, useEffect, useRef, useState, type PointerEvent, type RefObject } from 'react';
 
 import { useLatest } from '../lib/useLatest';
@@ -18,7 +19,6 @@ interface Options {
   probeShown: boolean;
 }
 
-// The point the inspector reads, in CSS pixels from the canvas's top left, and the values it read there.
 export function usePixelInspector({rendererRef, width, height, pixels, inspect, probeShown}: Options) {
   const [point, setPoint] = useState<{x: number; y: number; touch: boolean} | null>(null);
   const [reading, setReading] = useState<PixelReading | null>(null);

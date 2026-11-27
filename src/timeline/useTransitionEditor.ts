@@ -1,3 +1,4 @@
+// The selected transition on the timeline, and the edits that type into its boxes, delete it or add a new one.
 import { useState } from 'react';
 
 import { variableValue, type Transition, type Variable } from '../lib/document';
@@ -28,7 +29,6 @@ interface Options {
   onSelect(): void;
 }
 
-// The selected transition, and the edits made to it in its boxes, by deleting it or by adding one.
 export function useTransitionEditor({variables, onVariablesChange, maxDSecs, onSelect}: Options) {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [drafts, setDrafts] = useState<Drafts>({});

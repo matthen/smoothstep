@@ -1,3 +1,4 @@
+// The aspect ratio menu in the play bar.
 import { Button, Group, NativeSelect, Popover, Text, TextInput, Tooltip } from '@mantine/core';
 import { useState } from 'react';
 import { TbAspectRatio } from 'react-icons/tb';

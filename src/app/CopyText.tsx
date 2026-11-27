@@ -1,3 +1,4 @@
+// A copy button's state, like Mantine's CopyButton, but it still copies where the clipboard API isn't allowed.
 import { useEffect, useState, type ReactNode } from 'react';
 
 // Browsers only offer navigator.clipboard on https and localhost, so copy through a selected
@@ -34,7 +35,6 @@ interface CopyTextProps {
   children(state: {copied: boolean; copy(): void}): ReactNode;
 }
 
-// Like Mantine's CopyButton, but it still copies where the clipboard API isn't allowed.
 export default function CopyText({value, timeout = 1000, children}: CopyTextProps) {
   // Counts copies, so copying again restarts the timeout.
   const [copies, setCopies] = useState(0);

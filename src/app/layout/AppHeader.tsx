@@ -1,3 +1,4 @@
+// The header, with the title, the File and Help menus, and the buttons for saving, sharing and rendering.
 import { ActionIcon, Badge, Button, Group, Kbd, Menu, Text, TextInput, Tooltip } from '@mantine/core';
 import { useRef } from 'react';
 import {
@@ -36,7 +37,6 @@ interface Props {
   onRender: () => void;
 }
 
-// The title, the File and Help menus, and the buttons for saving, sharing and rendering.
 export default function AppHeader(props: Props) {
   const {phone, titleInput} = props;
   const canInstall = useCanInstall();

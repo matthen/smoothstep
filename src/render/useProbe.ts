@@ -1,3 +1,4 @@
+// The expression the canvas shows in place of the image, picked in a tab's editor, and whether the inspector is on.
 import { notifications } from '@mantine/notifications';
 import type { EditorView } from '@codemirror/view';
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
@@ -24,8 +25,6 @@ function markShown(views: Map<ShaderId, EditorView>, tab: ShaderId | null, range
   });
 }
 
-// An expression the canvas shows in place of the image, picked in a tab's editor, and whether pointing
-// at it shows values.
 export function useProbe(editorViews: RefObject<Map<ShaderId, EditorView>>) {
   const [probe, setProbe] = useState<ProbeState>(PROBE_OFF);
   const probeHoldTimer = useRef<number | undefined>(undefined);

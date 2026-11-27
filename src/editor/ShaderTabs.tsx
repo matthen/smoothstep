@@ -1,3 +1,4 @@
+// The tabs above the code, and the names and captions each code tab is shown with.
 import { ActionIcon, Menu, Text, Tooltip, UnstyledButton } from '@mantine/core';
 import { type ReactNode, useEffect, useRef } from 'react';
 import {
