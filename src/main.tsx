@@ -1,5 +1,6 @@
-// Only for the app's name, so only its Latin letters.
-import '@fontsource/monda/latin-700.css';
+// Starts the app: it sets up updates and installing, then renders `App` in the page's theme, with a crash screen
+// around it.
+import '@fontsource/monda/latin-700.css';  // The Monda font is only for the app's name, so only its Latin letters.
 import './styles/mantine';
 import './styles/main.scss';
 
