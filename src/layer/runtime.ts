@@ -19,7 +19,8 @@ export type ToWorker =
 
 // From the worker. Its code is the user's, so the app checks everything it sends.
 export type FromWorker =
-  | {type: "ready"; registered: boolean; hasDraw: boolean}
+  // `stoppedEarly`: the code's top level ran without an error but returned before setting up draw.
+  | {type: "ready"; registered: boolean; hasDraw: boolean; stoppedEarly: boolean}
   | {type: "drawing"; frame: number}
   | {type: "frame"; id: number; bitmap: ImageBitmap}
   | {type: "error"; message: string; stack: string; line: number | null}
@@ -188,6 +189,7 @@ export function workerRuntime(
   };
 
   let registered = false;
+  let ranToEnd = false;
   let userSetup: UserSetup | null = null;
   let userDraw: UserDraw | null = null;
   const start = (setup: unknown, draw: unknown) => {
@@ -338,7 +340,7 @@ export function workerRuntime(
         ctx.strokeStyle = "white";
         ctx.lineWidth = 2;
       }
-      send({type: "ready", registered, hasDraw: userDraw !== null && ctx !== null});
+      send({type: "ready", registered, hasDraw: userDraw !== null && ctx !== null, stoppedEarly: ranToEnd && !registered});
       return;
     }
     if (failed || !ctx || !canvas || !userDraw) {
@@ -417,6 +419,7 @@ export function workerRuntime(
       // An uncaught error goes to the app another way, which may not wait for the logs before it.
       try {
         code?.();
+        ranToEnd = true;
       } finally {
         sendLogs();
       }

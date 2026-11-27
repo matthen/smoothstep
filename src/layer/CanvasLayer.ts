@@ -48,10 +48,23 @@ const BUSY_MS = 1_000;
 const MAX_WAITING = 12;
 
 const NO_DRAW = "The Canvas2D code needs a draw function, which draws on the canvas each step.";
+const STOPPED_EARLY = "A return outside any function stopped the Canvas2D code before its end, so its draw " +
+  "function was never found. Move the return into a function or take it out.";
 const WRONG_SIZE = "The Canvas2D frame wasn't the animation's size, so it was stopped. Build to run it again.";
 
 // A message of one kind from the worker, whose fields may be missing or the wrong type.
 type Received<K extends FromWorker["type"]> = Partial<Extract<FromWorker, {type: K}>>;
+
+// What a worker's "ready" says about its code's first run: it set up a draw function, set up none,
+// returned before setting anything up, or threw, whose error arrives on its own.
+export type ReadyOutcome = "draws" | "no draw" | "stopped early" | "threw";
+
+export function readyOutcome(message: Received<"ready">): ReadyOutcome {
+  if (message.registered === true) {
+    return message.hasDraw === true ? "draws" : "no draw";
+  }
+  return message.stoppedEarly === true ? "stopped early" : "threw";
+}
 
 // What every run of one configuration shares.
 interface Prepared {
@@ -60,11 +73,18 @@ interface Prepared {
   textures: (ImageBitmap | null)[];
 }
 
+// A run's code is running for the first time, then it waits for steps or draws a batch of them. One
+// whose code threw waits for that error, and draws nothing.
+type RunPhase =
+  | {kind: "starting"}
+  | {kind: "idle"}
+  | {kind: "drawing"; batch: number}
+  | {kind: "threw"};
+
 interface Run {
   worker: SandboxWorker;
-  ready: boolean;
-  // The batch of steps the worker is drawing, and whether it has been sent any.
-  inFlight: number | null;
+  phase: RunPhase;
+  // Whether it has been sent any steps, and has sent back a frame.
   stepped: boolean;
   drawn: boolean;
   // The step it's drawing now.
@@ -75,6 +95,15 @@ interface Run {
   heldLogs: LayerLog[];
   heldDropped: number;
 }
+
+// The layer has no code yet, loads what a configuration needs (a newer configure replaces the phase,
+// so older work is dropped), runs it with a spare, stops on an error until the next configure, or is closed.
+type LayerPhase =
+  | {kind: "unconfigured"}
+  | {kind: "preparing"}
+  | {kind: "running"; prepared: Prepared; current: Run; standby: Run | null}
+  | {kind: "stopped"; errors: LineError[]}
+  | {kind: "disposed"};
 
 // The most a spare holds before it only counts them.
 const MAX_HELD_LOGS = 200;
@@ -91,24 +120,21 @@ async function loadBitmap(url: string): Promise<ImageBitmap | null> {
   }
 }
 
+function sameConfig(a: LayerConfig | null, b: LayerConfig): boolean {
+  return a !== null && a.code === b.code && a.width === b.width && a.height === b.height &&
+    a.duration === b.duration && a.textures.length === b.textures.length && a.textures.every((t, i) => t === b.textures[i]);
+}
+
 export class CanvasLayer {
   private sandbox = new Sandbox();
   private config: LayerConfig | null = null;
-  private prepared: Prepared | null = null;
-  // Bumped by each configure, so work for an older one is dropped when it finishes.
-  private generation = 0;
-  private current: Run | null = null;
-  private standby: Run | null = null;
+  private phase: LayerPhase = {kind: "unconfigured"};
   private waiting: LayerInputs[] = [];
   // Whether the code reads textures and one is a video, so each step needs the video's frame.
   private videos = false;
-  // After an error, nothing runs until the next configure.
-  private stopped = false;
-  private errors: LineError[] = [];
   private nextBatch = 1;
   private bitmaps = new Map<string, Promise<ImageBitmap | null>>();
   private pendingDraw: {resolve(bitmap: ImageBitmap): void; reject(error: Error): void} | null = null;
-  private disposed = false;
   private busyTimer: number | undefined;
   private busyShown = false;
 
@@ -118,45 +144,53 @@ export class CanvasLayer {
     private keepStandby = true,
   ) {}
 
+  private get current(): Run | null {
+    return this.phase.kind === "running" ? this.phase.current : null;
+  }
+
+  private get standby(): Run | null {
+    return this.phase.kind === "running" ? this.phase.standby : null;
+  }
+
+  // Whether steps pushed now will be drawn.
+  private get accepting(): boolean {
+    return this.phase.kind === "preparing" || this.phase.kind === "running";
+  }
+
   // Sets what to run. A new configuration starts a fresh run, as does `force` when nothing changed.
   // Returns whether it did.
   configure(config: LayerConfig, force = false): boolean {
-    const old = this.config;
-    const same = old !== null && old.code === config.code && old.width === config.width &&
-      old.height === config.height && old.duration === config.duration &&
-      old.textures.length === config.textures.length && old.textures.every((t, i) => t === config.textures[i]);
-    if ((same && !force) || this.disposed) {
+    if ((sameConfig(this.config, config) && !force) || this.phase.kind === "disposed") {
       return false;
     }
     this.config = config;
     this.dropBitmaps(config.textures);
-    const generation = ++this.generation;
     // A build (`force`) says so itself; a new size or texture starts the code again.
     if (!force && this.current?.stepped) {
       this.callbacks.onRestart?.();
     }
     this.stopRuns();
-    this.stopped = false;
-    this.prepared = null;
+    const preparing: LayerPhase = {kind: "preparing"};
+    this.phase = preparing;
     this.dropWaiting();
+    this.rejectPending(new Error("The Canvas2D layer was restarted."));
     this.videos = config.textures.some(isVideoURL) && uses(config.code, /\btextures\b/);
     void this.prepare(config).then(prepared => {
-      if (generation !== this.generation || this.disposed) {
+      if (this.phase !== preparing) {
         return;
       }
       if ("errors" in prepared) {
         this.fail(prepared.errors, true);
         return;
       }
-      this.prepared = prepared;
-      this.use(this.spawn(prepared));
+      this.use(prepared, this.spawn(prepared));
     });
     return true;
   }
 
   // Makes `run` the one that draws, and watches how long it takes to start.
-  private use(run: Run) {
-    this.current = run;
+  private use(prepared: Prepared, run: Run) {
+    this.phase = {kind: "running", prepared, current: run, standby: null};
     if (run.heldLogs.length > 0 || run.heldDropped > 0) {
       this.log(run.heldLogs, run.heldDropped);
       run.heldLogs = [];
@@ -212,12 +246,12 @@ export class CanvasLayer {
     const run: Run = {
       worker: this.sandbox.spawn(prepared.source.source, error => {
         if (run === this.current) {
-          this.fail([errorFromEvent(error, prepared.source)], !run.ready);
+          this.fail([errorFromEvent(error, prepared.source)], !this.loaded(run));
         } else {
           this.discardStandby();
         }
       }),
-      ready: false, inFlight: null, stepped: false, drawn: false, drawing: 0, started: performance.now(),
+      phase: {kind: "starting"}, stepped: false, drawn: false, drawing: 0, started: performance.now(),
       heldLogs: [], heldDropped: 0,
     };
     run.worker.port.onmessage = (event: MessageEvent<FromWorker>) => this.receive(run, prepared, event.data);
@@ -229,22 +263,27 @@ export class CanvasLayer {
     return run;
   }
 
+  // Whether the run's code got through its first run.
+  private loaded(run: Run): boolean {
+    return run.phase.kind === "idle" || run.phase.kind === "drawing";
+  }
+
   // Slow code just plays slowly, and is stopped by the next build or restart. After a while starting
   // or drawing one batch, it says so.
   private watchBusy() {
     window.clearTimeout(this.busyTimer);
     this.busyTimer = window.setTimeout(() => {
       const run = this.current;
-      if (run && (!run.ready || run.inFlight !== null)) {
+      if (run && (run.phase.kind === "starting" || run.phase.kind === "drawing")) {
         this.busyShown = true;
-        this.callbacks.onBusy?.(run.ready ? run.drawing : "starting");
+        this.callbacks.onBusy?.(run.phase.kind === "drawing" ? run.drawing : "starting");
       }
     }, BUSY_MS);
   }
 
   // Whether the run's code has been running for a while without finishing its first run.
   private slowToStart(run: Run): boolean {
-    return !run.ready && performance.now() - run.started >= BUSY_MS;
+    return run.phase.kind === "starting" && performance.now() - run.started >= BUSY_MS;
   }
 
   private notBusy() {
@@ -262,15 +301,15 @@ export class CanvasLayer {
     }
     if (message?.type === "logs") {
       this.receiveLogs(run, prepared, message);
-    } else if (message?.type === "ready") {
+    } else if (message?.type === "ready" && run.phase.kind === "starting") {
       this.receiveReady(run, message);
     } else if (message?.type === "drawing" && run === this.current && typeof message.frame === "number" && Number.isInteger(message.frame)) {
       run.drawing = message.frame;
       if (this.busyShown) {
         this.callbacks.onBusy?.(message.frame);
       }
-    } else if (message?.type === "frame" && run === this.current && message.id === run.inFlight &&
-        message.bitmap instanceof ImageBitmap) {
+    } else if (message?.type === "frame" && run === this.current && run.phase.kind === "drawing" &&
+        message.id === run.phase.batch && message.bitmap instanceof ImageBitmap) {
       this.receiveFrame(run, prepared, message.bitmap);
     } else if (message?.type === "error") {
       this.receiveError(run, prepared, message);
@@ -291,21 +330,27 @@ export class CanvasLayer {
 
   // The run's code has finished its first run: drawing can start, or a standby without a draw is dropped.
   private receiveReady(run: Run, message: Received<"ready">) {
-    run.ready = true;
-    if (run === this.current) {
-      if (message.registered === true && message.hasDraw !== true) {
-        // Under the last line, where the editor's fix puts one.
-        const lastLine = (this.config?.code ?? "").split("\n").length - 1;
-        this.fail([{line: lastLine, message: NO_DRAW, missing: "draw"}], true);
-        return;
+    const outcome = readyOutcome(message);
+    if (run !== this.current) {
+      if (outcome === "draws") {
+        run.phase = {kind: "idle"};
+      } else {
+        this.discardStandby();
       }
-      if (message.registered !== true) {
-        return;  // Its code stopped with an error, which arrives on its own.
-      }
+      return;
+    }
+    // Under the last line, where the editor's fix for a missing draw puts one.
+    const lastLine = (this.config?.code ?? "").split("\n").length - 1;
+    if (outcome === "no draw") {
+      this.fail([{line: lastLine, message: NO_DRAW, missing: "draw"}], true);
+    } else if (outcome === "stopped early") {
+      this.fail([{line: lastLine, message: STOPPED_EARLY}], true);
+    } else if (outcome === "threw") {
+      run.phase = {kind: "threw"};
+    } else {
+      run.phase = {kind: "idle"};
       this.notBusy();
       this.flush();
-    } else if (message.registered !== true || message.hasDraw !== true) {
-      this.discardStandby();
     }
   }
 
@@ -317,15 +362,15 @@ export class CanvasLayer {
       this.fail([{line: 0, message: WRONG_SIZE}]);
       return;
     }
-    run.inFlight = null;
+    run.phase = {kind: "idle"};
     if (this.waiting.length === 0) {
       this.notBusy();
     }
     if (!run.drawn) {
       run.drawn = true;
       this.callbacks.onStatus([]);
-      if (this.keepStandby && !this.standby) {
-        this.standby = this.spawn(prepared);
+      if (this.keepStandby && this.phase.kind === "running" && !this.phase.standby) {
+        this.phase.standby = this.spawn(prepared);
       }
     }
     const pending = this.pendingDraw;
@@ -344,7 +389,7 @@ export class CanvasLayer {
         message: typeof message.message === "string" ? message.message.slice(0, 500) : "",
         stack: typeof message.stack === "string" ? message.stack.slice(0, 5000) : "",
         line: typeof message.line === "number" ? message.line : null,
-      }, prepared.source)], !run.ready);
+      }, prepared.source)], !this.loaded(run));
     } else {
       this.discardStandby();
     }
@@ -368,49 +413,54 @@ export class CanvasLayer {
     run?.worker.kill();
   }
 
+  // Stops both workers; the caller moves the layer on to its next phase.
   private stopRuns() {
     this.stopRun(this.current);
     this.stopRun(this.standby);
-    this.current = null;
-    this.standby = null;
   }
 
   // A spare that fails isn't replaced: the next restart starts a worker of its own.
   private discardStandby() {
-    this.stopRun(this.standby);
-    this.standby = null;
+    if (this.phase.kind === "running") {
+      this.stopRun(this.phase.standby);
+      this.phase.standby = null;
+    }
   }
 
   private fail(errors: LineError[], loading = false) {
     this.stopRuns();
-    this.stopped = true;
-    this.errors = errors;
+    this.phase = {kind: "stopped", errors};
     this.dropWaiting();
     this.callbacks.onStatus(errors, loading);
+    this.rejectPending(this.error());
+  }
+
+  private rejectPending(error: Error) {
     const pending = this.pendingDraw;
     this.pendingDraw = null;
-    pending?.reject(this.error());
+    pending?.reject(error);
   }
 
   private error(): Error {
-    return new Error(this.errors[0]?.message ?? "The Canvas2D code has an error.");
+    const errors = this.phase.kind === "stopped" ? this.phase.errors : [];
+    return new Error(errors[0]?.message ?? "The Canvas2D code has an error.");
   }
 
   // Starts again from setup and frame 0. A run that hasn't been sent steps is already there, unless
   // its code is slow to start, which may never end, so it's replaced.
   restart() {
     this.dropWaiting();
-    const run = this.current;
-    if (this.stopped || !this.prepared || !run || (!run.stepped && !this.slowToStart(run))) {
+    const phase = this.phase;
+    if (phase.kind !== "running" || (!phase.current.stepped && !this.slowToStart(phase.current))) {
       return;
     }
+    const run = phase.current;
     this.stopRun(run);
     if (run.stepped) {
       this.callbacks.onRestart?.();
     }
-    const next = this.standby ?? this.spawn(this.prepared);
-    this.standby = null;
-    this.use(next);
+    this.rejectPending(new Error("The Canvas2D layer was restarted."));
+    this.use(phase.prepared, phase.standby ?? this.spawn(phase.prepared));
   }
 
   // Steps that won't be drawn, with their video frames closed.
@@ -423,17 +473,17 @@ export class CanvasLayer {
 
   // Whether each step pushed needs its video textures' frames, in `videoFrames`.
   get needsVideoFrames(): boolean {
-    return this.videos && !this.stopped;
+    return this.videos && this.accepting;
   }
 
   // Whether to hold off pushing more steps, because the worker has fallen behind.
   get busy(): boolean {
-    return !this.stopped && this.waiting.length >= MAX_WAITING;
+    return this.accepting && this.waiting.length >= MAX_WAITING;
   }
 
   // Queues a step to draw. Steps are drawn in order, and onFrame gets the latest frame.
   push(inputs: LayerInputs) {
-    if (this.stopped || !this.config) {
+    if (!this.accepting) {
       inputs.videoFrames?.forEach(frame => frame.bitmap.close());
       return;
     }
@@ -443,11 +493,11 @@ export class CanvasLayer {
 
   private flush() {
     const run = this.current;
-    if (!run?.ready || run.inFlight !== null || this.waiting.length === 0) {
+    if (run?.phase.kind !== "idle" || this.waiting.length === 0) {
       return;
     }
     const id = this.nextBatch++;
-    run.inFlight = id;
+    run.phase = {kind: "drawing", batch: id};
     run.drawing = this.waiting[0]!.frame;
     const frames = this.waiting.flatMap(step => (step.videoFrames ?? []).map(frame => frame.bitmap));
     run.worker.port.postMessage({type: "steps", id, steps: this.waiting} satisfies ToWorker, frames);
@@ -461,9 +511,9 @@ export class CanvasLayer {
   // Draws one step and resolves with exactly its frame, for exports. One at a time.
   draw(inputs: LayerInputs): Promise<ImageBitmap> {
     return new Promise((resolve, reject) => {
-      if (this.stopped) {
+      if (!this.accepting) {
         inputs.videoFrames?.forEach(frame => frame.bitmap.close());
-        reject(this.error());
+        reject(this.phase.kind === "stopped" ? this.error() : new Error("The Canvas2D layer was closed."));
         return;
       }
       this.pendingDraw = {resolve, reject};
@@ -472,12 +522,10 @@ export class CanvasLayer {
   }
 
   dispose() {
-    this.disposed = true;
     this.dropWaiting();
     this.stopRuns();
-    const pending = this.pendingDraw;
-    this.pendingDraw = null;
-    pending?.reject(new Error("The Canvas2D layer was closed."));
+    this.phase = {kind: "disposed"};
+    this.rejectPending(new Error("The Canvas2D layer was closed."));
     this.sandbox.dispose();
     this.dropBitmaps([]);
   }
