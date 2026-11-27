@@ -131,6 +131,11 @@ export function formatFloat(value: number): string {
   return value.toFixed(5);
 }
 
+// A value written after `before`, spaced from a minus sign so `a-0.5` dragged below zero reads `a- -0.3`, not `a--0.3`.
+export function spacedAfter(before: string, text: string): string {
+  return before === '-' && text.startsWith('-') ? ' ' + text : text;
+}
+
 export function formatVec(values: number[]): string {
   return `vec${values.length}(${values.map((v) => v.toFixed(3)).join(', ')})`;
 }

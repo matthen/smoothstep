@@ -14,6 +14,8 @@ export function stepAt(seconds: number): number {
 export interface StepRenderer {
   readonly hasState: boolean;
   render(inputs: FrameInputs): void;
+  // Draws the last step again with these inputs, from the state before it.
+  redraw(inputs: FrameInputs): void;
 }
 
 export interface Steps {
@@ -39,7 +41,8 @@ export function restarts(steps: Steps, clock: number): boolean {
 //   steps. After a restart it draws only step 0, so set-up runs however late the first frame is.
 // - It takes at most `maxSteps` in one call, and drops the rest, so a page that falls behind runs the
 //   simulation slower rather than skipping ahead or catching up later.
-// - With the clock where it was, as when paused and a value changes, it draws again at the same step.
+// - With the clock where it was, as when paused and a value changes, it draws the same step again, from
+//   the same state, so the simulation doesn't move on.
 export function renderSteps(
   renderer: StepRenderer, steps: Steps, clock: number, time: number,
   inputs: (time: number, frameIndex: number) => FrameInputs, maxSteps = Infinity,
@@ -55,7 +58,7 @@ export function renderSteps(
     return {rendered: 0, clock, dropped: stepAt(clock)};
   }
   if (clock === steps.clock) {
-    renderer.render(inputs(time, steps.rendered));
+    renderer.redraw(inputs(time, steps.rendered));
     return steps;
   }
   const to = Math.min(due, steps.rendered + maxSteps);

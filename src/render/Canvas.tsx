@@ -26,6 +26,10 @@ export interface CanvasLayout {
 export interface CanvasHandle {
   // Renders the current frame and returns it as a PNG data URL (for thumbnails).
   captureFrame(): string | null;
+  // A picker's drag sets its literal as a uniform: see Renderer.startPick. False if that doesn't build.
+  startPick(...args: Parameters<Renderer["startPick"]>): boolean;
+  setPickValues(values: number[]): void;
+  endPick(): void;
 }
 
 // The image's code, each buffer's, the code they share and the Canvas2D layer's, as last built.
@@ -139,6 +143,18 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
         renderer.showProbe = true;
         needsPresent.current = true;
       }
+    },
+    startPick(...args) {
+      return rendererRef.current?.startPick(...args) ?? false;
+    },
+    // Paused, the same step draws again from the state before it, so the simulation doesn't move on.
+    setPickValues(values) {
+      rendererRef.current?.setPickValues(values);
+      needsRender.current = true;
+    },
+    endPick() {
+      rendererRef.current?.endPick();
+      needsRender.current = true;
     },
   }));
 

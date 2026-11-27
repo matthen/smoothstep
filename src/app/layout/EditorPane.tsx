@@ -24,10 +24,14 @@ interface Props {
   onCodeChange: (tab: ShaderId, code: string, isHelperChange: boolean) => void;
   onShowExpression: (tab: ShaderId, view: EditorView, range: Range | null) => void;
   onView: (tab: ShaderId, view: EditorView | null) => void;
+  onPickerEdit: (tab: ShaderId, code: string, from: number, to: number) => boolean;
+  onPickerRelease: (tab: ShaderId, code: string | null) => void;
 }
 
 // The code tabs, each tab's editor, and the docs.
-export default function EditorPane({docState, tabs, onBuild, onSave, onFixed, onCodeChange, onShowExpression, onView}: Props) {
+export default function EditorPane({
+  docState, tabs, onBuild, onSave, onFixed, onCodeChange, onShowExpression, onView, onPickerEdit, onPickerRelease,
+}: Props) {
   const {doc, layer, buildState, errorShader, lineErrors, layerErrors} = docState;
   const {codeTab, docs, docsShown, showCodeTab, codeTabs} = tabs;
   const showRemoved = (tab: ShaderId | null) => {
@@ -89,6 +93,8 @@ export default function EditorPane({docState, tabs, onBuild, onSave, onFixed, on
           onShowExpression={tab === "canvas" ? undefined : (view, range) => onShowExpression(tab, view, range)}
           codeTabs={tabs.glslTabs}
           onView={view => onView(tab, view)}
+          onPickerEdit={(changed, from, to) => onPickerEdit(tab, changed, from, to)}
+          onPickerRelease={changed => onPickerRelease(tab, changed)}
         />)}
       {docs && tabs.docsLoaded &&
         <Suspense fallback={<div className="referencePanel" hidden={!docsShown} />}>

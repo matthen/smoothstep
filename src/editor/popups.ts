@@ -12,9 +12,10 @@ import { findReferencesAt, findReferencesHint, renameHint, startRename } from '.
 import {
   createColorPicker, createDirectionPicker, createFloatPicker, createVec2Picker, type PickerWidget,
 } from './pickers';
+import { pickerPresses } from './pickerPresses';
 import {
   findPickerMatch, formatCssColor, formatFloat, formatJsNumber, formatVec, jsNumberScale, parseCssColor, parseVec,
-  type PickerKind, type PickerMatch,
+  spacedAfter, type PickerKind, type PickerMatch,
 } from './pickerValues';
 
 // Marks transactions made by dragging a picker.
@@ -113,9 +114,10 @@ const close = (view: EditorView) => {
   if (view.state.field(popupField)) view.dispatch({ effects: setPopup.of(null) });
 };
 
-function replaceValue(view: EditorView, text: string) {
+function replaceValue(view: EditorView, value: string) {
   const popup = view.state.field(popupField);
   if (!popup) return;
+  const text = spacedAfter(view.state.sliceDoc(popup.from - 1, popup.from), value);
   view.dispatch({
     changes: { from: popup.from, to: popup.to, insert: text },
     selection: { anchor: popup.from },
@@ -158,10 +160,38 @@ function popupDom(content: HTMLElement) {
   return dom;
 }
 
+// Told when a picker is let go after a press, or closes during one.
+export const pickerReleased = Facet.define<(view: EditorView) => void>();
+
+// Where the value the open picker edits is now.
+export function pickerRange(state: EditorState): { from: number; to: number } | null {
+  const popup = state.field(popupField, false);
+  return popup ? { from: popup.from, to: popup.to } : null;
+}
+
 function openPicker(view: EditorView, from: number, to: number, kind: PickerKind, text: string, anchor: number) {
   const create = () => {
     const widget = pickerWidget(view, kind, text);
-    return { dom: popupDom(widget.dom), offset: { x: -widget.width / 2, y: 8 }, destroy: widget.destroy };
+    const dom = popupDom(widget.dom);
+    const release = () => {
+      for (const released of view.state.facet(pickerReleased)) released(view);
+    };
+    const presses = pickerPresses(release);
+    const lift = (e: PointerEvent) => presses.lift(e.pointerId);
+    const liftAll = () => presses.liftAll();
+    const ends = ['pointerup', 'pointercancel', 'lostpointercapture'] as const;
+    dom.addEventListener('pointerdown', (e) => presses.press(e.pointerId));
+    // On the window, so a pointer that lifts away from the picker still counts.
+    for (const end of ends) window.addEventListener(end, lift, true);
+    window.addEventListener('blur', liftAll);
+    // Closing, even mid-drag, hands over any edits held back.
+    const destroy = () => {
+      widget.destroy?.();
+      for (const end of ends) window.removeEventListener(end, lift, true);
+      window.removeEventListener('blur', liftAll);
+      release();
+    };
+    return { dom, offset: { x: -widget.width / 2, y: 8 }, destroy };
   };
   const tooltip = { pos: from + anchor, above: false, create };
   view.dispatch({ effects: setPopup.of({ from, to, anchor, tooltip }) });

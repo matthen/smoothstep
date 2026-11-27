@@ -47,7 +47,9 @@ Click the canvas or an empty part of the page first, so the code editor doesn't 
 
 Click a number in the code for a slider that you can drag sideways to change it, and up or down to
 zoom in or out. A `vec2` value brings up a 2D picker. A `vec3` brings up a colour picker when its
-values are between 0 and 1, and a 3D direction picker otherwise. Click a built-in function, like `smoothstep`, or an input, like
+values are between 0 and 1, and a 3D direction picker otherwise. Once the code is built, dragging a
+picker changes the canvas as you go, and a simulation keeps running with the new value until you let
+go, when it starts again from frame 0. Click a built-in function, like `smoothstep`, or an input, like
 `iTime`, to see its definition. The editor also suggests completions as you type.
 
 In a shader tab, hold `Cmd` on a Mac or `Ctrl` elsewhere and click one of your own names, like a

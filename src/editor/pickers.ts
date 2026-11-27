@@ -65,6 +65,7 @@ function onDrag(el: HTMLElement, handlers: DragHandlers) {
   };
   el.addEventListener('pointerup', end);
   el.addEventListener('pointercancel', end);
+  el.addEventListener('lostpointercapture', end);
 }
 
 // A ruler that scrolls under a fixed needle: drag sideways to change the value, up and down to zoom.

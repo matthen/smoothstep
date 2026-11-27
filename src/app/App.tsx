@@ -109,7 +109,7 @@ export default function App() {
     setOpenDialog: open => setDialog(open ? "open" : null),
   });
   const {save, download} = library;
-  const builds = useBuilds({docState, tabs, probe, log, showTip});
+  const builds = useBuilds({docState, canvasRef, tabs, probe, log, showTip});
 
   const onDurationChange = useCallback((duration: number) => {
     edit({duration});
@@ -169,7 +169,7 @@ export default function App() {
         <EditorPane
           docState={docState} tabs={tabs} onBuild={builds.build} onSave={() => void save(false)}
           onFixed={builds.queueBuild} onCodeChange={builds.onCodeChange} onShowExpression={builds.showExpression}
-          onView={builds.onEditorView}
+          onView={builds.onEditorView} onPickerEdit={builds.onPickerEdit} onPickerRelease={builds.onPickerRelease}
         />
         <PreviewPane
           workspace={workspaceRef} onWidthChange={setPreviewWidth} onResizing={setResizing}

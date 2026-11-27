@@ -6,7 +6,7 @@ import { lastFrameName } from './completion';
 import { editorExtensions, loadJavaScript, type EditorLanguage } from './extensions';
 import type { CodeTabs, DefinitionElsewhere } from './goToDefinition';
 import { errorLinePos, missingSkeleton, setLineErrors } from './lineErrors';
-import { pickerEdit } from './popups';
+import { pickerEdit, pickerRange, pickerReleased } from './popups';
 import type { ShowExpression } from './showExpression';
 import './editor.scss';
 
@@ -36,6 +36,11 @@ export interface CodeEditorProps {
   onShowExpression?: ShowExpression;
   // The GLSL tabs, for finding and renaming a name's uses across them.
   codeTabs?: CodeTabs;
+  // A picker's edit to code[from..to]: true if the canvas shows it without a build, so the code is
+  // reported once, when the picker is let go.
+  onPickerEdit?(code: string, from: number, to: number): boolean;
+  // A picker was let go, with the code it changed if that wasn't reported yet, which isn't sent to onChange.
+  onPickerRelease?(code: string | null): void;
 }
 
 // Puts `code` at the cursor, on lines of its own, and shows it.
@@ -56,12 +61,14 @@ export function insertCode(view: EditorView, code: string) {
 
 export default function CodeEditor({
   value, onChange, onBuild, onSave, lineErrors, hidden, language = "glsl", autoFocus, skeleton, onFixed, lastFrame,
-  onView, definitionElsewhere, onShowExpression, codeTabs,
+  onView, definitionElsewhere, onShowExpression, codeTabs, onPickerEdit, onPickerRelease,
 }: CodeEditorProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const extensionsRef = useRef<Extension | null>(null);
-  const callbacksRef = useRef({ onChange, onBuild, onSave, onFixed, definitionElsewhere, onShowExpression, codeTabs });
+  const callbacksRef = useRef({
+    onChange, onBuild, onSave, onFixed, definitionElsewhere, onShowExpression, codeTabs, onPickerEdit, onPickerRelease,
+  });
   const lineErrorsRef = useRef(lineErrors);
   // The code the editor last reported or was given, so our own edits coming back as `value` are ignored.
   const knownValueRef = useRef(value);
@@ -69,12 +76,22 @@ export default function CodeEditor({
   // effect runs, and that older code must not reset the editor.
   const reportedRef = useRef<string[]>([]);
 
+  // Set while picker edits the canvas has shown are held back from onChange.
+  const heldRef = useRef(false);
+
   useLayoutEffect(() => {
-    callbacksRef.current = { onChange, onBuild, onSave, onFixed, definitionElsewhere, onShowExpression, codeTabs };
+    callbacksRef.current = {
+      onChange, onBuild, onSave, onFixed, definitionElsewhere, onShowExpression, codeTabs, onPickerEdit, onPickerRelease,
+    };
     lineErrorsRef.current = lineErrors;
   });
 
   useEffect(() => {
+    const reporting = (code: string) => {
+      heldRef.current = false;
+      knownValueRef.current = code;
+      reportedRef.current = [...reportedRef.current.slice(-49), code];
+    };
     const extensions = [
       editorExtensions({
         onBuild: () => callbacksRef.current.onBuild(),
@@ -89,10 +106,19 @@ export default function CodeEditor({
       EditorView.updateListener.of((update) => {
         if (!update.docChanged) return;
         const code = update.state.doc.toString();
-        knownValueRef.current = code;
-        reportedRef.current = [...reportedRef.current.slice(-49), code];
         const isHelperChange = update.transactions.some((tr) => tr.annotation(pickerEdit));
+        const range = isHelperChange ? pickerRange(update.state) : null;
+        if (range && callbacksRef.current.onPickerEdit?.(code, range.from, range.to)) {
+          heldRef.current = true;
+          return;
+        }
+        reporting(code);
         callbacksRef.current.onChange(code, isHelperChange);
+      }),
+      pickerReleased.of((view) => {
+        const code = heldRef.current ? view.state.doc.toString() : null;
+        if (code !== null) reporting(code);
+        callbacksRef.current.onPickerRelease?.(code);
       }),
     ];
     extensionsRef.current = extensions;
@@ -126,6 +152,7 @@ export default function CodeEditor({
     if (reportedRef.current.includes(value)) return;
     knownValueRef.current = value;
     reportedRef.current = [];
+    heldRef.current = false;
     if (value === view.state.doc.toString()) return;
     // A new document gets a fresh state, so undo can't step back into the previous one.
     view.setState(EditorState.create({ doc: value, extensions: extensionsRef.current! }));

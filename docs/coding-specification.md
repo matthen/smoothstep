@@ -62,7 +62,10 @@ starts again from its first frame each time it ends. Videos have no sound here. 
 `iPrevFrame` is a texture like the others, so you can read the last frame and build on it, for
 trails or simulations. It starts black, and is cleared each time you build, the canvas changes size
 or a texture changes. `iFrame` goes back to 0 then too, and when the animation loops or goes back to
-the start, so `if (iFrame == 0)` is the place to set things up. While it plays, `iPrevFrame`,
+the start, so `if (iFrame == 0)` is the place to set things up. When you drag a picker in code
+that's built, the simulation keeps running and uses each new value as you drag. While paused, it stays
+on its step, which draws again with each value. It starts again once, when you let go, if the value
+changed. While it plays, `iPrevFrame`,
 `iFrame` and the buffers move on 60 times a second, whatever the screen's refresh rate or the export's frame rate, so
 a simulation runs at the same speed everywhere.
 
@@ -128,7 +131,8 @@ value.
 
 The code shown is marked with a dashed line. It stays on the canvas as you edit and build, until
 you click the × in the bar above the canvas, or press `Alt + Enter` on it again. While you drag a
-picker, the canvas shows the image until you let go. Your code, your saved animation and anything
+picker, the value shown changes with it. A picker on a number that GLSL needs as a constant, such as
+a `const` or an array size, rebuilds the code as you drag, so the canvas shows the image until you let go. Your code, your saved animation and anything
 you render stay as they are.
 
 The pixel inspector shows the numbers. Click its button at the top left of the canvas, then point
