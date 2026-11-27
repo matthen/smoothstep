@@ -38,11 +38,15 @@ export function useExport(store: ConsoleStore, doc: AnimationDocument, closeDial
   const [exportError, setExportError] = useState<string | null>(null);
   const exportAbort = useRef<AbortController | null>(null);
   const exporting = useCallback(() => exportAbort.current !== null, []);
+  // Whether to play again once renders stop, taken from before the first of a run of back-to-back renders.
+  const resumePlaying = useRef(false);
 
   const startExport = async (preview: Preview) => {
+    if (exportAbort.current === null) {
+      resumePlaying.current = preview.isPlaying;
+    }
     const controller = new AbortController();
     exportAbort.current = controller;
-    const resume = preview.isPlaying;
     preview.setIsPlaying(false);
     setExportError(null);
     setExportProgress({stage: "rendering", fraction: 0});
@@ -74,7 +78,7 @@ export function useExport(store: ConsoleStore, doc: AnimationDocument, closeDial
       if (exportAbort.current === controller) {
         exportAbort.current = null;
         setExportProgress(null);
-        if (resume) {
+        if (resumePlaying.current) {
           preview.setIsPlaying(true);
         }
       }

@@ -54,6 +54,8 @@ export interface Step {
 }
 
 export interface Lesson {
+  // Saved progress names the lesson by this, so it mustn't change.
+  id: string;
   title: string;
   steps: Step[];
 }
@@ -158,6 +160,7 @@ function challenges(lesson: string, list: ReactNode, hint: ReactNode): Step {
 
 export const LESSONS: Lesson[] = [
   {
+    id: "colour",
     title: "Colour from position",
     steps: [
       {
@@ -237,6 +240,7 @@ export const LESSONS: Lesson[] = [
     ],
   },
   {
+    id: "time",
     title: "Moving with time",
     steps: [
       {
@@ -338,6 +342,7 @@ vec3 colour = mix(left, right, t);`}</Lines>
     ],
   },
   {
+    id: "shapes",
     title: "Shapes",
     steps: [
       {
@@ -461,6 +466,7 @@ float d = length(uv - centre) - radius;`}</Lines>
     ],
   },
   {
+    id: "timeline",
     title: "The timeline",
     steps: [
       {
@@ -603,6 +609,7 @@ vec3 inside = mix(vec3(0.3, 0.55, 1.0), vec3(1.0, 0.6, 0.2), warmth);`}</Lines>
     ],
   },
   {
+    id: "patterns",
     title: "Patterns",
     steps: [
       {
@@ -702,6 +709,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
     ],
   },
   {
+    id: "textures",
     title: "Textures",
     steps: [
       {
@@ -788,6 +796,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
     ],
   },
   {
+    id: "memory",
     title: "Memory with iPrevFrame",
     steps: [
       {
@@ -879,6 +888,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
     ],
   },
   {
+    id: "buffers",
     title: "Buffers",
     steps: [
       {
@@ -1009,6 +1019,7 @@ vec2 cell = fract(polar * vec2(12.0, 3.0)) * 2.0 - 1.0;`}</Lines>
     ],
   },
   {
+    id: "canvas2d",
     title: "Draw with JavaScript",
     steps: [
       {
@@ -1213,6 +1224,7 @@ vec4 drawing = texture(iCanvas2D, uv);`}</Lines>
     ],
   },
   {
+    id: "share",
     title: "Share it",
     steps: [
       {

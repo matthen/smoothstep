@@ -63,9 +63,10 @@ function withTransition(row: number, transition: Partial<Transition>): TutorialS
 }
 
 describe("lessons", () => {
-  it("have unique step ids, a task for every check, and real examples", () => {
+  it("have unique lesson and step ids, a task for every check, and real examples", () => {
     const ids = LESSONS.flatMap(l => l.steps.map(s => s.id));
     expect(new Set(ids).size).toBe(ids.length);
+    expect(new Set(LESSONS.map(l => l.id)).size).toBe(LESSONS.length);
     for (const s of LESSONS.flatMap(l => l.steps)) {
       expect(s.check === undefined || s.task !== undefined, s.id).toBe(true);
       for (const id of s.examples ?? []) {
@@ -285,13 +286,46 @@ describe("progress", () => {
     saveProgress({lesson: 2, step: 40, completed: []});
     expect(loadProgress().step).toBe(LESSONS[2]!.steps.length - 1);
   });
+
+  it("names the lesson by its id, so adding a lesson doesn't move anyone", () => {
+    const share = LESSONS.findIndex(l => l.id === "share");
+    saveProgress({lesson: share, step: 1, completed: []});
+    expect(JSON.parse(window.localStorage.getItem("smoothstep.tutorial")!)).toMatchObject({lessonId: "share"});
+    expect(loadProgress().lesson).toBe(share);
+    // A lesson that's gone starts the tutorial again, keeping the steps done.
+    window.localStorage.setItem("smoothstep.tutorial", JSON.stringify({lessonId: "gone", step: 2, completed: ["gradient"]}));
+    expect(loadProgress()).toEqual({lesson: 0, step: 0, completed: ["gradient"]});
+  });
+
+  it("opens at a lesson named by its id, or the saved one for an id it doesn't know", () => {
+    saveProgress({lesson: 1, step: 0, completed: []});
+    expect(LESSONS[openingProgress("share").lesson]!.id).toBe("share");
+    expect(openingProgress("gone").lesson).toBe(1);
+  });
+
+  it("reads a saved lesson number in the order from before the Canvas2D lesson, unless that lesson was started", () => {
+    const at = (lesson: number, completed: string[] = []) => {
+      window.localStorage.setItem("smoothstep.tutorial", JSON.stringify({lesson, step: 0, completed}));
+      return LESSONS[loadProgress().lesson]!.id;
+    };
+    expect(at(1)).toBe("time");
+    expect(at(8)).toBe("share");
+    expect(at(8, ["add-canvas"])).toBe("canvas2d");
+    expect(at(9)).toBe("share");
+    // Saved in the order with the Canvas2D lesson, after doing some of it.
+    const canvas2dDone = LESSONS.find(l => l.id === "canvas2d")!.steps.map(s => s.id);
+    expect(at(7, canvas2dDone)).toBe("buffers");
+    expect(at(8, canvas2dDone)).toBe("canvas2d");
+    expect(at(9, [...canvas2dDone, "save"])).toBe("share");
+  });
 });
 
 describe("tutorial route", () => {
-  it("parses #tutorial and #tutorial/<n>", () => {
+  it("parses #tutorial, #tutorial/<n> and #tutorial/<lesson id>", () => {
     expect(parseHash("#tutorial")).toEqual({kind: "tutorial", lesson: null});
     expect(parseHash("#tutorial/2")).toEqual({kind: "tutorial", lesson: 1});
-    expect(parseHash("#tutorial/x")).toBeNull();
+    expect(parseHash("#tutorial/share.")).toEqual({kind: "tutorial", lesson: "share"});
+    expect(parseHash("#tutorial/2x")).toBeNull();
     expect(parseHash("#example/534226b1d5ed")).toEqual({kind: "example", id: "534226b1d5ed"});
   });
 });

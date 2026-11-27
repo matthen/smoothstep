@@ -1,13 +1,14 @@
 // What the URL hash asks the app (or the embedded player) to open:
 //   #anim/<id>       an animation saved in this browser
 //   #example/<id>    a built-in example
-//   #tutorial[/<n>]  a new animation with the tutorial open at lesson n
+//   #tutorial[/<l>]  a new animation with the tutorial open at a lesson, by id or by number from 1
 //   #share/<data>    an animation carried in the link itself, compressed (see share.ts)
 //   #url/<url>       an animation file anyone can download from that URL
 //   #gist/<id>       the animation file in a GitHub gist
 export type Route =
   | {kind: "anim" | "example"; id: string}
-  | {kind: "tutorial"; lesson: number | null}
+  // A lesson's index, or its id.
+  | {kind: "tutorial"; lesson: number | string | null}
   | {kind: "share"; data: string}
   | {kind: "url"; url: string}
   | {kind: "gist"; id: string};
@@ -28,10 +29,10 @@ export function parseHash(hash: string): Route | null {
   }
   // Chat apps and sentences often leave punctuation stuck to the end of a link.
   hash = hash.replace(/[.,;:!?)\]'"]+$/, "");
-  const tutorial = hash.match(/^#tutorial(?:\/(\d+))?$/);
+  const tutorial = hash.match(/^#tutorial(?:\/(?:(\d+)|([a-z][\w-]*)))?$/);
   if (tutorial) {
     // Lessons are numbered from 1 in the URL.
-    return {kind: "tutorial", lesson: tutorial[1] ? Math.max(0, Number(tutorial[1]) - 1) : null};
+    return {kind: "tutorial", lesson: tutorial[1] ? Math.max(0, Number(tutorial[1]) - 1) : tutorial[2] ?? null};
   }
   const stored = hash.match(/^#(anim|example)\/([a-f0-9]+)$/);
   if (stored) {
@@ -57,7 +58,7 @@ export function isBrokenShareLink(hash: string): boolean {
 export function routeHash(route: Route): string {
   switch (route.kind) {
     case "tutorial":
-      return "#tutorial" + (route.lesson === null ? "" : "/" + (route.lesson + 1));
+      return "#tutorial" + (route.lesson === null ? "" : "/" + (typeof route.lesson === "number" ? route.lesson + 1 : route.lesson));
     case "share":
       return "#share/" + route.data;
     case "url":

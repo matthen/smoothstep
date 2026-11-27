@@ -132,7 +132,8 @@ function DurationInput({duration, onDurationChange}: Pick<PlayerControlsProps, "
           const next = typeof v === "number" ? String(Number(v.toFixed(6))) : v;
           setText(next);
           const nextValue = Number(next);
-          if (next.trim() !== "" && Number.isFinite(nextValue) && nextValue > 0) {
+          // Leaving the box re-sends the value as a number, which mustn't mark the animation unsaved.
+          if (next.trim() !== "" && Number.isFinite(nextValue) && nextValue > 0 && nextValue !== duration) {
             onDurationChange(nextValue);
           }
         }}

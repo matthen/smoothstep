@@ -20,16 +20,16 @@ under Help → Documentation, as a tab beside your code.
 
 - [Tutorial](tutorial/README.md)\
   Ten short lessons you follow in the app, from your first shader to sharing it
-  1. [Colour from position](https://smoothstep.io/#tutorial/1)
-  2. [Moving with time](https://smoothstep.io/#tutorial/2)
-  3. [Shapes](https://smoothstep.io/#tutorial/3)
-  4. [The timeline](https://smoothstep.io/#tutorial/4)
-  5. [Patterns](https://smoothstep.io/#tutorial/5)
-  6. [Textures](https://smoothstep.io/#tutorial/6)
-  7. [Memory with iPrevFrame](https://smoothstep.io/#tutorial/7)
-  8. [Buffers](https://smoothstep.io/#tutorial/8)
-  9. [Draw with JavaScript](https://smoothstep.io/#tutorial/9)
-  10. [Share it](https://smoothstep.io/#tutorial/10)
+  1. [Colour from position](https://smoothstep.io/#tutorial/colour)
+  2. [Moving with time](https://smoothstep.io/#tutorial/time)
+  3. [Shapes](https://smoothstep.io/#tutorial/shapes)
+  4. [The timeline](https://smoothstep.io/#tutorial/timeline)
+  5. [Patterns](https://smoothstep.io/#tutorial/patterns)
+  6. [Textures](https://smoothstep.io/#tutorial/textures)
+  7. [Memory with iPrevFrame](https://smoothstep.io/#tutorial/memory)
+  8. [Buffers](https://smoothstep.io/#tutorial/buffers)
+  9. [Draw with JavaScript](https://smoothstep.io/#tutorial/canvas2d)
+  10. [Share it](https://smoothstep.io/#tutorial/share)
 - [Examples](examples.md)\
   Animations to open, play and change
 - [Sharing animations](sharing.md)\

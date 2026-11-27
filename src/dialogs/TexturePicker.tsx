@@ -9,8 +9,8 @@ import { usePhone } from '../app/layout/usePhone';
 import { asset, textureURL } from '../lib/config';
 import { EMPTY_TEXTURE, type TextureSlot } from '../lib/document';
 import {
-  addUploadedImage, deleteImage, listImages, MAX_IMAGE_DIM, MAX_VIDEO_MB, StorageFullError, UploadError,
-  type StoredImage,
+  addUploadedImage, deleteImage, listImages, MAX_IMAGE_DIM, MAX_VIDEO_MB, StorageFullError, temporaryImageIds,
+  UploadError, type StoredImage,
 } from '../lib/localStore';
 import { formatDuration, isVideoType, isVideoURL } from '../lib/media';
 import TextureData from './textures.json';
@@ -204,9 +204,11 @@ export default function TexturePicker(
     return () => window.clearTimeout(timer);
   }, [show]);
 
-  // Uploads in this animation that aren't in this browser (e.g. from a file opened without its images).
+  // Uploads in this animation that aren't stored in this browser (e.g. from a file opened without its
+  // images), and unsaved images from an opened file, so one taken out of its slot can be put back.
   const uploadIds = new Set(uploads.map(image => image.id));
-  const otherUploads = textures.filter(t => t.isUserUploaded && !uploadIds.has(t.url));
+  const otherUploads = [...new Set([...textures.filter(t => t.isUserUploaded).map(t => t.url), ...temporaryImageIds()])]
+    .filter(id => !uploadIds.has(id));
 
   const select = (url: string, isUserUploaded: boolean) => setTexture({...texture, url, isUserUploaded});
 
@@ -260,13 +262,13 @@ export default function TexturePicker(
                 "upload", false, () => {setUploadFormKey(k => k + 1); setShowUpload(true);},
                 <TbPhotoPlus className="thumbnail" />, "Add image or video",
               )}
-              {otherUploads.map(t => pickerItem(
-                "other-" + t.url, t.url === texture.url, () => select(t.url, true),
+              {otherUploads.map(id => pickerItem(
+                "other-" + id, id === texture.url, () => select(id, true),
                 <TextureThumbnail
-                  src={uploadThumbURL(t.url)} alt="texture preview"
-                  onDuration={seconds => setMeasured(m => m[t.url] === seconds ? m : {...m, [t.url]: seconds})}
+                  src={uploadThumbURL(id)} alt="texture preview"
+                  onDuration={seconds => setMeasured(m => m[id] === seconds ? m : {...m, [id]: seconds})}
                 />,
-                undefined, undefined, isVideoURL(uploadThumbURL(t.url)) ? formatDuration(measured[t.url]) : null,
+                undefined, undefined, isVideoURL(uploadThumbURL(id)) ? formatDuration(measured[id]) : null,
               ))}
               {uploads.map(image =>
                 <figure className={"picker" + (image.id === texture.url ? " selected" : "")} key={image.id}>

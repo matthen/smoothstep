@@ -69,6 +69,7 @@ export default function PreviewPane(
         ref={canvasRef}
         shaders={docState.shaders} buildId={docState.buildId} textureURLs={inputs.textureURLs}
         layerTextures={inputs.layerTextures} layerOverlay={layer?.overlay ?? true} onLayerStatus={onLayerStatus}
+        onLayerSettled={() => docState.dispatch({type: "layerSettled"})}
         onLayerLog={log.addLayerLogs} onLayerRestart={log.onLayerRestart} onTextureFailed={log.onTextureFailed}
         playhead={playhead} playing={playback.advancing} duration={doc.duration}
         valuesAt={playback.valuesAt}

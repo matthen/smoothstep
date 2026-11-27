@@ -223,6 +223,18 @@ describe("Textures and TexturePicker", () => {
     await waitFor(() => expect(badge(other)).toBe(formatDuration(9.5)));
   });
 
+  it("still offers an opened file's unsaved image once no slot uses it", async () => {
+    localStore.addTemporaryImage("dddd00000006", new Blob(["x"], {type: "image/png"}));
+    const props = renderTextures();
+    await openSlot("iTexture1");
+    const unsaved = within(picker()).getAllByAltText("texture preview")
+      .find(img => img.getAttribute("src") === localStore.imageURL("dddd00000006"))!;
+    await userEvent.click(unsaved);
+    await userEvent.click(within(picker()).getByRole("button", {name: "Apply changes"}));
+    const picked = props.onChange.mock.calls[0]![0] as TextureSlot[];
+    expect(picked[1]).toEqual({id: "iTexture1", url: "dddd00000006", isUserUploaded: true});
+  });
+
   it("empties a slot", async () => {
     const textures = emptyTextures();
     textures[2] = {id: "iTexture2", url: "fonts/1.png", isUserUploaded: false};

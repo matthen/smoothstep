@@ -90,7 +90,8 @@ export function tutorialState(
     code: doc.code, builtCode,
     shared: doc.shared ?? "", buffers: bufferCodes(doc), builtShared: builtExtras.shared, builtBuffers: builtExtras.buffers,
     canvas: layer?.code ?? null, builtCanvas: builtExtras.canvas, canvasOverlay: layer?.overlay ?? true,
-    built: docState.buildState === "built" && docState.compiled?.ok === true && docState.compiled.code === builtCode,
+    built: docState.buildState === "built" && docState.compiled?.ok === true && docState.compiled.code === builtCode &&
+      docState.layerSettled,
     isPlaying, time, variables: doc.variables, textures: doc.textures, duration: doc.duration,
     aspectRatio: doc.aspectRatio,
   };

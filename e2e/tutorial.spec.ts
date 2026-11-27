@@ -67,7 +67,7 @@ test("the tutorial puts code in the editor, notices the build, and moves on", as
 
 test("the buffers lesson adds a buffer, fills several tabs, and checks every tab's code", async ({page, context}) => {
   const errors = await offline(context);
-  await page.goto("./#tutorial/8");
+  await page.goto("./#tutorial/buffers");
   const panel = page.getByRole("complementary", {name: "Tutorial"});
   const status = panel.getByRole("status");
   const next = () => panel.getByRole("button", {name: "Next"}).click();
@@ -120,7 +120,7 @@ test("the buffers lesson adds a buffer, fills several tabs, and checks every tab
 
 test("the Canvas2D lesson adds the layer, fills its tab, and has the image read iCanvas2D", async ({page, context}) => {
   const errors = await offline(context);
-  await page.goto("./#tutorial/9");
+  await page.goto("./#tutorial/canvas2d");
   const panel = page.getByRole("complementary", {name: "Tutorial"});
   const status = panel.getByRole("status");
   const next = () => panel.getByRole("button", {name: "Next"}).click();

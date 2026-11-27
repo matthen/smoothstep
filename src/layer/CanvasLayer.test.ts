@@ -270,6 +270,28 @@ describe("CanvasLayer", () => {
     expect(seen.frames).toEqual([]);
   });
 
+  it("counts as settled once it has drawn or failed, and stays so when given the same configuration", async () => {
+    const {layer, worker} = makeLayer();
+    layer.configure(CONFIG);
+    await settle();
+    worker(0).ready();
+    expect(layer.settled).toBe(false);
+    layer.push(step(0));
+    worker(0).frame(CONFIG.width, CONFIG.height);
+    expect(layer.settled).toBe(true);
+    // An edit undone before the layer took it sends no new status, so the old one must stand.
+    expect(layer.configure({...CONFIG})).toBe(false);
+    expect(layer.settled).toBe(true);
+
+    layer.configure({...CONFIG, code: "function draw(ctx) { return 1; }"});
+    expect(layer.settled).toBe(false);
+    await settle();
+    worker(2).ready();
+    layer.push(step(0));
+    worker(2).frame(CONFIG.width + 1, CONFIG.height);
+    expect(layer.settled).toBe(true);
+  });
+
   it("closes the video frames of steps it won't draw", () => {
     const {layer} = makeLayer();
     const early = new FakeBitmap(1, 1);

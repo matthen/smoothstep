@@ -45,7 +45,7 @@ test("Help opens the docs, the shader inputs and the keyboard shortcuts in the D
   await page.getByLabel("Close the docs").click();
 
   // The tutorial's last step links to both.
-  await page.goto("./#tutorial/10");
+  await page.goto("./#tutorial/share");
   const panel = page.getByRole("complementary", {name: "Tutorial"});
   while (!await panel.getByRole("heading", {name: "Keep learning"}).isVisible()) {
     await panel.getByRole("button", {name: "Next"}).click();

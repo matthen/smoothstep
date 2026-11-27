@@ -48,6 +48,8 @@ interface CanvasProps extends FrameProps {
   layerOverlay: boolean;
   // The Canvas2D layer's errors, and whether its code failed to load; none once it draws.
   onLayerStatus(errors: LineError[], loading?: boolean): void;
+  // The Canvas2D layer's last status still holds, so no new one is coming.
+  onLayerSettled(): void;
   // The Canvas2D code's console calls, from runs of the latest build.
   onLayerLog(logs: LayerLog[], dropped: number): void;
   // The Canvas2D layer started its code again, other than for a build.
