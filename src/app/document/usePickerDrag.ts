@@ -1,3 +1,4 @@
+// Dragging a value picker in the code, from its first edit until it's let go.
 import { useEffect, useRef, type RefObject } from 'react';
 
 import { useLatest } from '../../lib/useLatest';

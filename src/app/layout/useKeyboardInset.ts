@@ -1,3 +1,4 @@
+// Where the on-screen keyboard is, for laying out the page around it on phones and tablets.
 import { useEffect, useState } from 'react';
 
 // More of the page than this hidden at the bottom means an on-screen keyboard, not a browser toolbar.

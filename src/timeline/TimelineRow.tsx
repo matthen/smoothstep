@@ -1,3 +1,4 @@
+// One row of the timeline, with its transitions as blocks, the curve they make, and any transition being made.
 import { VisuallyHidden } from '@mantine/core';
 import { useMemo, type PointerEvent as ReactPointerEvent } from 'react';
 
@@ -22,7 +23,6 @@ interface Props {
   onTransitionPointerDown: (event: ReactPointerEvent<HTMLDivElement>, index: number) => void;
 }
 
-// One row of the timeline: its transitions as blocks, the curve they make, and any transition being made.
 export default function TimelineRow(
   {transitions, pxPerSecond, width, range, selectedIndex, playhead, pending, prompt, phone, onTransitionPointerDown}: Props,
 ) {

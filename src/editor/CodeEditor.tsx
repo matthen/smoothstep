@@ -1,3 +1,4 @@
+// The React component that wraps one code tab's CodeMirror editor.
 import { EditorState, Transaction, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { useEffect, useLayoutEffect, useRef } from 'react';

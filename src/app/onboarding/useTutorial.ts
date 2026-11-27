@@ -1,3 +1,4 @@
+// The tutorial in the app, which puts each step's code in the animation and tells its checks what's built.
 import { useState } from 'react';
 
 import { TUTORIAL_HREF } from '../../lib/config';

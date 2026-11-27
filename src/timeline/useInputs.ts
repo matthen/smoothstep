@@ -1,3 +1,4 @@
+// The timeline's rows and the texture slots the panels show, from what the code uses and the animation sets.
 import { useCallback, useMemo, useState } from 'react';
 
 import { textureURL } from '../lib/config';
@@ -6,8 +7,6 @@ import { bufferCodes, EMPTY_TEXTURE, layerTextureURLs, type AnimationDocument } 
 import { floatNames } from './names';
 import { floatsInCode, inputsInCode } from './Sliders';
 
-// The timeline's rows and the texture slots the panels show, from what the code uses and the
-// animation sets.
 export function useInputs(doc: AnimationDocument) {
   const imagesVersion = useImagesChanged();
   // Every tab's code, the image's first, so its #define names win.

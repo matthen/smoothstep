@@ -1,6 +1,6 @@
+// The canvas container's width, height and offset within the pane, where the play bar is placed.
 import { useEffect, useState, type RefObject } from 'react';
 
-// The container's width, height and offset within the pane, where the play bar is placed.
 export function useContainerSize(containerRef: RefObject<HTMLDivElement | null>): [number, number, number] {
   const [container, setContainer] = useState<[number, number, number]>([0, 0, 0]);
   useEffect(() => {

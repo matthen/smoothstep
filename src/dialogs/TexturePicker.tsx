@@ -1,3 +1,4 @@
+// The dialog that picks a texture slot's image or video, from the built-in textures or the user's uploads.
 import { ActionIcon, Alert, Button, Group, Loader, Text } from '@mantine/core';
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { useDropzone } from 'react-dropzone';

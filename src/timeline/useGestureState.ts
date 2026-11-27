@@ -1,3 +1,4 @@
+// The pointer gesture under way on the timeline, and where a click would start a new transition.
 import { useEffect, useRef, useState } from 'react';
 
 import { canHold, holdCreating, HOLD_MS, type Gesture } from './gestures';
@@ -8,7 +9,6 @@ export interface Selection {
   startDSecs: number;
 }
 
-// The pointer gesture under way on the timeline, and where a click would start a new transition.
 export function useGestureState() {
   const [gesture, setGestureState] = useState<Gesture>({kind: "idle"});
   // Pointer handlers read the gesture from here, as moves can arrive before React re-renders.

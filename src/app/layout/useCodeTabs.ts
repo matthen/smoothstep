@@ -1,3 +1,4 @@
+// The code tabs above the editor, each with its own editor, and the Docs tab after them.
 import { EditorView } from '@codemirror/view';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
@@ -24,7 +25,6 @@ interface Options {
   typingIn: "code" | "panel" | null;
 }
 
-// The code tabs above the editor, each with its own editor, and the Docs tab after them.
 export function useCodeTabs({isNew, doc, sharedUntouched, phone, showCodeOnPhone, typingIn}: Options) {
   // The code the editor shows, or showed before the Docs tab.
   const [codeTab, setCodeTab] = useState<ShaderId>("image");

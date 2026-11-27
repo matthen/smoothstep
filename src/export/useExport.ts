@@ -1,3 +1,4 @@
+// The Render dialog's settings, progress and errors, and starting or cancelling a render.
 import { useCallback, useRef, useState } from 'react';
 
 import type { ConsoleStore } from '../console/consoleStore';

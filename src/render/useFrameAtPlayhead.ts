@@ -1,3 +1,5 @@
+// Drawing the frame at the playhead, stepping the simulation up to it, and asking for a draw whenever the
+// playhead or what's drawn at it changes.
 import { useCallback, useEffect, useRef } from 'react';
 
 import { useLatest } from '../lib/useLatest';
@@ -17,8 +19,7 @@ export interface FrameProps {
   onRestart(): void;
 }
 
-// Drawing the frame at the playhead, stepping the simulation up to it, and asking for a draw whenever the
-// playhead or what's drawn at it changes. `restart` starts the simulation again from step 0.
+// `restart` starts the simulation again from step 0.
 export function useFrameAtPlayhead(refs: CanvasRefs, props: FrameProps) {
   const {rendererRef, layerRef, needsRender: needsRenderRef} = refs;
   const propsRef = useLatest(props);

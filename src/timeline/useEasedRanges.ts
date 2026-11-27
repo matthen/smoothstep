@@ -1,3 +1,5 @@
+// Each timeline row's value range as drawn. When it changes, the drawing eases to the new range, so the curve
+// visibly moves before it rescales. A row going to or from a single value jumps, as there's no scale to ease between.
 import { useEffect, useRef, useState } from 'react';
 
 import type { ValueRange } from './curves';
@@ -8,9 +10,6 @@ const flat = (r: ValueRange) => !(r.hi - r.lo > 1e-9);
 const same = (a: ValueRange, b: ValueRange) => a.lo === b.lo && a.hi === b.hi;
 const lerp = (a: number, b: number, s: number) => a + (b - a) * s;
 
-// Each row's value range as drawn: when a row's range changes, such as when its end value is
-// stepped up, the drawing eases to the new one, so the curve visibly moves before it rescales.
-// A row going to or from a single value jumps, since there's no scale to ease between.
 export function useEasedRanges(targets: readonly ValueRange[]): readonly ValueRange[] {
   const [shown, setShownState] = useState(targets);
   // The effect reads what's drawn from here, mid-ease included.

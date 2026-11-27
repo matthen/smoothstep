@@ -1,3 +1,4 @@
+// iFrame starting again from 0 on a build, full screen, and the divider that sets how wide the canvas's side is.
 import { expect, test, type Page } from '@playwright/test';
 
 import { FRAME_WAIT, offline, skipTour } from './helpers';

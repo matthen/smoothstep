@@ -1,3 +1,4 @@
+// The app's Mantine theme, in the Dracula palette's colours.
 import { createTheme, type MantineColorsTuple } from '@mantine/core';
 
 // The Dracula palette as Mantine colour scales. `dark` runs from the foreground (0) to the

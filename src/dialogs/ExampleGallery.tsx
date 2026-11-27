@@ -1,3 +1,4 @@
+// The bundled examples as cards in groups, each opening its example, in the welcome and Open dialogs.
 import { Badge, Text, Title } from '@mantine/core';
 import { useRef } from 'react';
 
@@ -41,7 +42,6 @@ function ExampleCard({example, onOpen}: {example: Example; onOpen(): void}) {
   );
 }
 
-// The bundled examples as cards, grouped, each opening the example.
 export default function ExampleGallery({onOpen}: {onOpen(): void}) {
   return (
     <div className="exampleGallery">

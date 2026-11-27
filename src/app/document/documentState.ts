@@ -1,3 +1,4 @@
+// The open animation's state as a reducer, with the actions that open, edit, build and save it.
 import {
   canvasLayer, NEW_CANVAS_CODE, newDocument, sameExtras, shaderExtras, withCanvasLayer, type AnimationDocument,
   type ShaderExtras,

@@ -1,3 +1,4 @@
+// The bottom panel's Timeline tab, with a row of transitions for each iFloat, under a ruler with the playhead.
 import {useEffect, useEffectEvent, useRef} from "react";
 import {ActionIcon, Tooltip} from "@mantine/core";
 import {useMediaQuery} from "@mantine/hooks";

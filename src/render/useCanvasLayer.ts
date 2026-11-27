@@ -1,3 +1,4 @@
+// The preview's Canvas2D layer, started when a build has one and again when what it runs with changes.
 import { useEffect, useRef, useState, type RefObject } from 'react';
 
 import type { CanvasLayer, LayerLog } from '../layer/CanvasLayer';
@@ -42,8 +43,7 @@ interface Options {
   propsRef: RefObject<LayerCallbacks>;
 }
 
-// The Canvas2D layer: started when a build has one, and again when what it runs with changes. Returns the
-// step it has been drawing for a while, or "starting" while its code first runs.
+// Returns the step the layer has been drawing for a while, or "starting" while its code first runs.
 export function useCanvasLayer({refs, restart, code, buildId, duration, textures, size, propsRef}: Options) {
   const {rendererRef, layerRef, needsRender: needsRenderRef, needsPresent: needsPresentRef} = refs;
   const {width, height, layerWidth, layerHeight} = size;
