@@ -13,7 +13,8 @@ interface Draw {
 function play(frameTimes: readonly number[], hasState = true, maxSteps = Infinity) {
   const draws: Draw[] = [];
   let frame = 0;
-  const renderer = {hasState, render: (inputs: FrameInputs) => draws.push({frame, ...inputs})};
+  const draw = (inputs: FrameInputs) => draws.push({frame, ...inputs});
+  const renderer = {hasState, render: draw, redraw: draw};
   let steps: Steps = RESTART;
   for (; frame < frameTimes.length; frame++) {
     const time = frameTimes[frame]!;
@@ -67,7 +68,7 @@ describe("a shader with state", () => {
 
   it("steps at the times they fell at when it restarted partway through the animation", () => {
     const times: number[] = [];
-    const renderer = {hasState: true, render: (inputs: FrameInputs) => times.push(inputs.time)};
+    const renderer = {hasState: true, render: (inputs: FrameInputs) => times.push(inputs.time), redraw: () => undefined};
     const inputs = (time: number, frameIndex: number) => ({time, duration: 10, frameIndex, variableValues: []});
     // Restarted at 4 s, then a frame for each step.
     let steps = RESTART;
@@ -78,14 +79,18 @@ describe("a shader with state", () => {
     times.forEach((time, step) => expect(time - 4).toBeCloseTo(step / STEPS_PER_SECOND, 6));
   });
 
-  it("draws again at the same step when the clock hasn't moved, as when paused", () => {
-    const draws: number[] = [];
-    const renderer = {hasState: true, render: (inputs: FrameInputs) => draws.push(inputs.frameIndex)};
+  it("draws the same step again, without stepping, when the clock hasn't moved, as when paused", () => {
+    const draws: string[] = [];
+    const renderer = {
+      hasState: true,
+      render: (inputs: FrameInputs) => draws.push(`step ${inputs.frameIndex}`),
+      redraw: (inputs: FrameInputs) => draws.push(`again ${inputs.frameIndex}`),
+    };
     const inputs = (time: number, frameIndex: number) => ({time, duration: 10, frameIndex, variableValues: []});
     const started = renderSteps(renderer, RESTART, 0, 0, inputs);
     const steps = renderSteps(renderer, started, 0.1, 0.1, inputs);
-    renderSteps(renderer, steps, 0.1, 0.1, inputs);
-    expect(draws.slice(-2)).toEqual([stepAt(0.1), stepAt(0.1)]);
+    expect(renderSteps(renderer, steps, 0.1, 0.1, inputs)).toEqual(steps);
+    expect(draws.slice(-2)).toEqual([`step ${stepAt(0.1)}`, `again ${stepAt(0.1)}`]);
   });
 
   it("starts again from the first step when the clock goes back", () => {

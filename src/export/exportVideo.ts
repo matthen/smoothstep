@@ -168,6 +168,8 @@ export async function exportVideo(
       render: inputs => {
         due.push(inputs);
       },
+      // Each frame's clock is later than the last, so no step draws again.
+      redraw: () => undefined,
     };
     for (let i = 0; i < frames; i++) {
       if (signal.aborted) {

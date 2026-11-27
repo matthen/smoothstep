@@ -511,8 +511,16 @@ export class Renderer {
   }
 
   // Builds the image's shader and the buffers', compiling only those whose source changed. If any
-  // fails, the previous ones keep rendering.
+  // fails, the previous ones keep rendering, without a picker's uniform.
   setCode(code: string, buffers: readonly string[] = [], shared = ""): CompileResult {
+    const result = this.build(code, buffers, shared);
+    if (!result.ok) {
+      this.endPick();
+    }
+    return result;
+  }
+
+  private build(code: string, buffers: readonly string[], shared: string): CompileResult {
     const sources: [ShaderId, string][] = [["image", code], ...buffers.map((c, i): [ShaderId, string] => [i, c])];
     for (const [shader, source] of [["shared", shared] as [ShaderId, string], ...sources]) {
       const error = bracketError(source);
@@ -1231,6 +1239,25 @@ export class Renderer {
     }
     this.draw(this.program, output, inputs, input);
     this.targets = [output, input];
+    this.lastInputs = inputs;
+    this.drawProbe(inputs);
+    this.findRange(performance.now());
+    this.present();
+  }
+
+  // Draws the last step again from the same state before it, so a value changed while paused shows
+  // without moving the simulation on.
+  redraw(inputs: FrameInputs) {
+    if (!this.program || !this.targets || !this.lastInputs) {
+      this.render(inputs);
+      return;
+    }
+    this.uploadVideos();
+    const [latest, previous] = this.targets;
+    for (const i of this.used) {
+      this.draw(this.bufferPrograms[i]!, this.bufferTargets.get(i)![0], inputs, previous, i);
+    }
+    this.draw(this.program, latest, inputs, previous);
     this.lastInputs = inputs;
     this.drawProbe(inputs);
     this.findRange(performance.now());

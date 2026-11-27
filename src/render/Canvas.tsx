@@ -147,7 +147,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     startPick(...args) {
       return rendererRef.current?.startPick(...args) ?? false;
     },
-    // Paused, the frame draws again at the same step.
+    // Paused, the same step draws again from the state before it, so the simulation doesn't move on.
     setPickValues(values) {
       rendererRef.current?.setPickValues(values);
       needsRender.current = true;

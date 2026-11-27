@@ -28,6 +28,15 @@ export class LayerSteps implements StepRenderer {
 
   render(inputs: FrameInputs) {
     this.renderer.render(inputs);
+    this.queue(inputs);
+  }
+
+  redraw(inputs: FrameInputs) {
+    this.renderer.redraw(inputs);
+    this.queue(inputs);
+  }
+
+  private queue(inputs: FrameInputs) {
     // Drawn again at the same step, as when scrubbing while paused: the layer keeps the frame it drew,
     // unless its videos have since moved to exactly their frames, as after pausing.
     const videos = this.layer.needsVideoFrames;

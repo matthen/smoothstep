@@ -63,8 +63,9 @@ starts again from its first frame each time it ends. Videos have no sound here. 
 trails or simulations. It starts black, and is cleared each time you build, the canvas changes size
 or a texture changes. `iFrame` goes back to 0 then too, and when the animation loops or goes back to
 the start, so `if (iFrame == 0)` is the place to set things up. When you drag a picker in code
-that's built, the simulation keeps running and uses each new value as you drag. It starts again once,
-when you let go. While it plays, `iPrevFrame`,
+that's built, the simulation keeps running and uses each new value as you drag. While paused, it stays
+on its step, which draws again with each value. It starts again once, when you let go, if the value
+changed. While it plays, `iPrevFrame`,
 `iFrame` and the buffers move on 60 times a second, whatever the screen's refresh rate or the export's frame rate, so
 a simulation runs at the same speed everywhere.
 
