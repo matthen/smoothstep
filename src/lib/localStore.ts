@@ -132,6 +132,10 @@ export function addTemporaryImage(id: string, blob: Blob) {
   imagesChanged();
 }
 
+export function temporaryImageIds(): string[] {
+  return [...temporaryImages.keys()];
+}
+
 async function storeTemporaryImages(json: AnimationDocument) {
   for (const slot of json.textures) {
     const blob = slot.isUserUploaded ? temporaryImages.get(slot.url) : undefined;
