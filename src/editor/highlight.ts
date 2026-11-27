@@ -36,7 +36,11 @@ export function setJsParser(parser: JsParser) {
 }
 
 export function loadJsHighlighting(): Promise<void> {
-  jsLoading ??= import('@lezer/javascript').then(({ parser }) => setJsParser(parser));
+  // A failed load, say offline after a deploy, is forgotten so a later call tries again.
+  jsLoading ??= import('@lezer/javascript').then(({ parser }) => setJsParser(parser), (error: unknown) => {
+    jsLoading = null;
+    throw error;
+  });
   return jsLoading;
 }
 
