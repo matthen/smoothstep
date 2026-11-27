@@ -15,7 +15,7 @@ import {
 import { pickerPresses } from './pickerPresses';
 import {
   findPickerMatch, formatCssColor, formatFloat, formatJsNumber, formatVec, jsNumberScale, parseCssColor, parseVec,
-  type PickerKind, type PickerMatch,
+  spacedAfter, type PickerKind, type PickerMatch,
 } from './pickerValues';
 
 // Marks transactions made by dragging a picker.
@@ -114,9 +114,10 @@ const close = (view: EditorView) => {
   if (view.state.field(popupField)) view.dispatch({ effects: setPopup.of(null) });
 };
 
-function replaceValue(view: EditorView, text: string) {
+function replaceValue(view: EditorView, value: string) {
   const popup = view.state.field(popupField);
   if (!popup) return;
+  const text = spacedAfter(view.state.sliceDoc(popup.from - 1, popup.from), value);
   view.dispatch({
     changes: { from: popup.from, to: popup.to, insert: text },
     selection: { anchor: popup.from },

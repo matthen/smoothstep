@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   findJsPickerMatch, findPickerMatch, formatCssColor, formatFloat, formatJsNumber, formatVec, hsvToRgb, isColor,
-  jsNumberScale, parseCssColor, parseVec, rgbToHsv,
+  jsNumberScale, parseCssColor, parseVec, rgbToHsv, spacedAfter,
 } from './pickerValues';
 
 describe('findJsPickerMatch', () => {
@@ -71,6 +71,14 @@ describe('findPickerMatch', () => {
 
   it('treats a minus after an operand as subtraction', () => {
     expect(findPickerMatch('a-0.5', 3)).toEqual({ kind: 'float', from: 2, to: 5, text: '0.5' });
+  });
+
+  it('writes a negative value after a subtraction so it stays a subtraction', () => {
+    const written = 'a-' + spacedAfter('-', formatFloat(-0.3));
+    expect(written).toBe('a- -0.30000');
+    expect(findPickerMatch(written, written.length - 1)).toMatchObject({ text: '-0.30000' });
+    expect(spacedAfter('-', '0.3')).toBe('0.3');
+    expect(spacedAfter('+', '-0.3')).toBe('-0.3');
   });
 
   it('ignores integers, identifiers and the rest of the line', () => {

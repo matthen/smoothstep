@@ -22,13 +22,15 @@ export interface Sources {
 }
 
 // The type and components of a GLSL literal a picker edits, like 0.5 or vec3(1., 0.5, 0.).
+// A float may have a space before it, as after a minus sign.
 export function pickValue(text: string): {type: PickType; values: number[]} | null {
   const values = parseVec(text);
   if (values) {
     return {type: `vec${values.length}` as PickType, values};
   }
-  const value = Number(text);
-  return /^-?(\d+\.\d*|\.\d+)$/.test(text) && Number.isFinite(value) ? {type: "float", values: [value]} : null;
+  const float = text.trimStart();
+  const value = Number(float);
+  return /^-?(\d+\.\d*|\.\d+)$/.test(float) && Number.isFinite(value) ? {type: "float", values: [value]} : null;
 }
 
 // Where the literal that is edited[from..to] after a picker's edit sits in `built`, the code before it,

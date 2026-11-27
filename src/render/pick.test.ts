@@ -8,6 +8,7 @@ describe("pickValue", () => {
     expect(pickValue("0.5")).toEqual({type: "float", values: [0.5]});
     expect(pickValue("-.25")).toEqual({type: "float", values: [-0.25]});
     expect(pickValue("2.")).toEqual({type: "float", values: [2]});
+    expect(pickValue(" -0.3")).toEqual({type: "float", values: [-0.3]});
     expect(pickValue("vec2(0.1, -0.2)")).toEqual({type: "vec2", values: [0.1, -0.2]});
     expect(pickValue("vec3(1., 0.5, 0.)")).toEqual({type: "vec3", values: [1, 0.5, 0]});
     expect(pickValue("vec4(0.5)")).toEqual({type: "vec4", values: [0.5, 0.5, 0.5, 0.5]});
