@@ -29,31 +29,35 @@ interface Options {
 // The guided tour, the offer of it, and the one-time tips.
 export function useOnboarding({initialRoute, phone, showPane, closeDialog, busy}: Options) {
   const [tourTaken, setTourTaken] = useState(() => tourState() === "taken");
-  // What a one-time tip waits for: the tour, its offer, or another tip to finish.
-  const tourRunning = useRef(false);
-  const tourOfferShowing = useRef(false);
-  const tipShowing = useRef(false);
+  // What has the user's attention, which a one-time tip waits for: the tour, its offer, or another tip.
+  const attention = useRef<"tour" | "tourOffer" | "tip" | null>(null);
+  const release = (from: "tour" | "tourOffer" | "tip") => {
+    if (attention.current === from) {
+      attention.current = null;
+    }
+  };
 
   const takeTour = async () => {
     closeDialog();
+    attention.current = "tour";
     notifications.hide("tour");
+    notifications.hide("tip");
     setTourState("taken");
     setTourTaken(true);
-    tourRunning.current = true;
     let startTour;
     try {
       ({startTour} = await import('./tour'));
     } catch (error) {
       // Offline after a new deploy, say: the tour's chunk isn't cached.
       console.error(error);
-      tourRunning.current = false;
+      release("tour");
       return;
     }
     startTour({
       phone,
       // Applied at once, so the tour measures the pane it's about to highlight.
       showPane: pane => flushSync(() => showPane(pane)),
-      onFinish: () => {tourRunning.current = false;},
+      onFinish: () => release("tour"),
     });
   };
 
@@ -62,10 +66,10 @@ export function useOnboarding({initialRoute, phone, showPane, closeDialog, busy}
   const offerTourRef = useLatest(() => {
     if (initialRoute && initialRoute.kind !== "tutorial" && tourState() === null) {
       setTourState("offered");
-      tourOfferShowing.current = true;
+      attention.current = "tourOffer";
       notifications.show({
         id: "tour", autoClose: 12000, title: "New to smoothstep.io?",
-        onClose: () => {tourOfferShowing.current = false;},
+        onClose: () => release("tourOffer"),
         message: (
           <Group gap="xs" mt={4}>
             <Text size="sm">A one-minute tour shows you around.</Text>
@@ -79,17 +83,17 @@ export function useOnboarding({initialRoute, phone, showPane, closeDialog, busy}
 
   // Shows a one-time tip for what just happened, unless something else has the user's attention.
   const showTip = (event: TipEvent) => {
-    const blocked = tourRunning.current || tourOfferShowing.current || tipShowing.current || anyModalOpen() || busy;
+    const blocked = attention.current !== null || anyModalOpen() || busy;
     const id = chooseTip(tipsFor(event), seenTips(), blocked);
     if (!id) {
       return;
     }
     markTipSeen(id);
-    tipShowing.current = true;
+    attention.current = "tip";
     const {title, message} = tipContent(id, phone);
     notifications.show({
       id: "tip", autoClose: 15000, title, className: "tipNotification",
-      onClose: () => {tipShowing.current = false;},
+      onClose: () => release("tip"),
       message: (
         <>
           <Text size="sm">{withCode(message)}</Text>
