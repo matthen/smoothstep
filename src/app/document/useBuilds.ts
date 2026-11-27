@@ -1,5 +1,5 @@
 import type { EditorView } from '@codemirror/view';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { Range } from '../../editor/glslDefinitions';
 import { canvasLayer } from '../../lib/document';
@@ -20,9 +20,47 @@ interface Options {
   showTip: (event: TipEvent) => void;
 }
 
+// A picker's drag builds at most once a frame, with its latest edit. Edits stay live until that
+// build has rendered, as until then the code looks unbuilt.
+function useLiveBuild(dispatch: Options["docState"]["dispatch"], allBuilt: boolean) {
+  const frame = useRef<number | null>(null);
+  const live = useRef(false);
+  useEffect(() => {
+    if (allBuilt && frame.current === null) {
+      live.current = false;
+    }
+  });
+  const cancel = () => {
+    if (frame.current !== null) {
+      cancelAnimationFrame(frame.current);
+    }
+    frame.current = null;
+    live.current = false;
+  };
+  const cancelRef = useLatest(cancel);
+  useEffect(() => () => cancelRef.current(), [cancelRef]);
+  const allBuiltRef = useLatest(allBuilt);
+  return {
+    schedule() {
+      live.current = true;
+      frame.current ??= requestAnimationFrame(() => {
+        frame.current = null;
+        // Something else built the code since, so this build changes nothing and no render will end the drag.
+        if (allBuiltRef.current) {
+          live.current = false;
+        }
+        dispatch({type: "buildLive"});
+      });
+    },
+    cancel,
+    live: () => live.current,
+  };
+}
+
 // Building the code, and what the editor and canvas report as it's edited and built.
 export function useBuilds({docState, tabs, probe, log, showTip}: Options) {
   const {dispatch, builtCode, builtExtras, buildId, allBuilt} = docState;
+  const liveBuild = useLiveBuild(dispatch, allBuilt);
   const {setCodeTab, docsShownRef} = tabs;
   const docRef = useLatest(docState.doc);
 
@@ -47,13 +85,16 @@ export function useBuilds({docState, tabs, probe, log, showTip}: Options) {
 
   const onCodeChange = (tab: ShaderId, code: string, isHelperChange: boolean) => {
     // Picker drags rebuild live, as long as the code was built before the drag.
-    const live = isHelperChange && allBuilt;
-    docState.editCode(tab, code, live);
+    const live = isHelperChange && (allBuilt || liveBuild.live());
+    docState.editCode(tab, code);
     if (isHelperChange) {
       // They've found the pickers, so there's no need for the tip about them.
       markTipSeen("pickers");
+    } else {
+      liveBuild.cancel();  // Typing doesn't build.
     }
     if (live) {
+      liveBuild.schedule();
       probe.holdWhileEditing();
     }
   };
