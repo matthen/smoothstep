@@ -1,5 +1,5 @@
 // Animations and uploaded textures, kept in the browser's IndexedDB.
-import { createStore, del, get, set, values, type UseStore } from 'idb-keyval';
+import { createStore, del, get, keys, set, values, type UseStore } from 'idb-keyval';
 
 import type { AnimationDocument } from './document';
 import { isVideoType, MAX_VIDEO_MB, mediaExtension, mediaObjectURL, mediaType, revokeMediaURL, videoLoaded, videoProblem } from './media';
@@ -91,8 +91,8 @@ export function newId(): string {
   return Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
 }
 
-// Once something is saved, asks the browser not to evict it under storage pressure (best effort; there's no
-// navigator.storage on http or in jsdom).
+// Once per page load, when there's something saved, asks the browser not to evict it under storage pressure
+// (best effort; there's no navigator.storage on http or in jsdom).
 let persistAsked = false;
 function askToPersist() {
   if (!persistAsked) {
@@ -105,6 +105,9 @@ export async function init(): Promise<void> {
   const images = await values<StoredImage>(store("images"));
   images.forEach(cacheImageURL);
   imagesChanged();
+  if (images.length > 0 || (await keys(store("documents"))).length > 0) {
+    askToPersist();
+  }
 }
 
 function cacheImageURL(image: StoredImage) {
@@ -223,6 +226,7 @@ export async function getImage(id: string): Promise<StoredImage | undefined> {
 
 export async function putImage(record: StoredImage): Promise<void> {
   await write(() => set(record.id, record, store("images")));
+  askToPersist();
   cacheImageURL(record);
   imagesChanged();
 }
