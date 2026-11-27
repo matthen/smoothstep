@@ -51,6 +51,9 @@ const NO_DRAW = "The Canvas2D code needs a draw function, which draws on the can
 const WRONG_SIZE = "The Canvas2D frame wasn't the animation's size, so it was stopped. Build to run it again.";
 
 // What every run of one configuration shares.
+// A message of one kind from the worker, whose fields may be missing or the wrong type.
+type Received<K extends FromWorker["type"]> = Partial<Extract<FromWorker, {type: K}>>;
+
 interface Prepared {
   source: WorkerSource;
   fonts: FontData[];
@@ -247,31 +250,9 @@ export class CanvasLayer {
       return;
     }
     if (message?.type === "logs") {
-      const {logs, dropped} = logsFromWorker(message, prepared.source);
-      if (run === this.current) {
-        this.log(logs, dropped);
-      } else {
-        const room = Math.max(0, MAX_HELD_LOGS - run.heldLogs.length);
-        run.heldLogs.push(...logs.slice(0, room));
-        run.heldDropped += dropped + Math.max(0, logs.length - room);
-      }
+      this.receiveLogs(run, prepared, message);
     } else if (message?.type === "ready") {
-      run.ready = true;
-      if (run === this.current) {
-        if (message.registered === true && message.hasDraw !== true) {
-          // Under the last line, where the editor's fix puts one.
-          const lastLine = (this.config?.code ?? "").split("\n").length - 1;
-          this.fail([{line: lastLine, message: NO_DRAW, missing: "draw"}], true);
-          return;
-        }
-        if (message.registered !== true) {
-          return;  // Its code stopped with an error, which arrives on its own.
-        }
-        this.notBusy();
-        this.flush();
-      } else if (message.registered !== true || message.hasDraw !== true) {
-        this.discardStandby();
-      }
+      this.receiveReady(run, message);
     } else if (message?.type === "drawing" && run === this.current && typeof message.frame === "number" && Number.isInteger(message.frame)) {
       run.drawing = message.frame;
       if (this.busyShown) {
@@ -279,41 +260,82 @@ export class CanvasLayer {
       }
     } else if (message?.type === "frame" && run === this.current && message.id === run.inFlight &&
         message.bitmap instanceof ImageBitmap) {
-      const config = this.config!;
-      if (message.bitmap.width !== config.width || message.bitmap.height !== config.height) {
-        message.bitmap.close();
-        this.fail([{line: 0, message: WRONG_SIZE}]);
+      this.receiveFrame(run, prepared, message.bitmap);
+    } else if (message?.type === "error") {
+      this.receiveError(run, prepared, message);
+    }
+  }
+
+  // The current run's console calls are passed on; a standby's are held until it takes over.
+  private receiveLogs(run: Run, prepared: Prepared, message: Received<"logs">) {
+    const {logs, dropped} = logsFromWorker(message, prepared.source);
+    if (run === this.current) {
+      this.log(logs, dropped);
+    } else {
+      const room = Math.max(0, MAX_HELD_LOGS - run.heldLogs.length);
+      run.heldLogs.push(...logs.slice(0, room));
+      run.heldDropped += dropped + Math.max(0, logs.length - room);
+    }
+  }
+
+  // The run's code has finished its first run: drawing can start, or a standby without a draw is dropped.
+  private receiveReady(run: Run, message: Received<"ready">) {
+    run.ready = true;
+    if (run === this.current) {
+      if (message.registered === true && message.hasDraw !== true) {
+        // Under the last line, where the editor's fix puts one.
+        const lastLine = (this.config?.code ?? "").split("\n").length - 1;
+        this.fail([{line: lastLine, message: NO_DRAW, missing: "draw"}], true);
         return;
       }
-      run.inFlight = null;
-      if (this.waiting.length === 0) {
-        this.notBusy();
+      if (message.registered !== true) {
+        return;  // Its code stopped with an error, which arrives on its own.
       }
-      if (!run.drawn) {
-        run.drawn = true;
-        this.callbacks.onStatus([]);
-        if (this.keepStandby && !this.standby) {
-          this.standby = this.spawn(prepared);
-        }
-      }
-      const pending = this.pendingDraw;
-      this.pendingDraw = null;
-      if (pending) {
-        pending.resolve(message.bitmap);
-      } else {
-        this.callbacks.onFrame(message.bitmap);
-      }
+      this.notBusy();
       this.flush();
-    } else if (message?.type === "error") {
-      if (run === this.current) {
-        this.fail([errorFromStack({
-          message: typeof message.message === "string" ? message.message.slice(0, 500) : "",
-          stack: typeof message.stack === "string" ? message.stack.slice(0, 5000) : "",
-          line: typeof message.line === "number" ? message.line : null,
-        }, prepared.source)], !run.ready);
-      } else {
-        this.discardStandby();
+    } else if (message.registered !== true || message.hasDraw !== true) {
+      this.discardStandby();
+    }
+  }
+
+  // The frame the current run was asked for.
+  private receiveFrame(run: Run, prepared: Prepared, bitmap: ImageBitmap) {
+    const config = this.config!;
+    if (bitmap.width !== config.width || bitmap.height !== config.height) {
+      bitmap.close();
+      this.fail([{line: 0, message: WRONG_SIZE}]);
+      return;
+    }
+    run.inFlight = null;
+    if (this.waiting.length === 0) {
+      this.notBusy();
+    }
+    if (!run.drawn) {
+      run.drawn = true;
+      this.callbacks.onStatus([]);
+      if (this.keepStandby && !this.standby) {
+        this.standby = this.spawn(prepared);
       }
+    }
+    const pending = this.pendingDraw;
+    this.pendingDraw = null;
+    if (pending) {
+      pending.resolve(bitmap);
+    } else {
+      this.callbacks.onFrame(bitmap);
+    }
+    this.flush();
+  }
+
+  private receiveError(run: Run, prepared: Prepared, message: Received<"error">) {
+    if (run === this.current) {
+      this.fail([errorFromStack({
+        message: typeof message.message === "string" ? message.message.slice(0, 500) : "",
+        stack: typeof message.stack === "string" ? message.stack.slice(0, 5000) : "",
+        line: typeof message.line === "number" ? message.line : null,
+      }, prepared.source)], !run.ready);
+    } else {
+      this.discardStandby();
     }
   }
 

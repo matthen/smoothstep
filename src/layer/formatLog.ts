@@ -22,7 +22,8 @@ export function formatLogWithin(args: readonly unknown[], limits: FormatLimits):
 
   const key = (name: string) => /^[A-Za-z_$][\w$]*$/.test(name) ? name : quote(name);
 
-  const format = (value: unknown, depth: number, seen: object[]): string => {
+  // A value that isn't an object, or null for one that is.
+  const primitive = (value: unknown, depth: number): string | null => {
     switch (typeof value) {
       case "string":
         return depth === 0 ? value : quote(value);
@@ -40,8 +41,69 @@ export function formatLogWithin(args: readonly unknown[], limits: FormatLimits):
         return typeof name === "string" && name ? `ƒ ${name}()` : "ƒ ()";
       }
     }
-    if (value === null) {
-      return "null";
+    return value === null ? "null" : null;
+  };
+
+  const list = (items: string[], total: number, open: string, close: string) => {
+    const more = total > items.length ? [`…${total - items.length} more`] : [];
+    return open + [...items, ...more].join(", ") + close;
+  };
+
+  // An array or typed array, with the objects it's inside in `inner`.
+  const arrayLike = (object: object, depth: number, inner: object[]): string => {
+    const items = object as unknown as ArrayLike<unknown>;
+    const prefix = Array.isArray(object) ? "" : `${typeName(object)}(${items.length}) `;
+    if (depth >= MAX_DEPTH) {
+      return prefix + (items.length === 0 ? "[]" : "[…]");
+    }
+    const shown: string[] = [];
+    for (let i = 0; i < Math.min(items.length, MAX_ITEMS); i++) {
+      shown.push(i in items ? format(items[i], depth + 1, inner) : "empty");
+    }
+    return prefix + list(shown, items.length, "[", "]");
+  };
+
+  const collection = (object: Map<unknown, unknown> | Set<unknown>, depth: number, inner: object[]): string => {
+    const name = `${typeName(object)}(${object.size})`;
+    if (depth >= MAX_DEPTH) {
+      return name + (object.size === 0 ? " {}" : " {…}");
+    }
+    const shown: string[] = [];
+    for (const entry of object instanceof Map ? object.entries() : object.values()) {
+      if (shown.length >= MAX_ITEMS) {
+        break;
+      }
+      shown.push(object instanceof Map
+        ? `${format((entry as [unknown, unknown])[0], depth + 1, inner)} => ${format((entry as [unknown, unknown])[1], depth + 1, inner)}`
+        : format(entry, depth + 1, inner));
+    }
+    return name + " " + list(shown, object.size, "{", "}");
+  };
+
+  // Any other object, by its own enumerable keys.
+  const keyed = (object: object, depth: number, inner: object[]): string => {
+    const name = typeName(object);
+    const prefix = name && name !== "Object" ? name + " " : "";
+    const keys = Object.keys(object);
+    if (depth >= MAX_DEPTH) {
+      return prefix + (keys.length === 0 ? "{}" : "{…}");
+    }
+    const shown = keys.slice(0, MAX_KEYS).map(k => {
+      let item: string;
+      try {
+        item = format((object as Record<string, unknown>)[k], depth + 1, inner);
+      } catch {
+        item = "?";
+      }
+      return `${key(k)}: ${item}`;
+    });
+    return prefix + list(shown, keys.length, "{", "}");
+  };
+
+  const format = (value: unknown, depth: number, seen: object[]): string => {
+    const text = primitive(value, depth);
+    if (text !== null) {
+      return text;
     }
     const object = value as object;
     if (seen.includes(object)) {
@@ -58,54 +120,13 @@ export function formatLogWithin(args: readonly unknown[], limits: FormatLimits):
         return String(object);
       }
       const inner = [...seen, object];
-      const list = (items: string[], total: number, open: string, close: string) => {
-        const more = total > items.length ? [`…${total - items.length} more`] : [];
-        return open + [...items, ...more].join(", ") + close;
-      };
       if (Array.isArray(object) || ArrayBuffer.isView(object)) {
-        const items = object as unknown as ArrayLike<unknown>;
-        const prefix = Array.isArray(object) ? "" : `${typeName(object)}(${items.length}) `;
-        if (depth >= MAX_DEPTH) {
-          return prefix + (items.length === 0 ? "[]" : "[…]");
-        }
-        const shown: string[] = [];
-        for (let i = 0; i < Math.min(items.length, MAX_ITEMS); i++) {
-          shown.push(i in items ? format(items[i], depth + 1, inner) : "empty");
-        }
-        return prefix + list(shown, items.length, "[", "]");
+        return arrayLike(object, depth, inner);
       }
       if (object instanceof Map || object instanceof Set) {
-        const name = `${typeName(object)}(${object.size})`;
-        if (depth >= MAX_DEPTH) {
-          return name + (object.size === 0 ? " {}" : " {…}");
-        }
-        const shown: string[] = [];
-        for (const entry of object instanceof Map ? object.entries() : object.values()) {
-          if (shown.length >= MAX_ITEMS) {
-            break;
-          }
-          shown.push(object instanceof Map
-            ? `${format((entry as [unknown, unknown])[0], depth + 1, inner)} => ${format((entry as [unknown, unknown])[1], depth + 1, inner)}`
-            : format(entry, depth + 1, inner));
-        }
-        return name + " " + list(shown, object.size, "{", "}");
+        return collection(object, depth, inner);
       }
-      const name = typeName(object);
-      const prefix = name && name !== "Object" ? name + " " : "";
-      const keys = Object.keys(object);
-      if (depth >= MAX_DEPTH) {
-        return prefix + (keys.length === 0 ? "{}" : "{…}");
-      }
-      const shown = keys.slice(0, MAX_KEYS).map(k => {
-        let item: string;
-        try {
-          item = format((object as Record<string, unknown>)[k], depth + 1, inner);
-        } catch {
-          item = "?";
-        }
-        return `${key(k)}: ${item}`;
-      });
-      return prefix + list(shown, keys.length, "{", "}");
+      return keyed(object, depth, inner);
     } catch {
       return "[object]";
     }

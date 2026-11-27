@@ -300,6 +300,36 @@ function endDirective(state: GlslState) {
   state.macroParams = [];
 }
 
+// Counts the open braces and brackets. Brackets left open by half-typed code are forgotten at the next brace.
+function trackDepths(state: GlslState) {
+  if (curPunc === '{' || curPunc === '}') state.parenDepth = 0;
+  if (curPunc === '{') state.braceDepth++;
+  else if (curPunc === '}') state.braceDepth = Math.max(0, state.braceDepth - 1);
+  else if (curPunc === '(') state.parenDepth++;
+  else if (curPunc === ')') state.parenDepth = Math.max(0, state.parenDepth - 1);
+}
+
+// Opens and closes the blocks, brackets and statements that indentation follows. `ctx` is the context
+// the token started in.
+function trackContext(stream: StringStream, state: GlslState, ctx: Context) {
+  if (curPunc === ';' || curPunc === ':' || (curPunc === ',' && stream.match(/^\s*(?:\/\/.*)?$/, false))) {
+    while (state.context.type === 'statement') popContext(state);
+  } else if (curPunc === '{') pushContext(state, stream.column(), '}');
+  else if (curPunc === '[') pushContext(state, stream.column(), ']');
+  else if (curPunc === '(') pushContext(state, stream.column(), ')');
+  else if (curPunc === '}') {
+    while (ctx.type === 'statement') ctx = popContext(state);
+    if (ctx.type === '}') ctx = popContext(state);
+    while (ctx.type === 'statement') ctx = popContext(state);
+  } else if (curPunc === ctx.type) popContext(state);
+  else if (
+    ((ctx.type === '}' || ctx.type === 'top') && curPunc !== ';') ||
+    (ctx.type === 'statement' && curPunc === 'newstatement')
+  ) {
+    pushContext(state, stream.column(), 'statement', stream.current());
+  }
+}
+
 // Resets curPunc here rather than in token(), where TS would then narrow it to null across the tokenizer call.
 function readToken(stream: StringStream, state: GlslState): GlslToken | null {
   curPunc = null;
@@ -339,7 +369,7 @@ const glslParser: StreamParser<GlslState> = {
     return { ...state, context: copyContext(state.context)! };
   },
   token(stream, state) {
-    let ctx = state.context;
+    const ctx = state.context;
     if (stream.sol()) {
       if (ctx.align == null) ctx.align = false;
       state.indented = stream.indentation();
@@ -359,31 +389,10 @@ const glslParser: StreamParser<GlslState> = {
     if (style === 'meta') return style;
     if (ctx.align == null) ctx.align = true;
 
-    // Brackets left open by half-typed code are forgotten at the next brace.
-    if (curPunc === '{' || curPunc === '}') state.parenDepth = 0;
-    if (curPunc === '{') state.braceDepth++;
-    else if (curPunc === '}') state.braceDepth = Math.max(0, state.braceDepth - 1);
-    else if (curPunc === '(') state.parenDepth++;
-    else if (curPunc === ')') state.parenDepth = Math.max(0, state.parenDepth - 1);
+    trackDepths(state);
     trackHeader(state, style);
     state.structNext = style === 'keyword' && stream.current() === 'struct';
-
-    if (curPunc === ';' || curPunc === ':' || (curPunc === ',' && stream.match(/^\s*(?:\/\/.*)?$/, false))) {
-      while (state.context.type === 'statement') popContext(state);
-    } else if (curPunc === '{') pushContext(state, stream.column(), '}');
-    else if (curPunc === '[') pushContext(state, stream.column(), ']');
-    else if (curPunc === '(') pushContext(state, stream.column(), ')');
-    else if (curPunc === '}') {
-      while (ctx.type === 'statement') ctx = popContext(state);
-      if (ctx.type === '}') ctx = popContext(state);
-      while (ctx.type === 'statement') ctx = popContext(state);
-    } else if (curPunc === ctx.type) popContext(state);
-    else if (
-      ((ctx.type === '}' || ctx.type === 'top') && curPunc !== ';') ||
-      (ctx.type === 'statement' && curPunc === 'newstatement')
-    ) {
-      pushContext(state, stream.column(), 'statement', stream.current());
-    }
+    trackContext(stream, state, ctx);
     state.startOfLine = false;
     state.prevToken = style ?? curPunc;
     return style;
