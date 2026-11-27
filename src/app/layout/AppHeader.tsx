@@ -5,11 +5,11 @@ import {
   TbFileImport, TbFolderOpen, TbHelp, TbHistory, TbHome, TbKeyboard, TbRoute, TbSchool, TbShare, TbVideo,
 } from 'react-icons/tb';
 
-import { asset, REPO_URL, TUTORIAL_HREF } from '../lib/config';
-import { DOC_SECTIONS, type DocTarget } from '../lib/docLinks';
-import { DEFAULT_TITLE, MAX_TITLE_LENGTH } from '../lib/document';
-import { install, useCanInstall } from '../pwa/install';
-import { MOD_KEY } from './platform';
+import { asset, REPO_URL, TUTORIAL_HREF } from '../../lib/config';
+import { DOC_SECTIONS, type DocTarget } from '../../lib/docLinks';
+import { DEFAULT_TITLE, MAX_TITLE_LENGTH } from '../../lib/document';
+import { install, useCanInstall } from '../../pwa/install';
+import { MOD_KEY } from '../platform';
 
 interface Props {
   phone: boolean;

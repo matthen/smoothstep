@@ -1,9 +1,9 @@
-import type { AppLink } from '../lib/appLinks';
-import { DOC_SECTIONS, type DocTarget } from '../lib/docLinks';
-import { REPO_URL } from '../lib/config';
-import type { ShaderId } from '../render/Renderer';
-import type { Dialog } from './AppDialogs';
-import type { PanelTab } from './useLayout';
+import type { AppLink } from '../../lib/appLinks';
+import { DOC_SECTIONS, type DocTarget } from '../../lib/docLinks';
+import { REPO_URL } from '../../lib/config';
+import type { ShaderId } from '../../render/Renderer';
+import type { Dialog } from '../AppDialogs';
+import type { PanelTab } from '../layout/useLayout';
 
 export interface AppActions {
   newAnimation: () => void;

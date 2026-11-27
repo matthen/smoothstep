@@ -9,9 +9,9 @@ import Share from '../dialogs/Share';
 import Splash from '../dialogs/Splash';
 import { routeHash } from '../lib/routes';
 import AppModal from './AppModal';
-import type { useDocument } from './useDocument';
-import type { useExport } from './useExport';
-import type { useLibrary } from './useLibrary';
+import type { useDocument } from './document/useDocument';
+import type { useExport } from '../export/useExport';
+import type { useLibrary } from './document/useLibrary';
 
 export type Dialog = "open" | "import" | "saveCopy" | "share" | "export" | "splash";
 

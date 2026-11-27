@@ -58,7 +58,7 @@ $short-height: 520px;
 // The screen below the phone's sticky Code/Timeline/Textures switch.
 $phone-pane-height: calc(100dvh - 52px);
 
-// Keep in step with app/usePhone.ts.
+// Keep in step with app/layout/usePhone.ts.
 @mixin phone {
   @media (max-width: $phone-breakpoint) and (min-height: $short-height + 0.02px) {
     @content;

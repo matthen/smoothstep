@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { newDocument } from '../lib/document';
+import { newDocument } from '../../lib/document';
 import { documentReducer, initialDocumentState, type DocumentAction, type DocumentState } from './documentState';
 
 const run = (...actions: DocumentAction[]) =>

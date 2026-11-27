@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { TbDownload, TbFileImport, TbTrash } from 'react-icons/tb';
 
 import AppModal from '../app/AppModal';
-import { usePhone } from '../app/usePhone';
+import { usePhone } from '../app/layout/usePhone';
 import { animationFile, download, exportAll } from '../lib/archive';
 import { documentHref } from '../lib/config';
 import { deleteDocument, getDocument, listDocuments, StorageFullError, type DocumentSummary } from '../lib/localStore';

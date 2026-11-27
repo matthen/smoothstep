@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { anyModalOpen } from './AppModal';
+import { anyModalOpen } from '../AppModal';
 
 function browserFullScreen(on: boolean) {
   if (on) {

@@ -2,16 +2,16 @@ import { EditorView } from '@codemirror/view';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 
-import { insertCode } from '../editor/CodeEditor';
-import { describe, topLevel } from '../editor/glslDefinitions';
-import { analysisOf, selectDefinition, type CodeTab } from '../editor/goToDefinition';
-import { shaderName } from '../editor/ShaderTabs';
-import { DOC_SECTIONS, onOpenDocs, type DocTarget } from '../lib/docLinks';
-import { canvasLayer, SHARED_PLACEHOLDER, type AnimationDocument } from '../lib/document';
-import { useLatest } from '../lib/useLatest';
-import type { ShaderId } from '../render/Renderer';
-import { hasTab } from './documentState';
-import { docsClosed, setDocsClosed } from './onboarding';
+import { insertCode } from '../../editor/CodeEditor';
+import { describe, topLevel } from '../../editor/glslDefinitions';
+import { analysisOf, selectDefinition, type CodeTab } from '../../editor/goToDefinition';
+import { shaderName } from '../../editor/ShaderTabs';
+import { DOC_SECTIONS, onOpenDocs, type DocTarget } from '../../lib/docLinks';
+import { canvasLayer, SHARED_PLACEHOLDER, type AnimationDocument } from '../../lib/document';
+import { useLatest } from '../../lib/useLatest';
+import type { ShaderId } from '../../render/Renderer';
+import { hasTab } from '../document/documentState';
+import { docsClosed, setDocsClosed } from '../onboarding/onboarding';
 
 interface Options {
   // Whether the app opened without an animation, so a new one, which has the Docs tab unless it's been closed.

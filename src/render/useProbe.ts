@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 
 import type { Range } from '../editor/glslDefinitions';
 import { setShownExpression, shownExpression } from '../editor/showExpression';
-import type { ProbeRequest, ProbeResult, ShaderId } from '../render/Renderer';
+import type { ProbeRequest, ProbeResult, ShaderId } from './Renderer';
 
 // How long after a picker's last change the canvas shows the expression again.
 const PROBE_HOLD_MS = 250;

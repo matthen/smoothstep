@@ -3,8 +3,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { textureURL } from '../lib/config';
 import { useImagesChanged } from '../dialogs/useImagesChanged';
 import { bufferCodes, EMPTY_TEXTURE, type AnimationDocument } from '../lib/document';
-import { floatNames } from '../timeline/names';
-import { floatsInCode, inputsInCode } from '../timeline/Sliders';
+import { floatNames } from './names';
+import { floatsInCode, inputsInCode } from './Sliders';
 
 // The timeline's rows and the texture slots the panels show, from what the code uses and the
 // animation sets.

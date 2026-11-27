@@ -2,18 +2,18 @@ import { ActionIcon, Tooltip } from '@mantine/core';
 import { useRef, useState, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
 import { TbMaximize, TbMinimize } from 'react-icons/tb';
 
-import AspectRatioPicker from '../dialogs/AspectRatioPicker';
-import type { AspectRatio } from '../lib/document';
-import type { LineError } from '../lib/types';
-import Canvas, { type CanvasHandle, type CanvasLayout } from '../render/Canvas';
-import type { CompileResult } from '../render/Renderer';
-import PlayerControls, { PLAYER_ONE_ROW_WIDTH, PLAYER_SECOND_ROW_WIDTH } from '../timeline/PlayerControls';
+import AspectRatioPicker from '../../dialogs/AspectRatioPicker';
+import type { AspectRatio } from '../../lib/document';
+import type { LineError } from '../../lib/types';
+import Canvas, { type CanvasHandle, type CanvasLayout } from '../../render/Canvas';
+import type { CompileResult } from '../../render/Renderer';
+import PlayerControls, { PLAYER_ONE_ROW_WIDTH, PLAYER_SECOND_ROW_WIDTH } from '../../timeline/PlayerControls';
 import PaneDivider from './PaneDivider';
-import type { useConsoleLog } from './useConsoleLog';
-import type { useDocument } from './useDocument';
-import type { useInputs } from './useInputs';
-import type { usePlayback } from './usePlayback';
-import type { useProbe } from './useProbe';
+import type { useConsoleLog } from '../../console/useConsoleLog';
+import type { useDocument } from '../document/useDocument';
+import type { useInputs } from '../../timeline/useInputs';
+import type { usePlayback } from '../../timeline/usePlayback';
+import type { useProbe } from '../../render/useProbe';
 
 interface Props {
   workspace: RefObject<HTMLElement | null>;

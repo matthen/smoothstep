@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { ConsoleStore } from '../console/consoleStore';
+import type { ConsoleStore } from './consoleStore';
 import type { LayerLog } from '../layer/CanvasLayer';
 import type { LineError } from '../lib/types';
 import type { CompileResult } from '../render/Renderer';

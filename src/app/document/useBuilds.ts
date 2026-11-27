@@ -1,16 +1,16 @@
 import type { EditorView } from '@codemirror/view';
 import { useState } from 'react';
 
-import type { Range } from '../editor/glslDefinitions';
-import { canvasLayer } from '../lib/document';
-import type { LineError } from '../lib/types';
-import { useLatest } from '../lib/useLatest';
-import type { CompileResult, ShaderId } from '../render/Renderer';
-import { markTipSeen, type TipEvent } from './tips';
-import type { useCodeTabs } from './useCodeTabs';
-import type { useConsoleLog } from './useConsoleLog';
+import type { Range } from '../../editor/glslDefinitions';
+import { canvasLayer } from '../../lib/document';
+import type { LineError } from '../../lib/types';
+import { useLatest } from '../../lib/useLatest';
+import type { CompileResult, ShaderId } from '../../render/Renderer';
+import { markTipSeen, type TipEvent } from '../onboarding/tips';
+import type { useCodeTabs } from '../layout/useCodeTabs';
+import type { useConsoleLog } from '../../console/useConsoleLog';
 import type { useDocument } from './useDocument';
-import type { useProbe } from './useProbe';
+import type { useProbe } from '../../render/useProbe';
 
 interface Options {
   docState: ReturnType<typeof useDocument>;

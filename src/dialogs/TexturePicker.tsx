@@ -4,7 +4,7 @@ import { useDropzone } from 'react-dropzone';
 import { TbArrowLeft, TbPhotoPlus, TbTrash } from 'react-icons/tb';
 
 import AppModal from '../app/AppModal';
-import { usePhone } from '../app/usePhone';
+import { usePhone } from '../app/layout/usePhone';
 import { asset, textureURL } from '../lib/config';
 import { EMPTY_TEXTURE, type TextureSlot } from '../lib/document';
 import {

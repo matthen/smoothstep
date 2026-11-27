@@ -2,7 +2,7 @@ import { Alert, Button, Group, Loader, NativeSelect, Progress, Stack, Text, Text
 import { useState } from 'react';
 
 import AppModal from '../app/AppModal';
-import { useTouch } from '../app/usePhone';
+import { useTouch } from '../app/layout/usePhone';
 import { noVideoReason } from '../export/videoSupport';
 import { exportSize, frameCount, type ExportOptions, type ExportProgress, type ExportType } from './exportTypes';
 

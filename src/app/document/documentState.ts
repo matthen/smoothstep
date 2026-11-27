@@ -1,9 +1,9 @@
 import {
   canvasLayer, NEW_CANVAS_CODE, newDocument, shaderExtras, withCanvasLayer, type AnimationDocument, type ShaderExtras,
-} from '../lib/document';
-import type { Route } from '../lib/routes';
-import type { LineError } from '../lib/types';
-import type { ShaderId } from '../render/Renderer';
+} from '../../lib/document';
+import type { Route } from '../../lib/routes';
+import type { LineError } from '../../lib/types';
+import type { ShaderId } from '../../render/Renderer';
 
 // The open animation, its code as last built, and what the editor shows about it: the parts that all
 // start afresh when an animation opens.

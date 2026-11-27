@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 
-import { parseDocument, tutorialDocument, type AnimationDocument } from '../lib/document';
-import * as localStore from '../lib/localStore';
-import { isBrokenShareLink, type Route } from '../lib/routes';
-import { loadRoute, ShareError } from '../lib/share';
-import { lessonTitle } from '../tutorial/lessons';
-import type { TutorialProgress } from '../tutorial/progress';
+import { parseDocument, tutorialDocument, type AnimationDocument } from '../../lib/document';
+import * as localStore from '../../lib/localStore';
+import { isBrokenShareLink, type Route } from '../../lib/routes';
+import { loadRoute, ShareError } from '../../lib/share';
+import { lessonTitle } from '../../tutorial/lessons';
+import type { TutorialProgress } from '../../tutorial/progress';
 
 const STORAGE_BLOCKED = "This browser isn't letting smoothstep.io store data, so animations can't be saved here. " +
   "Private browsing can cause this.";

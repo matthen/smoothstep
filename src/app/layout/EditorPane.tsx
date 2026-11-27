@@ -3,16 +3,16 @@ import type { EditorView } from '@codemirror/view';
 import { lazy, Suspense } from 'react';
 import { TbHammer } from 'react-icons/tb';
 
-import CodeEditor from '../editor/CodeEditor';
-import type { Range } from '../editor/glslDefinitions';
-import ShaderTabs, { shaderCaption, shaderName, starterFunction } from '../editor/ShaderTabs';
-import { canvasLayer, withCanvasLayer } from '../lib/document';
-import type { ShaderId } from '../render/Renderer';
+import CodeEditor from '../../editor/CodeEditor';
+import type { Range } from '../../editor/glslDefinitions';
+import ShaderTabs, { shaderCaption, shaderName, starterFunction } from '../../editor/ShaderTabs';
+import { canvasLayer, withCanvasLayer } from '../../lib/document';
+import type { ShaderId } from '../../render/Renderer';
 import type { useCodeTabs } from './useCodeTabs';
-import type { useDocument } from './useDocument';
+import type { useDocument } from '../document/useDocument';
 
 // Loaded when the Docs tab is first shown, with the pages.
-const ReferencePanel = lazy(() => import('../reference/ReferencePanel'));
+const ReferencePanel = lazy(() => import('../../reference/ReferencePanel'));
 
 interface Props {
   docState: ReturnType<typeof useDocument>;

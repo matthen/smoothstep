@@ -3,10 +3,10 @@ import { notifications } from '@mantine/notifications';
 import { useCallback, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 
-import { GlslCode } from '../editor/InlineCode';
-import type { Route } from '../lib/routes';
-import { useLatest } from '../lib/useLatest';
-import { anyModalOpen } from './AppModal';
+import { GlslCode } from '../../editor/InlineCode';
+import type { Route } from '../../lib/routes';
+import { useLatest } from '../../lib/useLatest';
+import { anyModalOpen } from '../AppModal';
 import { setTourState, tourState } from './onboarding';
 import { chooseTip, markTipSeen, seenTips, tipContent, tipsFor, turnOffTips, type TipEvent } from './tips';
 import type { TourOptions } from './tour';

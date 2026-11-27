@@ -2,7 +2,7 @@ import {useEffect, useEffectEvent, useRef} from "react";
 import {ActionIcon, Tooltip} from "@mantine/core";
 import {useMediaQuery} from "@mantine/hooks";
 import {TbPlus} from "react-icons/tb";
-import {usePhone} from "../app/usePhone";
+import {usePhone} from "../app/layout/usePhone";
 import type {Variable} from "../lib/document";
 import {valueRange} from "./curves";
 import {durationDSecs, maxTimeFor, ROW_HEIGHT} from "./geometry";

@@ -1,7 +1,7 @@
 // One-time tips shown while you work, each the first time something happens. Which tips have been
 // seen, or that tips are turned off, is kept in this browser; if storage is blocked, tips can repeat.
-import type { Variable } from '../lib/document';
-import { uses } from '../lib/glslCode';
+import type { Variable } from '../../lib/document';
+import { uses } from '../../lib/glslCode';
 
 const KEY = "smoothstep.tips";
 

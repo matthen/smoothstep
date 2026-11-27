@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { emptyVariables } from '../lib/document';
+import { emptyVariables } from '../../lib/document';
 import { chooseTip, markTipSeen, seenTips, tipContent, tipsFor, turnOffTips, type TipId } from './tips';
 
 const withTransition = () => {

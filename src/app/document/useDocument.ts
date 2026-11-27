@@ -3,13 +3,13 @@ import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import {
   canvasLayer, DEFAULT_TITLE, MAX_TITLE_LENGTH, NEW_CANVAS_CODE, newBufferCode, sameExtras, shaderExtras,
   SHARED_PLACEHOLDER, type AnimationDocument,
-} from '../lib/document';
-import type { Route } from '../lib/routes';
-import type { LineError } from '../lib/types';
-import type { Shaders } from '../render/Canvas';
-import type { CompileResult, ShaderId } from '../render/Renderer';
-import { shaderName } from '../editor/ShaderTabs';
-import { setCrashDocument } from './crashState';
+} from '../../lib/document';
+import type { Route } from '../../lib/routes';
+import type { LineError } from '../../lib/types';
+import type { Shaders } from '../../render/Canvas';
+import type { CompileResult, ShaderId } from '../../render/Renderer';
+import { shaderName } from '../../editor/ShaderTabs';
+import { setCrashDocument } from '../crashState';
 import { documentReducer, initialDocumentState } from './documentState';
 
 export function windowTitle(title: string) {

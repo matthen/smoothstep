@@ -1,8 +1,8 @@
 import { SegmentedControl } from '@mantine/core';
 import { TbCircleCheckFilled } from 'react-icons/tb';
 
-import { ConsoleLabel } from '../console/ConsolePanel';
-import type { ConsoleStore } from '../console/consoleStore';
+import { ConsoleLabel } from '../../console/ConsolePanel';
+import type { ConsoleStore } from '../../console/consoleStore';
 import type { MobileTab } from './useLayout';
 
 interface Props {

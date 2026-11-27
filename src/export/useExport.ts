@@ -4,8 +4,8 @@ import type { ConsoleStore } from '../console/consoleStore';
 import type { ExportOptions, ExportProgress } from '../dialogs/exportTypes';
 import * as archive from '../lib/archive';
 import type { AnimationDocument } from '../lib/document';
-import { showMessage } from './statusMessage';
-import { logLayer } from './useConsoleLog';
+import { showMessage } from '../lib/statusMessage';
+import { logLayer } from '../console/useConsoleLog';
 
 const EXPORT_NAMES: Record<ExportOptions["type"], string> = {webm: "a WebM video", mp4: "an MP4 video", gif: "a GIF", png: "PNG frames"};
 
@@ -27,7 +27,7 @@ export function useExport(store: ConsoleStore, doc: AnimationDocument, closeDial
     store.add({level: "note", text: `Rendering ${EXPORT_NAMES[exportOptions.type]}`});
     try {
       // Loaded on first export, since the encoders are a large part of the app's size.
-      const {exportVideo} = await import('../export/exportVideo');
+      const {exportVideo} = await import('./exportVideo');
       archive.download(await exportVideo(doc, exportOptions, setExportProgress, controller.signal, {
         layer: (logs, dropped) => logLayer(store, logs, dropped, true),
         layerErrors: errors => errors.forEach(error =>

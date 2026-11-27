@@ -1,19 +1,19 @@
 import { notifications } from '@mantine/notifications';
 import { useCallback, useEffect, useRef, useState, type Dispatch, type RefObject } from 'react';
 
-import * as archive from '../lib/archive';
-import { documentHref } from '../lib/config';
-import type { AnimationDocument } from '../lib/document';
-import * as localStore from '../lib/localStore';
-import type { Route } from '../lib/routes';
-import { loadRoute, ShareError } from '../lib/share';
-import { useLatest } from '../lib/useLatest';
-import { onLaunchFiles } from '../pwa/install';
-import type { CanvasHandle } from '../render/Canvas';
+import * as archive from '../../lib/archive';
+import { documentHref } from '../../lib/config';
+import type { AnimationDocument } from '../../lib/document';
+import * as localStore from '../../lib/localStore';
+import type { Route } from '../../lib/routes';
+import { loadRoute, ShareError } from '../../lib/share';
+import { useLatest } from '../../lib/useLatest';
+import { onLaunchFiles } from '../../pwa/install';
+import type { CanvasHandle } from '../../render/Canvas';
 import type { DocumentAction } from './documentState';
-import { openHash } from './routing';
-import { showMessage } from './statusMessage';
-import type { TipEvent } from './tips';
+import { openHash } from '../routing';
+import { showMessage } from '../../lib/statusMessage';
+import type { TipEvent } from '../onboarding/tips';
 import { windowTitle } from './useDocument';
 
 function errorMessage(error: unknown, fallback: string): string {
