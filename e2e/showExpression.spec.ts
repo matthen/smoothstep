@@ -376,6 +376,50 @@ test("a fast picker drag leaves its last value built, and the shown expression c
   expect(errors).toEqual([]);
 });
 
+test("an expression shown while a picker drag holds the last one back replaces it", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#new");
+  // A constant's value can't be a uniform, so its drag builds each change, holding the expression back.
+  await setCode(page, `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  const float red = 0.2;
+  vec3 tint = vec3(0.0, 1.0, 0.0);
+  float d = 0.5;
+  fragColor = vec4(red, 0.0, 0.0, 1.0) + 0.0 * vec4(tint, d);
+}`);
+  await page.keyboard.press("Shift+Enter");
+  await word(page, "tint").dblclick();
+  await showButton(page).click();
+  await expectCenter(page, [0, 255, 0]);
+
+  await word(page, "0.2").click();
+  const ruler = page.locator(".ss-float-picker canvas");
+  const box = (await ruler.boundingBox())!;
+  const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  // Drags, then selects d and presses Alt+Enter at once, well inside the hold after the last change.
+  const d = await word(page, "d").elementHandle();
+  await ruler.evaluate(async (canvas, [d, x, y]) => {
+    for (let i = 1; i <= 5; i++) {
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      canvas.dispatchEvent(new PointerEvent("pointermove", {pointerId: 1, bubbles: true, clientX: x - 6 * i, clientY: y}));
+    }
+    const text = (d as HTMLElement).firstChild!;
+    const content = (d as HTMLElement).closest<HTMLElement>(".cm-content")!;
+    content.focus();
+    window.getSelection()!.setBaseAndExtent(text, 0, text, 1);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    content.dispatchEvent(new KeyboardEvent("keydown", {key: "Enter", code: "Enter", altKey: true, bubbles: true, cancelable: true}));
+  }, [d, x, y] as const);
+  await page.mouse.up();
+
+  await page.waitForTimeout(1000);
+  await expect(probeBar(page)).toContainText("float");
+  await expect(probeBar(page)).not.toContainText("tint");
+  await expectCenter(page, [128, 128, 128]);
+  expect(errors).toEqual([]);
+});
+
 test("showing an expression in code that doesn't build says why", async ({page, context}) => {
   const errors = await offline(context);
   await start(page);
