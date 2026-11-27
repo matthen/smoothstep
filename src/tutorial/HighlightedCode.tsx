@@ -1,13 +1,16 @@
 import { Fragment, useMemo } from 'react';
 
 import { highlightLines, LAYER_NAMES } from '../editor/highlight';
+import { useJsHighlighting } from '../editor/InlineCode';
 
 // Code coloured as in the editor: a step's code block, or a few lines quoted in its text.
 export default function HighlightedCode({code, javascript, className = "learnCodeText"}: {
   code: string; javascript: boolean; className?: string;
 }) {
+  const jsReady = useJsHighlighting(javascript);
   const lines = useMemo(() => highlightLines(code.replace(/\n$/, ""), javascript ? "js" : "glsl",
-    javascript ? LAYER_NAMES : undefined), [code, javascript]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- jsReady changes what highlightLines returns
+    javascript ? LAYER_NAMES : undefined), [code, javascript, jsReady]);
   return (
     <pre className={className}>
       {lines.map((spans, i) =>

@@ -1,7 +1,6 @@
 // Code coloured as in the editor, outside it: runs of text with the editor's `tok-*` classes, for code
 // blocks and for code quoted in the app's text, the tutorial, popups and the docs.
 import { highlightCode } from '@lezer/highlight';
-import { parser as jsParser } from '@lezer/javascript';
 
 import { HELPER_NAMES } from '../layer/helpers.ts';
 import { GLSL_TOKEN_CLASSES, tokenizeGlsl } from './glslLanguage.ts';
@@ -25,11 +24,38 @@ function markNames(run: string, names: ReadonlySet<string>): CodeSpan[] {
     .map((text) => ({ text, className: names.has(text) ? 'tok-builtin' : '' }));
 }
 
-// The code's lines as coloured runs. JavaScript can also mark `names`, such as LAYER_NAMES, as built-ins.
+type JsParser = typeof import('@lezer/javascript').parser;
+let jsParser: JsParser | null = null;
+let jsLoading: Promise<void> | null = null;
+const jsListeners = new Set<() => void>();
+
+// The JavaScript parser loads with the first Canvas2D tab or snippet, so it stays out of the app's startup.
+export function setJsParser(parser: JsParser) {
+  jsParser = parser;
+  jsListeners.forEach((listener) => listener());
+}
+
+export function loadJsHighlighting(): Promise<void> {
+  jsLoading ??= import('@lezer/javascript').then(({ parser }) => setJsParser(parser));
+  return jsLoading;
+}
+
+export const jsHighlightingReady = () => jsParser !== null;
+
+export function onJsHighlightingReady(listener: () => void): () => void {
+  jsListeners.add(listener);
+  return () => jsListeners.delete(listener);
+}
+
+// The code's lines as coloured runs. JavaScript can also mark `names`, such as LAYER_NAMES, as built-ins;
+// until its parser has loaded, only those are coloured.
 export function highlightLines(code: string, language: CodeLanguage, names?: ReadonlySet<string>): CodeSpan[][] {
   if (language === 'glsl') {
     return tokenizeGlsl(code).map((line) =>
       line.map((t) => ({ text: t.text, className: t.type ? GLSL_TOKEN_CLASSES[t.type] : '' })));
+  }
+  if (!jsParser) {
+    return code.split('\n').map((line) => names ? markNames(line, names) : line ? [{ text: line, className: '' }] : []);
   }
   const lines: CodeSpan[][] = [[]];
   highlightCode(code, jsParser.parse(code), jsHighlighter, (run, className) => {

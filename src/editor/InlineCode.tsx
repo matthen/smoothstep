@@ -1,11 +1,23 @@
 // Code quoted in the app's text, coloured as in the editor.
-import { useMemo } from 'react';
+import { useEffect, useMemo, useSyncExternalStore } from 'react';
 
-import { highlightLines, LAYER_NAMES, type CodeLanguage } from './highlight';
+import {
+  highlightLines, jsHighlightingReady, LAYER_NAMES, loadJsHighlighting, onJsHighlightingReady, type CodeLanguage,
+} from './highlight';
+
+// Loads the JavaScript parser when `javascript` is set, and says once it has, so the code is coloured again.
+export function useJsHighlighting(javascript: boolean): boolean {
+  useEffect(() => {
+    if (javascript) void loadJsHighlighting();
+  }, [javascript]);
+  return useSyncExternalStore(onJsHighlightingReady, jsHighlightingReady);
+}
 
 function InlineCode({ code, language }: { code: string; language: CodeLanguage }) {
+  const jsReady = useJsHighlighting(language === 'js');
   const spans = useMemo(() => highlightLines(code, language, language === 'js' ? LAYER_NAMES : undefined).flat(),
-    [code, language]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- jsReady changes what highlightLines returns
+    [code, language, jsReady]);
   return (
     <code className="ss-code">
       {spans.map((span, i) => span.className ? <span key={i} className={span.className}>{span.text}</span> : span.text)}
