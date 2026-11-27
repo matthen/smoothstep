@@ -1,9 +1,11 @@
 // Compile errors as alert widgets under their lines. An error about a missing draw or mainImage
-// shows the function to add, with a button that adds it.
+// shows the function to add, with a button that adds it, and some common GLSL mistakes have a button
+// that fixes them.
 import { Facet, StateEffect, StateField, type EditorState, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view';
 import { DOC_SECTIONS, docLinkElement } from '../lib/docLinks';
 import type { LineError } from '../lib/types';
+import { quickFix, type QuickFix } from './quickFixes';
 
 // The function this tab's code must have, to insert when it's missing.
 export const missingSkeleton = Facet.define<string, string | null>({combine: (values) => values[0] ?? null});
@@ -27,14 +29,40 @@ function insertSkeleton(view: EditorView, code: string) {
   });
 }
 
+// Makes the fix for the error on the line `dom` sits under, if the code there still has it.
+function applyQuickFix(view: EditorView, dom: HTMLElement, error: LineError, label: string) {
+  const {state} = view;
+  const line = state.doc.lineAt(view.posAtDOM(dom)).number - 1;
+  const fix = quickFix(error.message, state.doc.toString(), line);
+  if (fix?.label === label) {
+    view.dispatch({changes: fix.changes, effects: setLineErrors.of([]), userEvent: 'input.fix'});
+  }
+}
+
 class ErrorWidget extends WidgetType {
-  constructor(readonly error: LineError, readonly skeleton: string | null, readonly callbacks: LineErrorCallbacks) {
+  constructor(
+    readonly error: LineError, readonly skeleton: string | null, readonly fix: QuickFix | null,
+    readonly callbacks: LineErrorCallbacks,
+  ) {
     super();
   }
 
   eq(other: ErrorWidget) {
     return other.error.message === this.error.message && other.error.missing === this.error.missing &&
-      other.skeleton === this.skeleton;
+      other.skeleton === this.skeleton && other.fix?.label === this.fix?.label;
+  }
+
+  private fixButton(view: EditorView, dom: HTMLElement, label: string) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'ss-line-error-fix ss-line-error-quick-fix';
+    button.textContent = label;
+    // Builds even when the code has changed so the fix no longer applies, to bring the errors up to date.
+    button.addEventListener('click', () => {
+      applyQuickFix(view, dom, this.error, label);
+      this.callbacks.onFixed?.();
+    });
+    return button;
   }
 
   toDOM(view: EditorView) {
@@ -60,6 +88,9 @@ class ErrorWidget extends WidgetType {
         docLinkElement('How mainImage works', DOC_SECTIONS.shaders);
       dom.append(' ', docs);
     }
+    if (this.fix) {
+      dom.append(this.fixButton(view, dom, this.fix.label));
+    }
     return dom;
   }
 }
@@ -69,9 +100,11 @@ export const setLineErrors = StateEffect.define<LineError[]>();
 function errorDecorations(state: EditorState, errors: LineError[], callbacks: LineErrorCallbacks): DecorationSet {
   const { doc } = state;
   const skeleton = state.facet(missingSkeleton);
+  const code = doc.toString();
   const widgets = errors.map((error) => {
     const line = doc.line(Math.max(1, Math.min(doc.lines, error.line + 1)));
-    const widget = new ErrorWidget(error, skeleton, callbacks);
+    const fix = error.missing ? null : quickFix(error.message, code, line.number - 1);
+    const widget = new ErrorWidget(error, skeleton, fix, callbacks);
     return Decoration.widget({ widget, block: true, side: 1 }).range(line.to);
   });
   return Decoration.set(widgets, true);

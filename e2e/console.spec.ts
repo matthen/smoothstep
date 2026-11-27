@@ -98,6 +98,45 @@ test("a shader error is listed with its tab and line, and clicking it goes there
   await expect.poll(() => cursorLine(page)).toBe("  fragColor = vec4(uv, missing, 1.0);");
 });
 
+test("the Console warns once about every empty texture slot and always-0 iFloat the code reads, until it's set", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./");
+  await page.getByRole("button", {name: "Continue"}).click();
+  await consoleTab(page).click();
+  const shader = (value: string) =>
+    `void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  fragColor = vec4(${value});\n}`;
+  const texture = entries(page).filter({hasText: "iTexture2 is empty, so it reads as black."});
+  const float3 = entries(page).filter({hasText: "iFloat3 is always 0"});
+  const float4 = entries(page).filter({hasText: "iFloat4 is always 0"});
+  await setCode(page, shader("texture(iTexture2, fragCoord).rgb, iFloat3"));
+  await page.keyboard.press("Shift+Enter");
+  await expect(texture).toHaveCount(1);
+  await expect(float3).toHaveCount(1);
+
+  // Warnings still true show again on the next build.
+  await setCode(page, shader("texture(iTexture2, fragCoord).rgb + iFloat4, iFloat3"));
+  await page.keyboard.press("Shift+Enter");
+  await expect(float4).toHaveCount(1);
+  await expect(texture).toHaveCount(1);
+  await expect(float3).toHaveCount(1);
+
+  // One that's fixed goes.
+  await setCode(page, shader("vec3(iFloat4), iFloat3"));
+  await page.keyboard.press("Shift+Enter");
+  await expect(texture).toHaveCount(0);
+  await expect(float3).toHaveCount(1);
+  await expect(float4).toHaveCount(1);
+
+  // Setting an iFloat with its slider clears its warning straight away, without a build.
+  await page.getByRole("tab", {name: "Sliders"}).click();
+  await page.getByLabel("iFloat3 value").fill("0.5");
+  await page.getByLabel("iFloat3 value").press("Enter");
+  await consoleTab(page).click();
+  await expect(float3).toHaveCount(0);
+  await expect(float4).toHaveCount(1);
+  expect(errors).toEqual([]);
+});
+
 test("Canvas2D code with a syntax error makes the build line say it failed", async ({page, context}) => {
   await offline(context);
   await page.goto("./");

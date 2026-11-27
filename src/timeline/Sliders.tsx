@@ -22,14 +22,22 @@ interface SlidersProps {
   onHold(row: number, value: number): void;
 }
 
+// The numbers `pattern` captures in the code, in order, ignoring comments.
+function numbersInCode(code: string, pattern: RegExp): number[] {
+  const stripped = code.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  return [...new Set([...stripped.matchAll(pattern)].map(m => Number(m[1])))].sort((a, b) => a - b);
+}
+
 // The numbers of the inputs called `prefix`N that the code uses, in order, ignoring comments.
 export function inputsInCode(code: string, prefix: "iFloat" | "iTexture"): number[] {
-  const stripped = code.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
-  const found = stripped.matchAll(new RegExp(`\\b${prefix}(\\d+)\\b`, "g"));
-  return [...new Set([...found].map(m => Number(m[1])))].sort((a, b) => a - b);
+  return numbersInCode(code, new RegExp(`\\b${prefix}(\\d+)\\b`, "g"));
 }
 
 export const floatsInCode = (code: string) => inputsInCode(code, "iFloat");
+
+// The numbers N the Canvas2D code reads as `array`[N], like the texture slots in textures[N].
+export const layerInputsInCode = (code: string, array: "floats" | "textures") =>
+  numbersInCode(code, new RegExp(String.raw`\b${array}\s*\[\s*(\d+)\s*\]`, "g"));
 
 // As many decimal places as the range needs.
 function placesFor(lo: number, hi: number): number {

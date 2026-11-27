@@ -107,7 +107,7 @@ export default function App() {
     setOpenDialog: open => setDialog(open ? "open" : null),
   });
   const {save, download} = library;
-  const builds = useBuilds({docState, canvasRef, tabs, probe, log, showTip});
+  const builds = useBuilds({docState, canvasRef, tabs, probe, log, showTip, tutorialOpen});
 
   const onDurationChange = useCallback((duration: number) => {
     edit({duration});

@@ -19,6 +19,12 @@ always set to 1.
 If a tab's code has no `mainImage`, its error shows the one a new tab starts with, and **Insert a
 mainImage function** adds it after your code and builds.
 
+Some other common mistakes also get a button under their error that fixes them and builds. GLSL
+won't use a whole number like `1` where it needs a float, so for `float x = 1;` the button changes
+the `1` to `1.0`, and it does the same for `x * 2` or `pow(x, 2)`. GLSL's `%` only works on ints,
+so for `x % 2` with a float `x` the button changes it to `mod(x, 2.0)`. There are buttons like this
+for a line missing its `;`, and for a vector of the wrong size, such as a `vec4` given to a `vec3`.
+
 You write GLSL ES 3.00, the WebGL2 shader language. smoothstep.io adds `#version 300 es`,
 `precision highp float;` and the input uniforms below before your code, so you don't write them
 yourself.

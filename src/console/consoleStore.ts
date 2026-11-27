@@ -102,6 +102,13 @@ export class ConsoleStore {
     return this.entries[this.entries.length - 1];
   }
 
+  // Drops the entries with these ids that are still listed.
+  remove(ids: readonly number[]) {
+    this.entries = this.entries.filter(entry => !ids.includes(entry.id));
+    ids.forEach(id => this.unseen.delete(id));
+    this.changed();
+  }
+
   clear() {
     this.entries = [];
     this.unseen.clear();
