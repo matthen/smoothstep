@@ -43,6 +43,9 @@ test("a picker drag changes a running simulation as it goes, and starts it again
 }`);
   await page.keyboard.press("Shift+Enter");
   await expect(page.locator(".buildButton")).toBeHidden();
+  // Long enough that looping, which also starts the simulation again, can't happen during the drag.
+  await page.locator(".durationInput").fill("60");
+  await page.locator(".durationInput").press("Enter");
   await page.getByRole("button", {name: "Play"}).click();
   await expect.poll(() => frameIndex(page), FRAME_WAIT).toBeGreaterThan(30);
 
