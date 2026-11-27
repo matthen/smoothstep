@@ -1,6 +1,6 @@
 // Building the code, and what the editor and canvas report as it's edited and built.
 import type { EditorView } from '@codemirror/view';
-import { useState, type RefObject } from 'react';
+import { useMemo, useState, type RefObject } from 'react';
 
 import type { Range } from '../../editor/glslDefinitions';
 import { canvasLayer } from '../../lib/document';
@@ -10,7 +10,7 @@ import type { CanvasHandle } from '../../render/Canvas';
 import type { CompileResult, ShaderId } from '../../render/Renderer';
 import type { TipEvent } from '../onboarding/tips';
 import type { useCodeTabs } from '../layout/useCodeTabs';
-import { inputWarnings } from '../../console/inputWarnings';
+import { useInputWarnings } from '../../console/useInputWarnings';
 import type { useConsoleLog } from '../../console/useConsoleLog';
 import type { useDocument } from './useDocument';
 import type { useProbe } from '../../render/useProbe';
@@ -72,13 +72,19 @@ export function useBuilds({docState, canvasRef, tabs, probe, log, showTip, tutor
     }
   };
 
+  // Every shader tab's code, so a tip about iPrevFrame shows wherever it's used.
+  const builtShaders = useMemo(
+    () => [builtCode, builtExtras.shared, ...builtExtras.buffers].join("\n"), [builtCode, builtExtras]);
+  // A new one for each build that works. The tutorial's steps say when an input is still empty, so its
+  // warnings would only repeat them.
+  const {compiled} = docState;
+  const builtInputs = useMemo(() => compiled?.ok && !tutorialOpen ? {shaders: builtShaders, canvas: builtExtras.canvas} : null,
+    [compiled, tutorialOpen, builtShaders, builtExtras.canvas]);
+  useInputWarnings(log.showInputWarnings, builtInputs, docState.doc.textures, docState.doc.variables);
+
   const onBuilt = (result: CompileResult, ms: number) => {
-    // Every shader tab's code, so a tip about iPrevFrame shows wherever it's used.
-    const code = [builtCode, builtExtras.shared, ...builtExtras.buffers].join("\n");
-    // The tutorial's steps say when an input is still empty, so its warnings would only repeat them.
-    const {textures, variables} = docRef.current;
-    const warnings = result.ok && !tutorialOpen ? inputWarnings(code, builtExtras.canvas, textures, variables) : [];
-    log.logBuild(buildId, result, ms, warnings);
+    const code = builtShaders;
+    log.logBuild(buildId, result, ms);
     docState.built(result);
     if (!result.ok && !docsShownRef.current) {
       setCodeTab(result.shader);  // Show the code with the error.

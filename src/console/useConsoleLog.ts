@@ -40,6 +40,8 @@ export function useConsoleLog(store: ConsoleStore, exporting: () => boolean, sho
   const loopedAt = useRef(-Infinity);
   const buildLine = useRef<{id: number; shaderErrors: number; ms: number} | null>(null);
   const lastRestart = useRef<{id: number; at: number} | null>(null);
+  // The input warnings listed, by their text, with their entries' ids.
+  const inputWarningIds = useRef(new Map<string, number>());
 
   // The console counts its errors as seen while it shows.
   useEffect(() => store.setViewing(shown), [store, shown]);
@@ -47,21 +49,35 @@ export function useConsoleLog(store: ConsoleStore, exporting: () => boolean, sho
   const looped = useCallback(() => {loopedAt.current = performance.now();}, []);
   const rewound = useCallback(() => {loopedAt.current = -Infinity;}, []);
 
-  // Each build starts the console afresh, with a line saying how it went and its warnings.
-  const logBuild = (buildId: number, result: CompileResult, ms: number, warnings: string[] = []) => {
+  // Each build starts the console afresh, with a line saying how it went.
+  const logBuild = (buildId: number, result: CompileResult, ms: number) => {
     if (buildId === consoleBuild) {
       return;
     }
     const errors = result.ok ? [] : result.errors;
     setConsoleBuild(buildId);
     store.clear();
+    inputWarningIds.current.clear();
     store.add({level: "note", text: buildLineText(errors.length, ms)});
     buildLine.current = {id: store.last()!.id, shaderErrors: errors.length, ms};
     if (!result.ok) {
       errors.forEach(error => store.add({level: "error", text: error.message, tab: result.shader, line: error.line}));
     }
-    warnings.forEach(text => store.add({level: "warn", text}));
   };
+
+  // Lists the input warnings that are true now, adding new ones and dropping those that no longer are.
+  const showInputWarnings = useCallback((texts: readonly string[]) => {
+    const listed = inputWarningIds.current;
+    const gone = [...listed].filter(([text]) => !texts.includes(text));
+    if (gone.length > 0) {
+      store.remove(gone.map(([, id]) => id));
+      gone.forEach(([text]) => listed.delete(text));
+    }
+    for (const text of texts.filter(t => !listed.has(t))) {
+      store.add({level: "warn", text});
+      listed.set(text, store.last()!.id);
+    }
+  }, [store]);
 
   const logLayerStatus = (errors: LineError[], loading: boolean) => {
     errors.forEach(error => store.add({level: "error", text: error.message, tab: "canvas", line: error.line}));
@@ -101,5 +117,7 @@ export function useConsoleLog(store: ConsoleStore, exporting: () => boolean, sho
     text: `iTexture${slot}'s ${video ? "video couldn't be loaded or played" : "image couldn't be loaded"}, so it reads as black.`,
   });
 
-  return {looped, rewound, logBuild, logLayerStatus, addLayerLogs, onLayerRestart, onTextureFailed};
+  return {
+    looped, rewound, logBuild, showInputWarnings, logLayerStatus, addLayerLogs, onLayerRestart, onTextureFailed,
+  };
 }

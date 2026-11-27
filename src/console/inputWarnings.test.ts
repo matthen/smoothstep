@@ -41,6 +41,17 @@ describe("inputWarnings", () => {
     expect(warnings).toEqual([expect.stringMatching(/^iFloat0 is always 0, /)]);
   });
 
+  it("warns about always-0 floats the Canvas2D code reads that no shader does", () => {
+    const variables = emptyVariables();
+    variables[1] = {transitions: [transition]};
+    const warnings = inputWarnings("iFloat0", "f(floats[0], floats [1], floats[ 2 ]); // floats[3]",
+      emptyTextures(), variables);
+    expect(warnings).toEqual([
+      expect.stringMatching(/^iFloat0 is always 0, /),
+      expect.stringMatching(/^floats\[2\] is always 0, since iFloat2 /),
+    ]);
+  });
+
   it("has nothing to say about a new animation or the bundled examples", () => {
     expect(warningsFor(newDocument())).toEqual([]);
     const folder = "public/examples";

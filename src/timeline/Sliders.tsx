@@ -35,8 +35,9 @@ export function inputsInCode(code: string, prefix: "iFloat" | "iTexture"): numbe
 
 export const floatsInCode = (code: string) => inputsInCode(code, "iFloat");
 
-// The texture slots the Canvas2D code reads as textures[N].
-export const layerTexturesInCode = (code: string) => numbersInCode(code, /\btextures\s*\[\s*(\d+)\s*\]/g);
+// The numbers N the Canvas2D code reads as `array`[N], like the texture slots in textures[N].
+export const layerInputsInCode = (code: string, array: "floats" | "textures") =>
+  numbersInCode(code, new RegExp(String.raw`\b${array}\s*\[\s*(\d+)\s*\]`, "g"));
 
 // As many decimal places as the range needs.
 function placesFor(lo: number, hi: number): number {
