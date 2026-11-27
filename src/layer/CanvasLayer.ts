@@ -1,7 +1,7 @@
 // Runs an animation's Canvas2D layer for the app, the players and the exporter: starts its worker in
 // the sandbox, sends it the steps to draw, and hands back the frames. A run that has drawn can't be
 // rewound, so restarting starts a new worker; one is kept waiting so that's quick.
-import { uses } from '../lib/glslCode';
+import { layerReadsTextures } from '../lib/document';
 import { isVideoURL } from '../lib/media';
 import type { LineError } from '../lib/types';
 import type { LayerAssets } from './assets';
@@ -147,7 +147,7 @@ export class CanvasLayer {
     this.phase = preparing;
     this.waiting.drop();
     this.rejectPending(new Error("The Canvas2D layer was restarted."));
-    this.videos = config.textures.some(isVideoURL) && uses(config.code, /\btextures\b/);
+    this.videos = config.textures.some(isVideoURL) && layerReadsTextures(config.code);
     void prepare(config, this.assets, this.bitmaps).then(prepared => {
       if (this.phase !== preparing) {
         return;

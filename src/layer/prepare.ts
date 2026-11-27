@@ -1,6 +1,6 @@
 // Loads what every run of a Canvas2D layer's configuration shares: its script, with the libraries it
 // imports, and the fonts and images it uses.
-import { uses } from '../lib/glslCode';
+import { layerReadsTextures } from '../lib/document';
 import { isVideoURL } from '../lib/media';
 import type { LineError } from '../lib/types';
 import type { LayerAssets } from './assets';
@@ -25,7 +25,8 @@ export async function prepare(
     return {errors: imports.errors};
   }
   // Decoding images takes a while, so only for code that uses them.
-  const images = config.textures.map(url => url !== null && !isVideoURL(url) && uses(config.code, /\btextures\b/) ? url : null);
+  const reads = layerReadsTextures(config.code);
+  const images = config.textures.map(url => reads && url !== null && !isVideoURL(url) ? url : null);
   try {
     const [libraries, fonts, textures] = await Promise.all([
       Promise.all(imports.libraries.map(async name => ({name, code: await assets.library(name)}))),

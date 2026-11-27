@@ -11,7 +11,8 @@ import { safeFilename, zipWriter, type DownloadableFile } from '../lib/archive';
 import { textureURL } from '../lib/config';
 import type { CanvasLayer, LayerLog } from '../layer/CanvasLayer';
 import type { LineError } from '../lib/types';
-import { bufferCodes, canvasLayer, EMPTY_TEXTURE, variableValues, type AnimationDocument } from '../lib/document';
+import { bufferCodes, canvasLayer, layerTextureURLs, variableValues, type AnimationDocument } from '../lib/document';
+import { layerInputs } from '../render/layerSteps';
 import { Renderer, type FrameInputs } from '../render/Renderer';
 import { renderSteps, RESTART, type StepRenderer } from '../render/steps';
 import { noVideoReason } from './videoSupport';
@@ -105,6 +106,31 @@ function pngEncoder(canvas: HTMLCanvasElement): Encoder {
 
 const EXTENSIONS = {webm: ".webm", mp4: ".mp4", gif: ".gif", png: ".zip"};
 
+// The animation's Canvas2D layer, if it has one, started for an export at its size with its textures.
+async function startLayer(
+  doc: AnimationDocument, renderer: Renderer, frame: {width: number; height: number; textures: (string | null)[]},
+  log?: ExportLog,
+): Promise<CanvasLayer | null> {
+  const layerDoc = canvasLayer(doc);
+  if (!layerDoc) {
+    return null;
+  }
+  const {CanvasLayer, bundledAssets} = await import('../layer/bundled');
+  const layer = new CanvasLayer(bundledAssets, {
+    onFrame: bitmap => bitmap.close(),
+    onStatus: errors => {
+      if (errors.length > 0) {
+        log?.layerErrors(errors);
+      }
+    },
+    ...log && {onLog: (logs: LayerLog[], dropped: number) => log.layer(logs, dropped)},
+  }, false);
+  renderer.setLayer(true);
+  renderer.layerOverlay = layerDoc.overlay;
+  layer.configure({code: layerDoc.code, ...frame, duration: doc.duration});
+  return layer;
+}
+
 // Throws ExportCancelled when `signal` aborts.
 export async function exportVideo(
   doc: AnimationDocument, options: ExportOptions,
@@ -134,27 +160,10 @@ export async function exportVideo(
     renderer.setSize(width, height);
     renderer.onTextureFailed = (slot, video) =>
       log?.warn(`iTexture${slot}'s ${video ? "video" : "image"} couldn't be loaded, so it's black in the render.`);
-    renderer.setTextures(doc.textures.map(textureURL));
+    const textureURLs = doc.textures.map(textureURL);
+    renderer.setTextures(textureURLs);
     await renderer.texturesReady();
-    const layerDoc = canvasLayer(doc);
-    if (layerDoc) {
-      const {CanvasLayer, bundledAssets} = await import('../layer/bundled');
-      layer = new CanvasLayer(bundledAssets, {
-        onFrame: bitmap => bitmap.close(),
-        onStatus: errors => {
-          if (errors.length > 0) {
-            log?.layerErrors(errors);
-          }
-        },
-        ...log && {onLog: (logs: LayerLog[], dropped: number) => log.layer(logs, dropped)},
-      }, false);
-      renderer.setLayer(true);
-      renderer.layerOverlay = layerDoc.overlay;
-      layer.configure({
-        code: layerDoc.code, width, height, duration: doc.duration,
-        textures: doc.textures.map(t => t.url === EMPTY_TEXTURE && !t.isUserUploaded ? null : textureURL(t)),
-      });
-    }
+    layer = await startLayer(doc, renderer, {width, height, textures: layerTextureURLs(doc.textures, textureURLs)}, log);
     encoder = options.type === "gif" ? gifEncoder(frameCanvas, fps) :
       options.type === "png" ? pngEncoder(frameCanvas) :
       await videoEncoder(frameCanvas, options.type, fps, width, height, text => log?.warn(text));
@@ -185,10 +194,7 @@ export async function exportVideo(
           await Promise.race([renderer.seekVideos(inputs.time), cancelled]);
         }
         if (layer) {
-          const drawn = layer.draw({
-            time: inputs.time, frame: inputs.frameIndex, floats: inputs.variableValues,
-            videoFrames: layer.needsVideoFrames ? renderer.videoFrames() : undefined,
-          });
+          const drawn = layer.draw(layerInputs(inputs, layer, renderer));
           // However long a step takes, cancelling still stops the export.
           renderer.setLayerFrame(await Promise.race([drawn.catch((error: unknown) => {
             throw new Error("The Canvas2D code has an error: " + (error instanceof Error ? error.message : String(error)));

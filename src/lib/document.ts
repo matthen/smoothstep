@@ -1,4 +1,5 @@
 // The animation document: the JSON that's saved, downloaded and opened (see FILE_FORMATS.md).
+import { uses } from './glslCode';
 
 export const NUM_TEXTURES = 8;
 export const NUM_VARIABLES = 16;
@@ -162,6 +163,20 @@ export function bufferCodes(doc: AnimationDocument): string[] {
 // The animation's Canvas2D layer, if it has one.
 export function canvasLayer(doc: AnimationDocument): CanvasLayer | undefined {
   return doc.layers?.[0];
+}
+
+// Whether a Canvas2D layer's code reads its texture slots, so their images are needed.
+export function layerReadsTextures(code: string): boolean {
+  return uses(code, /\btextures\b/);
+}
+
+// Each texture slot's URL from `urls` for a Canvas2D layer, which gets null for an empty slot, in place
+// of the black image shaders read, and for a slot without a URL.
+export function layerTextureURLs(slots: readonly TextureSlot[], urls: readonly string[]): (string | null)[] {
+  return slots.map((slot, i) => {
+    const url = urls[i];
+    return (slot.url === EMPTY_TEXTURE && !slot.isUserUploaded) || !url ? null : url;
+  });
 }
 
 // The document with its Canvas2D layer set, or removed with null.

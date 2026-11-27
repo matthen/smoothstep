@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { textureURL } from '../lib/config';
 import { useImagesChanged } from '../dialogs/useImagesChanged';
-import { bufferCodes, EMPTY_TEXTURE, type AnimationDocument } from '../lib/document';
+import { bufferCodes, EMPTY_TEXTURE, layerTextureURLs, type AnimationDocument } from '../lib/document';
 import { floatNames } from './names';
 import { floatsInCode, inputsInCode } from './Sliders';
 
@@ -34,10 +34,7 @@ export function useInputs(doc: AnimationDocument) {
   }, [allCode, doc.textures, minSlots]);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- imagesVersion isn't read, but a changed stored image means new URLs
   const textureURLs = useMemo(() => doc.textures.map(textureURL), [doc.textures, imagesVersion]);
-  // The Canvas2D layer gets null for an empty slot, in place of the black image shaders read.
-  const layerTextures = useMemo(
-    () => doc.textures.map((t, i) => t.url === EMPTY_TEXTURE && !t.isUserUploaded ? null : textureURLs[i]!),
-    [doc.textures, textureURLs]);
+  const layerTextures = useMemo(() => layerTextureURLs(doc.textures, textureURLs), [doc.textures, textureURLs]);
 
   return {
     allCode, floatNameList, rowCount, addRow: () => setMinRows(rowCount + 1), resetRows,
