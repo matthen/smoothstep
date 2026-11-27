@@ -450,6 +450,7 @@ export class CanvasLayer {
   // its code is slow to start, which may never end, so it's replaced.
   restart() {
     this.dropWaiting();
+    this.rejectPending(new Error("The Canvas2D layer was restarted."));
     const phase = this.phase;
     if (phase.kind !== "running" || (!phase.current.stepped && !this.slowToStart(phase.current))) {
       return;
@@ -459,7 +460,6 @@ export class CanvasLayer {
     if (run.stepped) {
       this.callbacks.onRestart?.();
     }
-    this.rejectPending(new Error("The Canvas2D layer was restarted."));
     this.use(phase.prepared, phase.standby ?? this.spawn(phase.prepared));
   }
 

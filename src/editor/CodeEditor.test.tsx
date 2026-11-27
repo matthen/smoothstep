@@ -3,6 +3,7 @@ import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import CodeEditor from './CodeEditor';
+import { popupOpen } from './popups';
 
 afterEach(cleanup);
 
@@ -56,5 +57,25 @@ describe("CodeEditor", () => {
     const {container} = render(<CodeEditor {...props} value="x;" lineErrors={errors} skeleton="void mainImage() {}" />);
     expect(container.querySelector(".ss-line-error")!.textContent).toBe(errors[0]!.message);
     expect(container.querySelector(".ss-line-error button")).toBeNull();
+  });
+  it("takes another animation's code while a picker is open, without reporting the old code as a drag", () => {
+    // jsdom has no 2D canvas for the picker to draw on.
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(
+      (() => new Proxy({}, {get: () => () => ({width: 1}), set: () => true})) as never);
+    const a = "void mainImage(out vec4 c, in vec2 p) {\n  c = vec4(0.25, 0.0, 0.0, 1.0);\n}";
+    const b = "void mainImage(out vec4 c, in vec2 p) {\n  c = vec4(1.0);\n}";
+    const onPickerRelease = vi.fn();
+    const pickerProps = {...props, onPickerRelease, onPickerEdit: () => true};
+    const {container, rerender} = render(<CodeEditor {...pickerProps} value={a} />);
+    const view = viewIn(container);
+    const at = a.indexOf("0.25") + 1;
+    view.posAtCoords = () => at;
+    view.contentDOM.dispatchEvent(new MouseEvent("click", {bubbles: true, clientX: 1, clientY: 1}));
+    expect(popupOpen(view.state)).toBe(true);
+    rerender(<CodeEditor {...pickerProps} value={b} />);
+    expect(onPickerRelease).not.toHaveBeenCalledWith(a);
+    rerender(<CodeEditor {...pickerProps} value={a} />);
+    expect(view.state.doc.toString()).toBe(a);
+    vi.restoreAllMocks();
   });
 });

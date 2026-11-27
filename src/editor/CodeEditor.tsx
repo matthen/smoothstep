@@ -75,6 +75,8 @@ export default function CodeEditor({
   // Reports React hasn't caught up with: a fast picker drag can edit again before an older report's
   // effect runs, and that older code must not reset the editor.
   const reportedRef = useRef<string[]>([]);
+  // While a new document replaces the state, closing an open picker has no edits to report.
+  const replacingRef = useRef(false);
 
   useLayoutEffect(() => {
     callbacksRef.current = {
@@ -113,7 +115,7 @@ export default function CodeEditor({
       pickerReleased.of((view) => {
         // Edits the canvas showed are the only ones not yet reported.
         const current = view.state.doc.toString();
-        const code = current === knownValueRef.current ? null : current;
+        const code = replacingRef.current || current === knownValueRef.current ? null : current;
         if (code !== null) reporting(code);
         callbacksRef.current.onPickerRelease?.(code);
       }),
@@ -151,7 +153,12 @@ export default function CodeEditor({
     reportedRef.current = [];
     if (value === view.state.doc.toString()) return;
     // A new document gets a fresh state, so undo can't step back into the previous one.
-    view.setState(EditorState.create({ doc: value, extensions: extensionsRef.current! }));
+    replacingRef.current = true;
+    try {
+      view.setState(EditorState.create({ doc: value, extensions: extensionsRef.current! }));
+    } finally {
+      replacingRef.current = false;
+    }
     if (language === "javascript") {
       void loadJavaScript(view).catch((error: unknown) => console.error(error));
     }
