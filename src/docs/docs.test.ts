@@ -73,7 +73,7 @@ describe("the docs site", () => {
     const titles = [...entries.matchAll(/<li><a href="([^"]+)"[^>]*>[^<]+<\/a><div class="doc-entry-note">\S/g)].map(m => m[1]);
     expect(titles).toEqual(expect.arrayContaining(["tutorial.html", "examples.html", "canvas2d.html", "reference.html"]));
     // The tutorial's lessons are still a list inside its entry.
-    expect(entries).toMatch(/<ol>\s*<li><a href="\.\.\/#tutorial\/1"/);
+    expect(entries).toMatch(/<ol>\s*<li><a href="\.\.\/#tutorial\/colour"/);
     // A plain list stays a plain list.
     expect(html("acknowledgements.html")).toMatch(/<ul>\s*<li>/);
     expect(html("acknowledgements.html")).not.toContain("doc-entries");

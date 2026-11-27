@@ -92,7 +92,7 @@ localhost. `npm run dev` doesn't register it, so development always shows your l
 The build also turns the Markdown in `docs/` into a small docs site in `dist/docs/`, served at
 `docs/` beside the app (`npm run dev` serves it too), and into the pages the editor's Docs tab shows.
 Saved animations open at `#anim/<id>`, the bundled examples at `#example/<id>`, and the tutorial at
-`#tutorial` (or `#tutorial/<lesson>`), in a new animation. Shared animations open at
+`#tutorial` (or `#tutorial/<lesson>`, by the lesson's id or its number from 1), in a new animation. Shared animations open at
 `#share/<data>`, `#gist/<id>` and `#url/<address>`, and `embed.html` takes the same addresses to
 play an animation on its own.
 
