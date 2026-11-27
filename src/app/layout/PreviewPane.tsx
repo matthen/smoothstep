@@ -70,7 +70,7 @@ export default function PreviewPane(
         shaders={docState.shaders} buildId={docState.buildId} textureURLs={inputs.textureURLs}
         layerTextures={inputs.layerTextures} layerOverlay={layer?.overlay ?? true} onLayerStatus={onLayerStatus}
         onLayerLog={log.addLayerLogs} onLayerRestart={log.onLayerRestart} onTextureFailed={log.onTextureFailed}
-        playhead={playhead} playing={isPlaying && !playback.scrubbing} duration={doc.duration}
+        playhead={playhead} playing={playback.advancing} duration={doc.duration}
         valuesAt={playback.valuesAt}
         aspectRatio={doc.aspectRatio}
         onBuilt={onBuilt}
@@ -82,7 +82,7 @@ export default function PreviewPane(
         duration={doc.duration} playhead={playhead} isPlaying={isPlaying}
         onSeek={seek} onPlayPause={() => playback.setIsPlaying(p => !p)} onReset={() => seek(0)}
         onDurationChange={onDurationChange}
-        onScrubStart={() => playback.setScrubbing(true)} onScrubEnd={() => playback.setScrubbing(false)}
+        onScrubStart={playback.onScrubStart} onScrubEnd={playback.onScrubEnd}
         width={layout.width || undefined} top={layout.top} playOnly={fullView}
         extra={<>
           {!fullView &&

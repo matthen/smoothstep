@@ -75,9 +75,8 @@ export default function CodeEditor({
   // Reports React hasn't caught up with: a fast picker drag can edit again before an older report's
   // effect runs, and that older code must not reset the editor.
   const reportedRef = useRef<string[]>([]);
-
-  // Set while picker edits the canvas has shown are held back from onChange.
-  const heldRef = useRef(false);
+  // While a new document replaces the state, closing an open picker has no edits to report.
+  const replacingRef = useRef(false);
 
   useLayoutEffect(() => {
     callbacksRef.current = {
@@ -88,7 +87,6 @@ export default function CodeEditor({
 
   useEffect(() => {
     const reporting = (code: string) => {
-      heldRef.current = false;
       knownValueRef.current = code;
       reportedRef.current = [...reportedRef.current.slice(-49), code];
     };
@@ -109,14 +107,15 @@ export default function CodeEditor({
         const isHelperChange = update.transactions.some((tr) => tr.annotation(pickerEdit));
         const range = isHelperChange ? pickerRange(update.state) : null;
         if (range && callbacksRef.current.onPickerEdit?.(code, range.from, range.to)) {
-          heldRef.current = true;
           return;
         }
         reporting(code);
         callbacksRef.current.onChange(code, isHelperChange);
       }),
       pickerReleased.of((view) => {
-        const code = heldRef.current ? view.state.doc.toString() : null;
+        // Edits the canvas showed are the only ones not yet reported.
+        const current = view.state.doc.toString();
+        const code = replacingRef.current || current === knownValueRef.current ? null : current;
         if (code !== null) reporting(code);
         callbacksRef.current.onPickerRelease?.(code);
       }),
@@ -152,10 +151,14 @@ export default function CodeEditor({
     if (reportedRef.current.includes(value)) return;
     knownValueRef.current = value;
     reportedRef.current = [];
-    heldRef.current = false;
     if (value === view.state.doc.toString()) return;
     // A new document gets a fresh state, so undo can't step back into the previous one.
-    view.setState(EditorState.create({ doc: value, extensions: extensionsRef.current! }));
+    replacingRef.current = true;
+    try {
+      view.setState(EditorState.create({ doc: value, extensions: extensionsRef.current! }));
+    } finally {
+      replacingRef.current = false;
+    }
     if (language === "javascript") {
       void loadJavaScript(view).catch((error: unknown) => console.error(error));
     }

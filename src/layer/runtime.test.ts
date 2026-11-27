@@ -141,7 +141,19 @@ describe("workerRuntime", () => {
     expect(worker.context.ran).toBe(true);
     expect(worker.context.grabbed).toBeUndefined();
     await worker.send(INIT);
-    expect(worker.sent).toEqual([{type: "ready", registered: true, hasDraw: true}]);
+    expect(worker.sent).toEqual([{type: "ready", registered: true, hasDraw: true, stoppedEarly: false}]);
+  });
+
+  it("says the code stopped early when a top-level return skips setting up draw, but not when it threw", async () => {
+    const returned = startWorker("return;\nfunction draw() {}");
+    returned.givePort();
+    await returned.send(INIT);
+    expect(returned.sent).toEqual([{type: "ready", registered: false, hasDraw: false, stoppedEarly: true}]);
+
+    const threw = startWorker("missing();\nfunction draw() {}");
+    expect(() => threw.givePort()).toThrow(/missing/);
+    await threw.send(INIT);
+    expect(threw.sent).toEqual([{type: "ready", registered: false, hasDraw: false, stoppedEarly: false}]);
   });
 
   it("doesn't run a timer that comes due while paused if one before it clears it", async () => {

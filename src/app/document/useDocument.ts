@@ -26,13 +26,14 @@ export function useDocument(initialRoute: Route | null) {
   // The code the canvas last compiled, and whether it compiled.
   const [compiled, setCompiled] = useState<{code: string; ok: boolean} | null>(null);
 
+  const loading = state.status === "loading";
   const shaders = useMemo<Shaders | null>(
-    () => builtCode === null ? null : {code: builtCode, ...builtExtras}, [builtCode, builtExtras]);
-  const allBuilt = builtCode === doc.code && sameExtras(builtExtras, shaderExtras(doc));
+    () => loading ? null : {code: builtCode, ...builtExtras}, [loading, builtCode, builtExtras]);
+  const allBuilt = !loading && builtCode === doc.code && sameExtras(builtExtras, shaderExtras(doc));
   const layer = canvasLayer(doc);
   const buildState = lineErrors.length > 0 || state.layerErrors.length > 0 ? "error" : allBuilt ? "built" : "changed";
 
-  useEffect(() => setCrashDocument({id: state.documentId, json: doc}), [state.documentId, doc]);
+  useEffect(() => setCrashDocument(loading ? null : {id: state.documentId, json: doc}), [loading, state.documentId, doc]);
 
   const open = useCallback((json: AnimationDocument, sharedFrom?: Route) => {
     dispatch({type: "open", doc: json, sharedFrom});
@@ -115,11 +116,11 @@ export function useDocument(initialRoute: Route | null) {
   const built = (result: CompileResult) => {
     setLineErrors(result.ok ? [] : result.errors);
     setErrorShader(result.ok ? null : result.shader);
-    setCompiled({code: builtCode ?? "", ok: result.ok});
+    setCompiled({code: builtCode, ok: result.ok});
   };
 
   return {
-    ...state, dispatch, lineErrors, errorShader, compiled, shaders, allBuilt, layer, buildState,
+    ...state, loading, dispatch, lineErrors, errorShader, compiled, shaders, allBuilt, layer, buildState,
     open, openFailed, edit, editCode, build, commitTitle, rename, built,
     addBuffer, removeLastBuffer, addCanvasLayer, removeCanvasLayer, addShared, removeShared,
   };

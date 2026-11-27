@@ -36,6 +36,9 @@ export interface TimelineProps {
   playhead: Playhead;
   onSeek(time: number): void;
   onDurationChange(duration: number): void;
+  // Scrubbing on the ruler holds playback, as on the play bar.
+  onScrubStart(): void;
+  onScrubEnd(): void;
 }
 
 export default function Timeline(props: TimelineProps) {
@@ -97,6 +100,16 @@ export default function Timeline(props: TimelineProps) {
       cancelCreating();
     }
   });
+  const scrubbing = gesture.kind === "scrubbing";
+  const scrubStart = useEffectEvent(() => props.onScrubStart());
+  const scrubEnd = useEffectEvent(() => props.onScrubEnd());
+  useEffect(() => {
+    if (!scrubbing) {
+      return;
+    }
+    scrubStart();
+    return () => scrubEnd();
+  }, [scrubbing]);
   useEffect(() => {
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("pointerdown", onDocumentPointerDown);

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { variableValues, type Variable } from '../lib/document';
 import { Playhead } from './playhead';
+import { endScrub, PAUSED, showsPlaying, startScrub, withPlaying, type PlaybackMode } from './playbackMode';
 
 // `values`, keeping its last answer: each row's value and slider asks for the same time's values every frame.
 function lastAnswer(values: (time: number) => number[]): (time: number) => number[] {
@@ -19,8 +20,13 @@ function lastAnswer(values: (time: number) => number[]): (time: number) => numbe
 export function usePlayback(duration: number, variables: Variable[], onLoop: () => void, onRewind: () => void) {
   const [playhead] = useState(() => new Playhead());
   const restartFrames = useCallback(() => playhead.restartSteps(), [playhead]);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [scrubbing, setScrubbing] = useState(false);
+  const [mode, setMode] = useState<PlaybackMode>(PAUSED);
+  const isPlaying = showsPlaying(mode);
+  const advancing = mode.kind === "playing";
+  const setIsPlaying = useCallback((next: boolean | ((playing: boolean) => boolean)) =>
+    setMode(m => withPlaying(m, typeof next === "function" ? next(showsPlaying(m)) : next)), []);
+  const onScrubStart = useCallback(() => setMode(startScrub), []);
+  const onScrubEnd = useCallback(() => setMode(endScrub), []);
 
   // Animated values held by their sliders, by row, until the animation plays or the playhead moves.
   const [held, setHeld] = useState<ReadonlyMap<number, number>>(new Map());
@@ -43,7 +49,7 @@ export function usePlayback(duration: number, variables: Variable[], onLoop: () 
 
   // Advance time while playing.
   useEffect(() => {
-    if (!isPlaying || scrubbing) {
+    if (!advancing) {
       return;
     }
     let id = 0;
@@ -63,7 +69,7 @@ export function usePlayback(duration: number, variables: Variable[], onLoop: () 
     };
     id = requestAnimationFrame(step);
     return () => cancelAnimationFrame(id);
-  }, [isPlaying, scrubbing, duration, playhead, onLoop]);
+  }, [advancing, duration, playhead, onLoop]);
 
   const seek = useCallback((t: number) => {
     playhead.set(t);
@@ -78,7 +84,7 @@ export function usePlayback(duration: number, variables: Variable[], onLoop: () 
   const clampTime = useCallback((max: number) => playhead.set(Math.min(playhead.time, max)), [playhead]);
 
   return {
-    playhead, restartFrames, isPlaying, setIsPlaying, scrubbing, setScrubbing, heldRows, valuesAt, hold,
+    playhead, restartFrames, isPlaying, setIsPlaying, advancing, onScrubStart, onScrubEnd, heldRows, valuesAt, hold,
     releaseHolds, seek, clampTime,
   };
 }

@@ -314,6 +314,26 @@ test("errors show under their lines, and the Canvas2D.js tab is marked", async (
   expect(errors).toEqual([]);
 });
 
+test("a top-level return says why nothing draws, and the shaders keep drawing", async ({page, context}) => {
+  const errors = await offline(context);
+  await start(page);
+  await setCode(page, "return;\nfunction draw(ctx) {\n  clear(ctx);\n}");
+  await page.getByRole("button", {name: "Build"}).click();
+  const error = page.locator(".ss-line-error");
+  await expect(error).toContainText("return");
+  expect(await error.evaluate(el => el.previousElementSibling?.textContent)).toBe("}");
+  await expect(page.getByRole("tab", {name: "Canvas2D.js"})).toHaveAttribute("data-error", "true");
+  await page.getByRole("button", {name: "Play"}).click();
+  await page.waitForTimeout(1500);
+  await expect(page.getByText(/^Drawing step/)).toHaveCount(0);
+
+  await openTab(page, "Image.glsl");
+  await setCode(page, BLUE_IMAGE.replace("vec4(0., 0., 1., 1.)", "vec4(220. / 255., 20. / 255., 200. / 255., 1.)"));
+  await page.getByRole("button", {name: "Build"}).click();
+  await expectCenter(page, MAGENTA);
+  expect(errors).toEqual([]);
+});
+
 test("a draw that never finishes doesn't freeze the page, and building fixed code recovers", async ({page, context}) => {
   const errors = await offline(context);
   await start(page);

@@ -95,7 +95,7 @@ test("a picker drag changes a running simulation as it goes, and starts it again
   expect(errors).toEqual([]);
 });
 
-test("closing a picker mid-drag keeps the value it was dragged to, built and saved", async ({page, context}) => {
+test("closing a picker or building mid-drag keeps the value it was dragged to, built and saved", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./#new");
   await build(page, SIMULATION);
@@ -110,10 +110,23 @@ test("closing a picker mid-drag keeps the value it was dragged to, built and sav
   await page.mouse.up();
 
   expect(await exportedCode(page)).toContain(`vec4(${red.toFixed(5)}, 0.0, 0.0, 1.0)`);
+
+  // Building mid-drag lets the picker go first, so the build has the value it was dragged to.
+  await page.locator(OPEN_EDITOR).getByText(red.toFixed(5), {exact: true}).click();
+  await dragRuler(page);
+  await page.keyboard.press("Shift+Enter");
+  await expect(page.locator(".ss-float-picker")).toHaveCount(0);
+  await page.mouse.up();
+  const built = await redIn(page);
+  expect(built).toBeGreaterThan(red);
+  await expect(page.locator(".buildButton")).toBeHidden();
+  await expectCenter(page, [Math.min(built, 1) * 255, 0, 0]);
+  expect(await exportedCode(page)).toContain(`vec4(${built.toFixed(5)}, 0.0, 0.0, 1.0)`);
+
   await page.keyboard.press("ControlOrMeta+s");
   await expect(page).toHaveURL(/#anim\/[a-f0-9]+$/);
   await page.reload();
-  await expect(page.locator(OPEN_EDITOR)).toContainText(`vec4(${red.toFixed(5)},`);
+  await expect(page.locator(OPEN_EDITOR)).toContainText(`vec4(${built.toFixed(5)},`);
   expect(errors).toEqual([]);
 });
 

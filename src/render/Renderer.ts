@@ -548,6 +548,7 @@ export class Renderer {
     this.shaderState = this.used.length > 0 || uses(userCode(code, shared), /\biPrevFrame\b/);
     this.clearTargets();
     this.useProbe(null);
+    this.probeRequest = null;
     return {ok: true};
   }
 

@@ -37,6 +37,18 @@ describe("documentReducer", () => {
     expect(documentReducer(built, {type: "buildLive"})).toBe(built);
   });
 
+  it("an animation the URL names is loading until it opens or fails, and a failed one drops its id", () => {
+    const route = {kind: "anim", id: "stored"} as const;
+    const loading = initialDocumentState(route);
+    expect(loading.status).toBe("loading");
+    expect(loading.documentId).toBe("stored");
+    expect(documentReducer(loading, {type: "open", doc: newDocument()}).status).toBe("ready");
+    const failed = documentReducer(loading, {type: "openFailed", text: "Not found"});
+    expect(failed.status).toBe("failed");
+    expect(failed.documentId).toBeNull();
+    expect(initialDocumentState(null).status).toBe("ready");
+  });
+
   it("keeps edits made while saving as unsaved", () => {
     const saving = run({type: "editCode", tab: "image", code: "saved"});
     const savedDoc = saving.doc;
