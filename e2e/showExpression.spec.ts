@@ -336,7 +336,7 @@ test("a shown expression keeps showing through a build, with the new code's valu
   expect(errors).toEqual([]);
 });
 
-test("a picker's drag builds every step of the way, and the shown expression comes back after", async ({page, context}) => {
+test("a fast picker drag leaves its last value built, and the shown expression comes back after", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./#new");
   await setCode(page, `void mainImage(out vec4 fragColor, in vec2 fragCoord) {

@@ -39,11 +39,16 @@ function useLiveBuild(dispatch: Options["docState"]["dispatch"], allBuilt: boole
   };
   const cancelRef = useLatest(cancel);
   useEffect(() => () => cancelRef.current(), [cancelRef]);
+  const allBuiltRef = useLatest(allBuilt);
   return {
     schedule() {
       live.current = true;
       frame.current ??= requestAnimationFrame(() => {
         frame.current = null;
+        // Something else built the code since, so this build changes nothing and no render will end the drag.
+        if (allBuiltRef.current) {
+          live.current = false;
+        }
         dispatch({type: "buildLive"});
       });
     },
