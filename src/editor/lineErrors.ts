@@ -34,11 +34,9 @@ function applyQuickFix(view: EditorView, dom: HTMLElement, error: LineError, lab
   const {state} = view;
   const line = state.doc.lineAt(view.posAtDOM(dom)).number - 1;
   const fix = quickFix(error.message, state.doc.toString(), line);
-  if (fix?.label !== label) {
-    return false;
+  if (fix?.label === label) {
+    view.dispatch({changes: fix.changes, effects: setLineErrors.of([]), userEvent: 'input.fix'});
   }
-  view.dispatch({changes: fix.changes, effects: setLineErrors.of([]), userEvent: 'input.fix'});
-  return true;
 }
 
 class ErrorWidget extends WidgetType {
@@ -59,10 +57,10 @@ class ErrorWidget extends WidgetType {
     button.type = 'button';
     button.className = 'ss-line-error-fix ss-line-error-quick-fix';
     button.textContent = label;
+    // Builds even when the code has changed so the fix no longer applies, to bring the errors up to date.
     button.addEventListener('click', () => {
-      if (applyQuickFix(view, dom, this.error, label)) {
-        this.callbacks.onFixed?.();
-      }
+      applyQuickFix(view, dom, this.error, label);
+      this.callbacks.onFixed?.();
     });
     return button;
   }

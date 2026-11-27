@@ -76,6 +76,53 @@ describe("quickFix for an int where a float is needed", () => {
     expect(fix(noOverload("pow"), "float y = pow(x, 2) + pow(z, 3);")).toBeNull();
     expect(fix(noOverload("pow"), "float y = pow(x, y);")).toBeNull();
   });
+
+  it("offers nothing for an operator that has no float version", () => {
+    expect(fix(operands("<<", "highp float", "const int"), "float m = x << 2;")).toBeNull();
+    expect(fix(operands("&", "highp float", "const int"), "float m = x & 1;")).toBeNull();
+  });
+
+  it("offers nothing when an int would be left beside the float the literal becomes", () => {
+    const code = "int i = 3;\n";
+    // Another argument is an int.
+    expect(fix(noOverload("mod"), code + "int m = mod(i, 2);", 1)).toBeNull();
+    expect(fix(noOverload("pow"), code + "float m = pow(i, 2);", 1)).toBeNull();
+    // The result goes to an int.
+    expect(fix(operands("*", "highp float", "const int"), "int n = x * 2;")).toBeNull();
+    expect(fix(noOverload("max"), "int m = max(x, 2);")).toBeNull();
+    // A name #defined to an int is on the line, and could be the int the error is about.
+    const define = "#define N 3\n";
+    expect(fix(operands("<", "highp float", "const int"),
+      define + "for (int k = 0; k < 5; k++) if (x < N) x += 0.1;", 1)).toBeNull();
+    expect(fix(INT_TO_FLOAT, define + "float t = N; int k = 1;", 1)).toBeNull();
+    expect(fix(operands("*", "highp float", "const int"), define + code + "float y = x * N + float(i * 2);", 2))
+      .toBeNull();
+  });
+
+  it("still finds the one int when the others on the line go to ints", () => {
+    expect(fix(ASSIGN_INT, "for (int k = 0; k < 3; k++) x *= 2;")?.code).toBe("for (int k = 0; k < 3; k++) x *= 2.0;");
+  });
+});
+
+describe("quickFix for % on a float", () => {
+  it("changes it to mod, with a float for an int literal", () => {
+    expect(fix(operands("%", "highp float", "const int"), "float m = x % 2;")).toEqual(
+      {code: "float m = mod(x, 2.0);", label: "Change to mod(x, 2.0)"});
+    expect(fix(operands("%", "highp float", "const float"), "float m = x % 2.5;")?.code).toBe("float m = mod(x, 2.5);");
+    expect(fix(operands("%", "highp 2-component vector of float", "const int"), "vec2 m = uv % 2;")?.code)
+      .toBe("vec2 m = mod(uv, 2.0);");
+    expect(fix(operands("%", "highp float", "const int"), "float m = 1.0 + sin(x) % 2;")?.code)
+      .toBe("float m = 1.0 + mod(sin(x), 2.0);");
+  });
+
+  it("offers nothing when the operands aren't certain or mod has no version for them", () => {
+    // `-x % 2` and `x * 3. % 2` take % of more than the x.
+    expect(fix(operands("%", "highp float", "const int"), "float m = -x % 2;")).toBeNull();
+    expect(fix(operands("%", "highp float", "const int"), "float m = x * 3. % 2;")).toBeNull();
+    // An int variable on the right, or a vector there with a float on the left.
+    expect(fix(operands("%", "highp float", "mediump int"), "float m = x % i;")).toBeNull();
+    expect(fix(operands("%", "highp float", "highp 2-component vector of float"), "vec2 m = x % uv;")).toBeNull();
+  });
 });
 
 describe("quickFix for a vector of the wrong size", () => {
@@ -111,11 +158,16 @@ describe("quickFix for a missing semicolon", () => {
   it("ends the line before with a ;", () => {
     const code = "  float x = 1.\n  fragColor = vec4(x);";
     expect(fix(syntax("fragColor"), code, 1)).toEqual(
-      {code: "  float x = 1.;\n  fragColor = vec4(x);", label: "Add ; to the end of line 1"});
+      {code: "  float x = 1.;\n  fragColor = vec4(x);", label: "Add ; to the end of the line above"});
     expect(fix(syntax("}"), "  fragColor = vec4(x)  // grey\n}", 1)?.code).toBe("  fragColor = vec4(x);  // grey\n}");
     // Past blank lines and comments.
     expect(fix(syntax("float"), "float x = sin(iTime)\n\n// next\nfloat y = 2.;", 3)?.code)
       .toBe("float x = sin(iTime);\n\n// next\nfloat y = 2.;");
+    // A return isn't the header of a function.
+    expect(fix(syntax("}"), "float f(float x) {\n  return sin(x)\n}", 2)?.code)
+      .toBe("float f(float x) {\n  return sin(x);\n}");
+    // A call over two lines that closes on the line before.
+    expect(fix(syntax("x"), "  x = f(1.0,\n    2.0)\n  x += 1.0;", 2)?.code).toBe("  x = f(1.0,\n    2.0);\n  x += 1.0;");
   });
 
   it("offers nothing when the line before carries on or needs no ;", () => {
@@ -124,6 +176,9 @@ describe("quickFix for a missing semicolon", () => {
     expect(fix(syntax("float"), "#define N 3\nfloat y;", 1)).toBeNull();
     expect(fix(syntax("float"), "float f(float x)\nfloat y;", 1)).toBeNull();
     expect(fix(syntax("float"), "x = f(a,\nfloat y;", 1)).toBeNull();
+    // A missing comma inside a call or constructor over several lines, where a ; would land inside it.
+    expect(fix(syntax("x"), "vec3 c = mix(vec3(0.),\n    vec3(1.)\n    x);", 2)).toBeNull();
+    expect(fix(syntax("2.0"), "float a[3] = float[3](\n    1.0\n    2.0, 3.0);", 2)).toBeNull();
     // The error isn't at the start of its line.
     expect(fix(syntax("y"), "float x = 1.;\nfloat z y;", 1)).toBeNull();
     expect(fix(syntax("float"), "float x = 1.;\nfloatx y;", 1)).toBeNull();

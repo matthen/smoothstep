@@ -31,6 +31,11 @@ const PRECEDENCE: Record<string, number> = {
 };
 const LOOSEST = 99;
 const OPERATORS = Object.keys(PRECEDENCE).sort((a, b) => b.length - a.length);
+// Operators with no float version, which a float literal can't fix.
+const INT_ONLY = new Set(["%", "<<", ">>", "&", "|", "^", "%="]);
+const INT_TYPES = new Set(["int", "uint", "ivec2", "ivec3", "ivec4", "uvec2", "uvec3", "uvec4"]);
+// The int uniforms every shader is given.
+const INT_UNIFORMS = ["iFrame"];
 
 // Built-in functions with no int version, and min, max and clamp, whose int versions an int literal
 // next to a float can't be using.
@@ -55,6 +60,43 @@ function codeLines(code: string): CodeLine[] {
 }
 
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// The text with every bracketed group taken out, innermost first.
+function withoutBrackets(text: string): string {
+  let rest = text;
+  for (let before = ""; before !== rest;) {
+    before = rest;
+    rest = rest.replace(/\([^()]*\)|\[[^[\]]*\]/g, "");
+  }
+  return rest;
+}
+
+// Names #defined to an int, like N in `#define N 3`.
+const intDefines = (code: string) =>
+  new Set([...code.matchAll(/^\s*#\s*define\s+(\w+)[ \t]+[-+*/%() \t]*\d[-+*/%() \t\d]*$/gm)].map(m => m[1]!));
+
+// Names that hold ints: variables, parameters and functions declared with an int type, the int uniforms,
+// and the int types themselves, as in `int(x)`.
+function intNames(code: string): Set<string> {
+  const names = new Set([...INT_TYPES, ...INT_UNIFORMS]);
+  for (const [, declared] of code.matchAll(/\b(?:u?int|[iu]vec[234])\s+([^;{)]*)/g)) {
+    for (const part of withoutBrackets(declared!).split(",")) {
+      const name = /^\s*([A-Za-z_]\w*)/.exec(part)?.[1];
+      if (name !== undefined) {
+        names.add(name);
+      }
+    }
+  }
+  return names;
+}
+
+const namesIn = (text: string) => text.match(/[A-Za-z_]\w*/g) ?? [];
+
+// The name the statement around `at` assigns to, like n in `int n = x * 2;` or `n += x * 2;`.
+function assignedName(text: string, at: number): string | undefined {
+  const statement = text.slice(0, at).split(/[;{}]/).at(-1)!;
+  return /([A-Za-z_]\w*)(?:\[[^\]]*\]|\.\w+)*\s*[-+*/%]?=(?!=)/.exec(statement)?.[1];
+}
 
 // How tightly the token starting at `at` binds: an operator's precedence, or LOOSEST for the end of the
 // line or a token that ends an expression. Null for anything else, such as a name or a bracket that opens.
@@ -91,8 +133,15 @@ function toFloats(line: CodeLine, literals: {index: number; digits: string}[]): 
 
 const OPERAND_TYPES = /^'([^']+)' : wrong operand types - no operation '[^']+' exists that takes a left-hand operand of type '([^']*)' and a right operand of type '([^']*)'/;
 
+// Whether the operand on the other side of the operator from the literal `m` found is an int, as i in `i * 2`.
+function besideInt(text: string, m: RegExpMatchArray, intOnRight: boolean, ints: Set<string>): boolean {
+  const name = intOnRight ? /([A-Za-z_]\w*)\s*$/.exec(text.slice(0, m.index))?.[1] :
+    /^\s*([A-Za-z_]\w*)/.exec(text.slice(m.index! + m[0].length))?.[1];
+  return name !== undefined && ints.has(name);
+}
+
 // A float and an int literal either side of an operator, as in `x * 2` or `2 * x`.
-function intOperand(message: string, line: CodeLine): QuickFix | null {
+function intOperand(message: string, line: CodeLine, ints: Set<string>): QuickFix | null {
   const match = OPERAND_TYPES.exec(message);
   if (!match) {
     return null;
@@ -101,7 +150,7 @@ function intOperand(message: string, line: CodeLine): QuickFix | null {
   const prec = PRECEDENCE[op];
   const intOnRight = right === "const int" && left.includes("float");
   const intOnLeft = left === "const int" && right.includes("float");
-  if (prec === undefined || !(intOnRight || intOnLeft)) {
+  if (prec === undefined || INT_ONLY.has(op) || !(intOnRight || intOnLeft)) {
     return null;
   }
   // The operator, not part of a longer one, and the literal beside it.
@@ -110,6 +159,10 @@ function intOperand(message: string, line: CodeLine): QuickFix | null {
     new RegExp(`(${INT})\\s*${opPattern}`, "dg");
   const found = [...line.text.matchAll(pattern)].filter(m => {
     const [start, end] = m.indices![1]!;
+    const target = assignedName(line.text, start);
+    if (besideInt(line.text, m, intOnRight, ints) || (target !== undefined && ints.has(target))) {
+      return false;
+    }
     if (intOnRight) {
       const next = precedenceAt(line.text, end, ";),]}");
       return next !== null && next >= prec;
@@ -130,12 +183,12 @@ function intOperand(message: string, line: CodeLine): QuickFix | null {
 const ASSIGN_INT = /^'(?:=|assign)' : cannot convert from 'const int' to '(?:(?:out|inout|highp|mediump|lowp) )*float'$/;
 
 // An int literal given to a float, as in `float x = 1;` or `x += 1;`.
-function intAssigned(message: string, line: CodeLine): QuickFix | null {
+function intAssigned(message: string, line: CodeLine, ints: Set<string>): QuickFix | null {
   if (!ASSIGN_INT.test(message)) {
     return null;
   }
   const pattern = new RegExp(String.raw`(?<![-+*/%<>=!&|^])[-+*/%]?=(?!=)\s*(?:-\s*)?(${INT})\s*[;,]`, "dg");
-  const found = [...line.text.matchAll(pattern)];
+  const found = [...line.text.matchAll(pattern)].filter(m => !ints.has(assignedName(line.text, m.indices![1]![0]) ?? ""));
   if (found.length !== 1) {
     return null;
   }
@@ -168,22 +221,60 @@ function callArguments(text: string, open: number): {index: number; text: string
 const NO_OVERLOAD = /^'(\w+)' : no matching overloaded function found$/;
 
 // Int literals given to a function that takes floats, as in `pow(x, 2)`.
-function intArguments(message: string, line: CodeLine): QuickFix | null {
+function intArguments(message: string, line: CodeLine, ints: Set<string>): QuickFix | null {
   const name = NO_OVERLOAD.exec(message)?.[1];
   if (name === undefined || !FLOAT_FUNCTIONS.has(name)) {
     return null;
   }
   const calls = [...line.text.matchAll(new RegExp(String.raw`(?<![\w.])${name}\s*\(`, "g"))];
-  if (calls.length !== 1) {
+  if (calls.length !== 1 || ints.has(assignedName(line.text, calls[0]!.index) ?? "")) {
     return null;
   }
-  const args = callArguments(line.text, calls[0]!.index + calls[0]![0].length - 1);
-  const literals = (args ?? []).flatMap(arg => {
+  const args = callArguments(line.text, calls[0]!.index + calls[0]![0].length - 1) ?? [];
+  const literals = args.flatMap(arg => {
     const literal = /^\s*(?:-\s*)?(\d+)\s*$/d.exec(arg.text);
     return literal && new RegExp(`^${INT}$`).test(literal[1]!) ?
       [{index: arg.index + literal.indices![1]![0], digits: literal[1]!}] : [];
   });
-  return literals.length > 0 ? toFloats(line, literals) : null;
+  // Another argument that's an int would still have no float to match.
+  const intArgument = args.some(arg => namesIn(arg.text).some(n => ints.has(n)));
+  return literals.length > 0 && !intArgument ? toFloats(line, literals) : null;
+}
+
+// `a % b` with a float either side, which has no % but has mod(a, b). Each side must be a whole operand:
+// a name, call, index or swizzle, or a number on the right.
+const MOD_OPERAND = String.raw`(?<![\w.)\]])[A-Za-z_]\w*(?:\.\w+|\[[^[\]]*\]|\([^()]*\))*`;
+const MOD_PATTERN = new RegExp(String.raw`(${MOD_OPERAND})\s*%(?!=)\s*(${INT}|\d+\.\d*(?![\w.])|${MOD_OPERAND})`, "dg");
+
+// Whether the `a % b` found is a whole expression in its line, not part of `-a % b` or `a * b % c`.
+function wholeModulo(text: string, m: RegExpMatchArray): boolean {
+  const [start] = m.indices![1]!;
+  const [, end] = m.indices![2]!;
+  const before = text.slice(0, start).trimEnd();
+  const unary = /[-+]$/.test(before) && precedenceBefore(before, before.length - 1) !== null;
+  const previous = precedenceBefore(text, start);
+  const next = precedenceAt(text, end, ";),]}");
+  return !unary && previous !== null && previous > PRECEDENCE["%"]! && next !== null && next >= PRECEDENCE["%"]!;
+}
+
+function floatModulo(message: string, line: CodeLine): QuickFix | null {
+  const [, op, left = "", right = ""] = OPERAND_TYPES.exec(message) ?? [];
+  if (op !== "%" || !left.includes("float") || !(right === "const int" || /^(?:\w+ )*float$/.test(right))) {
+    return null;
+  }
+  const found = [...line.text.matchAll(MOD_PATTERN)].filter(m => wholeModulo(line.text, m));
+  if (found.length !== 1) {
+    return null;
+  }
+  const m = found[0]!;
+  const intLiteral = new RegExp(`^${INT}$`).test(m[2]!);
+  if (intLiteral !== (right === "const int")) {
+    return null;
+  }
+  const call = `mod(${m[1]!}, ${m[2]!}${intLiteral ? ".0" : ""})`;
+  const [from] = m.indices![1]!;
+  const [, to] = m.indices![2]!;
+  return {label: `Change to ${call}`, changes: [{from: line.from + from, to: line.from + to, insert: call}]};
 }
 
 const VECTOR_SIZES = /^'(?:=|assign)' : cannot convert from '(?:\w+ )*?(\d)-component vector of float' to '((?:\w+ )*?)(\d)-component vector of float'$/;
@@ -192,12 +283,7 @@ const ASSIGNMENT = /^(\s*(?:(?:const|highp|mediump|lowp)\s+)*(?:\w+\s+)?[\w.[\]]
 
 // Whether an expression can take a swizzle without brackets, like `texture(t, uv)` or `c.rg`.
 function isPostfix(expression: string): boolean {
-  let rest = expression.trim();
-  for (let before = ""; before !== rest;) {
-    before = rest;
-    rest = rest.replace(/\([^()]*\)|\[[^[\]]*\]/g, "");
-  }
-  return /^[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*$/.test(rest);
+  return /^[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*$/.test(withoutBrackets(expression.trim()));
 }
 
 // A vector of the wrong size: a bigger one cut down with a swizzle, or a vec3 given to a vec4 out
@@ -230,13 +316,21 @@ function vectorSize(message: string, line: CodeLine): QuickFix | null {
   return null;
 }
 
-// Whether a line's brackets all close on it.
-function balanced(text: string): boolean {
+// Whether every bracket opened before `at` closes before it, back to the last ; or brace outside brackets,
+// so a ; there would end a statement rather than land inside a call.
+function bracketsClosed(code: string, at: number): boolean {
   let depth = 0;
-  for (const char of text) {
-    depth += "([".includes(char) ? 1 : ")]".includes(char) ? -1 : 0;
-    if (depth < 0) {
-      return false;
+  for (let i = at - 1; i >= 0; i--) {
+    const char = code[i]!;
+    if (")]".includes(char)) {
+      depth++;
+    } else if ("([".includes(char)) {
+      if (depth === 0) {
+        return false;
+      }
+      depth--;
+    } else if ("{}".includes(char) || (char === ";" && depth === 0)) {
+      return depth === 0;
     }
   }
   return depth === 0;
@@ -248,8 +342,8 @@ function endsStatement(text: string): boolean {
   const trimmed = text.trim();
   const last = trimmed.at(-1)!;
   const endsInOperator = "+-*/%=<>!&|^?:,.".includes(last) && !/\d\.$/.test(trimmed);
-  return !endsInOperator && !";{}([".includes(last) && !trimmed.startsWith("#") && balanced(trimmed) &&
-    !/^(?:if|for|while|else|do|switch)\b/.test(trimmed) && !/^\w+\s+\w+\s*\([^=]*\)$/.test(trimmed);
+  return !endsInOperator && !";{}([".includes(last) && !trimmed.startsWith("#") &&
+    !/^(?:if|for|while|else|do|switch)\b/.test(trimmed) && !/^(?!return\b)\w+\s+\w+\s*\([^=]*\)$/.test(trimmed);
 }
 
 const SYNTAX_ERROR = /^'([^']+)' : syntax error$/;
@@ -271,7 +365,21 @@ function missingSemicolon(message: string, lines: CodeLine[], index: number): Qu
     return null;
   }
   const at = before.from + before.text.trimEnd().length;
-  return {label: `Add ; to the end of line ${previous + 1}`, changes: [{from: at, to: at, insert: ";"}]};
+  if (!bracketsClosed(lines.map(l => l.text).join("\n"), at)) {
+    return null;
+  }
+  return {label: "Add ; to the end of the line above", changes: [{from: at, to: at, insert: ";"}]};
+}
+
+// The fixes that change an int, none of which is certain on a line that uses an int #define.
+function intFix(message: string, line: CodeLine, code: string): QuickFix | null {
+  const defines = intDefines(code);
+  if (namesIn(line.text).some(name => defines.has(name))) {
+    return null;
+  }
+  const ints = intNames(code);
+  return intOperand(message, line, ints) ?? intAssigned(message, line, ints) ?? intArguments(message, line, ints) ??
+    floatModulo(message, line);
 }
 
 // The fix for an error on `line` (from 0) of `code`, or null if there isn't a certain one.
@@ -281,6 +389,6 @@ export function quickFix(message: string, code: string, line: number): QuickFix 
   if (!errorLine) {
     return null;
   }
-  return intOperand(message, errorLine) ?? intAssigned(message, errorLine) ?? intArguments(message, errorLine) ??
-    vectorSize(message, errorLine) ?? missingSemicolon(message, lines, line);
+  return intFix(message, errorLine, lines.map(l => l.text).join("\n")) ?? vectorSize(message, errorLine) ??
+    missingSemicolon(message, lines, line);
 }
