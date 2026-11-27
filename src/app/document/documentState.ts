@@ -27,6 +27,9 @@ export interface DocumentState {
   openedCode: string;
   // The Canvas2D layer's errors, which come from running its code, so they can arrive at any time.
   layerErrors: LineError[];
+  // Whether the Canvas2D layer has drawn its first frame or reported an error since its code was last
+  // built, or there's no layer: until then, a build that worked so far may still fail.
+  layerSettled: boolean;
   // The Canvas2D.js or shared.glsl tab, if it was just added here, so its editor takes focus when it appears.
   justAdded: "canvas" | "shared" | null;
   // Whether the shared.glsl tab is new and still shows its placeholder.
@@ -63,7 +66,7 @@ export function initialDocumentState(route: Route | null): DocumentState {
     status: route ? "loading" : "ready",
     doc, documentId: route?.kind === "anim" ? route.id : null, sharedFrom: null, hasUnsavedChanges: false,
     titleInput: doc.title, builtCode: doc.code, builtExtras: shaderExtras(doc), buildId: 0,
-    openedCode: doc.code, layerErrors: [], justAdded: null, sharedUntouched: false,
+    openedCode: doc.code, layerErrors: [], layerSettled: true, justAdded: null, sharedUntouched: false,
   };
 }
 
@@ -93,7 +96,7 @@ export function documentReducer(s: DocumentState, action: DocumentAction): Docum
       return {
         ...s, status: "ready", doc, sharedFrom: action.sharedFrom ?? null, hasUnsavedChanges: false, titleInput: doc.title,
         builtCode: doc.code, builtExtras: shaderExtras(doc), buildId: s.buildId + 1, openedCode: doc.code,
-        layerErrors: [], justAdded: null, sharedUntouched: false,
+        layerErrors: [], layerSettled: canvasLayer(doc) === undefined, justAdded: null, sharedUntouched: false,
       };
     }
     case "openFailed":
@@ -112,12 +115,16 @@ export function documentReducer(s: DocumentState, action: DocumentAction): Docum
       const doc = withTabCode(s.doc, action.tab, action.code);
       return {...s, doc, hasUnsavedChanges: true, sharedUntouched: s.sharedUntouched && action.tab !== "shared"};
     }
-    case "build":
-      return {...s, builtCode: s.doc.code, builtExtras: shaderExtras(s.doc), buildId: s.buildId + 1};
+    case "build": {
+      const extras = shaderExtras(s.doc);
+      return {...s, builtCode: s.doc.code, builtExtras: extras, buildId: s.buildId + 1, layerSettled: extras.canvas === null};
+    }
     case "buildLive": {
       const extras = shaderExtras(s.doc);
-      return s.builtCode === s.doc.code && sameExtras(s.builtExtras, extras) ? s :
-        {...s, builtCode: s.doc.code, builtExtras: extras};
+      return s.builtCode === s.doc.code && sameExtras(s.builtExtras, extras) ? s : {
+        ...s, builtCode: s.doc.code, builtExtras: extras,
+        layerSettled: extras.canvas === s.builtExtras.canvas ? s.layerSettled : extras.canvas === null,
+      };
     }
     case "addCanvas":
       return {
@@ -150,6 +157,6 @@ export function documentReducer(s: DocumentState, action: DocumentAction): Docum
     case "deleted":
       return {...s, documentId: null, hasUnsavedChanges: true};
     case "layerErrors":
-      return {...s, layerErrors: action.errors};
+      return {...s, layerErrors: action.errors, layerSettled: true};
   }
 }

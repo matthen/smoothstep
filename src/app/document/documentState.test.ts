@@ -57,6 +57,20 @@ describe("documentReducer", () => {
     expect(documentReducer(editedMeanwhile, {type: "saved", id: "a", doc: savedDoc}).hasUnsavedChanges).toBe(true);
   });
 
+  it("waits for the Canvas2D layer to draw or fail after a build that runs it", () => {
+    expect(run({type: "build"}).layerSettled).toBe(true);
+    const built = run({type: "addCanvas"}, {type: "build"});
+    expect(built.layerSettled).toBe(false);
+    expect(documentReducer(built, {type: "buildLive"}).layerSettled).toBe(false);
+    const reported = documentReducer(built, {type: "layerErrors", errors: []});
+    expect(reported.layerSettled).toBe(true);
+    // A live build that changes the layer's code runs it again; one that doesn't, doesn't.
+    expect(documentReducer(documentReducer(reported, {type: "editCode", tab: "image", code: "x"}), {type: "buildLive"})
+      .layerSettled).toBe(true);
+    expect(documentReducer(documentReducer(reported, {type: "editCode", tab: "canvas", code: "x"}), {type: "buildLive"})
+      .layerSettled).toBe(false);
+  });
+
   it("treats a new shared tab as untouched until its code is set", () => {
     const added = run({type: "addShared"});
     expect(added.sharedUntouched).toBe(true);
