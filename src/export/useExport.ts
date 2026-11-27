@@ -8,6 +8,26 @@ import { showMessage } from '../lib/statusMessage';
 import { logLayer } from '../console/useConsoleLog';
 
 const EXPORT_NAMES: Record<ExportOptions["type"], string> = {webm: "a WebM video", mp4: "an MP4 video", gif: "a GIF", png: "PNG frames"};
+// How often, at most, the Render dialog's progress bar moves, as each move re-renders the app.
+const PROGRESS_INTERVAL_MS = 100;
+
+// The preview pauses while a render runs, so it doesn't compete for the GPU.
+export interface Preview {
+  isPlaying: boolean;
+  setIsPlaying: (playing: boolean) => void;
+}
+
+// Passes on progress at most every PROGRESS_INTERVAL_MS, but always a new stage and the end.
+function throttledProgress(set: (progress: ExportProgress) => void) {
+  let shown: {progress: ExportProgress; at: number} | null = null;
+  return (progress: ExportProgress) => {
+    const now = performance.now();
+    if (!shown || progress.stage !== shown.progress.stage || progress.fraction >= 1 || now - shown.at >= PROGRESS_INTERVAL_MS) {
+      shown = {progress, at: now};
+      set(progress);
+    }
+  };
+}
 
 // Rendering the animation to a video or frames, logging to the console as it goes. `closeDialog` closes
 // the Render dialog when the render is done or cancelled.
@@ -18,9 +38,11 @@ export function useExport(store: ConsoleStore, doc: AnimationDocument, closeDial
   const exportAbort = useRef<AbortController | null>(null);
   const exporting = useCallback(() => exportAbort.current !== null, []);
 
-  const startExport = async () => {
+  const startExport = async (preview: Preview) => {
     const controller = new AbortController();
     exportAbort.current = controller;
+    const resume = preview.isPlaying;
+    preview.setIsPlaying(false);
     setExportError(null);
     setExportProgress({stage: "rendering", fraction: 0});
     const started = performance.now();
@@ -28,7 +50,7 @@ export function useExport(store: ConsoleStore, doc: AnimationDocument, closeDial
     try {
       // Loaded on first export, since the encoders are a large part of the app's size.
       const {exportVideo} = await import('./exportVideo');
-      archive.download(await exportVideo(doc, exportOptions, setExportProgress, controller.signal, {
+      archive.download(await exportVideo(doc, exportOptions, throttledProgress(setExportProgress), controller.signal, {
         layer: (logs, dropped) => logLayer(store, logs, dropped, true),
         layerErrors: errors => errors.forEach(error =>
           store.add({level: "error", text: error.message, tab: "canvas", line: error.line, render: true})),
@@ -51,6 +73,9 @@ export function useExport(store: ConsoleStore, doc: AnimationDocument, closeDial
       if (exportAbort.current === controller) {
         exportAbort.current = null;
         setExportProgress(null);
+        if (resume) {
+          preview.setIsPlaying(true);
+        }
       }
     }
   };

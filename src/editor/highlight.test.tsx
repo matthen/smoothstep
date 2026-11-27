@@ -1,4 +1,4 @@
-import { cleanup, render } from '@testing-library/react';
+import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { glslCodeHtml, highlightedCodeElement, looksLikeGlsl } from './highlight';
@@ -29,8 +29,10 @@ describe("inline code", () => {
       [['vec3', 'tok-type'], ['1.0', 'tok-number'], ['0.5', 'tok-number'], ['0.2', 'tok-number']]);
   });
 
-  it("marks the Canvas2D layer's names in JavaScript", () => {
+  it("marks the Canvas2D layer's names in JavaScript, and colours the rest once the parser loads", async () => {
     const {container} = render(<JsCode>{'Disk({center: [0, 0]})'}</JsCode>);
+    expect(runs(container.querySelector('code')!)).toContainEqual(['Disk', 'tok-builtin']);
+    await waitFor(() => expect(runs(container.querySelector('code')!)).toContainEqual(['0', 'tok-number']));
     expect(runs(container.querySelector('code')!)).toContainEqual(['Disk', 'tok-builtin']);
   });
 

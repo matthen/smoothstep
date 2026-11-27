@@ -129,6 +129,7 @@ export class CanvasLayer {
       return false;
     }
     this.config = config;
+    this.dropBitmaps(config.textures);
     const generation = ++this.generation;
     // A build (`force`) says so itself; a new size or texture starts the code again.
     if (!force && this.current?.stepped) {
@@ -175,7 +176,7 @@ export class CanvasLayer {
     try {
       const [libraries, fonts, textures] = await Promise.all([
         Promise.all(imports.libraries.map(async name => ({name, code: await this.assets.library(name)}))),
-        this.assets.fonts(),
+        this.assets.fonts(config.code),
         // Decoding images takes a while, so only for code that uses them.
         Promise.all(config.textures.map(url =>
           url !== null && !isVideoURL(url) && uses(config.code, /\btextures\b/) ? this.bitmap(url) : Promise.resolve(null))),
@@ -194,6 +195,16 @@ export class CanvasLayer {
       this.bitmaps.set(url, bitmap);
     }
     return bitmap;
+  }
+
+  // Closes the images no slot shows any more. Workers have their own copies, so running ones keep theirs.
+  private dropBitmaps(keep: readonly (string | null)[]) {
+    for (const [url, bitmap] of this.bitmaps) {
+      if (!keep.includes(url)) {
+        void bitmap.then(b => b?.close());
+        this.bitmaps.delete(url);
+      }
+    }
   }
 
   private spawn(prepared: Prepared): Run {
@@ -468,9 +479,6 @@ export class CanvasLayer {
     this.pendingDraw = null;
     pending?.reject(new Error("The Canvas2D layer was closed."));
     this.sandbox.dispose();
-    for (const bitmap of this.bitmaps.values()) {
-      void bitmap.then(b => b?.close());
-    }
-    this.bitmaps.clear();
+    this.dropBitmaps([]);
   }
 }

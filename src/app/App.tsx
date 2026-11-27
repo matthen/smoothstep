@@ -215,7 +215,7 @@ export default function App() {
 
       <AppDialogs
         dialog={dialog} setDialog={setDialog} docState={docState} library={library} exporter={exporter}
-        onTour={() => void takeTour()} tourTaken={onboarding.tourTaken} alert={alert} setAlert={setAlert}
+        preview={playback} onTour={() => void takeTour()} tourTaken={onboarding.tourTaken} alert={alert} setAlert={setAlert}
       />
     </div>
   );

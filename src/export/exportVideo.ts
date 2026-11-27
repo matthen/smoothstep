@@ -1,6 +1,5 @@
 // Renders an animation frame by frame at a fixed rate on its own canvas, and encodes it in the
 // browser: WebM and MP4 with WebCodecs, GIF with gifenc, PNG frames as a zip.
-import { zip } from 'fflate';
 import { applyPalette, GIFEncoder, quantize } from 'gifenc';
 import {
   BufferTarget, CanvasSource, getFirstEncodableVideoCodec, Mp4OutputFormat, Output, Quality,
@@ -8,7 +7,7 @@ import {
 } from 'mediabunny';
 
 import { exportSize, frameCount, type ExportOptions, type ExportProgress } from '../dialogs/exportTypes';
-import { safeFilename, type DownloadableFile } from '../lib/archive';
+import { safeFilename, zipWriter, type DownloadableFile } from '../lib/archive';
 import { textureURL } from '../lib/config';
 import type { CanvasLayer, LayerLog } from '../layer/CanvasLayer';
 import type { LineError } from '../lib/types';
@@ -90,20 +89,16 @@ function gifEncoder(canvas: HTMLCanvasElement, fps: number): Encoder {
 }
 
 function pngEncoder(canvas: HTMLCanvasElement): Encoder {
-  const files: Record<string, Uint8Array> = {};
+  const files = zipWriter();
   return {
     addFrame: async index => {
       const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png"));
       if (!blob) {
         throw new Error("Couldn't encode a PNG frame.");
       }
-      files["frame" + String(index).padStart(5, "0") + ".png"] = new Uint8Array(await blob.arrayBuffer());
+      files.add("frame" + String(index).padStart(5, "0") + ".png", new Uint8Array(await blob.arrayBuffer()));
     },
-    finish: async () => {
-      const bytes = await new Promise<Uint8Array>((resolve, reject) =>
-        zip(files, {level: 0}, (err, data) => err ? reject(err) : resolve(data)));
-      return new Blob([bytes as Uint8Array<ArrayBuffer>], {type: "application/zip"});
-    },
+    finish: () => Promise.resolve(files.finish()),
     cancel: async () => {},
   };
 }
