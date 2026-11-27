@@ -18,8 +18,9 @@ interface Options {
 // A picker's drag on built code shows each value on the canvas through a uniform, without building or
 // starting the simulation again. The document takes the code, and builds it, once the picker is let go.
 export function usePickerDrag({docState, canvasRef, probe}: Options) {
-  // For the press under way: whether the canvas took it, or it rebuilds as other edits do.
-  const mode = useRef<"uniform" | "rebuild" | null>(null);
+  // For the press under way: whether the canvas took it, or it rebuilds as other edits do, and the tab's
+  // code when it started, so a release after another animation opens is dropped.
+  const drag = useRef<{mode: "uniform" | "rebuild"; code: string | undefined} | null>(null);
   const docRef = useLatest(docState.doc);
 
   const start = (tab: ShaderId, code: string, from: number, to: number) => {
@@ -36,8 +37,8 @@ export function usePickerDrag({docState, canvasRef, probe}: Options) {
 
   // Whether the canvas shows the edit, so it needn't reach the document yet.
   const onPickerEdit = (tab: ShaderId, code: string, from: number, to: number): boolean => {
-    mode.current ??= start(tab, code, from, to) ? "uniform" : "rebuild";
-    if (mode.current === "rebuild") {
+    drag.current ??= {mode: start(tab, code, from, to) ? "uniform" : "rebuild", code: tabCode(docRef.current, tab)};
+    if (drag.current.mode === "rebuild") {
       return false;
     }
     const value = pickValue(code.slice(from, to));
@@ -48,11 +49,10 @@ export function usePickerDrag({docState, canvasRef, probe}: Options) {
   };
 
   const onPickerRelease = (tab: ShaderId, code: string | null) => {
-    mode.current = null;
-    if (code === null) {
-      return;
-    }
-    if (code === tabCode(docRef.current, tab)) {
+    const started = drag.current;
+    drag.current = null;
+    const current = tabCode(docRef.current, tab);
+    if (code === null || code === current || started?.code !== current) {
       canvasRef.current?.endPick();
       return;
     }

@@ -12,6 +12,7 @@ import { findReferencesAt, findReferencesHint, renameHint, startRename } from '.
 import {
   createColorPicker, createDirectionPicker, createFloatPicker, createVec2Picker, type PickerWidget,
 } from './pickers';
+import { pickerPresses } from './pickerPresses';
 import {
   findPickerMatch, formatCssColor, formatFloat, formatJsNumber, formatVec, jsNumberScale, parseCssColor, parseVec,
   type PickerKind, type PickerMatch,
@@ -171,19 +172,22 @@ function openPicker(view: EditorView, from: number, to: number, kind: PickerKind
   const create = () => {
     const widget = pickerWidget(view, kind, text);
     const dom = popupDom(widget.dom);
-    let pressed = false;
     const release = () => {
-      if (pressed) {
-        pressed = false;
-        for (const released of view.state.facet(pickerReleased)) released(view);
-      }
+      for (const released of view.state.facet(pickerReleased)) released(view);
     };
-    // A captured pointer's events still bubble up here from the picker's canvas.
-    dom.addEventListener('pointerdown', () => { pressed = true; });
-    dom.addEventListener('pointerup', release);
-    dom.addEventListener('pointercancel', release);
+    const presses = pickerPresses(release);
+    const lift = (e: PointerEvent) => presses.lift(e.pointerId);
+    const liftAll = () => presses.liftAll();
+    const ends = ['pointerup', 'pointercancel', 'lostpointercapture'] as const;
+    dom.addEventListener('pointerdown', (e) => presses.press(e.pointerId));
+    // On the window, so a pointer that lifts away from the picker still counts.
+    for (const end of ends) window.addEventListener(end, lift, true);
+    window.addEventListener('blur', liftAll);
+    // Closing, even mid-drag, hands over any edits held back.
     const destroy = () => {
       widget.destroy?.();
+      for (const end of ends) window.removeEventListener(end, lift, true);
+      window.removeEventListener('blur', liftAll);
       release();
     };
     return { dom, offset: { x: -widget.width / 2, y: 8 }, destroy };
