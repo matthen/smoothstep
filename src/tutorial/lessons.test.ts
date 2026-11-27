@@ -63,9 +63,10 @@ function withTransition(row: number, transition: Partial<Transition>): TutorialS
 }
 
 describe("lessons", () => {
-  it("have unique step ids, a task for every check, and real examples", () => {
+  it("have unique lesson and step ids, a task for every check, and real examples", () => {
     const ids = LESSONS.flatMap(l => l.steps.map(s => s.id));
     expect(new Set(ids).size).toBe(ids.length);
+    expect(new Set(LESSONS.map(l => l.id)).size).toBe(LESSONS.length);
     for (const s of LESSONS.flatMap(l => l.steps)) {
       expect(s.check === undefined || s.task !== undefined, s.id).toBe(true);
       for (const id of s.examples ?? []) {
@@ -284,6 +285,26 @@ describe("progress", () => {
     // A step past the end of the lesson lands on its last step.
     saveProgress({lesson: 2, step: 40, completed: []});
     expect(loadProgress().step).toBe(LESSONS[2]!.steps.length - 1);
+  });
+
+  it("names the lesson by its id, so adding a lesson doesn't move anyone", () => {
+    const share = LESSONS.findIndex(l => l.id === "share");
+    saveProgress({lesson: share, step: 1, completed: []});
+    expect(JSON.parse(window.localStorage.getItem("smoothstep.tutorial")!)).toMatchObject({lessonId: "share"});
+    expect(loadProgress().lesson).toBe(share);
+    window.localStorage.setItem("smoothstep.tutorial", JSON.stringify({lessonId: "gone", step: 0, completed: []}));
+    expect(loadProgress().lesson).toBe(0);
+  });
+
+  it("reads a saved lesson number in the order from before the Canvas2D lesson, unless that lesson was started", () => {
+    const at = (lesson: number, completed: string[] = []) => {
+      window.localStorage.setItem("smoothstep.tutorial", JSON.stringify({lesson, step: 0, completed}));
+      return LESSONS[loadProgress().lesson]!.id;
+    };
+    expect(at(1)).toBe("time");
+    expect(at(8)).toBe("share");
+    expect(at(8, ["add-canvas"])).toBe("canvas2d");
+    expect(at(9)).toBe("share");
   });
 });
 
