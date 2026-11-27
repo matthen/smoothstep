@@ -4,6 +4,7 @@ import type { LineError } from '../lib/types';
 import { FORMAT_LIMITS, formatLogWithin } from './formatLog';
 import { HELPER_NAMES, makeHelpers } from './helpers';
 import { MAX_WORKER_LOGS, workerRuntime, type LogLevel, type WorkerLog } from './runtime';
+import { workerPartsSource } from './worker/parts';
 
 export interface WorkerSource {
   source: string;
@@ -16,7 +17,7 @@ export interface WorkerSource {
 export function workerSource(code: string, libraries: readonly {name: string; code: string}[]): WorkerSource {
   const helpers = HELPER_NAMES.map(name => "__smoothstep.helpers." + name).join(", ");
   const prefix =
-    `const __smoothstep = (${workerRuntime.toString()})(${makeHelpers.toString()}, ` +
+    `const __smoothstep = (${workerRuntime.toString()})(${workerPartsSource()}, ${makeHelpers.toString()}, ` +
     `args => (${formatLogWithin.toString()})(args, ${JSON.stringify(FORMAT_LIMITS)}), ${MAX_WORKER_LOGS});\n` +
     libraries.map(library =>
       `__smoothstep.define(${JSON.stringify(library.name)}, function (module, exports) {\n${library.code}\n});\n`).join("") +

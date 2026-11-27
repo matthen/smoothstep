@@ -1,8 +1,9 @@
 // What runs in a Canvas2D layer's worker before the layer's own code: it takes messages from the
 // app, calls setup and draw, and sends back each frame. The worker gets workerRuntime as source
-// text, so it must not use anything from outside its own body.
+// text, with its parts, so it must not use anything from outside its own body.
 import type { FontData } from './fonts';
 import type { HelperEnv, Helpers } from './helpers';
+import type { WorkerParts } from './worker/parts';
 
 // What the layer draws one step with.
 export interface LayerInputs {
@@ -42,7 +43,6 @@ export interface WorkerLog {
 
 type UserSetup = (inputs: Record<string, unknown>) => unknown;
 type UserDraw = (ctx: OffscreenCanvasRenderingContext2D, inputs: Record<string, unknown>) => void;
-type ModuleFactory = (module: {exports: unknown}, exports: unknown) => void;
 
 interface WorkerEvent {
   reason?: unknown;
@@ -53,140 +53,27 @@ interface WorkerScope {
   fonts: {add(font: FontFace): void};
 }
 
-type Callback = (...args: unknown[]) => void;
-
 // The most console calls a worker holds between messages to the app; past it they're only counted.
 export const MAX_WORKER_LOGS = 200;
 
-// eslint-disable-next-line max-lines-per-function, max-statements -- the worker gets it as one function's source text, so it can't call module-level helpers
 export function workerRuntime(
-  helpersFor: (env: HelperEnv) => Helpers, formatLog: (args: readonly unknown[]) => string, maxLogs: number,
+  parts: WorkerParts, helpersFor: (env: HelperEnv) => Helpers, formatLog: (args: readonly unknown[]) => string,
+  maxLogs: number,
 ) {
   const scope = self as unknown as WorkerScope;
+  const global = self as unknown as Record<string, unknown>;
   // Drawing units: the canvas is always this many tall, so sizes look the same at any resolution.
   const UNITS_TALL = 1080;
   const env: HelperEnv = {scale: 1, width: UNITS_TALL, height: UNITS_TALL};
   const helpers = helpersFor(env);
 
-  // The layer's code can't start workers of its own, or loop on frames, messages or timers outside its steps.
-  const global = self as unknown as Record<string, unknown>;
-  const remove = (name: string, from: object = global) => {
-    for (let o: object | null = from; o; o = Object.getPrototypeOf(o) as object | null) {
-      Reflect.deleteProperty(o, name);
-    }
-  };
-  ["Worker", "SharedWorker", "requestAnimationFrame", "cancelAnimationFrame", "MessageChannel",
-    "BroadcastChannel", "scheduler", "TaskController"].forEach(name => remove(name));
-  if (typeof AbortSignal !== "undefined") {
-    remove("timeout", AbortSignal);
-  }
-
-  // What the runtime calls once the layer's code has run, kept here so that code can't replace it.
-  const {apply, deleteProperty} = Reflect;
-  const native = (prototype: object, name: string, part: "value" | "get" | "set") =>
-    Object.getOwnPropertyDescriptor(prototype, name)![part] as (...args: never[]) => unknown;
-  const postMessage = native(MessagePort.prototype, "postMessage", "value");
-  const setOnMessage = native(MessagePort.prototype, "onmessage", "set");
-  const dataOf = native(MessageEvent.prototype, "data", "get");
-  const stopImmediately = native(Event.prototype, "stopImmediatePropagation", "value");
-
-  // Timers run only while steps are being drawn, or soon after: a timer that comes due while the
-  // animation is paused waits for the next step, so a loop of them doesn't keep the worker busy.
-  // They're kept in objects with no prototype, so the layer's code can't patch how they're stored.
-  const realNow = performance.now.bind(performance);
-  const [nativeSetTimeout, nativeSetInterval, nativeClear] = [setTimeout, setInterval, clearTimeout];
-  ["setTimeout", "setInterval", "clearTimeout", "clearInterval"].forEach(name => remove(name));
-  const IDLE_MS = 1000;
-  let lastActive = -Infinity;
-  let drawing = false;
-  let nextTimer = 1;
-  const timers = Object.create(null) as Record<number, ReturnType<typeof setTimeout> | undefined>;
-  const parked = Object.create(null) as Record<number, (() => void) | undefined>;
-  const awake = () => drawing || realNow() - lastActive < IDLE_MS;
-  const call = (callback: unknown, args: unknown[]) => {
-    if (typeof callback === "function") {
-      apply(callback as Callback, undefined, args);
-    }
-  };
-  const clear = (id: unknown) => {
-    if (typeof id === "number") {
-      nativeClear(timers[id]);
-      deleteProperty(timers, id);
-      deleteProperty(parked, id);
-    }
-  };
-  global.setTimeout = (callback: unknown, ms?: number, ...args: unknown[]) => {
-    const id = nextTimer++;
-    timers[id] = nativeSetTimeout(() => {
-      deleteProperty(timers, id);
-      if (awake()) {
-        call(callback, args);
-      } else {
-        parked[id] = () => call(callback, args);
-      }
-    }, ms);
-    return id;
-  };
-  global.setInterval = (callback: unknown, ms?: number, ...args: unknown[]) => {
-    const id = nextTimer++;
-    const start = () => {
-      timers[id] = nativeSetInterval(() => {
-        if (awake()) {
-          call(callback, args);
-        } else {
-          nativeClear(timers[id]);
-          deleteProperty(timers, id);
-          parked[id] = () => {
-            start();
-            call(callback, args);
-          };
-        }
-      }, ms);
-    };
-    start();
-    return id;
-  };
-  global.clearTimeout = clear;
-  global.clearInterval = clear;
-  // Runs the parked timers in turn, skipping any that an earlier one cleared.
-  const wake = () => {
-    drawing = true;
-    for (const id in parked) {
-      const resume = parked[id];
-      if (resume) {
-        deleteProperty(parked, id);
-        resume();
-      }
-    }
-  };
-
-  // Math.random repeats from one run to the next, and clocks give the animation's time.
-  let seed = 0x2F6E2B1;
-  Math.random = () => {
-    seed = (seed + 0x6D2B79F5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-  let stepTime = 0;
-  Date.now = () => Math.round(stepTime * 1000);
-  performance.now = () => stepTime * 1000;
-
-  const factories: Record<string, ModuleFactory> = {};
-  const modules: Record<string, unknown> = {};
-  const define = (name: string, factory: ModuleFactory) => {
-    factories[name] = factory;
-  };
-  // A library's exports; with `byDefault`, what `import name from` gives.
-  const lib = (name: string, byDefault = false): unknown => {
-    if (!(name in modules)) {
-      const module = {exports: {} as unknown};
-      factories[name]!(module, module.exports);
-      modules[name] = module.exports;
-    }
-    const exported = modules[name] as {__esModule?: boolean; default?: unknown} | undefined;
-    return byDefault && exported?.__esModule && "default" in exported ? exported.default : exported;
-  };
+  // Before any library or the layer's code runs, so neither can replace what the runtime calls.
+  const natives = parts.lockdown(global);
+  const {apply, postMessage, setOnMessage, dataOf, stopImmediately} = natives;
+  const timers = parts.makeTimers({natives, now: natives.now});
+  timers.install(global);
+  const clock = parts.makeDeterministic();
+  const {define, lib} = parts.makeModules();
 
   let registered = false;
   let ranToEnd = false;
@@ -199,104 +86,20 @@ export function workerRuntime(
   };
 
   let port: MessagePort | null = null;
-  let canvas: OffscreenCanvas | null = null;
-  let ctx: OffscreenCanvasRenderingContext2D | null = null;
-  let duration = 0;
-  let resolution: [number, number] = [0, 0];
-  let textures: (ImageBitmap | null)[] = [];
-  let data: unknown = undefined;
-  let setupDone = false;
-  let failed = false;
-
-  // Console calls wait here and go to the app together, ahead of any other message, so they arrive
-  // in order. A run of the same call is kept as one with a count, and past maxLogs they're only counted.
-  const ErrorType = Error;
-  let logs: WorkerLog[] = [];
-  let droppedLogs = 0;
-  let logsDue = false;
-  let logging = false;
-  let stepFrame: number | null = null;
-  let stepStarted = false;
-  const sendLogs = () => {
-    logsDue = false;
-    if (port && (logs.length > 0 || droppedLogs > 0)) {
-      const message: FromWorker = {type: "logs", logs, dropped: droppedLogs};
-      logs = [];
-      droppedLogs = 0;
+  const logger = parts.makeLogger({formatLog, maxLogs, setTimeout: natives.setTimeout, post: message => {
+    if (port) {
       apply(postMessage, port, [message, []]);
     }
-  };
+    return port !== null;
+  }});
+  parts.installConsole(global, logger.log, apply);
   const send = (message: FromWorker, transfer: Transferable[] = []) => {
-    sendLogs();
+    logger.flush();
     if (port) {
       apply(postMessage, port, [message, transfer]);
     }
   };
-  const stackLines = (): number[] => {
-    try {
-      const stack = new ErrorType().stack ?? "";
-      return stack.split("\n").flatMap(frame => {
-        const match = /:(\d+):\d+\)?\s*$/.exec(frame);
-        return match ? [Number(match[1])] : [];
-      });
-    } catch {
-      return [];
-    }
-  };
-  const log = (level: LogLevel, args: unknown[]) => {
-    // Formatting can run the code's own getters, which may log too.
-    if (logging) {
-      return;
-    }
-    logging = true;
-    try {
-      const last = logs[logs.length - 1];
-      if (droppedLogs > 0) {
-        droppedLogs++;
-      } else {
-        const text = formatLog(args);
-        const lines = stackLines();
-        const time = stepStarted ? stepTime : null;
-        if (last && last.level === level && last.text === text && last.lines.join() === lines.join()) {
-          last.count++;
-          last.frame = stepFrame;
-          last.time = time;
-        } else if (logs.length >= maxLogs) {
-          droppedLogs++;
-        } else {
-          logs.push({level, text, frame: stepFrame, time, lines, count: 1});
-        }
-      }
-      if (!logsDue) {
-        logsDue = true;
-        nativeSetTimeout(sendLogs, 0);
-      }
-    } finally {
-      logging = false;
-    }
-  };
-  const consoleObject = (global.console ?? {}) as Record<string, unknown>;
-  global.console = consoleObject;
-  ([["log", "log"], ["debug", "log"], ["dir", "log"], ["trace", "log"], ["info", "info"], ["warn", "warn"],
-    ["error", "error"]] as const).forEach(([name, level]) => {
-    // The browser's own console still gets each call, so devtools shows it even from a loop that never ends.
-    const original = consoleObject[name];
-    consoleObject[name] = (...args: unknown[]) => {
-      if (typeof original === "function") {
-        apply(original as Callback, consoleObject, args);
-      }
-      log(level, args);
-    };
-  });
-  const originalAssert = consoleObject.assert;
-  consoleObject.assert = (condition: unknown, ...args: unknown[]) => {
-    if (typeof originalAssert === "function") {
-      apply(originalAssert as Callback, consoleObject, [condition, ...args]);
-    }
-    if (!condition) {
-      log("error", ["Assertion failed" + (args.length > 0 ? ":" : ""), ...args]);
-    }
-  };
+  let failed = false;
   const fail = (error: unknown) => {
     failed = true;
     const e = error as {message?: unknown; stack?: unknown; lineNumber?: unknown; line?: unknown} | null | undefined;
@@ -307,52 +110,47 @@ export function workerRuntime(
     });
   };
 
-  const handle = async (message: ToWorker) => {
-    if (message.type === "init") {
-      // Fonts go in before any of the layer's code draws, as a font is looked up once and remembered.
-      await Promise.all(message.fonts.map(async font => {
-        try {
-          const face = new FontFace(font.family, font.data, {weight: font.weight, unicodeRange: font.unicodeRange});
-          scope.fonts.add(face);
-          await face.load();
-        } catch {
-          // Text falls back to another font.
-        }
-      }));
-      canvas = new OffscreenCanvas(message.width, message.height);
-      // The animation sets the size, and every frame must have it.
-      for (const side of ["width", "height"] as const) {
-        const value = canvas[side];
-        Object.defineProperty(canvas, side, {get: () => value, set: () => {
-          throw new Error(`The canvas's ${side} is set by the animation's size, so it can't be changed.`);
-        }});
+  let canvas: OffscreenCanvas | null = null;
+  let ctx: OffscreenCanvasRenderingContext2D | null = null;
+  let duration = 0;
+  let resolution: [number, number] = [0, 0];
+  let textures: (ImageBitmap | null)[] = [];
+  let data: unknown = undefined;
+  let setupDone = false;
+
+  const init = async (message: Extract<ToWorker, {type: "init"}>) => {
+    // Fonts go in before any of the layer's code draws, as a font is looked up once and remembered.
+    await Promise.all(message.fonts.map(async font => {
+      try {
+        const face = new FontFace(font.family, font.data, {weight: font.weight, unicodeRange: font.unicodeRange});
+        scope.fonts.add(face);
+        await face.load();
+      } catch {
+        // Text falls back to another font.
       }
-      ctx = canvas.getContext("2d");
-      env.scale = message.height / UNITS_TALL;
-      env.height = UNITS_TALL;
-      env.width = UNITS_TALL * message.width / message.height;
-      duration = message.duration;
-      resolution = [message.width, message.height];
-      textures = message.textures;
-      if (ctx) {
-        ctx.font = "48px Inter, sans-serif";
-        ctx.fillStyle = "white";
-        ctx.strokeStyle = "white";
-        ctx.lineWidth = 2;
-      }
-      send({type: "ready", registered, hasDraw: userDraw !== null && ctx !== null, stoppedEarly: ranToEnd && !registered});
-      return;
+    }));
+    canvas = new OffscreenCanvas(message.width, message.height);
+    // The animation sets the size, and every frame must have it.
+    for (const side of ["width", "height"] as const) {
+      const value = canvas[side];
+      Object.defineProperty(canvas, side, {get: () => value, set: () => {
+        throw new Error(`The canvas's ${side} is set by the animation's size, so it can't be changed.`);
+      }});
     }
-    if (failed || !ctx || !canvas || !userDraw) {
-      return;
+    ctx = canvas.getContext("2d");
+    env.scale = message.height / UNITS_TALL;
+    env.height = UNITS_TALL;
+    env.width = UNITS_TALL * message.width / message.height;
+    duration = message.duration;
+    resolution = [message.width, message.height];
+    textures = message.textures;
+    if (ctx) {
+      ctx.font = "48px Inter, sans-serif";
+      ctx.fillStyle = "white";
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 2;
     }
-    try {
-      wake();
-      await drawSteps(message);
-    } finally {
-      drawing = false;
-      lastActive = realNow();
-    }
+    send({type: "ready", registered, hasDraw: userDraw !== null && ctx !== null, stoppedEarly: ranToEnd && !registered});
   };
 
   const drawSteps = async (message: Extract<ToWorker, {type: "steps"}>) => {
@@ -361,9 +159,8 @@ export function workerRuntime(
     }
     for (const step of message.steps) {
       send({type: "drawing", frame: step.frame});
-      stepTime = step.time;
-      stepFrame = step.frame;
-      stepStarted = true;
+      clock.setTime(step.time);
+      logger.setStep(step.frame, step.time);
       for (const {slot, bitmap} of step.videoFrames ?? []) {
         // A video's last frame is closed, so a long video doesn't fill the memory.
         const old = textures[slot];
@@ -396,6 +193,19 @@ export function workerRuntime(
     send({type: "frame", id: message.id, bitmap}, [bitmap]);
   };
 
+  const handle = async (message: ToWorker) => {
+    if (message.type === "init") {
+      await init(message);
+    } else if (!failed && ctx && canvas && userDraw) {
+      try {
+        timers.wake();
+        await drawSteps(message);
+      } finally {
+        timers.sleep();
+      }
+    }
+  };
+
   // The layer's code and the libraries' definitions, which run once the port has arrived.
   let body: (() => void) | null = null;
   const run = (code: () => void) => {
@@ -421,7 +231,7 @@ export function workerRuntime(
         code?.();
         ranToEnd = true;
       } finally {
-        sendLogs();
+        logger.flush();
       }
     }
   }, {capture: true});
