@@ -3,6 +3,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { variableValues, type Variable } from '../lib/document';
 import { Playhead } from './playhead';
 
+// `values`, keeping its last answer: each row's value and slider asks for the same time's values every frame.
+function lastAnswer(values: (time: number) => number[]): (time: number) => number[] {
+  let last: {time: number; values: number[]} | null = null;
+  return (time) => {
+    if (last?.time !== time) {
+      last = {time, values: values(time)};
+    }
+    return last.values;
+  };
+}
+
 // The playhead, playing it, and the values the animation's variables have at a time.
 // `onLoop` hears when playing wraps back to the start, and `onRewind` when the playhead is put there.
 export function usePlayback(duration: number, variables: Variable[], onLoop: () => void, onRewind: () => void) {
@@ -16,7 +27,8 @@ export function usePlayback(duration: number, variables: Variable[], onLoop: () 
   // A hold only counts while the row is animated, so deleting its last transition lets it go.
   const heldRows = useMemo(() => new Map([...held].filter(([i]) => variables[i]!.transitions.length > 0)),
     [held, variables]);
-  const valuesAt = useCallback((time: number) => variableValues(variables, time).map((v, i) => heldRows.get(i) ?? v),
+  const valuesAt = useMemo(
+    () => lastAnswer((time: number) => variableValues(variables, time).map((v, i) => heldRows.get(i) ?? v)),
     [variables, heldRows]);
   const hold = useCallback((row: number, value: number) => setHeld(h => new Map(h).set(row, value)), []);
   const releaseHolds = useCallback(() => setHeld(new Map()), []);
