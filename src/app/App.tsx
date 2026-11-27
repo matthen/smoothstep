@@ -41,7 +41,6 @@ export default function App() {
   const initialRoute = useMemo(() => parseHash(window.location.hash), []);
   // Where the tutorial opens, when the URL asks for it.
   const [tutorialStart] = useState(() => initialRoute?.kind === "tutorial" ? openingProgress(initialRoute.lesson) : null);
-  const [loading, setLoading] = useState(initialRoute !== null);
   const [alert, setAlert] = useState<string | null>(null);
   const [dialog, setDialog] = useState<Dialog | null>(window.location.hash ? null : "splash");
   const closeDialog = useCallback(() => setDialog(null), []);
@@ -50,7 +49,9 @@ export default function App() {
   const [appConsole] = useState(() => new ConsoleStore());
 
   const docState = useDocument(initialRoute);
-  const {doc, documentId, sharedFrom, hasUnsavedChanges, dispatch, edit, open: openDocument, openFailed} = docState;
+  const {
+    doc, documentId, sharedFrom, hasUnsavedChanges, dispatch, edit, open: openDocument, openFailed, loading,
+  } = docState;
   useUnsavedGuards(hasUnsavedChanges);
   const {
     phone, touch, mobileTab, chooseMobileTab, showCodeOnPhone, panelTab, setPanelTab, showFooter, setShowFooter,
@@ -98,11 +99,7 @@ export default function App() {
     releaseHolds();
     resetRows();
   }, [openDocument, clearProbe, showCodeTab, releaseHolds, resetRows]);
-  const finishLoading = useCallback(() => {
-    setLoading(false);
-    offerTour();
-  }, [offerTour]);
-  useStartup({initialRoute, tutorialStart, loadDocument, openFailed, setAlert, onFinished: finishLoading});
+  useStartup({initialRoute, tutorialStart, loadDocument, openFailed, setAlert, onFinished: offerTour});
 
   const library = useLibrary({
     doc, documentId, sharedFrom, hasUnsavedChanges, dispatch, loading, canvasRef, setAlert, showTip,

@@ -27,7 +27,7 @@ interface Options {
   sharedFrom: Route | null;
   hasUnsavedChanges: boolean;
   dispatch: Dispatch<DocumentAction>;
-  // Whether the animation is still loading, so there's nothing to save yet.
+  // Whether the animation is still loading, so there's nothing to save or download yet.
   loading: boolean;
   canvasRef: RefObject<CanvasHandle | null>;
   setAlert: (text: string) => void;
@@ -93,6 +93,10 @@ export function useLibrary(
   }, [saveRef]);
 
   const download = useCallback(async () => {
+    // A download now would be the default document under the loading animation's id.
+    if (loading) {
+      return;
+    }
     const now = Date.now();
     try {
       archive.download(await archive.animationFile({
@@ -102,7 +106,7 @@ export function useLibrary(
       console.error(error);
       setAlert("Error downloading animation.");
     }
-  }, [doc, documentId, setAlert]);
+  }, [loading, doc, documentId, setAlert]);
 
   // Adds animation files from the computer to the browser's animations, and opens the one a single
   // file holds.

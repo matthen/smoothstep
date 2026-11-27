@@ -125,11 +125,9 @@ export function useBuilds({docState, canvasRef, tabs, probe, log, showTip}: Opti
     if (!result.ok && !docsShownRef.current) {
       setCodeTab(result.shader);  // Show the code with the error.
     }
-    if (builtCode !== null) {
-      // Every tab's code, so a tip about iPrevFrame shows wherever it's used.
-      const code = [builtCode, builtExtras.shared, ...builtExtras.buffers].join("\n");
-      showTip({kind: "built", ok: result.ok, code, edited: builtCode !== docState.openedCode});
-    }
+    // Every tab's code, so a tip about iPrevFrame shows wherever it's used.
+    const code = [builtCode, builtExtras.shared, ...builtExtras.buffers].join("\n");
+    showTip({kind: "built", ok: result.ok, code, edited: builtCode !== docState.openedCode});
   };
 
   return {

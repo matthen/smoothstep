@@ -9,6 +9,9 @@ import type { ShaderId } from '../../render/Renderer';
 // The open animation, its code as last built, and what the editor shows about it: the parts that all
 // start afresh when an animation opens.
 export interface DocumentState {
+  // Whether the animation the URL names is still loading, opened, or couldn't be opened. While it
+  // loads, `doc` is a placeholder that mustn't be shown, saved or downloaded.
+  status: "loading" | "ready" | "failed";
   doc: AnimationDocument;
   // Its id in this browser's animations, or null if it isn't one of them.
   documentId: string | null;
@@ -16,8 +19,8 @@ export interface DocumentState {
   sharedFrom: Route | null;
   hasUnsavedChanges: boolean;
   titleInput: string;
-  // The image's code and the other tabs' code, as last built; no code until the animation has loaded.
-  builtCode: string | null;
+  // The image's code and the other tabs' code, as last built.
+  builtCode: string;
   builtExtras: ShaderExtras;
   buildId: number;
   // The code as it was opened, so building it unchanged doesn't count as editing.
@@ -57,8 +60,9 @@ export type DocumentAction =
 export function initialDocumentState(route: Route | null): DocumentState {
   const doc = newDocument();
   return {
+    status: route ? "loading" : "ready",
     doc, documentId: route?.kind === "anim" ? route.id : null, sharedFrom: null, hasUnsavedChanges: false,
-    titleInput: doc.title, builtCode: route ? null : doc.code, builtExtras: shaderExtras(doc), buildId: 0,
+    titleInput: doc.title, builtCode: doc.code, builtExtras: shaderExtras(doc), buildId: 0,
     openedCode: doc.code, layerErrors: [], justAdded: null, sharedUntouched: false,
   };
 }
@@ -87,14 +91,14 @@ export function documentReducer(s: DocumentState, action: DocumentAction): Docum
     case "open": {
       const {doc} = action;
       return {
-        ...s, doc, sharedFrom: action.sharedFrom ?? null, hasUnsavedChanges: false, titleInput: doc.title,
+        ...s, status: "ready", doc, sharedFrom: action.sharedFrom ?? null, hasUnsavedChanges: false, titleInput: doc.title,
         builtCode: doc.code, builtExtras: shaderExtras(doc), buildId: s.buildId + 1, openedCode: doc.code,
         layerErrors: [], justAdded: null, sharedUntouched: false,
       };
     }
     case "openFailed":
       return {
-        ...s, documentId: null, doc: {...s.doc, code: "// " + action.text}, builtCode: "// " + action.text,
+        ...s, status: "failed", documentId: null, doc: {...s.doc, code: "// " + action.text}, builtCode: "// " + action.text,
         builtExtras: {buffers: [], shared: "", canvas: null},
       };
     case "edit": {

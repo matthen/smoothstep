@@ -86,7 +86,7 @@ export function tutorialState(
 ): TutorialState {
   const {doc, builtCode, builtExtras, layer} = docState;
   return {
-    code: doc.code, builtCode: builtCode ?? "",
+    code: doc.code, builtCode,
     shared: doc.shared ?? "", buffers: bufferCodes(doc), builtShared: builtExtras.shared, builtBuffers: builtExtras.buffers,
     canvas: layer?.code ?? null, builtCanvas: builtExtras.canvas, canvasOverlay: layer?.overlay ?? true,
     built: docState.buildState === "built" && docState.compiled?.ok === true && docState.compiled.code === builtCode,

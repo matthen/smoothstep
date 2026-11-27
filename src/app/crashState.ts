@@ -3,7 +3,7 @@ import type { AnimationDocument } from '../lib/document';
 
 let current: {id: string | null; json: AnimationDocument} | null = null;
 
-export function setCrashDocument(value: {id: string | null; json: AnimationDocument}) {
+export function setCrashDocument(value: {id: string | null; json: AnimationDocument} | null) {
   current = value;
 }
 
