@@ -37,7 +37,7 @@ export default function BottomPanel(
   {tab, onTabChange, onToggle, phone, doc, edit, onTimelineChange, onDurationChange, playback, inputs, onMessage, store,
     consoleShown, onGoToLine}: Props,
 ) {
-  const {time, values, seek} = playback;
+  const {playhead, valuesAt, seek} = playback;
   return (
     <section className="bottomPanel">
       <Tabs
@@ -59,15 +59,15 @@ export default function BottomPanel(
         </Tabs.List>
         <Tabs.Panel value="animation">
           <Timeline
-            variables={doc.variables} variableValues={values} names={inputs.floatNameList}
+            variables={doc.variables} valuesAt={valuesAt} names={inputs.floatNameList}
             onVariablesChange={onTimelineChange}
-            duration={doc.duration} currentTime={time} onSeek={seek} onDurationChange={onDurationChange}
+            duration={doc.duration} playhead={playhead} onSeek={seek} onDurationChange={onDurationChange}
             rowCount={inputs.rowCount} onAddRow={inputs.addRow}
           />
         </Tabs.Panel>
         <Tabs.Panel value="sliders">
           <Sliders
-            variables={doc.variables} values={values} names={inputs.floatNameList}
+            variables={doc.variables} playhead={playhead} valuesAt={valuesAt} names={inputs.floatNameList}
             code={inputs.allCode}
             held={new Set(playback.heldRows.keys())} onVariablesChange={(variables: Variable[]) => edit({variables})}
             onHold={playback.hold}

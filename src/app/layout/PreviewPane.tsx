@@ -42,7 +42,7 @@ export default function PreviewPane(
     onLayerStatus, onBuilt, onDurationChange}: Props,
 ) {
   const {doc, layer} = docState;
-  const {time, isPlaying, seek} = playback;
+  const {playhead, isPlaying, seek} = playback;
   const [layout, setLayout] = useState<CanvasLayout>({width: 0, height: 0, top: 0, containerWidth: 0});
   const pressedBackground = useRef(false);
   return (
@@ -70,8 +70,8 @@ export default function PreviewPane(
         shaders={docState.shaders} buildId={docState.buildId} textureURLs={inputs.textureURLs}
         layerTextures={inputs.layerTextures} layerOverlay={layer?.overlay ?? true} onLayerStatus={onLayerStatus}
         onLayerLog={log.addLayerLogs} onLayerRestart={log.onLayerRestart} onTextureFailed={log.onTextureFailed}
-        time={time} playing={isPlaying && !playback.scrubbing} duration={doc.duration} stepClock={playback.stepClock}
-        variableValues={playback.values}
+        playhead={playhead} playing={isPlaying && !playback.scrubbing} duration={doc.duration}
+        valuesAt={playback.valuesAt}
         aspectRatio={doc.aspectRatio}
         onBuilt={onBuilt}
         onRestart={playback.restartFrames} onLayout={setLayout}
@@ -79,7 +79,7 @@ export default function PreviewPane(
         inspect={probe.inspect} onInspectChange={probe.setInspect}
       />
       <PlayerControls
-        duration={doc.duration} currentTime={time} isPlaying={isPlaying}
+        duration={doc.duration} playhead={playhead} isPlaying={isPlaying}
         onSeek={seek} onPlayPause={() => playback.setIsPlaying(p => !p)} onReset={() => seek(0)}
         onDurationChange={onDurationChange}
         onScrubStart={() => playback.setScrubbing(true)} onScrubEnd={() => playback.setScrubbing(false)}

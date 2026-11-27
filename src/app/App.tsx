@@ -1,5 +1,5 @@
 import { Loader } from '@mantine/core';
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 
 import { ConsoleStore } from '../console/consoleStore';
@@ -33,11 +33,9 @@ import { useOnboarding } from './onboarding/useOnboarding';
 import { usePlayback } from '../timeline/usePlayback';
 import { useProbe } from '../render/useProbe';
 import { useStartup } from './document/useStartup';
-import { tutorialState, useTutorial } from './onboarding/useTutorial';
+import TutorialPane from './onboarding/TutorialPane';
+import { useTutorial } from './onboarding/useTutorial';
 import { useUnsavedGuards } from './document/useUnsavedGuards';
-
-// Loaded when the tutorial opens, with its lessons.
-const TutorialPanel = lazy(() => import('../tutorial/TutorialPanel'));
 
 export default function App() {
   const initialRoute = useMemo(() => parseHash(window.location.hash), []);
@@ -188,8 +186,8 @@ export default function App() {
 
       {tutorialOpen && tutorialStart && !loading &&
         <Suspense fallback={<div className="learnPanel" />}>
-          <TutorialPanel
-            initial={tutorialStart} state={tutorialState(docState, playback)} onPutCode={tutorial.putTutorialCode}
+          <TutorialPane
+            initial={tutorialStart} docState={docState} playback={playback} onPutCode={tutorial.putTutorialCode}
             onLessonChange={tutorial.changeTutorialLesson} onClose={tutorial.closeTutorial}
             onStepDoneChange={tutorial.setTutorialStepDone}
           />

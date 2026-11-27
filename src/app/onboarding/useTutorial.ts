@@ -7,7 +7,6 @@ import { lessonTitle, type TabCode, type TutorialState } from '../../tutorial/le
 import type { TutorialProgress } from '../../tutorial/progress';
 import type { useDocument } from '../document/useDocument';
 import type { MobileTab } from '../layout/useLayout';
-import type { usePlayback } from '../../timeline/usePlayback';
 
 interface Options {
   // Where the tutorial opens, or null if the app opened without it.
@@ -83,7 +82,7 @@ export function useTutorial(
 
 // What the tutorial's steps check: the animation, what's built, and how it's playing.
 export function tutorialState(
-  docState: ReturnType<typeof useDocument>, playback: ReturnType<typeof usePlayback>,
+  docState: ReturnType<typeof useDocument>, isPlaying: boolean, time: number,
 ): TutorialState {
   const {doc, builtCode, builtExtras, layer} = docState;
   return {
@@ -91,7 +90,7 @@ export function tutorialState(
     shared: doc.shared ?? "", buffers: bufferCodes(doc), builtShared: builtExtras.shared, builtBuffers: builtExtras.buffers,
     canvas: layer?.code ?? null, builtCanvas: builtExtras.canvas, canvasOverlay: layer?.overlay ?? true,
     built: docState.buildState === "built" && docState.compiled?.ok === true && docState.compiled.code === builtCode,
-    isPlaying: playback.isPlaying, time: playback.time, variables: doc.variables, textures: doc.textures, duration: doc.duration,
+    isPlaying, time, variables: doc.variables, textures: doc.textures, duration: doc.duration,
     aspectRatio: doc.aspectRatio,
   };
 }

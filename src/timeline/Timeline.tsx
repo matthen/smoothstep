@@ -9,6 +9,8 @@ import {durationDSecs, maxTimeFor, ROW_HEIGHT} from "./geometry";
 import {awaitingEnd, shownCreating} from "./gestures";
 import type {Rows} from "./gestures";
 import {keyAction, shortcutsAllowed} from "./keys";
+import type {Playhead} from "./playhead";
+import {PlayheadMark, RowValue} from "./PlayheadMarks";
 import TimelineRow from "./TimelineRow";
 import TimelineRuler from "./TimelineRuler";
 import TransitionProperties, {type Heading} from "./TransitionProperties";
@@ -24,19 +26,20 @@ export interface TimelineProps {
   variables: Variable[];
   // What the code calls each variable with #define, if anything (see names.ts).
   names?: (string | null)[];
-  variableValues: number[];
+  // The variables' values at a time, as the canvas is drawn with them.
+  valuesAt(time: number): number[];
   onVariablesChange(variables: Variable[]): void;
   // How many rows to show, from iFloat0, and a way to show one more.
   rowCount: number;
   onAddRow(): void;
   duration: number;
-  currentTime: number;
+  playhead: Playhead;
   onSeek(time: number): void;
   onDurationChange(duration: number): void;
 }
 
 export default function Timeline(props: TimelineProps) {
-  const {variables, variableValues, onVariablesChange, duration, currentTime, onSeek, onDurationChange} = props;
+  const {variables, valuesAt, onVariablesChange, duration, playhead, onSeek, onDurationChange} = props;
   const rowCount = Math.min(props.rowCount, variables.length);
   const name = (row: number) => props.names?.[row] ?? null;
   const rootRef = useRef<HTMLDivElement>(null);
@@ -50,7 +53,7 @@ export default function Timeline(props: TimelineProps) {
     maxTime: maxTimeFor(variables, duration),
     // The scale stays as it was during a drag or a change of duration, so the pointer stays on what it holds.
     frozenPxPerSecond: gesture.kind === "duration" || gesture.kind === "dragging" ? gesture.pxPerSecond : null,
-    currentTime,
+    playhead,
     onPinchStart: () => {
       const current = gestureRef.current;
       if (current.kind === "creating" && !current.released) {
@@ -64,7 +67,6 @@ export default function Timeline(props: TimelineProps) {
     },
   });
   const {gridRef, labelsRef, setScrollLeft, pps, x, width, viewWidth, ruler} = zoom;
-  const currentDSecs = currentTime * 10;
   const rows: Rows = {transitions: variables.slice(0, rowCount).map(v => v.transitions), maxDSecs, pxPerSecond: pps};
   const ranges = useEasedRanges(rows.transitions.map(valueRange));
   const editor = useTransitionEditor({variables, onVariablesChange, maxDSecs, onSelect: () => setHover(null)});
@@ -133,14 +135,14 @@ export default function Timeline(props: TimelineProps) {
             onFit={() => zoom.zoomTo(1, {time: 0, viewX: 0})} touch={touch}
           />
           <TimelineRuler
-            x={x} width={width} ruler={ruler} duration={duration} currentTime={currentTime} postDuration={postDuration}
+            x={x} width={width} ruler={ruler} duration={duration} playhead={playhead} postDuration={postDuration}
             onScrubberPointerDown={onScrubberPointerDown} onDurationPointerDown={onDurationPointerDown}
           />
           <div className="labels" ref={labelsRef}>
             {variables.slice(0, rowCount).map((variable, row) => (
               <div key={row} className={"rowHead" + (variable.transitions.length > 0 ? " animated" : "")}>
                 <div className="rowLabel" title={name(row) ? `iFloat${row}` : undefined}>{name(row) ?? "iFloat" + row}</div>
-                <div className="variableValue">{(variableValues[row] ?? 0).toFixed(2)}</div>
+                <RowValue playhead={playhead} valuesAt={valuesAt} row={row} />
               </div>
             ))}
             {/* Under the last row, like the labels; it mustn't start a transition. */}
@@ -161,9 +163,8 @@ export default function Timeline(props: TimelineProps) {
             {...rowHandlers}
           >
             <div className="postDuration" style={postDuration} />
-            <div
-              className="scrubber"
-              style={{left: x(currentTime) - 1, height: rowsHeight, zIndex: markerZ}}
+            <PlayheadMark
+              playhead={playhead} x={x} className="scrubber" offset={-1} style={{height: rowsHeight, zIndex: markerZ}}
               onPointerDown={onScrubberPointerDown}
             />
             <div
@@ -174,7 +175,7 @@ export default function Timeline(props: TimelineProps) {
             {rows.transitions.map((transitions, row) =>
               <TimelineRow
                 key={row} transitions={transitions} pxPerSecond={pps} width={width} range={ranges[row]}
-                selectedIndex={selection?.row === row ? selectedIndex : -1} currentDSecs={currentDSecs}
+                selectedIndex={selection?.row === row ? selectedIndex : -1} playhead={playhead}
                 pending={pending?.row === row ? pending : null} prompt={prompt} phone={phone}
                 onTransitionPointerDown={(event, index) => onTransitionPointerDown(event, row, index)}
               />)}
