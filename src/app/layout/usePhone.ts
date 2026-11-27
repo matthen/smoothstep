@@ -1,3 +1,4 @@
+// Whether the screen is a phone's, and whether it's a touch screen.
 import { useMediaQuery } from '@mantine/hooks';
 
 // Matches the phone mixin in styles/_theme.scss.

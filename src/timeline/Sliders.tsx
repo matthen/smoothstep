@@ -1,3 +1,4 @@
+// The bottom panel's Sliders tab, and finding which inputs the code uses.
 import { Slider, Text, TextInput } from '@mantine/core';
 import { useState } from 'react';
 

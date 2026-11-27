@@ -4,6 +4,23 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
+// Every source file opens with a comment saying what it is, after any `/// <reference>` lines.
+const fileHeader = {
+  meta: { type: 'suggestion', schema: [], messages: { missing: "Start the file with a comment saying what it is." } },
+  create(context) {
+    return {
+      Program(node) {
+        const source = context.sourceCode;
+        const header = source.getAllComments().find(comment => !comment.value.startsWith('/ <reference'));
+        const first = source.ast.tokens[0];
+        if (first && (!header || header.range[0] > first.range[0])) {
+          context.report({ node, loc: { line: 1, column: 0 }, messageId: 'missing' });
+        }
+      },
+    };
+  },
+};
+
 export default tseslint.config(
   { ignores: ['dist', 'public', 'test-results', 'playwright-report', 'tools'] },
   {
@@ -38,5 +55,11 @@ export default tseslint.config(
       complexity: ['error', 30],
       'max-depth': ['error', 4],
     },
+  },
+  {
+    files: ['src/**/*.{ts,tsx}', 'e2e/**/*.ts'],
+    ignores: ['**/*.test.{ts,tsx}', '**/*.d.ts'],
+    plugins: { local: { rules: { 'file-header': fileHeader } } },
+    rules: { 'local/file-header': 'error' },
   },
 );

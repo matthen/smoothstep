@@ -1,3 +1,4 @@
+// The panel above the timeline's rows, where the selected transition's times, values and type are typed in.
 import { ActionIcon, NativeSelect, NumberInput } from '@mantine/core';
 import { TbTrash } from 'react-icons/tb';
 

@@ -1,3 +1,5 @@
+// The timeline's scale and scroll. The zoom buttons, ctrl + scroll and pinches zoom it, and it scrolls to keep the
+// playhead in view.
 import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react';
 
 import {
@@ -35,7 +37,6 @@ interface Options {
   fingerHeld: () => boolean;
 }
 
-// The timeline's scale and scroll: zooming with buttons, ctrl + scroll and pinches, and following the playhead.
 export function useTimelineZoom({maxTime, frozenPxPerSecond, playhead, onPinchStart, fingerHeld}: Options) {
   const gridRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef<HTMLDivElement>(null);

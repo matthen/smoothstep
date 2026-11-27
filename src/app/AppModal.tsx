@@ -1,3 +1,4 @@
+// The modal every dialog in the app opens in, built on Mantine's.
 import { Modal, type ModalProps } from '@mantine/core';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 

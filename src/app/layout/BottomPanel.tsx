@@ -1,3 +1,4 @@
+// The bottom panel under the code and canvas, with the Timeline, Sliders, Textures and Console tabs.
 import { ActionIcon, Tabs } from '@mantine/core';
 import { TbChevronDown } from 'react-icons/tb';
 
@@ -32,7 +33,6 @@ interface Props {
   onGoToLine: (tab: ShaderId, line: number | null) => void;
 }
 
-// The Timeline, Sliders, Textures and Console tabs under the code and canvas.
 export default function BottomPanel(
   {tab, onTabChange, onToggle, phone, doc, edit, onTimelineChange, onDurationChange, playback, inputs, onMessage, store,
     consoleShown, onGoToLine}: Props,

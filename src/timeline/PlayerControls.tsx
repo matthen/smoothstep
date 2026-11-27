@@ -1,3 +1,4 @@
+// The play bar under the canvas, which also handles the playback keys while focus isn't somewhere you type.
 import {useEffect, useEffectEvent, useState} from "react";
 import type {CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode} from "react";
 import {ActionIcon, NumberInput, Tooltip} from "@mantine/core";

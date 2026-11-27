@@ -1,3 +1,4 @@
+// Saving to the browser's animations, and moving animations in and out of it as files and links.
 import { notifications } from '@mantine/notifications';
 import { useCallback, useEffect, useRef, useState, type Dispatch, type RefObject } from 'react';
 
@@ -36,7 +37,6 @@ interface Options {
   showTip: (event: TipEvent) => void;
 }
 
-// Saving to the browser's animations, and moving animations in and out of it as files and links.
 export function useLibrary(
   {doc, documentId, sharedFrom, hasUnsavedChanges, dispatch, loading, canvasRef, setAlert, setOpenDialog, showTip}: Options,
 ) {

@@ -1,3 +1,4 @@
+// The screen shown after an error the app can't recover from, which offers to download the animations first.
 import { Component, useState, type ReactNode } from 'react';
 import { Button, Group } from '@mantine/core';
 

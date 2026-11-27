@@ -1,3 +1,4 @@
+// When to offer the guided tour and show a one-time tip, so neither interrupts the user or the other.
 import { Button, Group, Text } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useCallback, useRef, useState } from 'react';

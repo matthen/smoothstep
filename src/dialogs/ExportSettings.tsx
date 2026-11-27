@@ -1,3 +1,4 @@
+// The Render dialog, which sets a render's size, frame rate and file type, and shows its progress.
 import { Alert, Button, Group, Loader, NativeSelect, Progress, Stack, Text, TextInput } from '@mantine/core';
 import { useState } from 'react';
 

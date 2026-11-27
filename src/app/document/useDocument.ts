@@ -1,3 +1,4 @@
+// The open animation, its edits and builds, and how its last build went.
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 
 import {
@@ -16,7 +17,6 @@ export function windowTitle(title: string) {
   document.title = title === DEFAULT_TITLE ? "smoothstep.io" : title + " - smoothstep.io";
 }
 
-// The open animation, its edits and builds, and how its last build went.
 export function useDocument(initialRoute: Route | null) {
   const [state, dispatch] = useReducer(documentReducer, initialRoute, initialDocumentState);
   const {doc, builtCode, builtExtras, titleInput} = state;

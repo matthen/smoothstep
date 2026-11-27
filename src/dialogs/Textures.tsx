@@ -1,3 +1,4 @@
+// The bottom panel's Textures tab, with a button per slot that opens the texture picker.
 import { ActionIcon, Tooltip } from '@mantine/core';
 import { lazy, Suspense, useState } from 'react';
 import { TbPhotoPlus, TbPlus } from 'react-icons/tb';
@@ -33,7 +34,6 @@ function knownDuration(texture: TextureSlot): number | undefined {
   return texture.isUserUploaded ? imageDuration(texture.url) : SAMPLE_DURATIONS.get(texture.url);
 }
 
-// The footer's Textures tab: a button per slot, which opens the texture picker.
 export default function Textures({textures, count, onChange, onAdd, onMessage}: TexturesProps) {
   const [slot, setSlot] = useState<number | null>(null);
   const [showPicker, setShowPicker] = useState(false);

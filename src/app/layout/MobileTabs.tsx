@@ -1,3 +1,4 @@
+// The tabs along a phone's bottom edge, choosing which pane fills the screen.
 import { SegmentedControl } from '@mantine/core';
 import { TbCircleCheckFilled } from 'react-icons/tb';
 
@@ -14,7 +15,6 @@ interface Props {
   stepDone: boolean;
 }
 
-// The tabs along a phone's bottom edge, choosing which pane fills the screen.
 export default function MobileTabs({tab, onChange, store, tutorialOpen, stepDone}: Props) {
   return (
     <nav className="mobileTabs" data-crowded={tutorialOpen || undefined}>

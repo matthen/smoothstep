@@ -11,7 +11,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "lint": "eslint . && stylelint \"src/**/*.scss\" && knip",
+    "lint": "eslint . && stylelint \"src/**/*.scss\" && knip && node tools/checkReadmes.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test"

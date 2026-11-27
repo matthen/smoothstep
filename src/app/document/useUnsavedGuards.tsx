@@ -1,3 +1,4 @@
+// Asks before unsaved changes are lost to a link, closing the page, or reloading into a new version.
 import { Button, Group, Text } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useEffect } from 'react';
@@ -6,7 +7,6 @@ import { useLatest } from '../../lib/useLatest';
 import { appUpdates, updateIfFresh } from '../../pwa/updates';
 import { confirmLeaving, hasConfirmedLeaving, useHashLinks } from '../routing';
 
-// Asks before unsaved changes are lost to a link, closing the page, or reloading into a new version.
 export function useUnsavedGuards(hasUnsavedChanges: boolean) {
   useHashLinks(hasUnsavedChanges);
 

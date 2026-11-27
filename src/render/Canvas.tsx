@@ -1,3 +1,4 @@
+// The app's preview canvas, a React component that owns a Renderer and drives it through the use* hooks beside it.
 import { Alert } from '@mantine/core';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type PointerEvent } from 'react';
 

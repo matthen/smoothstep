@@ -1,3 +1,4 @@
+// Links into the app, paths to files in public/, the bundled examples, and each texture slot's image URL.
 import type { TextureSlot } from './document';
 import { imageURL } from './localStore';
 

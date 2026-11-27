@@ -1,3 +1,4 @@
+// The Save copy dialog, which asks for the copy's title.
 import { Button, Group, TextInput } from '@mantine/core';
 import { useState, type SubmitEvent } from 'react';
 
@@ -20,7 +21,6 @@ export function copyTitle(title: string): string {
   return title.slice(0, MAX_TITLE_LENGTH - SUFFIX.length) + SUFFIX;
 }
 
-// Asks for the title of the copy.
 export default function SaveCopy({show, title, onSave, onHide}: SaveCopyProps) {
   const [copy, setCopy] = useState("");
   const [inputValue, setInputValue] = useState("");

@@ -1,3 +1,4 @@
+// The pane with the canvas and its play bar, beside the code.
 import { ActionIcon, Tooltip } from '@mantine/core';
 import { useRef, useState, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
 import { TbMaximize, TbMinimize } from 'react-icons/tb';
@@ -36,7 +37,6 @@ interface Props {
 const isBackground = (event: ReactMouseEvent) =>
   event.target === event.currentTarget || (event.target as HTMLElement).id === "canvasContainer";
 
-// The canvas and its play bar, beside the code.
 export default function PreviewPane(
   {workspace, onWidthChange, onResizing, fullView, setFull, canvasRef, docState, playback, inputs, probe, log,
     onLayerStatus, onBuilt, onDurationChange}: Props,

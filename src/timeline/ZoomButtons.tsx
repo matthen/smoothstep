@@ -1,3 +1,4 @@
+// The timeline's zoom buttons, in the corner above the row labels.
 import { ActionIcon, Tooltip } from '@mantine/core';
 import { TbArrowAutofitWidth, TbZoomIn, TbZoomOut } from 'react-icons/tb';
 
@@ -12,7 +13,6 @@ interface Props {
   touch: boolean;
 }
 
-// The zoom buttons in the corner above the row labels.
 export default function ZoomButtons({canZoomIn, canZoomOut, zoomBy, onFit, touch}: Props) {
   return (
     <div className="corner">

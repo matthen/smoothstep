@@ -1,3 +1,4 @@
+// The Share dialog, and the iframe code that shows an animation playing on another website.
 import { ActionIcon, Alert, Button, Group, Stack, Text, Textarea, TextInput, Title, Tooltip } from '@mantine/core';
 import { useMemo, useState } from 'react';
 import { TbCheck, TbCopy, TbDownload, TbQrcode } from 'react-icons/tb';

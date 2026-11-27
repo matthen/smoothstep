@@ -1,3 +1,4 @@
+// Texture tiles' pictures and video lengths, for the Textures tab and the texture picker.
 import type { CSSProperties } from 'react';
 
 import { isVideoURL } from '../lib/media';

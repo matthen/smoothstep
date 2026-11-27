@@ -1,3 +1,5 @@
+// The preview's render loop. It draws on animation frames when something changed, keeps a smoothed frame rate,
+// and drops to 1× if it stays slow.
 import { useEffect, useRef, useState, type RefObject } from 'react';
 
 import type { SlowFrames } from './layout';
@@ -15,8 +17,7 @@ interface Options {
   onSlow: () => void;
 }
 
-// Renders on animation frames when something changed, keeping a smoothed frame rate, and dropping
-// to 1× if it stays slow. Returns the frame rate and what Auto found, as last shown.
+// Returns the frame rate and what Auto found, as last shown.
 export function useRenderLoop({refs, needsReadRef, frames, renderFrame, readIfDue, onSlow}: Options) {
   const {rendererRef, needsRender: needsRenderRef, needsPresent: needsPresentRef} = refs;
   const [fps, setFps] = useState<number | null>(null);
