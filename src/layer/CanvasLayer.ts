@@ -7,6 +7,7 @@ import type { LineError } from '../lib/types';
 import type { LayerAssets } from './assets';
 import type { FontData } from './fonts';
 import { parseImports } from './libraries';
+import { checkFromWorker, readyOutcome } from './messages';
 import type { LayerWorker, WorkerHost } from './host';
 import type { FromWorker, LayerInputs } from './runtime';
 import { Sandbox } from './sandbox';
@@ -53,19 +54,7 @@ const STOPPED_EARLY = "A return outside any function stopped the Canvas2D code b
   "function was never found. Move the return into a function or take it out.";
 const WRONG_SIZE = "The Canvas2D frame wasn't the animation's size, so it was stopped. Build to run it again.";
 
-// A message of one kind from the worker, whose fields may be missing or the wrong type.
-type Received<K extends FromWorker["type"]> = Partial<Extract<FromWorker, {type: K}>>;
-
-// What a worker's "ready" says about its code's first run: it set up a draw function, set up none,
-// returned before setting anything up, or threw, whose error arrives on its own.
-export type ReadyOutcome = "draws" | "no draw" | "stopped early" | "threw";
-
-export function readyOutcome(message: Received<"ready">): ReadyOutcome {
-  if (message.registered === true) {
-    return message.hasDraw === true ? "draws" : "no draw";
-  }
-  return message.stoppedEarly === true ? "stopped early" : "threw";
-}
+type Received<K extends FromWorker["type"]> = Extract<FromWorker, {type: K}>;
 
 // What every run of one configuration shares.
 interface Prepared {
@@ -255,7 +244,7 @@ export class CanvasLayer {
       phase: {kind: "starting"}, stepped: false, drawn: false, drawing: 0, started: performance.now(),
       heldLogs: [], heldDropped: 0,
     };
-    run.worker.onMessage = data => this.receive(run, prepared, data as Partial<FromWorker> | null);
+    run.worker.onMessage = data => this.receive(run, prepared, data);
     // Each worker gets its own copies of the fonts and images.
     run.worker.post({
       type: "init", width: config.width, height: config.height, duration: config.duration,
@@ -295,22 +284,22 @@ export class CanvasLayer {
     }
   }
 
-  // The worker runs the user's code, so nothing it sends is taken on trust.
-  private receive(run: Run, prepared: Prepared, message: Partial<FromWorker> | null) {
+  private receive(run: Run, prepared: Prepared, data: unknown) {
     if (run !== this.current && run !== this.standby) {
       return;
     }
+    const message = checkFromWorker(data);
     if (message?.type === "logs") {
       this.receiveLogs(run, prepared, message);
     } else if (message?.type === "ready" && run.phase.kind === "starting") {
       this.receiveReady(run, message);
-    } else if (message?.type === "drawing" && run === this.current && typeof message.frame === "number" && Number.isInteger(message.frame)) {
+    } else if (message?.type === "drawing" && run === this.current) {
       run.drawing = message.frame;
       if (this.busyShown) {
         this.callbacks.onBusy?.(message.frame);
       }
     } else if (message?.type === "frame" && run === this.current && run.phase.kind === "drawing" &&
-        message.id === run.phase.batch && message.bitmap instanceof ImageBitmap) {
+        message.id === run.phase.batch) {
       this.receiveFrame(run, prepared, message.bitmap);
     } else if (message?.type === "error") {
       this.receiveError(run, prepared, message);
@@ -319,7 +308,8 @@ export class CanvasLayer {
 
   // The current run's console calls are passed on; a standby's are held until it takes over.
   private receiveLogs(run: Run, prepared: Prepared, message: Received<"logs">) {
-    const {logs, dropped} = logsFromWorker(message, prepared.source);
+    const logs = logsFromWorker(message.logs, prepared.source);
+    const dropped = message.dropped;
     if (run === this.current) {
       this.log(logs, dropped);
     } else {
@@ -386,11 +376,7 @@ export class CanvasLayer {
 
   private receiveError(run: Run, prepared: Prepared, message: Received<"error">) {
     if (run === this.current) {
-      this.fail([errorFromStack({
-        message: typeof message.message === "string" ? message.message.slice(0, 500) : "",
-        stack: typeof message.stack === "string" ? message.stack.slice(0, 5000) : "",
-        line: typeof message.line === "number" ? message.line : null,
-      }, prepared.source)], !this.loaded(run));
+      this.fail([errorFromStack(message, prepared.source)], !this.loaded(run));
     } else {
       this.discardStandby();
     }
