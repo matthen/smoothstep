@@ -1,17 +1,20 @@
 import { Alert } from '@mantine/core';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type PointerEvent } from 'react';
 
-import type { CanvasLayer, LayerLog } from '../layer/CanvasLayer';
+import type { LayerLog } from '../layer/CanvasLayer';
 import type { AspectRatio, ShaderExtras } from '../lib/document';
 import type { LineError } from '../lib/types';
 import { useLatest } from '../lib/useLatest';
 import { CanvasTools, PixelReadout, type ShownProbe } from './CanvasTools';
 import { pixelAt } from './inspect';
-import type { FoundRange, RangeMode } from './probeRange';
-import { LayerSteps } from './layerSteps';
+import type { RangeMode } from './probeRange';
 import { drawingSize, fitCanvas, SlowFrames } from './layout';
-import { Renderer, type CompileResult, type PixelReading, type ProbeRequest, type ProbeResult } from './Renderer';
+import { Renderer, type CompileResult, type ProbeRequest, type ProbeResult } from './Renderer';
 import { renderSteps, RESTART, restarts } from './steps';
+import { useCanvasLayer, type CanvasRefs } from './useCanvasLayer';
+import { useContainerSize } from './useContainerSize';
+import { usePixelInspector } from './usePixelInspector';
+import { useRenderLoop } from './useRenderLoop';
 
 export interface CanvasLayout {
   width: number;   // displayed size in CSS pixels
@@ -29,9 +32,6 @@ export interface CanvasHandle {
 export interface Shaders extends ShaderExtras {
   code: string;
 }
-
-// How long a change of size or length is left to settle before the Canvas2D layer starts again with it.
-const LAYER_SETTLE_MS = 80;
 
 interface CanvasProps {
   shaders: Shaders | null;
@@ -70,22 +70,20 @@ interface CanvasProps {
   onInspectChange(on: boolean): void;
 }
 
-// How often, at most, the inspector reads its pixel again while the animation plays.
-const READ_INTERVAL_MS = 100;
+// The canvas as a PNG, at its CSS size. Called in the same task as the draw, so the buffer is still there.
+function pngAtSize(canvas: HTMLCanvasElement, width: number, height: number): string {
+  if (canvas.width === width && canvas.height === height) {
+    return canvas.toDataURL("image/png");
+  }
+  const thumbnail = document.createElement("canvas");
+  thumbnail.width = width;
+  thumbnail.height = height;
+  thumbnail.getContext("2d")?.drawImage(canvas, 0, 0, width, height);
+  return thumbnail.toDataURL("image/png");
+}
 
-const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rendererRef = useRef<Renderer | null>(null);
-  const propsRef = useLatest(props);
-  const needsRender = useRef(true);
-  const [error, setError] = useState<string | null>(null);
-  // The container's width, height and offset within the pane, where the play bar is placed.
-  const [container, setContainer] = useState<[number, number, number]>([0, 0, 0]);
-  const [fps, setFps] = useState<number | null>(null);
-  // The step the Canvas2D layer has been drawing for a while, or "starting" while its code first runs.
-  const [layerBusy, setLayerBusy] = useState<number | "starting" | null>(null);
-  // Touch screens can't hover, so a tap shows the size and frame rate for a few seconds.
+// Touch screens can't hover, so a tap shows the size and frame rate for a few seconds.
+function useTapOverlays(): [boolean, (event: PointerEvent) => void] {
   const [overlays, setOverlays] = useState(false);
   const overlayTimer = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(overlayTimer.current), []);
@@ -96,9 +94,22 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
       overlayTimer.current = window.setTimeout(() => setOverlays(false), 3000);
     }
   };
+  return [overlays, showOverlays];
+}
+
+const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rendererRef = useRef<Renderer | null>(null);
+  const propsRef = useLatest(props);
+  const needsRender = useRef(true);
+  const [error, setError] = useState<string | null>(null);
+  const container = useContainerSize(containerRef);
+  const [overlays, showOverlays] = useTapOverlays();
   const [width, height] = fitCanvas(container[0], container[1], props.aspectRatio);
   // Set when this build's preview was too slow to draw at the screen's full resolution.
   const [lowRes, setLowRes] = useState(false);
+  const lowerRes = useCallback(() => setLowRes(true), []);
   const [pixelWidth, pixelHeight] = drawingSize(width, height, window.devicePixelRatio, lowRes);
   // The Canvas2D layer stays at full resolution, so dropping to 1× doesn't start it again.
   const [layerWidth, layerHeight] = drawingSize(width, height, window.devicePixelRatio);
@@ -107,53 +118,14 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
 
   const [probe, setProbe] = useState<ShownProbe | null>(null);
   const [rangeMode, setRangeMode] = useState<RangeMode>("auto");
-  // What Auto found, as last shown in the bar.
-  const [found, setFound] = useState<FoundRange>(null);
-  const foundRef = useRef<FoundRange>(null);
-  // The inspector's point, in CSS pixels from the canvas's top left, and what it read there.
-  const [point, setPoint] = useState<{x: number; y: number; touch: boolean} | null>(null);
-  const [reading, setReading] = useState<PixelReading | null>(null);
-  // A mouse reads values while an expression shows; a finger only with the inspector on, as it otherwise scrolls.
-  const inspecting = props.inspect || probe !== null;
-  const sizeRef = useLatest({width, height, pixels: [pixelWidth, pixelHeight] as [number, number]});
-  const pointRef = useLatest(point);
-  // Set when the canvas has drawn since the point was last read.
-  const needsRead = useRef(false);
-  const lastRead = useRef(0);
-  const readPoint = useCallback((at = pointRef.current) => {
-    const renderer = rendererRef.current;
-    if (!renderer || !at) {
-      return;
-    }
-    const {width, height, pixels} = sizeRef.current;
-    const [x, y] = pixelAt(at.x, at.y, width, height, pixels);
-    const next = renderer.readPixel(x, y);
-    setReading(last => JSON.stringify(last) === JSON.stringify(next) ? last : next);
-    needsRead.current = false;
-    lastRead.current = performance.now();
-  }, [pointRef, sizeRef]);
-  const movePoint = (event: PointerEvent<HTMLCanvasElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const at = {
-      x: Math.min(rect.width, Math.max(0, event.clientX - rect.left)),
-      y: Math.min(rect.height, Math.max(0, event.clientY - rect.top)),
-      touch: event.pointerType !== "mouse",
-    };
-    setPoint(at);
-    readPoint(at);
-  };
-  useEffect(() => {
-    if (!inspecting || !props.inspect) {
-      setPoint(p => inspecting && !p?.touch ? p : null);
-    }
-  }, [inspecting, props.inspect]);
+  const {point, reading, inspecting, needsReadRef, readIfDue, canvasHandlers} = usePixelInspector({
+    rendererRef, width, height, pixels: [pixelWidth, pixelHeight], inspect: props.inspect, probeShown: probe !== null,
+  });
 
   const steps = useRef(RESTART);
-  // The animation's Canvas2D layer, once it has loaded, and the stepping that keeps it with the shaders.
-  const layerRef = useRef<{layer: CanvasLayer; steps: LayerSteps} | null>(null);
-  const layerBuildId = useRef(-1);
-  // The layer sent a frame, to show even when nothing else changed.
+  const layerRef: CanvasRefs["layerRef"] = useRef(null);
   const needsPresent = useRef(false);
+  const refs: CanvasRefs = {rendererRef, layerRef, needsRender, needsPresent};
   const restart = useCallback(() => {
     steps.current = RESTART;
     layerRef.current?.steps.restart();
@@ -193,15 +165,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
         } else {
           renderFrame();
         }
-        // In the same task as the draw, so the buffer is still there. Thumbnails stay at the CSS size.
-        if (canvas.width === width && canvas.height === height) {
-          return canvas.toDataURL("image/png");
-        }
-        const thumbnail = document.createElement("canvas");
-        thumbnail.width = width;
-        thumbnail.height = height;
-        thumbnail.getContext("2d")?.drawImage(canvas, 0, 0, width, height);
-        return thumbnail.toDataURL("image/png");
+        return pngAtSize(canvas, width, height);
       } finally {
         renderer.showProbe = true;
         needsPresent.current = true;
@@ -222,23 +186,11 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
       };
     } catch (e) {
       console.error(e);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- WebGL only fails when the mounted canvas asks for a context
       setError("smoothstep.io needs WebGL 2, which this browser or device doesn't support.");
       return undefined;
     }
   }, [propsRef]);
-
-  useEffect(() => {
-    const element = containerRef.current!;
-    // A hidden canvas (the bottom panel taking the screen above a tablet's keyboard) keeps its size,
-    // so its simulation carries on when it comes back.
-    const observer = new ResizeObserver(() => {
-      if (element.clientWidth > 0 && element.clientHeight > 0) {
-        setContainer([element.clientWidth, element.clientHeight, element.offsetTop]);
-      }
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
 
   // The CSS size last drawn at: when only the resolution changes, the simulation carries on.
   const drawnSize = useRef<[number, number]>([0, 0]);
@@ -256,6 +208,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
   const frames = useRef(new SlowFrames());
   useEffect(() => {
     frames.current = new SlowFrames();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset with the frame watcher, which the render loop reads
     setLowRes(false);
   }, [props.buildId]);
 
@@ -297,83 +250,18 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
       needsRender.current = true;
     }
     renderer.redrawProbe();
-    needsRead.current = true;
+    needsReadRef.current = true;
   }, [props.probe, props.shaders, props.buildId]); // eslint-disable-line react-hooks/exhaustive-deps -- sets the probe on a new request or build; the probe shown and callbacks mustn't retrigger it
 
   useEffect(() => {
     rendererRef.current?.setRangeMode(rangeMode);
   }, [rangeMode]);
 
-  // The Canvas2D layer: started when a build has one, and again when what it runs with changes.
-  const layerCode = props.shaders === null ? undefined : props.shaders.canvas;
-  useEffect(() => {
-    const renderer = rendererRef.current;
-    if (!renderer || layerCode === undefined) {
-      return undefined;
-    }
-    renderer.setLayer(layerCode !== null);
-    needsRender.current = true;
-    if (layerCode === null) {
-      layerRef.current?.layer.dispose();
-      layerRef.current = null;
-      propsRef.current.onLayerStatus([]);
-      return undefined;
-    }
-    if (width === 0 || height === 0) {
-      return undefined;
-    }
-    const force = layerBuildId.current !== props.buildId;
-    const config = {
-      code: layerCode, width: layerWidth, height: layerHeight, duration: props.duration, textures: props.layerTextures,
-    };
-    const timer = window.setTimeout(() => {
-      void import('../layer/bundled').then(({CanvasLayer, bundledAssets}) => {
-        if (rendererRef.current !== renderer || propsRef.current.shaders?.canvas !== layerCode) {
-          return;
-        }
-        if (!layerRef.current) {
-          const layer = new CanvasLayer(bundledAssets, {
-            onFrame: bitmap => {
-              renderer.setLayerFrame(bitmap);
-              needsPresent.current = true;
-            },
-            // A run of the code before the latest build may still fail or log until the layer takes the new code.
-            onStatus: (errors, loading) => {
-              if (layerBuildId.current === propsRef.current.buildId) {
-                propsRef.current.onLayerStatus(errors, loading);
-              }
-            },
-            onBusy: setLayerBusy,
-            onLog: (logs, dropped) => {
-              if (layerBuildId.current === propsRef.current.buildId) {
-                propsRef.current.onLayerLog(logs, dropped);
-              }
-            },
-            onRestart: () => {
-              if (layerBuildId.current === propsRef.current.buildId) {
-                propsRef.current.onLayerRestart();
-              }
-            },
-          });
-          layerRef.current = {layer, steps: new LayerSteps(renderer, layer)};
-        }
-        layerBuildId.current = props.buildId;
-        if (layerRef.current.layer.configure(config, force)) {
-          restart();
-          needsRender.current = true;
-        }
-      }).catch((error: unknown) => {
-        console.error(error);
-        propsRef.current.onLayerStatus([{line: 0, message: "Couldn't load the Canvas2D layer. Check your connection and build again."}], true);
-      });
-    }, force || !layerRef.current ? 0 : LAYER_SETTLE_MS);
-    return () => window.clearTimeout(timer);
-  }, [layerCode, props.buildId, width, height, layerWidth, layerHeight, props.duration, props.layerTextures, propsRef, restart]);
-
-  useEffect(() => () => {
-    layerRef.current?.layer.dispose();
-    layerRef.current = null;
-  }, []);
+  const layerBusy = useCanvasLayer({
+    refs, restart,
+    code: props.shaders === null ? undefined : props.shaders.canvas, buildId: props.buildId, duration: props.duration,
+    textures: props.layerTextures, size: {width, height, layerWidth, layerHeight}, propsRef,
+  });
 
   useEffect(() => {
     if (rendererRef.current) {
@@ -393,52 +281,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     needsRender.current = true;
   }, [props.time, props.playing, props.stepClock, props.variableValues, props.duration]);
 
-  // Render on animation frames when something changed, keeping a smoothed frame rate, and dropping
-  // to 1× if it stays slow.
-  useEffect(() => {
-    let id = 0;
-    let updates = 0;
-    const loop = (now: number) => {
-      if (!needsRender.current && needsPresent.current) {
-        rendererRef.current?.refresh();
-        needsRead.current = true;
-      }
-      needsPresent.current = false;
-      if (needsRender.current) {
-        needsRender.current = false;
-        needsRead.current = true;
-        renderFrame();
-        const rate = frames.current.frame(now);
-        if (rate !== null) {
-          updates += 1;
-          if (updates % 10 === 0) {
-            const value = Math.round(rate);
-            setFps(value > 20 ? Math.round(value / 3) * 3 : value);
-          }
-          if (frames.current.slow) {
-            setLowRes(true);
-          }
-        }
-      } else {
-        frames.current.idle();
-        // While nothing new draws, Auto catches up with the last frame.
-        if (rendererRef.current?.findRange(now, true)) {
-          rendererRef.current.present();
-        }
-      }
-      const nextFound = rendererRef.current?.foundRange ?? null;
-      if (nextFound?.[0] !== foundRef.current?.[0] || nextFound?.[1] !== foundRef.current?.[1]) {
-        foundRef.current = nextFound;
-        setFound(nextFound);
-      }
-      if (pointRef.current && needsRead.current && now - lastRead.current > READ_INTERVAL_MS) {
-        readPoint();
-      }
-      id = requestAnimationFrame(loop);
-    };
-    id = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(id);
-  }, [renderFrame, pointRef, readPoint]);
+  const {fps, found} = useRenderLoop({refs, needsReadRef, frames, renderFrame, readIfDue, onSlow: lowerRes});
 
   // Leaves room for the size and frame rate at the top right.
   const toolsRoom = Math.max(0, width - 16 - 88);
@@ -452,22 +295,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
             style={{
               width, height, ...(inspecting ? {cursor: "crosshair"} : {}), ...(props.inspect ? {touchAction: "none"} : {}),
             }}
-            onPointerDown={event => {
-              if (props.inspect && event.pointerType !== "mouse") {
-                event.currentTarget.setPointerCapture(event.pointerId);
-                movePoint(event);
-              }
-            }}
-            onPointerMove={event => {
-              if (event.pointerType === "mouse" ? inspecting : props.inspect && event.buttons) {
-                movePoint(event);
-              }
-            }}
-            onPointerLeave={event => {
-              if (event.pointerType === "mouse") {
-                setPoint(null);
-              }
-            }}
+            {...canvasHandlers}
           />
           <CanvasTools
             style={{top: marginTop + 8, left: marginSide + 8, maxWidth: toolsRoom}} room={toolsRoom}
@@ -484,6 +312,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
           <div className="fps" style={{top: marginTop + 8, right: marginSide + 8}}>
             <p>{pixelWidth}&times;{pixelHeight}px</p>
             {fps ? <p>{fps} fps</p> : null}
+            {/* eslint-disable-next-line react-hooks/refs -- the step drawn changes every frame, too often for state, so it shows as of each render */}
             <p>{Math.max(0, steps.current.rendered)}</p>
           </div>
           {layerBusy !== null ? (
