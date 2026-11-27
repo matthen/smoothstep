@@ -1,6 +1,6 @@
 // Files for moving animations in and out of the browser (formats in FILE_FORMATS.md):
 // one animation as `<title>.smoothstep.json` with its uploads embedded, or everything as a zip.
-import { strFromU8, strToU8, unzip, zip, type Unzipped } from 'fflate';
+import { strFromU8, strToU8, unzip, Zip, ZipPassThrough, type Unzipped } from 'fflate';
 
 import { canonicalJSON, parseDocument, type AnimationDocument } from './document';
 import * as localStore from './localStore';
@@ -88,6 +88,28 @@ function validThumbnail(value: unknown): string | null {
   return typeof value === "string" && value.startsWith("data:image/png;base64,") ? value : null;
 }
 
+// A zip of stored files, written as each is added so its bytes needn't be held until the end.
+export function zipWriter() {
+  const parts: Blob[] = [];
+  let failure: Error | null = null;
+  const zip = new Zip((error, chunk) => {
+    if (error) failure = error;
+    else parts.push(new Blob([chunk]));
+  });
+  return {
+    add(name: string, bytes: Uint8Array) {
+      const file = new ZipPassThrough(name);
+      zip.add(file);
+      file.push(bytes, true);
+    },
+    finish(): Blob {
+      zip.end();
+      if (failure) throw failure;
+      return new Blob(parts, {type: "application/zip"});
+    },
+  };
+}
+
 export function download({blob, filename}: DownloadableFile): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -130,7 +152,7 @@ export async function animationFile(record: StoredDocument): Promise<Downloadabl
 export async function exportAll(): Promise<DownloadableFile & {count: number}> {
   const docs = (await localStore.allDocuments()).sort((a, b) => b.modified - a.modified);
   const images = await localStore.listImages();
-  const files: Record<string, Uint8Array> = {};
+  const files = zipWriter();
   const manifest = {
     format: EXPORT_FORMAT, version: VERSION, exported: new Date().toISOString(),
     animations: [] as Record<string, string>[],
@@ -141,28 +163,26 @@ export async function exportAll(): Promise<DownloadableFile & {count: number}> {
       id: doc.id, title: doc.title, created: iso(doc.created), modified: iso(doc.modified),
       file: "animations/" + doc.id + ".json",
     };
-    files[entry.file!] = strToU8(JSON.stringify(doc.json, null, 1));
+    files.add(entry.file!, strToU8(JSON.stringify(doc.json, null, 1)));
     const thumbnail = validThumbnail(doc.thumbnail);
     if (thumbnail) {
       entry.thumbnail = "thumbnails/" + doc.id + ".png";
-      files[entry.thumbnail] = dataURLBytes(thumbnail);
+      files.add(entry.thumbnail, dataURLBytes(thumbnail));
     }
     manifest.animations.push(entry);
   }
   for (const image of images) {
     const file = "images/" + image.id + "." + mediaExtension(image.blob.type);
-    files[file] = new Uint8Array(await image.blob.arrayBuffer());
+    files.add(file, new Uint8Array(await image.blob.arrayBuffer()));
     manifest.images.push({
       id: image.id, filename: image.filename, width: image.width, height: image.height,
       created: iso(image.created), file, type: image.blob.type,
       ...(image.duration === undefined ? {} : {duration: image.duration}),
     });
   }
-  files["manifest.json"] = strToU8(JSON.stringify(manifest, null, 1));
-  const bytes = await new Promise<Uint8Array>((resolve, reject) =>
-    zip(files, {level: 0}, (err, data) => err ? reject(err) : resolve(data)));
+  files.add("manifest.json", strToU8(JSON.stringify(manifest, null, 1)));
   return {
-    blob: new Blob([bytes as Uint8Array<ArrayBuffer>], {type: "application/zip"}),
+    blob: files.finish(),
     filename: "smoothstep-animations-" + new Date().toISOString().slice(0, 10) + ".zip",
     count: docs.length,
   };
