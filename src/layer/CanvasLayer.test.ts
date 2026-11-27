@@ -240,15 +240,12 @@ describe("CanvasLayer", () => {
     expect(seen.frames).toHaveLength(1);
   });
 
-  it("says in the console when an image the code reads couldn't be loaded, on every configuration that has it", async () => {
-    const {layer, seen} = makeLayer(true, () => Promise.resolve(null));
-    const config = {...CONFIG, code: "function draw(ctx, {textures}) {}", textures: [null, "broken.png"]};
-    layer.configure(config);
+  it("runs with an image the code reads that couldn't be loaded as null", async () => {
+    const {layer, worker} = makeLayer(true, () => Promise.resolve(null));
+    layer.configure({...CONFIG, code: "function draw(ctx, {textures}) {}", textures: [null, "broken.png"]});
     await settle();
-    expect(seen.logs.map(log => [log.level, log.text])).toEqual([["warn", expect.stringContaining("textures[1]")]]);
-    layer.configure(config, true);
-    await settle();
-    expect(seen.logs).toHaveLength(2);
+    const init = worker(0).posts.find(({message}) => message.type === "init")?.message;
+    expect(init).toMatchObject({textures: [null, null]});
   });
 
   it("doesn't load images for code that doesn't read textures", async () => {

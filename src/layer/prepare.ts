@@ -7,14 +7,12 @@ import type { LayerAssets } from './assets';
 import type { FontData } from './fonts';
 import { parseImports } from './libraries';
 import type { TextureBitmaps } from './textureBitmaps';
-import { workerSource, type LayerLog, type WorkerSource } from './workerSource';
+import { workerSource, type WorkerSource } from './workerSource';
 
 export interface Prepared {
   source: WorkerSource;
   fonts: FontData[];
   textures: (ImageBitmap | null)[];
-  // Console lines about it, such as an image that couldn't be loaded.
-  warnings: LayerLog[];
 }
 
 export async function prepare(
@@ -33,11 +31,8 @@ export async function prepare(
       assets.fonts(config.code),
       Promise.all(images.map(url => url === null ? Promise.resolve(null) : bitmaps.get(url))),
     ]);
-    const warnings = images.flatMap((url, slot): LayerLog[] => url !== null && textures[slot] === null ? [{
-      level: "warn", text: `textures[${slot}]'s image couldn't be loaded, so it's null.`,
-      frame: null, time: null, line: null, count: 1,
-    }] : []);
-    return {source: workerSource(imports.code, libraries), fonts, textures, warnings};
+    // An image that couldn't be loaded is null; the shaders' own warning about that slot covers it.
+    return {source: workerSource(imports.code, libraries), fonts, textures};
   } catch (error) {
     console.error(error);
     return {errors: [{line: 0, message: "Couldn't load what the Canvas2D code needs. Check your connection and build again."}]};

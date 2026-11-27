@@ -156,9 +156,6 @@ export class CanvasLayer {
         this.fail(prepared.errors, true);
         return;
       }
-      if (prepared.warnings.length > 0) {
-        this.log(prepared.warnings, 0);
-      }
       this.use(prepared, this.spawn(prepared));
     });
     return true;
