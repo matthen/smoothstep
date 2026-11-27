@@ -159,6 +159,24 @@ export function locateErrors(errors: LineError[], shared: string): {inShared: bo
   };
 }
 
+const DECLARED_TYPE = String.raw`\b(?:void|bool|int|uint|float|[biu]?vec[234]|mat[234](?:x[234])?|\w*sampler\w*)\s+`;
+
+// Where an error with no line number comes from, such as a link error or a call to a function declared but
+// never defined: the first name in the log declared in the shared code or the shader's own, else line 0.
+export function locateUnplacedError(log: string, code: string, shared: string): {inShared: boolean; errors: LineError[]} {
+  const message = log.trim() || "Couldn't link the shader.";
+  for (const name of log.match(/\b[A-Za-z_]\w*\b/g) ?? []) {
+    const declaration = new RegExp(DECLARED_TYPE + name + String.raw`\b`);
+    for (const [inShared, source] of [[true, shared], [false, code]] as const) {
+      const line = source.split("\n").findIndex(text => declaration.test(text));
+      if (line >= 0) {
+        return {inShared, errors: [{line, message}]};
+      }
+    }
+  }
+  return {inShared: false, errors: [{line: 0, message}]};
+}
+
 // Whether code defines mainImage, outside comments.
 function definesMainImage(code: string): boolean {
   return /\bvoid\s+mainImage\s*\(/.test(code.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, ""));
@@ -532,8 +550,9 @@ export class Renderer {
     if ("failed" in linked) {
       const {failed: shader, result} = linked;
       const source = shader === "image" ? code : buffers[shader]!;
-      if (result.stage === "link") {
-        return {ok: false, shader, errors: [{line: 0, message: result.log.trim() || "Couldn't link the shader."}]};
+      if (result.stage === "link" || !/ERROR:\s*\d+:\d+:/.test(result.log)) {
+        const located = locateUnplacedError(result.log, source, shared);
+        return {ok: false, shader: located.inShared ? "shared" : shader, errors: located.errors};
       }
       const located = locateErrors(parseErrors(result.log, userCode(source, shared)), shared);
       return located.inShared ? {ok: false, shader: "shared", errors: located.errors} :

@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import { exportSize, frameCount } from '../export/exportVideo';
 import { drawingSize, fitCanvas, SlowFrames } from './layout';
-import { buffersUsed, fragmentSource, locateErrors, markMissingMainImage, PAST_END_ERROR, parseErrors } from './Renderer';
+import {
+  buffersUsed, fragmentSource, locateErrors, locateUnplacedError, markMissingMainImage, PAST_END_ERROR, parseErrors,
+} from './Renderer';
 
 describe("parseErrors", () => {
   const code = "void mainImage(out vec4 c, in vec2 p) {\n  c = vec4(1.);\n  oops;\n}";
@@ -117,5 +119,19 @@ describe("buffers and shared code", () => {
     expect(locateErrors([{line: 3, message: "own"}], shared))
       .toEqual({inShared: false, errors: [{line: 1, message: "own"}]});
     expect(locateErrors([{line: 0, message: "own"}], "")).toEqual({inShared: false, errors: [{line: 0, message: "own"}]});
+  });
+
+  // Logs as Chrome's WebGL gives them.
+  it("puts an error with no line on the declaration of a name it mentions, in the shared code or the shader's", () => {
+    const varying = "FRAGMENT varying vUv does not match any VERTEX varying\n";
+    const shared = "// Helpers\nin vec2 vUv;\nfloat helper(float x);";
+    const code = "void mainImage(out vec4 c, in vec2 p) {\n  c = vec4(helper(vUv.x));\n}";
+    expect(locateUnplacedError(varying, code, shared)).toEqual({inShared: true, errors: [{line: 1, message: varying.trim()}]});
+    const undefinedFunction = "ERROR: Function helper() called by main() is undefined\n";
+    expect(locateUnplacedError(undefinedFunction, code, shared).errors[0]!.line).toBe(2);
+    const own = "in vec2 vUv;\n" + code;
+    expect(locateUnplacedError(varying, own, "")).toEqual({inShared: false, errors: [{line: 0, message: varying.trim()}]});
+    expect(locateUnplacedError("FRAGMENT shader uniforms count exceeds MAX_FRAGMENT_UNIFORM_VECTORS(4096)", code, shared))
+      .toMatchObject({inShared: false, errors: [{line: 0}]});
   });
 });
