@@ -10,6 +10,7 @@ import type { CanvasHandle } from '../../render/Canvas';
 import type { CompileResult, ShaderId } from '../../render/Renderer';
 import type { TipEvent } from '../onboarding/tips';
 import type { useCodeTabs } from '../layout/useCodeTabs';
+import { inputWarnings } from '../../console/inputWarnings';
 import type { useConsoleLog } from '../../console/useConsoleLog';
 import type { useDocument } from './useDocument';
 import type { useProbe } from '../../render/useProbe';
@@ -22,9 +23,10 @@ interface Options {
   probe: ReturnType<typeof useProbe>;
   log: ReturnType<typeof useConsoleLog>;
   showTip: (event: TipEvent) => void;
+  tutorialOpen: boolean;
 }
 
-export function useBuilds({docState, canvasRef, tabs, probe, log, showTip}: Options) {
+export function useBuilds({docState, canvasRef, tabs, probe, log, showTip, tutorialOpen}: Options) {
   const {dispatch, builtCode, builtExtras, buildId, allBuilt} = docState;
   const pickerDrag = usePickerDrag({docState, canvasRef, probe});
   const {setCodeTab, docsShownRef} = tabs;
@@ -71,13 +73,16 @@ export function useBuilds({docState, canvasRef, tabs, probe, log, showTip}: Opti
   };
 
   const onBuilt = (result: CompileResult, ms: number) => {
-    log.logBuild(buildId, result, ms);
+    // Every shader tab's code, so a tip about iPrevFrame shows wherever it's used.
+    const code = [builtCode, builtExtras.shared, ...builtExtras.buffers].join("\n");
+    // The tutorial's steps say when an input is still empty, so its warnings would only repeat them.
+    const {textures, variables} = docRef.current;
+    const warnings = result.ok && !tutorialOpen ? inputWarnings(code, builtExtras.canvas, textures, variables) : [];
+    log.logBuild(buildId, result, ms, warnings);
     docState.built(result);
     if (!result.ok && !docsShownRef.current) {
       setCodeTab(result.shader);  // Show the code with the error.
     }
-    // Every tab's code, so a tip about iPrevFrame shows wherever it's used.
-    const code = [builtCode, builtExtras.shared, ...builtExtras.buffers].join("\n");
     showTip({kind: "built", ok: result.ok, code, edited: builtCode !== docState.openedCode});
   };
 

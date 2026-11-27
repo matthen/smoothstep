@@ -40,6 +40,8 @@ export function useConsoleLog(store: ConsoleStore, exporting: () => boolean, sho
   const loopedAt = useRef(-Infinity);
   const buildLine = useRef<{id: number; shaderErrors: number; ms: number} | null>(null);
   const lastRestart = useRef<{id: number; at: number} | null>(null);
+  // The last build's warnings about the inputs the code reads.
+  const warned = useRef(new Set<string>());
 
   // The console counts its errors as seen while it shows.
   useEffect(() => store.setViewing(shown), [store, shown]);
@@ -47,8 +49,9 @@ export function useConsoleLog(store: ConsoleStore, exporting: () => boolean, sho
   const looped = useCallback(() => {loopedAt.current = performance.now();}, []);
   const rewound = useCallback(() => {loopedAt.current = -Infinity;}, []);
 
-  // Each build starts the console afresh, with a line saying how it went.
-  const logBuild = (buildId: number, result: CompileResult, ms: number) => {
+  // Each build starts the console afresh, with a line saying how it went. Of its warnings, only those
+  // the last build didn't have are listed.
+  const logBuild = (buildId: number, result: CompileResult, ms: number, warnings: string[] = []) => {
     if (buildId === consoleBuild) {
       return;
     }
@@ -60,7 +63,12 @@ export function useConsoleLog(store: ConsoleStore, exporting: () => boolean, sho
     if (!result.ok) {
       errors.forEach(error => store.add({level: "error", text: error.message, tab: result.shader, line: error.line}));
     }
+    warnings.filter(text => !warned.current.has(text)).forEach(text => store.add({level: "warn", text}));
+    warned.current = new Set(warnings);
   };
+
+  // A newly opened animation's warnings are all new.
+  const forgetWarnings = useCallback(() => {warned.current = new Set();}, []);
 
   const logLayerStatus = (errors: LineError[], loading: boolean) => {
     errors.forEach(error => store.add({level: "error", text: error.message, tab: "canvas", line: error.line}));
@@ -100,5 +108,5 @@ export function useConsoleLog(store: ConsoleStore, exporting: () => boolean, sho
     text: `iTexture${slot}'s ${video ? "video couldn't be loaded or played" : "image couldn't be loaded"}, so it reads as black.`,
   });
 
-  return {looped, rewound, logBuild, logLayerStatus, addLayerLogs, onLayerRestart, onTextureFailed};
+  return {looped, rewound, logBuild, forgetWarnings, logLayerStatus, addLayerLogs, onLayerRestart, onTextureFailed};
 }

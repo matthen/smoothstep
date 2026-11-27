@@ -98,6 +98,29 @@ test("a shader error is listed with its tab and line, and clicking it goes there
   await expect.poll(() => cursorLine(page)).toBe("  fragColor = vec4(uv, missing, 1.0);");
 });
 
+test("reading an empty texture slot or an iFloat that's always 0 warns once, until it changes", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./");
+  await page.getByRole("button", {name: "Continue"}).click();
+  await consoleTab(page).click();
+  const shader = (input: string) =>
+    `void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  fragColor = texture(iTexture2, fragCoord) + ${input};\n}`;
+  await setCode(page, shader("iFloat3"));
+  await page.keyboard.press("Shift+Enter");
+  const texture = entries(page).filter({hasText: "iTexture2 is empty, so it reads as black."});
+  const float3 = entries(page).filter({hasText: "iFloat3 is always 0"});
+  await expect(texture).toHaveCount(1);
+  await expect(float3).toHaveCount(1);
+
+  // The next build lists only the warning that's new.
+  await setCode(page, shader("iFloat3 + iFloat4"));
+  await page.keyboard.press("Shift+Enter");
+  await expect(entries(page).filter({hasText: "iFloat4 is always 0"})).toHaveCount(1);
+  await expect(texture).toHaveCount(0);
+  await expect(float3).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
 test("Canvas2D code with a syntax error makes the build line say it failed", async ({page, context}) => {
   await offline(context);
   await page.goto("./");

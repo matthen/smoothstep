@@ -68,6 +68,7 @@ export default function App() {
   const log = useConsoleLog(appConsole, exporter.exporting, consoleShown);
   const playback = usePlayback(doc.duration, doc.variables, log.looped, log.rewound);
   const {clampTime, releaseHolds} = playback;
+  const {forgetWarnings} = log;
   const probe = useProbe(tabs.editorViews);
   const {clear: clearProbe} = probe;
   const inputs = useInputs(doc);
@@ -99,7 +100,8 @@ export default function App() {
     showCodeTab("image");
     releaseHolds();
     resetRows();
-  }, [openDocument, clearProbe, showCodeTab, releaseHolds, resetRows]);
+    forgetWarnings();
+  }, [openDocument, clearProbe, showCodeTab, releaseHolds, resetRows, forgetWarnings]);
   useStartup({initialRoute, tutorialStart, loadDocument, openFailed, setAlert, onFinished: offerTour});
 
   const library = useLibrary({
@@ -107,7 +109,7 @@ export default function App() {
     setOpenDialog: open => setDialog(open ? "open" : null),
   });
   const {save, download} = library;
-  const builds = useBuilds({docState, canvasRef, tabs, probe, log, showTip});
+  const builds = useBuilds({docState, canvasRef, tabs, probe, log, showTip, tutorialOpen});
 
   const onDurationChange = useCallback((duration: number) => {
     edit({duration});
