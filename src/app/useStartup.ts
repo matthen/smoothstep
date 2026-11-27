@@ -62,5 +62,6 @@ export function useStartup({initialRoute, tutorialStart, loadDocument, openFaile
         onFinished();
       }
     });
+    // Runs once: every dependency is stable, and a change would reopen the animation over the user's edits.
   }, [initialRoute, loadDocument, onFinished, tutorialStart, openFailed, setAlert]);
 }

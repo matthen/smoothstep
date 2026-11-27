@@ -50,10 +50,10 @@ const MAX_WAITING = 12;
 const NO_DRAW = "The Canvas2D code needs a draw function, which draws on the canvas each step.";
 const WRONG_SIZE = "The Canvas2D frame wasn't the animation's size, so it was stopped. Build to run it again.";
 
-// What every run of one configuration shares.
 // A message of one kind from the worker, whose fields may be missing or the wrong type.
 type Received<K extends FromWorker["type"]> = Partial<Extract<FromWorker, {type: K}>>;
 
+// What every run of one configuration shares.
 interface Prepared {
   source: WorkerSource;
   fonts: FontData[];

@@ -91,6 +91,8 @@ export default function App() {
   });
   const {showTip, takeTour, offerTour} = onboarding;
 
+  // Resets the state other hooks keep for the open animation; the reducer resets its own. It must stay
+  // stable, since the startup effect would otherwise run again and reopen the URL's animation over edits.
   const loadDocument = useCallback((json: AnimationDocument, sharedFrom?: Route) => {
     openDocument(json, sharedFrom);
     clearProbe();
