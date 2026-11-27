@@ -98,6 +98,25 @@ test("the ruler seeks, and dragging the end changes the length", async ({page, c
   expect(errors).toEqual([]);
 });
 
+test("scrubbing on the ruler while playing holds the playhead still, and playing goes on after release", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#new");
+  await blankTimeline(page);
+  const ruler = (await page.locator(".header").boundingBox())!;
+  const fitted = await scale(page);
+  await page.getByRole("button", {name: "Play"}).click();
+  await page.mouse.move(ruler.x + 3 * fitted, ruler.y + 12);
+  await page.mouse.down();
+  await expect.poll(() => scrubberTime(page)).toBeCloseTo(3, 1);
+  await page.waitForTimeout(1000);
+  expect(await scrubberTime(page)).toBeCloseTo(3, 1);
+  await expect(page.getByRole("button", {name: "Pause"})).toBeVisible();
+
+  await page.mouse.up();
+  await expect.poll(() => scrubberTime(page)).toBeGreaterThan(3.3);
+  expect(errors).toEqual([]);
+});
+
 test("transitions are dragged out, drawn with their curve, moved, resized and deleted", async ({page, context}) => {
   const errors = await offline(context);
   await page.goto("./#new");

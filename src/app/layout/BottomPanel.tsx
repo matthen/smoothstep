@@ -62,6 +62,7 @@ export default function BottomPanel(
             variables={doc.variables} valuesAt={valuesAt} names={inputs.floatNameList}
             onVariablesChange={onTimelineChange}
             duration={doc.duration} playhead={playhead} onSeek={seek} onDurationChange={onDurationChange}
+            onScrubStart={playback.onScrubStart} onScrubEnd={playback.onScrubEnd}
             rowCount={inputs.rowCount} onAddRow={inputs.addRow}
           />
         </Tabs.Panel>
