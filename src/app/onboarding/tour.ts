@@ -4,8 +4,8 @@ import './tour.scss';
 
 import { driver, type DriveStep } from 'driver.js';
 
-import { glslCodeHtml } from '../editor/highlight';
-import { MOD_KEY } from './platform';
+import { glslCodeHtml } from '../../editor/highlight';
+import { MOD_KEY } from '../platform';
 
 export interface TourOptions {
   phone: boolean;

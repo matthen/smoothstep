@@ -57,6 +57,7 @@ type Callback = (...args: unknown[]) => void;
 // The most console calls a worker holds between messages to the app; past it they're only counted.
 export const MAX_WORKER_LOGS = 200;
 
+// eslint-disable-next-line max-lines-per-function, max-statements -- the worker gets it as one function's source text, so it can't call module-level helpers
 export function workerRuntime(
   helpersFor: (env: HelperEnv) => Helpers, formatLog: (args: readonly unknown[]) => string, maxLogs: number,
 ) {

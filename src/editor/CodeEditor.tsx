@@ -114,7 +114,7 @@ export default function CodeEditor({
       view.destroy();
       viewRef.current = null;
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- the view is made once; later props reach it through refs and the effects below
 
   useEffect(() => {
     const view = viewRef.current;

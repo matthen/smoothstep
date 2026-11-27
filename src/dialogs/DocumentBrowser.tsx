@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { TbDownload, TbFileImport, TbTrash } from 'react-icons/tb';
 
 import AppModal from '../app/AppModal';
-import { usePhone } from '../app/usePhone';
+import { usePhone } from '../app/layout/usePhone';
 import { animationFile, download, exportAll } from '../lib/archive';
 import { documentHref } from '../lib/config';
 import { deleteDocument, getDocument, listDocuments, StorageFullError, type DocumentSummary } from '../lib/localStore';
@@ -43,7 +43,7 @@ export default function DocumentBrowser({show, onHide, currentId, onDeleted, onM
     if (show) {
       updateList();
     }
-  }, [show, version]);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [show, version]);  // eslint-disable-line react-hooks/exhaustive-deps -- lists again on opening or a new version, not when updateList's identity changes
 
   const handleDownload = async (document: DocumentSummary) => {
     try {

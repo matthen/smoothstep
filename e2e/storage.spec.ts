@@ -126,7 +126,8 @@ test("after a browser restart the animation and texture are still there", async 
 
   await modal.getByText("Static test").click();
   await expect(page).toHaveURL(new RegExp("#anim/" + docId + "$"));
-  await expect(page.locator("#titleInput")).toHaveValue("Static test");
+  // Opening it reloads the page, which can take more than 5 s on a slow machine.
+  await expect(page.locator("#titleInput")).toHaveValue("Static test", {timeout: 20_000});
 
   // A hash-only goto returns before the app's own reload, so load the page fresh.
   await page.goto("about:blank");

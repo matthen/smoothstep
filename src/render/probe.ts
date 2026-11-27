@@ -71,28 +71,11 @@ export function planProbe(code: string, from: number, to: number, analysis: Anal
     return fail("Select an expression inside a function, not on a # line.");
   }
   const selected = tokens.slice(first, last + 1);
-  let depth = 0;
-  for (const [i, t] of selected.entries()) {
-    if (t.text === ";" || t.text === "{" || t.text === "}" || (t.type === "keyword" && STATEMENT_KEYWORDS.has(t.text))) {
-      return fail(NOT_ONE);
-    }
-    if (t.type === "operator" && ASSIGNMENTS.test(t.text)) {
-      return fail("Select an expression that doesn't change a variable.");
-    }
-    // A type is only an expression as a constructor; before a name it declares a variable.
-    if (t.type === "typeName" && selected[i + 1]?.text !== "(" && selected[i + 1]?.text !== "[") {
-      return fail(NOT_ONE);
-    }
-    if (OPEN[t.text]) depth++;
-    else if (CLOSE.has(t.text)) depth--;
-    else if (t.text === "," && depth === 0) return fail(NOT_ONE);
-    if (depth < 0) return fail(NOT_ONE);
+  const problem = notOneExpression(selected);
+  if (problem) {
+    return fail(problem);
   }
   const lastToken = selected.at(-1)!;
-  if (depth !== 0 || (selected[0]!.type === "operator" && !/^[-+!~]$/.test(selected[0]!.text)) ||
-      lastToken.type === "operator" || lastToken.text === "." || selected[0]!.text === ".") {
-    return fail(NOT_ONE);
-  }
 
   // The function body the selection is in.
   const body = enclosingBody(analysis, first);
@@ -106,6 +89,33 @@ export function planProbe(code: string, from: number, to: number, analysis: Anal
     ok: true, from: from2, to: to2, expression: code.slice(from2, to2), sites, functionName: body.name,
     types: orderTypes(guessType(analysis, from2, to2)),
   };
+}
+
+// Why the selected tokens aren't a single expression that changes nothing, or null if they are one.
+function notOneExpression(selected: Analysis["tokens"]): string | null {
+  let depth = 0;
+  for (const [i, t] of selected.entries()) {
+    if (t.text === ";" || t.text === "{" || t.text === "}" || (t.type === "keyword" && STATEMENT_KEYWORDS.has(t.text))) {
+      return NOT_ONE;
+    }
+    if (t.type === "operator" && ASSIGNMENTS.test(t.text)) {
+      return "Select an expression that doesn't change a variable.";
+    }
+    // A type is only an expression as a constructor; before a name it declares a variable.
+    if (t.type === "typeName" && selected[i + 1]?.text !== "(" && selected[i + 1]?.text !== "[") {
+      return NOT_ONE;
+    }
+    if (OPEN[t.text]) depth++;
+    else if (CLOSE.has(t.text)) depth--;
+    else if (t.text === "," && depth === 0) return NOT_ONE;
+    if (depth < 0) return NOT_ONE;
+  }
+  const lastToken = selected.at(-1)!;
+  if (depth !== 0 || (selected[0]!.type === "operator" && !/^[-+!~]$/.test(selected[0]!.text)) ||
+      lastToken.type === "operator" || lastToken.text === "." || selected[0]!.text === ".") {
+    return NOT_ONE;
+  }
+  return null;
 }
 
 interface Body extends Range {
@@ -126,25 +136,30 @@ function enclosingBody({tokens}: Analysis, index: number): Body | null {
       if (open < index && index < i) {
         // A function's body follows its parameters' closing bracket.
         if (tokens[open - 1]?.text !== ")") return null;
-        let d = 0;
-        let j = open - 1;
-        for (; j >= 0; j--) {
-          if (tokens[j]!.text === ")") d++;
-          else if (tokens[j]!.text === "(" && --d === 0) break;
-        }
-        return {from: tokens[open]!.from, to: tokens[i]!.to, open, close: i, name: tokens[j - 1]?.text ?? ""};
+        return {from: tokens[open]!.from, to: tokens[i]!.to, open, close: i, name: functionName(tokens, open)};
       }
     }
   }
   return null;
 }
 
-// Places to insert the call, best first.
-function insertionSites({tokens}: Analysis, first: number, last: number, body: Body): Site[] {
-  // The outermost bracket around the selection, if it's in one: a for loop's brackets hold `;`s too.
+// The name before the parameters of the function whose body opens at `open`.
+function functionName(tokens: Analysis["tokens"], open: number): string {
+  let d = 0;
+  let j = open - 1;
+  for (; j >= 0; j--) {
+    if (tokens[j]!.text === ")") d++;
+    else if (tokens[j]!.text === "(" && --d === 0) break;
+  }
+  return tokens[j - 1]?.text ?? "";
+}
+
+// The outermost bracket around the token at `first`, if it's in one, within the body opening at `open`:
+// a for loop's brackets hold `;`s too.
+function outerBracket(tokens: Analysis["tokens"], first: number, open: number): number {
   let outer = -1;
   let depth = 0;
-  for (let i = first - 1; i > body.open; i--) {
+  for (let i = first - 1; i > open; i--) {
     const text = tokens[i]!.text;
     if ((text === "{" || text === "}") && depth === 0) break;
     if (CLOSE.has(text)) depth++;
@@ -153,20 +168,23 @@ function insertionSites({tokens}: Analysis, first: number, last: number, body: B
       else depth--;
     }
   }
-  const header = outer >= 0 ? tokens[outer - 1]?.text : undefined;
-  const inHeader = header === "if" || header === "while" || header === "for" || header === "switch";
-  // A statement's first token: the one after the last `;` or brace outside brackets before `index`.
-  let start = body.open + 1;
-  for (let i = (inHeader ? outer - 1 : outer >= 0 ? outer : first) - 1, d = 0; i > body.open; i--) {
+  return outer;
+}
+
+// A statement's first token: the one after the last `;` or brace outside brackets before `before`.
+function statementStart(tokens: Analysis["tokens"], before: number, open: number): number {
+  for (let i = before - 1, d = 0; i > open; i--) {
     const text = tokens[i]!.text;
     if (CLOSE.has(text)) d++;
     else if (OPEN[text]) d--;
-    else if (d <= 0 && (text === ";" || text === "{" || text === "}")) {
-      start = i + 1;
-      break;
-    }
+    else if (d <= 0 && (text === ";" || text === "{" || text === "}")) return i + 1;
   }
-  // Into the bodies of `if`s, `else`s and loops without braces, which get braces so the call runs only with them.
+  return open + 1;
+}
+
+// From a statement's start, into the bodies of `if`s, `else`s and loops without braces that hold the
+// token at `first`. Those get braces, so the call runs only with them.
+function innermostStatement(tokens: Analysis["tokens"], start: number, first: number) {
   let braced = false;
   for (;;) {
     const text = tokens[start]!.text;
@@ -175,10 +193,19 @@ function insertionSites({tokens}: Analysis, first: number, last: number, body: B
     } else if (CONTROL.has(text) && tokens[start + 1]?.text === "(" && matching(tokens, start + 1) < first) {
       start = matching(tokens, start + 1) + 1;
     } else {
-      break;
+      return {start, braced};
     }
     braced = true;
   }
+}
+
+// Places to insert the call, best first.
+function insertionSites({tokens}: Analysis, first: number, last: number, body: Body): Site[] {
+  const outer = outerBracket(tokens, first, body.open);
+  const header = outer >= 0 ? tokens[outer - 1]?.text : undefined;
+  const inHeader = header === "if" || header === "while" || header === "for" || header === "switch";
+  const {start, braced} = innermostStatement(
+    tokens, statementStart(tokens, inHeader ? outer - 1 : outer >= 0 ? outer : first, body.open), first);
   const end = statementEnd(tokens, start, body.close);
   const braces: [number, number] | undefined = braced ? [tokens[start]!.from, tokens[end]!.to] : undefined;
   const before = {at: tokens[start]!.from, braces};
@@ -359,23 +386,35 @@ const SWIZZLE = /^(?:[xyzw]{1,4}|[rgba]{1,4}|[stpq]{1,4})$/;
 export function guessType(analysis: Analysis, from: number, to: number): ProbeType | null {
   const tokens = analysis.tokens.filter(t => t.from >= from && t.to <= to);
   if (tokens.length === 0) return null;
-  const [head, second] = [tokens[0]!, tokens[1]];
-  const tail = tokens.at(-1)!;
-  // A comparison or logic outside brackets makes a bool.
-  let depth = 0;
-  for (const t of tokens) {
-    if (OPEN[t.text]) depth++;
-    else if (CLOSE.has(t.text)) depth--;
-    else if (depth === 0 && t.type === "operator" && /^(?:[<>]=?|[!=]=|&&|\|\||\^\^|!)$/.test(t.text)) return "bool";
-  }
+  if (makesBool(tokens)) return "bool";
   // A swizzle at the end gives the size.
+  const tail = tokens.at(-1)!;
   if (tokens.length > 2 && tokens.at(-2)!.text === "." && SWIZZLE.test(tail.text)) {
     const n = tail.text.length;
     const base = guessType(analysis, from, tokens.at(-3)!.to);
     const ints = base?.startsWith("i");
     return n === 1 ? (ints ? "int" : "float") : `${ints ? "i" : ""}vec${n}` as ProbeType;
   }
-  const whole = tail.text === ")" && second?.text === "(" && closingIndex(tokens, 1) === tokens.length - 1;
+  const direct = directType(analysis, tokens);
+  return direct === undefined ? widestType(analysis, tokens) : direct;
+}
+
+// Whether a comparison or logic outside brackets makes the tokens a bool.
+function makesBool(tokens: Analysis["tokens"]): boolean {
+  let depth = 0;
+  for (const t of tokens) {
+    if (OPEN[t.text]) depth++;
+    else if (CLOSE.has(t.text)) depth--;
+    else if (depth === 0 && t.type === "operator" && /^(?:[<>]=?|[!=]=|&&|\|\||\^\^|!)$/.test(t.text)) return true;
+  }
+  return false;
+}
+
+// The type of a lone name or number, or of a whole call to a constructor, a function of known type or
+// a declared function. Undefined when the tokens are none of these, or a name or call it can't tell.
+function directType(analysis: Analysis, tokens: Analysis["tokens"]): ProbeType | null | undefined {
+  const [head, second] = [tokens[0]!, tokens[1]];
+  const whole = tokens.at(-1)!.text === ")" && second?.text === "(" && closingIndex(tokens, 1) === tokens.length - 1;
   if (whole && head.type === "typeName") {
     return (PROBE_TYPES as readonly string[]).includes(head.text) ? head.text as ProbeType : null;
   }
@@ -387,7 +426,11 @@ export function guessType(analysis: Analysis, from: number, to: number): ProbeTy
     if (declared) return declared;
     if (tokens.length === 1) return head.type === "number" ? (/[.eE]/.test(head.text) ? "float" : "int") : null;
   }
-  // Otherwise the widest vector among its names, outside functions that make a float.
+  return undefined;
+}
+
+// The widest vector among the tokens' names, outside functions that make a float.
+function widestType(analysis: Analysis, tokens: Analysis["tokens"]): ProbeType | null {
   let widest: ProbeType | null = null;
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i]!;

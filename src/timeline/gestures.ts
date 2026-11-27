@@ -9,7 +9,7 @@ export type Gesture =
   // A new transition: dragged out with the button held, or clicked twice (`released` after the first).
   | Creating
   // The scale stays put while dragging, though the timeline's length can change.
-  | {kind: "dragging"; mode: GrabMode; row: number; index: number; original: Transition[]; startX: number;
+  | {kind: "dragging"; mode: GrabMode; row: number; index: number; original: readonly Transition[]; startX: number;
      moved: Transition; pxPerSecond: number}
   | {kind: "scrubbing"}
   | {kind: "duration"; startX: number; startDuration: number; latest: number; pxPerSecond: number};

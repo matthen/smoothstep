@@ -3,7 +3,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { TbBulb, TbRoute, TbSchool } from 'react-icons/tb';
 
 import AppModal from '../app/AppModal';
-import { usePhone } from '../app/usePhone';
+import { usePhone } from '../app/layout/usePhone';
 import { asset, documentHref, REPO_URL, TUTORIAL_HREF } from '../lib/config';
 import { DOC_SECTIONS, docsSiteHref, openDocs } from '../lib/docLinks';
 import { listDocuments, type DocumentSummary } from '../lib/localStore';

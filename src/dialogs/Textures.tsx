@@ -6,7 +6,7 @@ import { GlslCode } from '../editor/InlineCode';
 import { textureURL } from '../lib/config';
 import { EMPTY_TEXTURE, type TextureSlot } from '../lib/document';
 import { imageDuration } from '../lib/localStore';
-import { usePhone } from '../app/usePhone';
+import { usePhone } from '../app/layout/usePhone';
 import { formatDuration, isVideoURL } from '../lib/media';
 import TextureData from './textures.json';
 import TextureThumbnail, { VideoLength } from './TextureThumbnail';

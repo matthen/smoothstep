@@ -94,56 +94,40 @@ export function analyse(code: string, structs: readonly string[] = []): Analysis
   const scope = () => blocks.at(-1) ?? whole;
   const handled = new Set<number>();
 
-  for (let i = 0; i < tokens.length; i++) {
+  // A #define's name, and its parameters, which are known to the end of its line.
+  const macro = (i: number) => {
     const t = tokens[i]!;
-    const prev = tokens[i - 1];
     const next = tokens[i + 1];
-    if (t.text === '{') {
-      blocks.push({ from: t.from, to: tokens[closing(tokens, i)]!.to });
-      continue;
-    }
-    if (t.text === '}') {
-      blocks.pop();
-      continue;
-    }
-    // mainImage is a built-in name, but its parameters are the user's.
-    const mainImage = t.text === 'mainImage' && t.type === 'variableName.standard';
-    if (handled.has(i) || !(isName(t) || mainImage)) continue;
-    if (prev?.type === 'meta' && /^#\s*define$/.test(prev.text)) {
-      declare(t, 'macro', whole);
-      if (next?.text === '(' && next.from === t.to) {
-        const lineScope = { from: t.from, to: logicalLineEnd(code, t.from) };
-        for (let j = i + 2; j < closing(tokens, i + 1); j++) {
-          if (isName(tokens[j])) declare(tokens[j]!, 'parameter', lineScope);
-        }
+    declare(t, 'macro', whole);
+    if (next?.text === '(' && next.from === t.to) {
+      const lineScope = { from: t.from, to: logicalLineEnd(code, t.from) };
+      for (let j = i + 2; j < closing(tokens, i + 1); j++) {
+        if (isName(tokens[j])) declare(tokens[j]!, 'parameter', lineScope);
       }
-      continue;
     }
-    if (prev?.text === 'struct') {
-      declare(t, 'struct', scope());
-      continue;
-    }
-    if (!isType(prev) || tokens[i - 2]?.text === '.') continue;
-    // A function: its parameters are known in its body, or only in its brackets for a prototype.
-    if (next?.text === '(' && blocks.length === 0) {
-      const close = closing(tokens, i + 1);
-      const hasBody = tokens[close + 1]?.text === '{';
-      if (!mainImage) declare(t, 'function', whole, hasBody);
-      const paramScope = hasBody ?
-        { from: tokens[close + 1]!.from, to: tokens[closing(tokens, close + 1)]!.to } :
-        { from: next.from, to: tokens[close]!.to };
-      for (let j = i + 2; j < close; j++) {
-        if (isName(tokens[j]) && isType(tokens[j - 1])) {
-          declare(tokens[j]!, 'parameter', paramScope);
-          handled.add(j);
-        }
+  };
+
+  // A function: its parameters are known in its body, or only in its brackets for a prototype.
+  const fn = (i: number, mainImage: boolean) => {
+    const next = tokens[i + 1]!;
+    const close = closing(tokens, i + 1);
+    const hasBody = tokens[close + 1]?.text === '{';
+    if (!mainImage) declare(tokens[i]!, 'function', whole, hasBody);
+    const paramScope = hasBody ?
+      { from: tokens[close + 1]!.from, to: tokens[closing(tokens, close + 1)]!.to } :
+      { from: next.from, to: tokens[close]!.to };
+    for (let j = i + 2; j < close; j++) {
+      if (isName(tokens[j]) && isType(tokens[j - 1])) {
+        declare(tokens[j]!, 'parameter', paramScope);
+        handled.add(j);
       }
-      continue;
     }
-    if (mainImage) continue;
-    // A variable, and any more declared after commas in the same statement, as in `float a = f(x, y), b;`.
-    // Each comes into scope after its initialiser, so in `float s = s * 2.;` the second `s` is an outer one.
-    let last: Declaration | null = declare(t, 'variable', scope());
+  };
+
+  // A variable, and any more declared after commas in the same statement, as in `float a = f(x, y), b;`.
+  // Each comes into scope after its initialiser, so in `float s = s * 2.;` the second `s` is an outer one.
+  const variables = (i: number) => {
+    let last: Declaration | null = declare(tokens[i]!, 'variable', scope());
     let j = i + 1;
     for (let depth = 0; j < tokens.length; j++) {
       const text = tokens[j]!.text;
@@ -161,6 +145,34 @@ export function analyse(code: string, structs: readonly string[] = []): Analysis
       }
     }
     if (last) last.start = tokens[j]?.from ?? code.length;
+  };
+
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i]!;
+    const prev = tokens[i - 1];
+    const next = tokens[i + 1];
+    if (t.text === '{') {
+      blocks.push({ from: t.from, to: tokens[closing(tokens, i)]!.to });
+      continue;
+    }
+    if (t.text === '}') {
+      blocks.pop();
+      continue;
+    }
+    // mainImage is a built-in name, but its parameters are the user's.
+    const mainImage = t.text === 'mainImage' && t.type === 'variableName.standard';
+    if (handled.has(i) || !(isName(t) || mainImage)) continue;
+    if (prev?.type === 'meta' && /^#\s*define$/.test(prev.text)) {
+      macro(i);
+    } else if (prev?.text === 'struct') {
+      declare(t, 'struct', scope());
+    } else if (!isType(prev) || tokens[i - 2]?.text === '.') {
+      continue;
+    } else if (next?.text === '(' && blocks.length === 0) {
+      fn(i, mainImage);
+    } else if (!mainImage) {
+      variables(i);
+    }
   }
   return { code, tokens, declarations, length: code.length };
 }

@@ -4,7 +4,7 @@ import { useDropzone } from 'react-dropzone';
 import { TbArrowLeft, TbPhotoPlus, TbTrash } from 'react-icons/tb';
 
 import AppModal from '../app/AppModal';
-import { usePhone } from '../app/usePhone';
+import { usePhone } from '../app/layout/usePhone';
 import { asset, textureURL } from '../lib/config';
 import { EMPTY_TEXTURE, type TextureSlot } from '../lib/document';
 import {
@@ -191,7 +191,7 @@ export default function TexturePicker(
         onMessage("Error listing your images and videos.");
       });
     }
-  }, [show, imagesVersion]);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [show, imagesVersion]);  // eslint-disable-line react-hooks/exhaustive-deps -- lists again on opening or when stored images change, not when onMessage changes
 
   // Opens on the slot's current image.
   useEffect(() => {
