@@ -12,6 +12,7 @@ import {
   PROBE_DECLARATIONS, PROBE_MAIN, planProbe, probeComponents, sharedCallers, typeFromError, UNREACHED, withProbe,
   type ProbeType, type Site,
 } from './probe';
+import { ProgramCache } from './programCache';
 import { combineBlocks, rangeFor, type FoundRange, type RangeMode } from './probeRange';
 
 const VERTEX_SHADER = `#version 300 es
@@ -278,6 +279,9 @@ class WebGLUnavailableError extends Error {}
 
 export class Renderer {
   readonly gl: WebGL2RenderingContext;
+  // Every program shares this vertex shader, compiled once.
+  private vertexShader: WebGLShader;
+  private programs = new ProgramCache<Program>(program => this.deleteProgram(program));
   private program: Program | null = null;
   private bufferPrograms: Program[] = [];
   // The buffers the image needs, in the order they render.
@@ -320,6 +324,8 @@ export class Renderer {
   // [last frame, the one before], for the image and for each buffer in use.
   private targets: [Target, Target] | null = null;
   private bufferTargets = new Map<number, [Target, Target]>();
+  // The size those targets were made at.
+  private targetSize: [number, number] = [0, 0];
   // Buffers hold half floats where the browser can render to them, and bytes otherwise.
   private floatBuffers: boolean;
   private width = 1;
@@ -347,6 +353,11 @@ export class Renderer {
     const quad = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, quad);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
+    const vertex = this.compile(gl.VERTEX_SHADER, VERTEX_SHADER);
+    if (!vertex.shader) {
+      throw new Error("Couldn't build the vertex shader: " + vertex.log);
+    }
+    this.vertexShader = vertex.shader;
     const copy = this.link(COPY_SHADER);
     if (!copy.program) {
       throw new Error("Couldn't build the copy shader: " + copy.log);
@@ -457,12 +468,10 @@ export class Renderer {
     if (!fragment.shader) {
       return {program: null, log: fragment.log, stage: "compile"};
     }
-    const vertex = this.compile(gl.VERTEX_SHADER, VERTEX_SHADER);
     const program = gl.createProgram();
-    gl.attachShader(program, vertex.shader!);
+    gl.attachShader(program, this.vertexShader);
     gl.attachShader(program, fragment.shader);
     gl.linkProgram(program);
-    gl.deleteShader(vertex.shader);
     gl.deleteShader(fragment.shader);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
       const log = gl.getProgramInfoLog(program) ?? "";
@@ -479,7 +488,21 @@ export class Renderer {
     return {program: linked, log: "", stage: "link"};
   }
 
-  // Builds the image's shader and the buffers'. If any fails, the previous ones keep rendering.
+  // A program for the source, the cached one if it has built before.
+  private cachedLink(fragmentSourceCode: string): ReturnType<Renderer["link"]> {
+    const cached = this.programs.get(fragmentSourceCode);
+    if (cached) {
+      return {program: cached, log: "", stage: "link"};
+    }
+    const result = this.link(fragmentSourceCode);
+    if (result.program) {
+      this.programs.add(fragmentSourceCode, result.program);
+    }
+    return result;
+  }
+
+  // Builds the image's shader and the buffers', compiling only those whose source changed. If any
+  // fails, the previous ones keep rendering.
   setCode(code: string, buffers: readonly string[] = [], shared = ""): CompileResult {
     const sources: [ShaderId, string][] = [["image", code], ...buffers.map((c, i): [ShaderId, string] => [i, c])];
     for (const [shader, source] of [["shared", shared] as [ShaderId, string], ...sources]) {
@@ -490,9 +513,9 @@ export class Renderer {
     }
     const programs: Program[] = [];
     for (const [shader, source] of sources) {
-      const result = this.link(fragmentSource(source, buffers.length, shader !== "image", shared));
+      const result = this.cachedLink(fragmentSource(source, buffers.length, shader !== "image", shared));
       if (!result.program) {
-        programs.forEach(p => this.deleteProgram(p));
+        this.programs.prune();
         if (result.stage === "link") {
           return {ok: false, shader, errors: [{line: 0, message: result.log.trim() || "Couldn't link the shader."}]};
         }
@@ -502,7 +525,8 @@ export class Renderer {
       }
       programs.push(result.program);
     }
-    [this.program, ...this.bufferPrograms].forEach(p => p && this.deleteProgram(p));
+    const slots = Math.max(programs.length, this.bufferPrograms.length + 1);
+    this.programs.use(Array.from({length: slots}, (_, i) => [i === 0 ? "image" : `buffer${i - 1}`, programs[i] ?? null]));
     this.program = programs[0]!;
     this.bufferPrograms = programs.slice(1);
     this.sources = {code, buffers, shared};
@@ -541,7 +565,9 @@ export class Renderer {
     const attempt = (site: Site, type: ProbeType | null) => {
       const variant = withProbe(request.code, site, plan.expression, type);
       const [c, s] = request.tab === "shared" ? [own, variant] : [variant, shared];
-      const result = this.link(probeFragmentSource(c, buffers.length, s));
+      // A build with no type only tests that some type works, so it isn't kept.
+      const source = probeFragmentSource(c, buffers.length, s);
+      const result = type === null ? this.link(source) : this.cachedLink(source);
       if (type === null) {
         reason ||= /ERROR:\s*\d+:\d+:\s*(.*)/.exec(result.log)?.[1]?.trim() ?? "";
       }
@@ -598,10 +624,8 @@ export class Renderer {
   }
 
   private useProbe(probe: Probe | null) {
-    if (this.probe) {
-      this.deleteProgram(this.probe.program);
-    }
     this.probe = probe;
+    this.programs.use([["probe", probe?.program ?? null]]);
     this.found = null;
     this.rangeAt = -Infinity;
     // A probed buffer draws each frame, with the buffers it reads, even if the image doesn't read them.
@@ -782,6 +806,7 @@ export class Renderer {
       this.targets = this.resample(this.targets, false, oldWidth, oldHeight);
       this.bufferTargets = new Map([...this.bufferTargets].map(([i, pair]) =>
         [i, this.resample(pair, true, oldWidth, oldHeight)]));
+      this.targetSize = [width, height];
       return false;
     }
     this.clearTargets();
@@ -806,12 +831,36 @@ export class Renderer {
   }
 
   // Starts again from a blank previous frame and blank buffers (after a new shader or size, or a rewind).
+  // Targets already at this size are cleared rather than made again.
   clearTargets() {
+    if (this.targetSize[0] !== this.width || this.targetSize[1] !== this.height) {
+      this.freeTargets();
+      this.targetSize = [this.width, this.height];
+    }
+    this.targets ??= [this.target(false), this.target(false)];
+    const old = this.bufferTargets;
+    this.bufferTargets = new Map(this.used.map(i => [i, old.get(i) ?? [this.target(true), this.target(true)]]));
+    for (const [i, pair] of old) {
+      if (!this.bufferTargets.has(i)) {
+        pair.forEach(t => this.deleteTarget(t));
+      }
+    }
+    const gl = this.gl;
+    gl.clearColor(0, 0, 0, 0);
+    for (const target of [...this.targets, ...[...this.bufferTargets.values()].flat()]) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, target.framebuffer);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  }
+
+  // Deletes the image's and buffers' targets, so they're made again at the current size.
+  private freeTargets() {
     for (const pair of [this.targets, ...this.bufferTargets.values()]) {
       pair?.forEach(t => this.deleteTarget(t));
     }
-    this.targets = [this.target(false), this.target(false)];
-    this.bufferTargets = new Map(this.used.map(i => [i, [this.target(true), this.target(true)]]));
+    this.targets = null;
+    this.bufferTargets = new Map();
   }
 
   private deleteTarget(target: Target) {
@@ -1152,6 +1201,7 @@ export class Renderer {
     this.videos.forEach(video => video.dispose());
     this.videos.clear();
     this.slotVideos = [];
+    this.gl.deleteShader(this.vertexShader);
     this.gl.getExtension("WEBGL_lose_context")?.loseContext();
   }
 }

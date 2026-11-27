@@ -1,5 +1,6 @@
 import {
-  canvasLayer, NEW_CANVAS_CODE, newDocument, shaderExtras, withCanvasLayer, type AnimationDocument, type ShaderExtras,
+  canvasLayer, NEW_CANVAS_CODE, newDocument, sameExtras, shaderExtras, withCanvasLayer, type AnimationDocument,
+  type ShaderExtras,
 } from '../../lib/document';
 import type { Route } from '../../lib/routes';
 import type { LineError } from '../../lib/types';
@@ -34,9 +35,10 @@ export type DocumentAction =
   | {type: "openFailed"; text: string}
   // Setting the shared code, even to what it was, makes the shared.glsl tab no longer untouched.
   | {type: "edit"; change: Partial<AnimationDocument> | ((doc: AnimationDocument) => AnimationDocument)}
-  // A live edit also builds the code, as a picker's drag does.
-  | {type: "editCode"; tab: ShaderId; code: string; live: boolean}
+  | {type: "editCode"; tab: ShaderId; code: string}
   | {type: "build"}
+  // Builds the code as it is now without a new build id, as a picker's drag does; nothing if it's built.
+  | {type: "buildLive"}
   | {type: "addCanvas"}
   | {type: "removeCanvas"}
   | {type: "addShared"}
@@ -99,13 +101,15 @@ export function documentReducer(s: DocumentState, action: DocumentAction): Docum
     }
     case "editCode": {
       const doc = withTabCode(s.doc, action.tab, action.code);
-      return {
-        ...s, doc, hasUnsavedChanges: true, sharedUntouched: s.sharedUntouched && action.tab !== "shared",
-        ...action.live ? {builtCode: doc.code, builtExtras: shaderExtras(doc)} : {},
-      };
+      return {...s, doc, hasUnsavedChanges: true, sharedUntouched: s.sharedUntouched && action.tab !== "shared"};
     }
     case "build":
       return {...s, builtCode: s.doc.code, builtExtras: shaderExtras(s.doc), buildId: s.buildId + 1};
+    case "buildLive": {
+      const extras = shaderExtras(s.doc);
+      return s.builtCode === s.doc.code && sameExtras(s.builtExtras, extras) ? s :
+        {...s, builtCode: s.doc.code, builtExtras: extras};
+    }
     case "addCanvas":
       return {
         ...s, doc: withCanvasLayer(s.doc, {kind: "canvas2d", code: NEW_CANVAS_CODE, overlay: true}),

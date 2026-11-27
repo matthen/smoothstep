@@ -336,6 +336,46 @@ test("a shown expression keeps showing through a build, with the new code's valu
   expect(errors).toEqual([]);
 });
 
+test("a picker's drag builds every step of the way, and the shown expression comes back after", async ({page, context}) => {
+  const errors = await offline(context);
+  await page.goto("./#new");
+  await setCode(page, `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec3 tint = vec3(0.0, 1.0, 0.0);
+  float d = 0.2;
+  fragColor = vec4(d, 0.0, 0.0, 1.0) + 0.0 * vec4(tint, 1.0);
+}`);
+  await page.keyboard.press("Shift+Enter");
+  await word(page, "tint").dblclick();
+  await showButton(page).click();
+  await expectCenter(page, [0, 255, 0]);
+
+  await word(page, "0.2").click();
+  const ruler = page.locator(".ss-float-picker canvas");
+  const box = (await ruler.boundingBox())!;
+  const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  // Two moves a frame, as a fast mouse sends them, so some come before the last one's build has drawn.
+  await ruler.evaluate(async (canvas, [x, y]) => {
+    for (let i = 1; i <= 20; i++) {
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      for (const k of [0, 1]) {
+        canvas.dispatchEvent(new PointerEvent("pointermove", {pointerId: 1, bubbles: true, clientX: x! - 4 * i - 2 * k, clientY: y}));
+      }
+    }
+  }, [x, y]);
+  await page.mouse.up();
+  const d = Number(/float d = ([\d.]+);/.exec(await editorCode(page))![1]);
+  expect(d).toBeGreaterThan(0.4);
+  // The last step built too, so nothing is left to build.
+  await expect(page.locator(".buildButton")).toBeHidden();
+  await expect(probeBar(page)).toContainText("tint");
+  await expectCenter(page, [0, 255, 0]);
+  await probeBar(page).getByRole("button", {name: "Show the image"}).click();
+  await expectCenter(page, [Math.min(d, 1) * 255, 0, 0]);
+  expect(errors).toEqual([]);
+});
+
 test("showing an expression in code that doesn't build says why", async ({page, context}) => {
   const errors = await offline(context);
   await start(page);

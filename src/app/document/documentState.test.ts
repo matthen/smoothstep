@@ -9,7 +9,7 @@ const run = (...actions: DocumentAction[]) =>
 describe("documentReducer", () => {
   it("opening an animation drops everything left from the one before", () => {
     const edited = run(
-      {type: "addShared"}, {type: "addCanvas"}, {type: "editCode", tab: "image", code: "edited", live: false},
+      {type: "addShared"}, {type: "addCanvas"}, {type: "editCode", tab: "image", code: "edited"},
       {type: "layerErrors", errors: [{line: 1, message: "oops"}]},
     );
     const opened = newDocument();
@@ -23,18 +23,25 @@ describe("documentReducer", () => {
     expect(after.buildId).toBeGreaterThan(edited.buildId);
   });
 
-  it("builds a live edit at once, and other edits only on Build", () => {
-    const typed = run({type: "editCode", tab: "image", code: "typed", live: false});
+  it("builds edits only on Build, or a live build, which keeps the build id", () => {
+    const typed = run({type: "editCode", tab: "image", code: "typed"});
     expect(typed.builtCode).not.toBe("typed");
     expect(documentReducer(typed, {type: "build"}).builtCode).toBe("typed");
-    expect(run({type: "editCode", tab: "image", code: "dragged", live: true}).builtCode).toBe("dragged");
+    const live = documentReducer(typed, {type: "buildLive"});
+    expect(live.builtCode).toBe("typed");
+    expect(live.buildId).toBe(typed.buildId);
+  });
+
+  it("leaves code that's already built alone on a live build, so it doesn't build again", () => {
+    const built = run({type: "editCode", tab: "image", code: "dragged"}, {type: "buildLive"});
+    expect(documentReducer(built, {type: "buildLive"})).toBe(built);
   });
 
   it("keeps edits made while saving as unsaved", () => {
-    const saving = run({type: "editCode", tab: "image", code: "saved", live: false});
+    const saving = run({type: "editCode", tab: "image", code: "saved"});
     const savedDoc = saving.doc;
     expect(documentReducer(saving, {type: "saved", id: "a", doc: savedDoc}).hasUnsavedChanges).toBe(false);
-    const editedMeanwhile = documentReducer(saving, {type: "editCode", tab: "image", code: "later", live: false});
+    const editedMeanwhile = documentReducer(saving, {type: "editCode", tab: "image", code: "later"});
     expect(documentReducer(editedMeanwhile, {type: "saved", id: "a", doc: savedDoc}).hasUnsavedChanges).toBe(true);
   });
 
@@ -42,8 +49,8 @@ describe("documentReducer", () => {
     const added = run({type: "addShared"});
     expect(added.sharedUntouched).toBe(true);
     expect(added.hasUnsavedChanges).toBe(false);
-    expect(documentReducer(added, {type: "editCode", tab: "image", code: "x", live: false}).sharedUntouched).toBe(true);
-    expect(documentReducer(added, {type: "editCode", tab: "shared", code: "x", live: false}).sharedUntouched).toBe(false);
+    expect(documentReducer(added, {type: "editCode", tab: "image", code: "x"}).sharedUntouched).toBe(true);
+    expect(documentReducer(added, {type: "editCode", tab: "shared", code: "x"}).sharedUntouched).toBe(false);
     expect(documentReducer(added, {type: "edit", change: {shared: ""}}).sharedUntouched).toBe(false);
   });
 });

@@ -41,7 +41,7 @@ export function useDocument(initialRoute: Route | null) {
   const openFailed = useCallback((text: string) => dispatch({type: "openFailed", text}), []);
   const edit = useCallback((change: Partial<AnimationDocument> | ((d: AnimationDocument) => AnimationDocument)) =>
     dispatch({type: "edit", change}), []);
-  const editCode = (tab: ShaderId, code: string, live: boolean) => dispatch({type: "editCode", tab, code, live});
+  const editCode = (tab: ShaderId, code: string) => dispatch({type: "editCode", tab, code});
   const build = () => dispatch({type: "build"});
 
   const commitTitle = () => {
