@@ -67,7 +67,8 @@ export default function App() {
   const exporter = useExport(appConsole, doc, closeDialog);
   const log = useConsoleLog(appConsole, exporter.exporting, consoleShown);
   const playback = usePlayback(doc.duration, doc.variables, log.looped, log.rewound);
-  const {clampTime, releaseHolds} = playback;  const probe = useProbe(tabs.editorViews);
+  const {clampTime, releaseHolds} = playback;
+  const probe = useProbe(tabs.editorViews);
   const {clear: clearProbe} = probe;
   const inputs = useInputs(doc);
   const {resetRows} = inputs;
