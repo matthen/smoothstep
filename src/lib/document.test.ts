@@ -1,10 +1,22 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  canonicalJSON, canvasLayer, MAX_BUFFERS, newDocument, parseDocument, InvalidDocumentError, sameExtras, shaderExtras,
-  sliderRange, variableValue, variableValues, withCanvasLayer,
+  canonicalJSON, canvasLayer, EMPTY_TEXTURE, layerTextureURLs, MAX_BUFFERS, newDocument, parseDocument,
+  InvalidDocumentError, sameExtras, shaderExtras, sliderRange, variableValue, variableValues, withCanvasLayer,
   type Transition,
 } from './document';
+
+describe("layerTextureURLs", () => {
+  it("gives the Canvas2D layer null for an empty slot or one without a URL, and the URL otherwise", () => {
+    const slots = [
+      {id: "iTexture0", url: EMPTY_TEXTURE, isUserUploaded: false},
+      {id: "iTexture1", url: EMPTY_TEXTURE, isUserUploaded: true},
+      {id: "iTexture2", url: "noise.png", isUserUploaded: false},
+      {id: "iTexture3", url: "photo.png", isUserUploaded: false},
+    ];
+    expect(layerTextureURLs(slots, ["black", "upload", "noise", ""])).toEqual([null, "upload", "noise", null]);
+  });
+});
 
 describe("newDocument", () => {
   it("turns its phase once round over the animation, so the colours loop without a jump", () => {

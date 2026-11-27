@@ -2,11 +2,11 @@
 // (embed.html) and the standalone player file. It loops the animation, and a click pauses it.
 import type { LayerAssets } from '../layer/assets';
 import type { CanvasLayer } from '../layer/CanvasLayer';
-import { bufferCodes, canvasLayer, EMPTY_TEXTURE, variableValues, type AnimationDocument } from '../lib/document';
-import { LayerSteps } from '../render/layerSteps';
+import { bufferCodes, canvasLayer, layerTextureURLs, variableValues, type AnimationDocument } from '../lib/document';
+import { holdsBack, LayerSteps } from '../render/layerSteps';
 import { drawingSize, fitCanvas, SlowFrames } from '../render/layout';
 import { Renderer } from '../render/Renderer';
-import { renderSteps, RESTART, restarts } from '../render/steps';
+import { renderSteps, RESTART } from '../render/steps';
 
 export interface PlayerOptions {
   doc: AnimationDocument;
@@ -94,8 +94,7 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link, lay
     if (layer && layerDoc && canvas.width > 0 && canvas.height > 0) {
       layer.host.configure({
         code: layerDoc.code, width: canvas.width, height: canvas.height, duration: doc.duration,
-        textures: doc.textures.map((t, i) =>
-          (t.url === EMPTY_TEXTURE && !t.isUserUploaded) || !textureURLs[i] ? null : textureURLs[i]),
+        textures: layerTextureURLs(doc.textures, textureURLs),
       });
     }
   };
@@ -166,10 +165,8 @@ export function startPlayer(container: HTMLElement, {doc, textureURLs, link, lay
         }
       }
       // A layer that has fallen behind is waited for, which slows the animation rather than the page.
-      // So are videos it reads, so it gets the same frames as the shaders.
       renderer.followVideos(time, true);
-      if (!layer?.steps.waitingForVideos &&
-        (!layer?.steps.busy || steps.rendered < 0 || restarts(steps, stepClock))) {
+      if (!holdsBack(layer?.steps, steps, stepClock)) {
         steps = renderSteps(layer?.steps ?? renderer, steps, stepClock, time, (t, frameIndex) => ({
           time: t, duration: doc.duration, frameIndex, variableValues: variableValues(doc.variables, t),
         }), 4);

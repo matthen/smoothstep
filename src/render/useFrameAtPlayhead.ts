@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef } from 'react';
 
 import { useLatest } from '../lib/useLatest';
 import type { Playhead } from '../timeline/playhead';
-import { renderSteps, RESTART, restarts } from './steps';
+import { holdsBack } from './layerSteps';
+import { renderSteps, RESTART } from './steps';
 import type { CanvasRefs } from './useCanvasLayer';
 
 export interface FrameProps {
@@ -40,9 +41,7 @@ export function useFrameAtPlayhead(refs: CanvasRefs, props: FrameProps) {
     }
     const {time, stepClock} = p.playhead;
     renderer.followVideos(time, p.playing);
-    // A restart goes ahead, which also stops a layer stuck on a step. Videos the layer reads are
-    // waited for, so it gets the same frames as the shaders.
-    if (layerSteps?.waitingForVideos || (layerSteps?.busy && !restarts(steps.current, stepClock))) {
+    if (holdsBack(layerSteps, steps.current, stepClock)) {
       needsRenderRef.current = true;  // Try again next frame, when the layer may have caught up.
       return;
     }

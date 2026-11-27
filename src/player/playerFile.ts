@@ -6,8 +6,7 @@ import { fontFilesUsed } from '../layer/fonts';
 import { parseImports } from '../layer/libraries';
 import { safeFilename, type DownloadableFile } from '../lib/archive';
 import { asset, textureURL } from '../lib/config';
-import { bufferCodes, canvasLayer, EMPTY_TEXTURE, type AnimationDocument } from '../lib/document';
-import { uses } from '../lib/glslCode';
+import { bufferCodes, canvasLayer, EMPTY_TEXTURE, layerReadsTextures, type AnimationDocument } from '../lib/document';
 import type { PlayerData } from './standalone';
 
 async function dataURL(url: string): Promise<string> {
@@ -41,7 +40,7 @@ export async function playerFile(doc: AnimationDocument, link: string | null): P
   // Canvas2D layer that uses textures may use any of them.
   const allCode = [doc.code, doc.shared ?? "", ...bufferCodes(doc)].join("\n");
   const layer = canvasLayer(doc);
-  const layerTextures = layer !== undefined && uses(layer.code, /\btextures\b/);
+  const layerTextures = layer !== undefined && layerReadsTextures(layer.code);
   const textures = await Promise.all(doc.textures.map((slot, i) =>
     new RegExp("\\biTexture" + i + "\\b").test(allCode) ||
       (layerTextures && (slot.isUserUploaded || slot.url !== EMPTY_TEXTURE))

@@ -44,22 +44,15 @@ describe("workerSource", () => {
     expect(errorFromStack({message: "x", stack: "nothing useful", line: null}, source).line).toBe(0);
   });
 
-  it("puts a console call on the innermost line of the code in its stack, and drops malformed ones", () => {
+  it("puts a console call on the innermost line of the code in its stack", () => {
     const line = scriptLine(source.source, 1);
-    const {logs, dropped} = logsFromWorker({
-      logs: [
-        {level: "log", text: "hi", frame: 3, time: 0.05, lines: [5, line, 12], count: 2},
-        {level: "shout", text: "no", frame: 0, time: 0, lines: [], count: 1},
-        {level: "warn", text: 42, lines: []},
-        {level: "error", text: "outside the code", frame: null, time: null, lines: [5], count: -3},
-      ],
-      dropped: 7,
-    }, source);
-    expect(logs).toEqual([
+    expect(logsFromWorker([
+      {level: "log", text: "hi", frame: 3, time: 0.05, lines: [5, line, 12], count: 2},
+      {level: "error", text: "outside the code", frame: null, time: null, lines: [5], count: 1},
+    ], source)).toEqual([
       {level: "log", text: "hi", frame: 3, time: 0.05, line: 1, count: 2},
       {level: "error", text: "outside the code", frame: null, time: null, line: null, count: 1},
     ]);
-    expect(dropped).toBe(7);
   });
 
   it("maps a syntax error's line, and tidies its message", () => {

@@ -4,6 +4,7 @@ import type { LineError } from '../lib/types';
 import { FORMAT_LIMITS, formatLogWithin } from './formatLog';
 import { HELPER_NAMES, makeHelpers } from './helpers';
 import { MAX_WORKER_LOGS, workerRuntime, type LogLevel, type WorkerLog } from './runtime';
+import { workerPartsSource } from './worker/parts';
 
 export interface WorkerSource {
   source: string;
@@ -16,7 +17,7 @@ export interface WorkerSource {
 export function workerSource(code: string, libraries: readonly {name: string; code: string}[]): WorkerSource {
   const helpers = HELPER_NAMES.map(name => "__smoothstep.helpers." + name).join(", ");
   const prefix =
-    `const __smoothstep = (${workerRuntime.toString()})(${makeHelpers.toString()}, ` +
+    `const __smoothstep = (${workerRuntime.toString()})(${workerPartsSource()}, ${makeHelpers.toString()}, ` +
     `args => (${formatLogWithin.toString()})(args, ${JSON.stringify(FORMAT_LIMITS)}), ${MAX_WORKER_LOGS});\n` +
     libraries.map(library =>
       `__smoothstep.define(${JSON.stringify(library.name)}, function (module, exports) {\n${library.code}\n});\n`).join("") +
@@ -45,34 +46,11 @@ export interface LayerLog {
   count: number;
 }
 
-const LEVELS: readonly LogLevel[] = ["log", "info", "warn", "error"];
-const MAX_TEXT = 2000;
-
-// The console calls in a message from the worker, which runs the user's code, so each is checked.
-// A call inside a library or helper is on the line of the code that called it.
-export function logsFromWorker(
-  message: {logs?: unknown; dropped?: unknown}, source: WorkerSource,
-): {logs: LayerLog[]; dropped: number} {
-  const number = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value : null;
-  const logs = (Array.isArray(message.logs) ? message.logs as unknown[] : []).slice(0, 1000).flatMap(item => {
-    const log = item as Partial<Record<keyof WorkerLog, unknown>> | null;
-    if (!log || typeof log.text !== "string" || !LEVELS.includes(log.level as LogLevel)) {
-      return [];
-    }
-    const lines = Array.isArray(log.lines) ? (log.lines as unknown[]).slice(0, 50) : [];
-    let line: number | null = null;
-    for (const scriptLine of lines) {
-      line = typeof scriptLine === "number" ? codeLine(scriptLine, source) : null;
-      if (line !== null) {
-        break;
-      }
-    }
-    return [{
-      level: log.level as LogLevel, text: log.text.slice(0, MAX_TEXT), frame: number(log.frame), time: number(log.time),
-      line, count: Math.max(1, Math.floor(number(log.count) ?? 1)),
-    }];
-  });
-  return {logs, dropped: Math.max(0, Math.floor(number(message.dropped) ?? 0))};
+// The worker's console calls, checked by checkFromWorker, on lines of the code. A call inside a
+// library or helper is on the line of the code that called it.
+export function logsFromWorker(logs: readonly WorkerLog[], source: WorkerSource): LayerLog[] {
+  return logs.map(({lines, ...log}) =>
+    ({...log, line: lines.map(line => codeLine(line, source)).find(line => line !== null) ?? null}));
 }
 
 function tidy(message: string): string {
