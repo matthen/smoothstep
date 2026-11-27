@@ -4,7 +4,7 @@ import { useLatest } from '../lib/useLatest';
 import { pixelAt } from './inspect';
 import type { PixelReading, Renderer } from './Renderer';
 
-// How often, at most, the inspector reads its pixel again while the animation plays.
+// How often, at most, the inspector reads its pixel again while the animation plays or the pointer moves.
 const READ_INTERVAL_MS = 100;
 
 interface Options {
@@ -26,10 +26,11 @@ export function usePixelInspector({rendererRef, width, height, pixels, inspect, 
   const inspecting = inspect || probeShown;
   const sizeRef = useLatest({width, height, pixels});
   const pointRef = useLatest(point);
-  // Set when the canvas has drawn since the point was last read.
+  // Set when the canvas has drawn or the point has moved since it was last read.
   const needsReadRef = useRef(false);
   const lastRead = useRef(0);
-  const readPoint = useCallback((at = pointRef.current) => {
+  const readPoint = useCallback(() => {
+    const at = pointRef.current;
     const renderer = rendererRef.current;
     if (!renderer || !at) {
       return;
@@ -49,7 +50,9 @@ export function usePixelInspector({rendererRef, width, height, pixels, inspect, 
       touch: event.pointerType !== "mouse",
     };
     setPoint(at);
-    readPoint(at);
+    // The render loop's readIfDue reads it, so a fast pointer reads at most every READ_INTERVAL_MS.
+    pointRef.current = at;
+    needsReadRef.current = true;
   };
   useEffect(() => {
     if (!inspecting || !inspect) {

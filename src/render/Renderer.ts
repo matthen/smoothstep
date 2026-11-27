@@ -315,6 +315,7 @@ export class Renderer {
   // The site and type that last built for an expression, tried first when the code builds again.
   private probeCache: {key: string; site: number; type: ProbeType} | null = null;
   private layerSize: [number, number] = [1, 1];
+  private layerReadFramebuffer: WebGLFramebuffer | null = null;
   private uniforms = new WeakMap<WebGLProgram, Map<string, WebGLUniformLocation | null>>();
   // [last frame, the one before], for the image and for each buffer in use.
   private targets: [Target, Target] | null = null;
@@ -520,6 +521,7 @@ export class Renderer {
   setProbe(request: ProbeRequest | null): ProbeResult | null {
     if (!request) {
       this.useProbe(null);
+      this.freeProbeTargets();
       return null;
     }
     if (request.tab === "canvas") {
@@ -582,7 +584,17 @@ export class Renderer {
         };
       }
     }
+    if (!this.probe) {
+      this.freeProbeTargets();
+    }
     return {ok: false, message: "This selection doesn't work as a value here" + (reason ? `: ${reason}` : ".")};
+  }
+
+  // The probe's targets are full size, so they go when nothing shows; drawProbe and findRange make them again.
+  private freeProbeTargets() {
+    [this.probeTarget, this.rangeTarget].forEach(t => t && this.deleteTarget(t));
+    this.probeTarget = null;
+    this.rangeTarget = null;
   }
 
   private useProbe(probe: Probe | null) {
@@ -719,12 +731,12 @@ export class Renderer {
     let color: [number, number, number] = [bytes[0]! / 255, bytes[1]! / 255, bytes[2]! / 255];
     if (this.hasLayer && this.layerOverlay) {
       // The layer's frame goes over the image with premultiplied alpha, as present() draws it.
-      const layer = gl.createFramebuffer();
-      gl.bindFramebuffer(gl.FRAMEBUFFER, layer);
+      this.layerReadFramebuffer ??= gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.layerReadFramebuffer);
+      // Attached on each read, as setLayer replaces the texture.
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.canvasTexture, 0);
       const [lw, lh] = this.layerSize;
       gl.readPixels(Math.floor(x * lw / this.width), Math.floor(y * lh / this.height), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, bytes);
-      gl.deleteFramebuffer(layer);
       const alpha = bytes[3]! / 255;
       color = [0, 1, 2].map(i => color[i]! * (1 - alpha) + bytes[i]! / 255) as [number, number, number];
     }
@@ -870,6 +882,9 @@ export class Renderer {
       this.images.set(url, image);
       this.imageStates.set(url, "loading");
       const settle = (ok: boolean) => {
+        if (this.images.get(url) !== image) {
+          return;  // No slot shows it any more.
+        }
         this.imageStates.set(url, ok ? "loaded" : "failed");
         const slots = this.textureURLs.flatMap((slotURL, slot) => slotURL === url && !this.slotVideos[slot] ? [slot] : []);
         for (const slot of slots) {
@@ -892,6 +907,12 @@ export class Renderer {
       if (!this.slotVideos.includes(video)) {
         video.dispose();
         this.videos.delete(url);
+      }
+    }
+    for (const url of this.images.keys()) {
+      if (!this.textureURLs.includes(url)) {
+        this.images.delete(url);
+        this.imageStates.delete(url);
       }
     }
   }
