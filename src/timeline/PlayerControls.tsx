@@ -4,11 +4,12 @@ import {ActionIcon, NumberInput, Tooltip} from "@mantine/core";
 import {TbPlayerPauseFilled, TbPlayerPlayFilled, TbPlayerSkipBackFilled} from "react-icons/tb";
 import {formatTime} from "./geometry";
 import {keyAction, keySeekTime, shortcutsAllowed} from "./keys";
+import {usePlayheadSelect, type Playhead} from "./playhead";
 import "./timeline.scss";
 
 export interface PlayerControlsProps {
   duration: number;
-  currentTime: number;
+  playhead: Playhead;
   isPlaying: boolean;
   onSeek(time: number): void;
   onPlayPause(): void;
@@ -37,8 +38,9 @@ function fractionAt(element: HTMLElement, clientX: number): number {
 }
 
 // The scrub bar: hovering shows the time under the pointer, pressing or dragging seeks there.
-function ScrubSlider({duration, currentTime, onSeek, onScrubStart, onScrubEnd}: Pick<
-  PlayerControlsProps, "duration" | "currentTime" | "onSeek" | "onScrubStart" | "onScrubEnd">) {
+function ScrubSlider({duration, playhead, onSeek, onScrubStart, onScrubEnd}: Pick<
+  PlayerControlsProps, "duration" | "playhead" | "onSeek" | "onScrubStart" | "onScrubEnd">) {
+  const currentTime = usePlayheadSelect(playhead, time => time);
   const [hoverFraction, setHoverFraction] = useState<number | null>(null);
   const [scrubbing, setScrubbing] = useState(false);
   const progress = duration > 0 ? Math.max(0, Math.min(1, currentTime / duration)) : 0;
@@ -139,7 +141,7 @@ function DurationInput({duration, onDurationChange}: Pick<PlayerControlsProps, "
 }
 
 export default function PlayerControls(props: PlayerControlsProps) {
-  const {duration, currentTime, isPlaying, onSeek, onPlayPause, onReset, width, top} = props;
+  const {duration, playhead, isPlaying, onSeek, onPlayPause, onReset, width, top} = props;
 
   const onKeyDown = useEffectEvent((event: KeyboardEvent) => {
     const action = keyAction(event);
@@ -151,7 +153,7 @@ export default function PlayerControls(props: PlayerControlsProps) {
       onPlayPause();
       return;
     }
-    const time = keySeekTime(action, currentTime, duration);
+    const time = keySeekTime(action, playhead.time, duration);
     if (time !== null) {
       onSeek(time);
     }

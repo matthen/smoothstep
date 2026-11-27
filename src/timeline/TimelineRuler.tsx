@@ -1,6 +1,8 @@
 import type { PointerEvent as ReactPointerEvent } from 'react';
 
 import type { Ruler } from './geometry';
+import type { Playhead } from './playhead';
+import { PlayheadMark } from './PlayheadMarks';
 
 interface Props {
   // Where a time is drawn, from the rows' left edge.
@@ -8,7 +10,7 @@ interface Props {
   width: number;
   ruler: Ruler;
   duration: number;
-  currentTime: number;
+  playhead: Playhead;
   // The part past the duration, shaded.
   postDuration: {left: number; width: number};
   onScrubberPointerDown: (event: ReactPointerEvent) => void;
@@ -17,7 +19,7 @@ interface Props {
 
 // The ruler over the rows, with the duration's handle and the playhead.
 export default function TimelineRuler(
-  {x, width, ruler, duration, currentTime, postDuration, onScrubberPointerDown, onDurationPointerDown}: Props,
+  {x, width, ruler, duration, playhead, postDuration, onScrubberPointerDown, onDurationPointerDown}: Props,
 ) {
   return (
     <div className="header" style={{width}} onPointerDown={onScrubberPointerDown}>
@@ -31,7 +33,7 @@ export default function TimelineRuler(
       <div className="durationHandle" style={{left: x(duration)}} onPointerDown={onDurationPointerDown}>
         {Math.round(duration * 100) / 100}s
       </div>
-      <div className="playhead" style={{left: x(currentTime)}} />
+      <PlayheadMark playhead={playhead} x={x} className="playhead" />
     </div>
   );
 }

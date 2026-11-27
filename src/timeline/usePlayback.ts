@@ -1,28 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { variableValues, type Variable } from '../lib/document';
-import { useLatest } from '../lib/useLatest';
+import { Playhead } from './playhead';
 
-// The playhead, playing it, and the values the animation's variables have there.
+// The playhead, playing it, and the values the animation's variables have at a time.
 // `onLoop` hears when playing wraps back to the start, and `onRewind` when the playhead is put there.
 export function usePlayback(duration: number, variables: Variable[], onLoop: () => void, onRewind: () => void) {
-  const [time, setTime] = useState(0);
-  // Seconds played since the simulation last restarted, which set how many steps it has taken.
-  const [stepClock, setStepClock] = useState(0);
-  const restartFrames = useCallback(() => setStepClock(0), []);
+  const [playhead] = useState(() => new Playhead());
+  const restartFrames = useCallback(() => playhead.restartSteps(), [playhead]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [scrubbing, setScrubbing] = useState(false);
-  // Latest time for the play loop, which shouldn't restart every frame.
-  const timeRef = useLatest(time);
 
   // Animated values held by their sliders, by row, until the animation plays or the playhead moves.
   const [held, setHeld] = useState<ReadonlyMap<number, number>>(new Map());
   // A hold only counts while the row is animated, so deleting its last transition lets it go.
   const heldRows = useMemo(() => new Map([...held].filter(([i]) => variables[i]!.transitions.length > 0)),
     [held, variables]);
-  const values = useMemo(() => variableValues(variables, time).map((v, i) => heldRows.get(i) ?? v),
-    [variables, time, heldRows]);
-  const hold = (row: number, value: number) => setHeld(h => new Map(h).set(row, value));
+  const valuesAt = useCallback((time: number) => variableValues(variables, time).map((v, i) => heldRows.get(i) ?? v),
+    [variables, heldRows]);
+  const hold = useCallback((row: number, value: number) => setHeld(h => new Map(h).set(row, value)), []);
   const releaseHolds = useCallback(() => setHeld(new Map()), []);
   // Playing hands every held value back to the timeline.
   const [wasPlaying, setWasPlaying] = useState(isPlaying);
@@ -43,14 +39,11 @@ export function usePlayback(duration: number, variables: Variable[], onLoop: () 
     const step = (now: number) => {
       if (last !== null) {
         const elapsed = Math.max(0, (now - last) / 1000);
-        const next = timeRef.current + elapsed;
-        if (next > duration) {
+        if (playhead.time + elapsed > duration) {
           onLoop();
-          setTime(0);
-          restartFrames();
+          playhead.set(0, 0);
         } else {
-          setTime(next);
-          setStepClock(clock => clock + elapsed);
+          playhead.advance(elapsed);
         }
       }
       last = now;
@@ -58,22 +51,22 @@ export function usePlayback(duration: number, variables: Variable[], onLoop: () 
     };
     id = requestAnimationFrame(step);
     return () => cancelAnimationFrame(id);
-  }, [isPlaying, scrubbing, duration, timeRef, restartFrames, onLoop]);
+  }, [isPlaying, scrubbing, duration, playhead, onLoop]);
 
   const seek = useCallback((t: number) => {
-    setTime(t);
-    setHeld(new Map());  // Moving the playhead shows the timeline's values again.
+    playhead.set(t);
+    setHeld(h => h.size > 0 ? new Map() : h);  // Moving the playhead shows the timeline's values again.
     if (t === 0) {
       onRewind();
       restartFrames();
     }
-  }, [restartFrames, onRewind]);
+  }, [playhead, restartFrames, onRewind]);
 
   // Keeps the playhead within a shorter animation.
-  const clampTime = useCallback((max: number) => setTime(t => Math.min(t, max)), []);
+  const clampTime = useCallback((max: number) => playhead.set(Math.min(playhead.time, max)), [playhead]);
 
   return {
-    time, stepClock, restartFrames, isPlaying, setIsPlaying, scrubbing, setScrubbing, heldRows, values, hold,
+    playhead, restartFrames, isPlaying, setIsPlaying, scrubbing, setScrubbing, heldRows, valuesAt, hold,
     releaseHolds, seek, clampTime,
   };
 }

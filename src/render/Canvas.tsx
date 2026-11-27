@@ -10,9 +10,9 @@ import { pixelAt } from './inspect';
 import type { RangeMode } from './probeRange';
 import { drawingSize, fitCanvas, SlowFrames } from './layout';
 import { Renderer, type CompileResult, type ProbeRequest, type ProbeResult } from './Renderer';
-import { renderSteps, RESTART, restarts } from './steps';
 import { useCanvasLayer, type CanvasRefs } from './useCanvasLayer';
 import { useContainerSize } from './useContainerSize';
+import { useFrameAtPlayhead, type FrameProps } from './useFrameAtPlayhead';
 import { usePixelInspector } from './usePixelInspector';
 import { useRenderLoop } from './useRenderLoop';
 
@@ -33,7 +33,7 @@ export interface Shaders extends ShaderExtras {
   code: string;
 }
 
-interface CanvasProps {
+interface CanvasProps extends FrameProps {
   shaders: Shaders | null;
   buildId: number;      // bumps on every build, so building the same code again restarts iPrevFrame
   textureURLs: string[];
@@ -49,17 +49,9 @@ interface CanvasProps {
   onLayerRestart(): void;
   // A texture slot whose image or video didn't load.
   onTextureFailed(slot: number, video: boolean): void;
-  time: number;
-  // Whether time is moving on by itself, so videos play along rather than seek to each frame.
-  playing: boolean;
-  duration: number;
-  stepClock: number;  // seconds played since the simulation restarted
-  variableValues: number[];
   aspectRatio: AspectRatio;
   // What the shaders' code built to, and how long that took.
   onBuilt(result: CompileResult, ms: number): void;
-  // The previous frame was cleared (new build, size or textures), so iFrame should restart at 0.
-  onRestart(): void;
   onLayout(layout: CanvasLayout): void;
   // An expression to show in place of the image, what became of it, and the way to turn it off.
   probe: ProbeRequest | null;
@@ -122,33 +114,10 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     rendererRef, width, height, pixels: [pixelWidth, pixelHeight], inspect: props.inspect, probeShown: probe !== null,
   });
 
-  const steps = useRef(RESTART);
   const layerRef: CanvasRefs["layerRef"] = useRef(null);
   const needsPresent = useRef(false);
   const refs: CanvasRefs = {rendererRef, layerRef, needsRender, needsPresent};
-  const restart = useCallback(() => {
-    steps.current = RESTART;
-    layerRef.current?.steps.restart();
-    propsRef.current.onRestart();
-  }, [propsRef]);
-
-  const renderFrame = useCallback(() => {
-    const p = propsRef.current;
-    const renderer = rendererRef.current;
-    const layerSteps = layerRef.current?.steps;
-    if (!renderer) {
-      return;
-    }
-    renderer.followVideos(p.time, p.playing);
-    // A restart goes ahead, which also stops a layer stuck on a step. Videos the layer reads are
-    // waited for, so it gets the same frames as the shaders.
-    if (layerSteps?.waitingForVideos || (layerSteps?.busy && !restarts(steps.current, p.stepClock))) {
-      needsRender.current = true;  // Try again next frame, when the layer may have caught up.
-      return;
-    }
-    steps.current = renderSteps(layerSteps ?? renderer, steps.current, p.stepClock, p.time,
-      (time, frameIndex) => ({time, duration: p.duration, frameIndex, variableValues: p.variableValues}), 4);
-  }, [propsRef]);
+  const {restart, renderFrame, stepShown} = useFrameAtPlayhead(refs, props);
 
   useImperativeHandle(ref, () => ({
     captureFrame() {
@@ -277,10 +246,6 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
     needsRender.current = true;
   }, [props.textureURLs, restart]);
 
-  useEffect(() => {
-    needsRender.current = true;
-  }, [props.time, props.playing, props.stepClock, props.variableValues, props.duration]);
-
   const {fps, found} = useRenderLoop({refs, needsReadRef, frames, renderFrame, readIfDue, onSlow: lowerRes});
 
   // Leaves room for the size and frame rate at the top right.
@@ -312,8 +277,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(function Canvas(props, ref)
           <div className="fps" style={{top: marginTop + 8, right: marginSide + 8}}>
             <p>{pixelWidth}&times;{pixelHeight}px</p>
             {fps ? <p>{fps} fps</p> : null}
-            {/* eslint-disable-next-line react-hooks/refs -- the step drawn changes every frame, too often for state, so it shows as of each render */}
-            <p>{Math.max(0, steps.current.rendered)}</p>
+            <p ref={stepShown} />
           </div>
           {layerBusy !== null ? (
             <p className="layerBusy" role="status" style={{top: marginTop + 44, left: marginSide + 8}}>

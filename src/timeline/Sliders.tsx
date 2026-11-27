@@ -3,11 +3,13 @@ import { useState } from 'react';
 
 import { GlslCode } from '../editor/InlineCode';
 import { sliderRange, type Variable } from '../lib/document';
+import { usePlayheadSelect, type Playhead } from './playhead';
 
 interface SlidersProps {
   variables: Variable[];
-  // The values the canvas is drawn with now.
-  values: number[];
+  // The values the canvas is drawn with at the playhead.
+  playhead: Playhead;
+  valuesAt(time: number): number[];
   // Each iFloat's #define name, if it has one.
   names: (string | null)[];
   // All the code, to find which iFloats it uses.
@@ -78,10 +80,63 @@ function NumberBox({value, onChange, onClear, label, lo, hi, className, steady}:
   );
 }
 
+interface SliderRowProps extends Pick<SlidersProps, "playhead" | "valuesAt" | "onHold"> {
+  row: number;
+  variable: Variable;
+  // Its #define name, if it has one.
+  name: string | null;
+  held: boolean;
+  update(row: number, change: Partial<Variable>): void;
+  clear(row: number, end: "min" | "max"): void;
+}
+
+// One iFloat's slider, which follows the playhead itself, so only a moving value re-renders as it plays.
+function SliderRow({row, variable, name: defined, held, playhead, valuesAt, update, clear, onHold}: SliderRowProps) {
+  const value = usePlayheadSelect(playhead, time => valuesAt(time)[row] ?? 0);
+  const [lo, hi] = sliderRange(variable);
+  const animated = variable.transitions.length > 0;
+  const name = defined ?? "iFloat" + row;
+  const top = hi > lo ? hi : lo + 1;
+  const fraction = Math.min(Math.max((value - lo) / (top - lo), 0), 1);
+  const step = (top - lo) / 1000;
+  return (
+    <div className="sliderRow" data-held={held || undefined}>
+      <div className="sliderName">
+        {name}
+        {defined && <span className="floatName"> iFloat{row}</span>}
+      </div>
+      <NumberBox
+        className="sliderEnd" label={name + " minimum"} value={lo} lo={lo} hi={hi}
+        onChange={min => min < hi && update(row, {min})} onClear={() => clear(row, "min")}
+      />
+      <div className="sliderTrack">
+        <Slider
+          min={lo} max={top} step={step} value={Math.min(Math.max(value, lo), top)} label={null}
+          // Mantine reads the decimal places from step's text, which tiny steps write as "5e-7".
+          precision={Math.min(Math.max(0, Math.ceil(-Math.log10(step))), 12)}
+          thumbProps={{"aria-label": name}}
+          onChange={v => animated ? onHold(row, v) : update(row, {value: v})}
+        />
+        {/* The value, under the handle and moving with it. */}
+        <div className="sliderValue" style={{left: `${100 * fraction}%`}}>
+          <NumberBox
+            label={name + " value"} value={value} lo={lo} hi={hi} steady
+            onChange={v => animated ? onHold(row, v) : update(row, {value: v})}
+          />
+        </div>
+      </div>
+      <NumberBox
+        className="sliderEnd" label={name + " maximum"} value={hi} lo={lo} hi={hi}
+        onChange={max => max > lo && update(row, {max})} onClear={() => clear(row, "max")}
+      />
+    </div>
+  );
+}
+
 // A slider for each iFloat the code uses. One without transitions keeps the value it's set to; one
 // animated on the timeline follows it until its slider is moved, and the timeline takes over again
 // when the animation plays.
-export default function Sliders({variables, values, names, code, held, onVariablesChange, onHold}: SlidersProps) {
+export default function Sliders({variables, playhead, valuesAt, names, code, held, onVariablesChange, onHold}: SlidersProps) {
   const used = floatsInCode(code).filter(i => i < variables.length);
   const update = (row: number, change: Partial<Variable>) =>
     onVariablesChange(variables.map((v, i) => i === row ? {...v, ...change} : v));
@@ -109,48 +164,11 @@ export default function Sliders({variables, values, names, code, held, onVariabl
   }
   return (
     <div className="sliders">
-      {used.map(row => {
-        const variable = variables[row]!;
-        const [lo, hi] = sliderRange(variable);
-        const animated = variable.transitions.length > 0;
-        const name = names[row] ?? "iFloat" + row;
-        const value = values[row] ?? 0;
-        const top = hi > lo ? hi : lo + 1;
-        const fraction = Math.min(Math.max((value - lo) / (top - lo), 0), 1);
-        const step = (top - lo) / 1000;
-        return (
-          <div className="sliderRow" key={row} data-held={held.has(row) || undefined}>
-            <div className="sliderName">
-              {name}
-              {names[row] && <span className="floatName"> iFloat{row}</span>}
-            </div>
-            <NumberBox
-              className="sliderEnd" label={name + " minimum"} value={lo} lo={lo} hi={hi}
-              onChange={min => min < hi && update(row, {min})} onClear={() => clear(row, "min")}
-            />
-            <div className="sliderTrack">
-              <Slider
-                min={lo} max={top} step={step} value={Math.min(Math.max(value, lo), top)} label={null}
-                // Mantine reads the decimal places from step's text, which tiny steps write as "5e-7".
-                precision={Math.min(Math.max(0, Math.ceil(-Math.log10(step))), 12)}
-                thumbProps={{"aria-label": name}}
-                onChange={v => animated ? onHold(row, v) : update(row, {value: v})}
-              />
-              {/* The value, under the handle and moving with it. */}
-              <div className="sliderValue" style={{left: `${100 * fraction}%`}}>
-                <NumberBox
-                  label={name + " value"} value={value} lo={lo} hi={hi} steady
-                  onChange={v => animated ? onHold(row, v) : update(row, {value: v})}
-                />
-              </div>
-            </div>
-            <NumberBox
-              className="sliderEnd" label={name + " maximum"} value={hi} lo={lo} hi={hi}
-              onChange={max => max > lo && update(row, {max})} onClear={() => clear(row, "max")}
-            />
-          </div>
-        );
-      })}
+      {used.map(row =>
+        <SliderRow
+          key={row} row={row} variable={variables[row]!} name={names[row] ?? null} held={held.has(row)}
+          playhead={playhead} valuesAt={valuesAt} update={update} clear={clear} onHold={onHold}
+        />)}
     </div>
   );
 }

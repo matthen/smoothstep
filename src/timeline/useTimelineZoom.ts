@@ -3,6 +3,7 @@ import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 're
 import {
   clampZoom, DEFAULT_PX_PER_SECOND, fitPxPerSecond, rulerTicks, timeAreaWidth, timeToX, xToTime,
 } from './geometry';
+import type { Playhead } from './playhead';
 
 // The width of the rows' visible part, and of the row labels to its left.
 interface View {
@@ -27,7 +28,7 @@ interface Options {
   maxTime: number;
   // The scale a drag started at, which holds until it ends, or null.
   frozenPxPerSecond: number | null;
-  currentTime: number;
+  playhead: Playhead;
   // A second finger came down, to pinch.
   onPinchStart: () => void;
   // Whether a held finger is dragging out a transition, so a touch move mustn't scroll.
@@ -35,7 +36,7 @@ interface Options {
 }
 
 // The timeline's scale and scroll: zooming with buttons, ctrl + scroll and pinches, and following the playhead.
-export function useTimelineZoom({maxTime, frozenPxPerSecond, currentTime, onPinchStart, fingerHeld}: Options) {
+export function useTimelineZoom({maxTime, frozenPxPerSecond, playhead, onPinchStart, fingerHeld}: Options) {
   const gridRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef<HTMLDivElement>(null);
   // How far the grid is scrolled sideways, so the ruler only draws the ticks in sight.
@@ -44,7 +45,6 @@ export function useTimelineZoom({maxTime, frozenPxPerSecond, currentTime, onPinc
   const [zoom, setZoom] = useState(1);
   const anchorRef = useRef<Anchor | null>(null);
   const pinchRef = useRef<Pinch | null>(null);
-  const lastTimeRef = useRef(currentTime);
 
   const fitScale = view ? fitPxPerSecond(view.width, maxTime) : DEFAULT_PX_PER_SECOND;
   const zoomLevel = clampZoom(zoom, fitScale);
@@ -98,7 +98,7 @@ export function useTimelineZoom({maxTime, frozenPxPerSecond, currentTime, onPinc
 
   // The zoom buttons keep the playhead in place when it's in sight, or else the middle.
   function zoomBy(factor: number) {
-    const playheadX = x(currentTime) - scrollLeft;
+    const playheadX = x(playhead.time) - scrollLeft;
     const viewX = playheadX >= 0 && playheadX <= viewWidth ? playheadX : viewWidth / 2;
     zoomTo(zoomLevel * factor, {time: xToTime(scrollLeft + viewX, pps), viewX});
   }
@@ -174,7 +174,7 @@ export function useTimelineZoom({maxTime, frozenPxPerSecond, currentTime, onPinc
 
   // Keep the playhead in view when zoomed in: when it runs off the right edge, or jumps back off
   // the left (looping or seeking), scroll it to near the left edge.
-  const followPlayhead = useEffectEvent((previous: number) => {
+  const followPlayhead = useEffectEvent((currentTime: number, previous: number) => {
     const grid = gridRef.current;
     if (!grid || grid.scrollWidth <= grid.clientWidth) {
       return;
@@ -191,10 +191,15 @@ export function useTimelineZoom({maxTime, frozenPxPerSecond, currentTime, onPinc
     }
   });
   useEffect(() => {
-    const previous = lastTimeRef.current;
-    lastTimeRef.current = currentTime;
-    followPlayhead(previous);
-  }, [currentTime]);
+    let previous = playhead.time;
+    return playhead.subscribe(() => {
+      const time = playhead.time;
+      if (time !== previous) {
+        followPlayhead(time, previous);
+        previous = time;
+      }
+    });
+  }, [playhead]);
 
   return {
     gridRef, labelsRef, setScrollLeft, pps, x, width, viewWidth, ruler, zoomTo, zoomBy,

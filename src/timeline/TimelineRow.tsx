@@ -1,9 +1,10 @@
 import { VisuallyHidden } from '@mantine/core';
-import type { PointerEvent as ReactPointerEvent } from 'react';
+import { useMemo, type PointerEvent as ReactPointerEvent } from 'react';
 
 import type { Transition } from '../lib/document';
 import { rowPaths, type ValueRange } from './curves';
 import { ROW_HEIGHT } from './geometry';
+import { usePlayheadSelect, type Playhead } from './playhead';
 import type { Heading } from './TransitionProperties';
 
 interface Props {
@@ -13,7 +14,7 @@ interface Props {
   range: ValueRange | undefined;
   // The selected transition's index in this row, or -1.
   selectedIndex: number;
-  currentDSecs: number;
+  playhead: Playhead;
   // A transition being made or pointed at in this row, if any, and what to do next to finish it.
   pending: Heading | null;
   prompt: string | null;
@@ -23,10 +24,13 @@ interface Props {
 
 // One row of the timeline: its transitions as blocks, the curve they make, and any transition being made.
 export default function TimelineRow(
-  {transitions, pxPerSecond, width, range, selectedIndex, currentDSecs, pending, prompt, phone, onTransitionPointerDown}: Props,
+  {transitions, pxPerSecond, width, range, selectedIndex, playhead, pending, prompt, phone, onTransitionPointerDown}: Props,
 ) {
   const pxPerDSec = pxPerSecond / 10;
-  const paths = rowPaths(transitions, pxPerSecond, width, range);
+  const paths = useMemo(() => rowPaths(transitions, pxPerSecond, width, range), [transitions, pxPerSecond, width, range]);
+  // Which transitions the playhead is in, as a string so it only re-renders when that changes.
+  const active = usePlayheadSelect(playhead, time =>
+    transitions.map(t => t.startDSecs <= time * 10 && time * 10 <= t.endDSecs ? "1" : "0").join(""));
   const blockStyle = (startDSecs: number, endDSecs: number) => ({
     left: startDSecs * pxPerDSec,
     width: Math.max(3, (endDSecs - startDSecs) * pxPerDSec),
@@ -35,7 +39,7 @@ export default function TimelineRow(
     <div className="variableRow">
       {transitions.map((transition, index) => {
         const isSelected = selectedIndex === index;
-        const isActive = transition.startDSecs <= currentDSecs && currentDSecs <= transition.endDSecs;
+        const isActive = active[index] === "1";
         return (
           <div
             key={index}
