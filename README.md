@@ -14,7 +14,7 @@
   <a href="https://smoothstep.io"><img src="docs/images/screenshot.png" alt="smoothstep.io, with the Pokémon type battles example: its Canvas2D.js code on the left, the battle with its legend on the right, and the animation timeline below"></a>
 </p>
 
-smoothstep.io is a toolkit for making animations in the WebGL shader language. You write a
+smoothstep.io is an editor for making animations in the WebGL shader language. You write a
 GLSL fragment shader, animate its inputs on a timeline, give it image and video textures, and export
 the result as video. For text, shapes and physics, a Canvas2D layer adds JavaScript that draws on a
 2D canvas over the image. It all runs in your browser, with no server or sign-in.
