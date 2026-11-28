@@ -16,7 +16,7 @@ export const REVISION_LENGTH = 16;
 
 const RUNTIME_DIRS = ["examples/", "images/textures/", "docs/images/"];
 // Files only search engines, social sites and old Windows tiles ask for.
-const NOT_CACHED = new Set([WORKER_FILE, "robots.txt", "browserconfig.xml", "mstile-150x150.png", "brand.png"]);
+const NOT_CACHED = new Set([WORKER_FILE, "robots.txt", "browserconfig.xml", "mstile-150x150.png", "share.png"]);
 
 export function cachePolicy(path: string): "precache" | "runtime" | "none" {
   if (NOT_CACHED.has(path) || path.endsWith(".map") || path.split("/").some(part => part.startsWith("."))) {
