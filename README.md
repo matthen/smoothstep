@@ -100,9 +100,8 @@ play an animation on its own.
 
 smoothstep.io is a React 19 app in TypeScript, built with Vite. It uses Mantine for its interface,
 Sass for the app's own styles, CodeMirror 6 for the code editor, and WebGL 2 for rendering. The
-source is in `src/`, and every folder has a README saying what it holds. The file formats are
-described in [FILE_FORMATS.md](FILE_FORMATS.md), and the libraries and sources the app uses are credited
-in [docs/acknowledgements.md](docs/acknowledgements.md).
+file formats are described in [FILE_FORMATS.md](FILE_FORMATS.md), and the libraries and sources the
+app uses are credited in [docs/acknowledgements.md](docs/acknowledgements.md).
 
 ## Licence
 
