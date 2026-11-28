@@ -99,55 +99,10 @@ play an animation on its own.
 ## How it's built
 
 smoothstep.io is a React 19 app in TypeScript, built with Vite. It uses Mantine for its interface,
-Sass for the app's own styles, CodeMirror 6 for the code editor, and WebGL 2 for rendering.
-
-- `src/app/` has `App.tsx`, which holds the open animation and lays out the page, the URL
-  handling, the tour, the one-time tips (`tips.ts`), and the crash screen. If the app ever hits
-  an error, the crash screen lets you download the animation you were editing and everything
-  you've saved.
-- `src/lib/` has the animation format and its checks (`document.ts`), the IndexedDB store
-  for animations and uploaded images (`localStore.ts`), and file downloads and imports
-  (`archive.ts`), in the formats described in [FILE_FORMATS.md](FILE_FORMATS.md). The
-  addresses the app opens are in `routes.ts`, and `share.ts` makes share links and loads
-  animations from links, gists and other websites.
-- `src/player/` is the bare player, without React, behind `embed.html` and the player files that
-  Share downloads.
-- `src/render/` compiles and draws the buffers and the image, and maps compile errors back to
-  lines of your code. `probe.ts` adds the code that shows a selected expression on the canvas.
-- `src/layer/` runs the Canvas2D layer: a worker inside a sandboxed iframe, with the drawing helpers
-  (`helpers.ts`), the built-in libraries (`libraries.ts`) and fonts (`fonts.ts`).
-- `src/editor/` is the code editor, with GLSL highlighting, hints, the inline pickers and the
-  tabs for the image, buffers and shared code.
-  The pickers are adapted from [glslEditor](https://github.com/patriciogonzalezvivo/glslEditor).
-- `src/timeline/` is the timeline and the play and seek bar.
-- `src/dialogs/` has the welcome, Open, texture, export, share and other dialogs.
-- `src/tutorial/` is the tutorial: its lessons and their checks (`lessons.tsx`), and the Learn panel
-  that shows them beside the editor.
-- `src/docs/` builds the docs: `render.ts` turns `docs/*.md` into pages with
-  [marked](https://marked.js.org), colouring code as the editor does, and `plugin.ts` makes the docs
-  site and the pages for `src/reference/`, which shows them in the editor's Docs tab.
-  `reference.ts` writes the Reference page from the lists the editor's popups use: the shader inputs
-  (`src/lib/shaderInputs.ts`), the Canvas2D layer's names (`src/editor/canvas2dReference.json`), its
-  fonts and its libraries.
-- `src/pwa/` makes the app work offline and installable: `worker.ts` is the service worker,
-  `plugin.ts` builds it with the list of files to keep (`cachePlan.ts`), and `updates.ts` registers it
-  and offers to reload into a new version.
-- `src/export/` renders an animation frame by frame and encodes it in the browser. WebM and
-  MP4 use the browser's WebCodecs encoder through [Mediabunny](https://mediabunny.dev), GIF
-  uses [gifenc](https://github.com/mattdesl/gifenc), and PNG frames download as a zip.
-
-Everything in `public/` is copied into the build as it is. That includes the built-in
-textures in `images/textures/` (credited in [CREDITS.md](public/images/textures/CREDITS.md))
-and the example animations in `examples/`: each has its `.json`, a `.png` thumbnail and a short
-`.mp4` preview for the example gallery. The list of examples, with their descriptions, is in
-`src/lib/config.ts`.
-
-`tools/` has the scripts that generate data. `buildTextures.py` makes the texture list and
-thumbnails, `buildFonts.py` draws the font sheets, and `buildFunctions.py` makes the list of
-GLSL built-ins the editor's hints show. `buildLayerAssets.mjs` bundles the Canvas2D layer's libraries
-into `public/libs/` and copies its fonts into `public/fonts/`. `makeExamplePreviews.mjs` renders the examples' previews
-and thumbnails with the app's own exporter. The end-to-end tests are in `e2e/`. They block every
-request that isn't to your own machine, so they also check that the app works offline.
+Sass for the app's own styles, CodeMirror 6 for the code editor, and WebGL 2 for rendering. The
+source is in `src/`, and every folder has a README saying what it holds. The file formats are
+described in [FILE_FORMATS.md](FILE_FORMATS.md), and the libraries and sources the app uses are credited
+in [docs/acknowledgements.md](docs/acknowledgements.md).
 
 ## Licence
 
